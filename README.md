@@ -1,10 +1,14 @@
-# Micro SaaS
+# Prime Ges
 
 Fundação de um produto **SaaS** moderno, modular, seguro e preparado para produção.
 
-> Status atual: **infraestrutura inicial**. Funcionalidades de negócio (autenticação,
-> pagamentos, painel administrativo, etc.) ainda não foram implementadas — ver
-> [`docs/architecture.md`](./docs/architecture.md) para o roadmap.
+> Status atual: **autenticação, multi-tenant, dashboard e módulo de Clientes
+> implementados** (Etapas 1–3). Pagamentos, planos, assinaturas, demais
+> módulos de negócio (produtos, serviços, vendas, estoque, financeiro) e o
+> painel administrativo global ainda não foram implementados — ver
+> [`docs/architecture.md`](./docs/architecture.md) para o roadmap e
+> [`docs/authentication.md`](./docs/authentication.md) para o fluxo de
+> autenticação.
 
 ## Stack
 
@@ -26,29 +30,40 @@ Fundação de um produto **SaaS** moderno, modular, seguro e preparado para prod
 
 ```
 src/
+├── middleware.ts      # protege /app, /admin, /onboarding; renova sessão
 ├── app/
-│   ├── (public)/     # área pública (landing, login, signup)
-│   ├── (app)/        # área autenticada do cliente
-│   ├── (admin)/      # painel administrativo (isolado)
-│   └── api/          # route handlers (webhooks, endpoints internos)
+│   ├── auth/callback/ # troca code por sessão (confirmação/recuperação)
+│   ├── onboarding/    # criação da primeira empresa (fora do route group (app))
+│   ├── (public)/      # landing, /login, /register, /forgot-password, /reset-password
+│   ├── (app)/
+│   │   └── app/
+│   │       ├── page.tsx           # dashboard
+│   │       └── clientes/          # listagem, /novo, /[id], /[id]/editar
+│   ├── (admin)/       # painel administrativo (isolado, ainda vazio)
+│   └── api/           # route handlers (webhooks, endpoints internos)
 ├── components/
-│   ├── ui/           # componentes shadcn/ui
-│   ├── shared/       # componentes reutilizáveis entre app/admin
-│   ├── app/          # específicos da área do cliente
-│   └── admin/        # específicos do admin
+│   ├── ui/            # componentes shadcn/ui (button, input, label, alert)
+│   ├── shared/         # reutilizáveis (auth forms, headers)
+│   ├── app/             # AppShell, sidebar, dashboard e módulo de clientes
+│   └── admin/            # específicos do admin
 ├── lib/
-│   ├── supabase/     # clientes Supabase (browser, server, admin, middleware)
-│   ├── auth/         # helpers de sessão e RBAC (futuro)
-│   └── validations/  # schemas de validação (futuro)
+│   ├── supabase/       # clientes Supabase (browser, server, admin, middleware)
+│   ├── auth/             # server actions de auth + leitura de sessão/perfil
+│   ├── companies/         # leitura da empresa atual + criação (onboarding)
+│   ├── customers/          # queries e server actions do módulo de clientes
+│   └── validations/         # schemas Zod (auth, company, customer)
 ├── hooks/
-├── types/            # tipos globais + tipos gerados do Supabase
-└── config/           # configuração estática do projeto
+├── types/               # Profile, Company, Customer + tipos do Supabase
+└── config/               # configuração estática do projeto
 
 supabase/
-└── migrations/       # SQL versionado do banco
+└── migrations/
+    ├── 001_create_profiles.sql
+    └── 002_create_companies_customers.sql   # companies, company_members, customers, RLS
 
 docs/
-└── architecture.md   # visão geral da arquitetura
+├── architecture.md     # visão geral da arquitetura
+└── authentication.md   # fluxo de autenticação em detalhe
 ```
 
 ## Como executar localmente
@@ -75,7 +90,15 @@ docs/
    ```
 
 5. Acesse [http://localhost:3000](http://localhost:3000). Você deve ver o nome
-   do projeto, "Micro SaaS" e o status "Aplicação Online".
+   do projeto "Prime Ges" e o status "Aplicação Online".
+
+6. Aplique as migrations no seu projeto Supabase, em ordem, antes de testar
+   (`supabase/migrations/001_create_profiles.sql` e depois
+   `002_create_companies_customers.sql`), pelo SQL Editor do dashboard ou via
+   `supabase db push` se estiver usando o Supabase CLI.
+
+7. No primeiro acesso, você será redirecionado para `/onboarding` para criar
+   sua empresa antes de chegar ao dashboard.
 
 ## Variáveis de ambiente
 
