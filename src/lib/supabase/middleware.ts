@@ -3,12 +3,11 @@ import { NextResponse, type NextRequest } from "next/server";
 
 /**
  * Atualiza a sessão Supabase a cada request (renova o token quando
- * necessário) e devolve a response já com os cookies atualizados.
+ * necessário) e devolve a response já com os cookies atualizados, além
+ * do usuário autenticado atual (ou null).
  *
- * Nesta etapa apenas mantém a sessão viva — nenhuma regra de
- * autorização (RBAC, proteção de /admin, etc.) foi implementada
- * ainda. Isso será adicionado quando o sistema de autenticação
- * for construído.
+ * Regras de autorização por role (ex: proteger /admin) ainda não foram
+ * implementadas — apenas autenticação (usuário logado ou não).
  */
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({
@@ -42,7 +41,9 @@ export async function updateSession(request: NextRequest) {
   );
 
   // Necessário para manter o token de sessão atualizado.
-  await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  return response;
+  return { response, user };
 }
