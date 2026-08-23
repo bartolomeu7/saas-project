@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ClientesCadastradosCard } from "@/components/app/clientes-cadastrados-card";
 import { ClientesStatsRow } from "@/components/app/clientes-stats-row";
 import { ClientesRecentesSection } from "@/components/app/clientes-recentes-section";
+import { ProdutosStatsRow } from "@/components/app/produtos-stats-row";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -28,20 +29,35 @@ function DashboardCardSkeleton() {
   );
 }
 
+function StatCardSkeleton() {
+  return (
+    <div className="flex items-center gap-3 rounded-lg border border-border bg-card/60 p-3.5">
+      <Skeleton className="h-9 w-9 shrink-0 rounded-md" />
+      <div className="flex-1">
+        <Skeleton className="h-5 w-10" />
+        <Skeleton className="mt-1.5 h-3 w-16" />
+      </div>
+    </div>
+  );
+}
+
+// Grade igual à de CustomerStats — evita layout shift quando os dados reais substituem o skeleton.
 function StatsRowSkeleton() {
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
       {[0, 1, 2].map((i) => (
-        <div
-          key={i}
-          className="flex items-center gap-3 rounded-lg border border-border bg-card/60 p-3.5"
-        >
-          <Skeleton className="h-9 w-9 shrink-0 rounded-md" />
-          <div className="flex-1">
-            <Skeleton className="h-5 w-10" />
-            <Skeleton className="mt-1.5 h-3 w-16" />
-          </div>
-        </div>
+        <StatCardSkeleton key={i} />
+      ))}
+    </div>
+  );
+}
+
+// Grade igual à de ProductStats (4 colunas).
+function ProductStatsRowSkeleton() {
+  return (
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      {[0, 1, 2, 3].map((i) => (
+        <StatCardSkeleton key={i} />
       ))}
     </div>
   );
@@ -144,6 +160,15 @@ export default async function DashboardPage() {
         </h2>
         <Suspense fallback={<StatsRowSkeleton />}>
           <ClientesStatsRow companyId={company.id} />
+        </Suspense>
+      </section>
+
+      <section className="flex flex-col gap-3">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          Estatísticas de produtos
+        </h2>
+        <Suspense fallback={<ProductStatsRowSkeleton />}>
+          <ProdutosStatsRow companyId={company.id} businessType={company.business_type} />
         </Suspense>
       </section>
 

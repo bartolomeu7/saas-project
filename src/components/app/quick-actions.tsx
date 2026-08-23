@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
-import { UserPlus, ShoppingCart, Wrench, FileText } from "lucide-react";
+import { UserPlus, Package, ShoppingCart, Wrench, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface QuickAction {
@@ -11,12 +11,13 @@ interface QuickAction {
 }
 
 /**
- * Apenas "Novo cliente" está habilitado nesta etapa — vendas, serviços e
+ * "Novo cliente" e "Novo produto" habilitados — vendas, serviços e
  * orçamentos ainda não existem no sistema (sem tabela no banco), então
  * aparecem desabilitados em vez de linkarem para uma rota inexistente.
  */
 const ACTIONS: QuickAction[] = [
   { label: "Novo cliente", href: "/app/clientes/novo", icon: UserPlus, enabled: true },
+  { label: "Novo produto", href: "/app/produtos/novo", icon: Package, enabled: true },
   { label: "Nova venda", href: "/app/vendas/novo", icon: ShoppingCart, enabled: false },
   { label: "Novo serviço", href: "/app/servicos/novo", icon: Wrench, enabled: false },
   { label: "Novo orçamento", href: "/app/orcamentos/novo", icon: FileText, enabled: false },

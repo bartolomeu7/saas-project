@@ -2,7 +2,9 @@
  * Tipos do banco de dados Supabase.
  *
  * Gerado a partir do projeto Supabase conectado (fpbcruinppjbwtinzrdg),
- * refletindo as migrations 001-005 já aplicadas. Para regenerar:
+ * refletindo as migrations 001-003, 005 e 006 já aplicadas (004, de
+ * billing, permanece só como arquivo local, não aplicada). Para
+ * regenerar:
  *
  *   npx supabase gen types typescript --project-id fpbcruinppjbwtinzrdg > src/types/supabase.ts
  */
@@ -293,6 +295,113 @@ export type Database = {
           },
         ]
       }
+      product_categories: {
+        Row: {
+          company_id: string
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          status: Database["public"]["Enums"]["product_status"]
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          status?: Database["public"]["Enums"]["product_status"]
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          status?: Database["public"]["Enums"]["product_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_categories_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          barcode: string | null
+          category_id: string | null
+          company_id: string
+          cost_price: number
+          created_at: string
+          description: string | null
+          id: string
+          minimum_stock: number
+          name: string
+          sale_price: number
+          sku: string | null
+          status: Database["public"]["Enums"]["product_status"]
+          stock_quantity: number
+          unit: Database["public"]["Enums"]["product_unit"]
+          updated_at: string
+        }
+        Insert: {
+          barcode?: string | null
+          category_id?: string | null
+          company_id: string
+          cost_price?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          minimum_stock?: number
+          name: string
+          sale_price?: number
+          sku?: string | null
+          status?: Database["public"]["Enums"]["product_status"]
+          stock_quantity?: number
+          unit?: Database["public"]["Enums"]["product_unit"]
+          updated_at?: string
+        }
+        Update: {
+          barcode?: string | null
+          category_id?: string | null
+          company_id?: string
+          cost_price?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          minimum_stock?: number
+          name?: string
+          sale_price?: number
+          sku?: string | null
+          status?: Database["public"]["Enums"]["product_status"]
+          stock_quantity?: number
+          unit?: Database["public"]["Enums"]["product_unit"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "product_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -373,6 +482,8 @@ export type Database = {
       company_role: "owner" | "admin" | "employee"
       company_status: "active" | "inactive"
       customer_status: "active" | "inactive"
+      product_status: "active" | "inactive"
+      product_unit: "un" | "kg" | "g" | "l" | "ml" | "m" | "cx" | "pct" | "kit"
       user_role: "user" | "admin" | "super_admin"
       user_status: "active" | "inactive" | "suspended"
     }
@@ -517,6 +628,8 @@ export const Constants = {
       company_role: ["owner", "admin", "employee"],
       company_status: ["active", "inactive"],
       customer_status: ["active", "inactive"],
+      product_status: ["active", "inactive"],
+      product_unit: ["un", "kg", "g", "l", "ml", "m", "cx", "pct", "kit"],
       user_role: ["user", "admin", "super_admin"],
       user_status: ["active", "inactive", "suspended"],
     },
