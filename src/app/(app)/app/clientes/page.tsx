@@ -48,12 +48,23 @@ export default async function CustomersPage({
             Gerencie os clientes da sua empresa.
           </p>
         </div>
-        <Link
-          href="/app/clientes/novo"
-          className={cn(buttonVariants(), "shrink-0")}
-        >
-          + Novo cliente
-        </Link>
+        <div className="flex shrink-0 flex-wrap gap-2">
+          <Link
+            href="/app/clientes/ranking"
+            className={cn(buttonVariants({ variant: "outline" }))}
+          >
+            Ranking
+          </Link>
+          <Link
+            href="/app/clientes/sorteio"
+            className={cn(buttonVariants({ variant: "outline" }))}
+          >
+            Sortear cliente
+          </Link>
+          <Link href="/app/clientes/novo" className={cn(buttonVariants())}>
+            + Novo cliente
+          </Link>
+        </div>
       </div>
 
       {!hasAnyCustomer ? (

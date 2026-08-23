@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth/session";
+import { getCurrentUser, getCurrentProfile } from "@/lib/auth/session";
 import { getCurrentCompany } from "@/lib/companies/queries";
 import { AppShell } from "@/components/app/app-shell";
 
@@ -17,15 +17,22 @@ export default async function AppLayout({
 }: {
   children: ReactNode;
 }) {
-  const user = await getCurrentUser();
-  const current = await getCurrentCompany();
+  const [user, profile, current] = await Promise.all([
+    getCurrentUser(),
+    getCurrentProfile(),
+    getCurrentCompany(),
+  ]);
 
   if (!current) {
     redirect("/onboarding");
   }
 
   return (
-    <AppShell company={current.company} userEmail={user?.email}>
+    <AppShell
+      company={current.company}
+      userName={profile?.full_name}
+      userEmail={user?.email}
+    >
       {children}
     </AppShell>
   );

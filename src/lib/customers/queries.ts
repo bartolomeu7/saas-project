@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type { Customer, CustomerStatus } from "@/types/customer";
 
@@ -50,10 +51,18 @@ export async function listCustomers({
 
   const trimmedSearch = search?.trim();
   if (trimmedSearch) {
-    const term = trimmedSearch.replace(/[%_]/g, "\\$&");
-    query = query.or(
-      `name.ilike.%${term}%,phone.ilike.%${term}%,email.ilike.%${term}%,document.ilike.%${term}%`
-    );
+    // Vírgula, parênteses e aspas têm significado especial na sintaxe do
+    // filtro .or() do PostgREST (separador de condições, agrupamento,
+    // citação) — removidos em vez de escapados, já que são raros em
+    // nome/telefone/e-mail/documento reais e não vale a complexidade de
+    // um escape completo para um campo de busca.
+    const safeTerm = trimmedSearch.replace(/[,()"\\]/g, "").trim();
+    if (safeTerm) {
+      const term = safeTerm.replace(/[%_]/g, "\\$&");
+      query = query.or(
+        `name.ilike.%${term}%,phone.ilike.%${term}%,email.ilike.%${term}%,document.ilike.%${term}%`
+      );
+    }
   }
 
   const { data, error, count } = await query
@@ -99,8 +108,14 @@ export interface CustomerStats {
   recent: number;
 }
 
-/** Estatísticas simples usadas nos cards do dashboard. */
-export async function getCustomerStats(
+/**
+ * Estatísticas simples usadas nos cards do dashboard.
+ * Envolvida em `cache()` (memoização por request) porque o dashboard
+ * chama essa função a partir de mais de uma seção (card "Clientes
+ * cadastrados" e o bloco de estatísticas) — sem isso, seriam duas
+ * consultas idênticas ao Supabase na mesma renderização.
+ */
+export const getCustomerStats = cache(async function getCustomerStats(
   companyId: string
 ): Promise<CustomerStats> {
   const supabase = createClient();
@@ -130,7 +145,7 @@ export async function getCustomerStats(
     active: activeResult.count ?? 0,
     recent: recentResult.count ?? 0,
   };
-}
+});
 
 /** Últimos clientes cadastrados, para a seção "Clientes recentes" do dashboard. */
 export async function getRecentCustomers(

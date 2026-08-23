@@ -1,5 +1,6 @@
 "use client";
 
+import { useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 
@@ -14,6 +15,7 @@ export function CustomerFilters() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const current = searchParams.get("status") ?? "all";
+  const [isPending, startTransition] = useTransition();
 
   function setStatus(value: string) {
     const params = new URLSearchParams(searchParams.toString());
@@ -25,26 +27,33 @@ export function CustomerFilters() {
     }
     params.delete("page");
 
-    router.push(`${pathname}?${params.toString()}`);
+    startTransition(() => {
+      router.push(`${pathname}?${params.toString()}`);
+    });
   }
 
   return (
-    <div className="inline-flex rounded-md border border-border p-1">
-      {FILTERS.map((filter) => (
-        <button
-          key={filter.value}
-          type="button"
-          onClick={() => setStatus(filter.value)}
-          className={cn(
-            "rounded px-3 py-1.5 text-sm font-medium transition-colors",
-            current === filter.value
-              ? "bg-secondary text-secondary-foreground"
-              : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          {filter.label}
-        </button>
-      ))}
+    <div className="flex items-center gap-2">
+      <div className="inline-flex rounded-md border border-border p-1">
+        {FILTERS.map((filter) => (
+          <button
+            key={filter.value}
+            type="button"
+            onClick={() => setStatus(filter.value)}
+            className={cn(
+              "rounded px-3 py-1.5 text-sm font-medium transition-colors",
+              current === filter.value
+                ? "bg-secondary text-secondary-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            {filter.label}
+          </button>
+        ))}
+      </div>
+      {isPending && (
+        <span className="text-xs text-muted-foreground">Atualizando...</span>
+      )}
     </div>
   );
 }

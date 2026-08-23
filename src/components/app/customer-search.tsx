@@ -15,7 +15,7 @@ export function CustomerSearch() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [value, setValue] = useState(searchParams.get("q") ?? "");
-  const [, startTransition] = useTransition();
+  const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -38,12 +38,17 @@ export function CustomerSearch() {
   }, [value]);
 
   return (
-    <Input
-      type="search"
-      placeholder="Buscar por nome, telefone, e-mail ou documento..."
-      value={value}
-      onChange={(event) => setValue(event.target.value)}
-      className="max-w-sm"
-    />
+    <div className="flex items-center gap-2">
+      <Input
+        type="search"
+        placeholder="Buscar por nome, telefone, e-mail ou documento..."
+        value={value}
+        onChange={(event) => setValue(event.target.value)}
+        className="max-w-sm"
+      />
+      {isPending && (
+        <span className="text-xs text-muted-foreground">Buscando...</span>
+      )}
+    </div>
   );
 }

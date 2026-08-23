@@ -98,6 +98,32 @@ export async function signOutAction(): Promise<void> {
 }
 
 /**
+ * Login/cadastro via Google. O trigger on_auth_user_created (migration 001)
+ * cria o profile automaticamente, do mesmo jeito que no cadastro por
+ * e-mail — nenhuma lógica adicional é necessária para novos usuários.
+ *
+ * Requer o provedor Google habilitado nas configurações de Auth do
+ * Supabase (Client ID/Secret do Google Cloud Console); sem isso, o
+ * Supabase retorna erro e o usuário é redirecionado de volta ao login.
+ */
+export async function signInWithGoogleAction(): Promise<void> {
+  const supabase = createClient();
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: `${siteConfig.url}/auth/callback?next=/app`,
+    },
+  });
+
+  if (error || !data.url) {
+    redirect("/login?error=google");
+  }
+
+  redirect(data.url);
+}
+
+/**
  * Início da recuperação de senha: envia e-mail com link para
  * /auth/callback, que troca o código pela sessão e redireciona para
  * /reset-password.

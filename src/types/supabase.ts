@@ -1,215 +1,524 @@
 /**
  * Tipos do banco de dados Supabase.
  *
- * Escrito manualmente para espelhar as migrations em supabase/migrations/.
- * Assim que possível, substitua por tipos gerados automaticamente:
+ * Gerado a partir do projeto Supabase conectado (fpbcruinppjbwtinzrdg),
+ * refletindo as migrations 001-005 já aplicadas. Para regenerar:
  *
- *   npx supabase gen types typescript --project-id <PROJECT_ID> > src/types/supabase.ts
- *
- * Mantenha este arquivo em sincronia com as migrations até lá.
+ *   npx supabase gen types typescript --project-id fpbcruinppjbwtinzrdg > src/types/supabase.ts
  */
 
-import type { UserRole, UserStatus } from "./profile";
-import type { BusinessType, CompanyRole, CompanyStatus } from "./company";
-import type { CustomerStatus } from "./customer";
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.15"
+  }
   public: {
     Tables: {
-      profiles: {
+      audit_logs: {
         Row: {
-          id: string;
-          user_id: string;
-          full_name: string | null;
-          email: string | null;
-          avatar_url: string | null;
-          status: UserStatus;
-          role: UserRole;
-          created_at: string;
-          updated_at: string;
-          last_login_at: string | null;
-        };
+          action: string
+          actor_user_id: string | null
+          company_id: string
+          created_at: string
+          entity_id: string
+          entity_type: string
+          id: string
+          metadata: Json
+        }
         Insert: {
-          id?: string;
-          user_id: string;
-          full_name?: string | null;
-          email?: string | null;
-          avatar_url?: string | null;
-          status?: UserStatus;
-          role?: UserRole;
-          created_at?: string;
-          updated_at?: string;
-          last_login_at?: string | null;
-        };
+          action: string
+          actor_user_id?: string | null
+          company_id: string
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          id?: string
+          metadata?: Json
+        }
         Update: {
-          id?: string;
-          user_id?: string;
-          full_name?: string | null;
-          email?: string | null;
-          avatar_url?: string | null;
-          status?: UserStatus;
-          role?: UserRole;
-          created_at?: string;
-          updated_at?: string;
-          last_login_at?: string | null;
-        };
-        Relationships: [];
-      };
+          action?: string
+          actor_user_id?: string | null
+          company_id?: string
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          metadata?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       companies: {
         Row: {
-          id: string;
-          name: string;
-          business_type: BusinessType;
-          status: CompanyStatus;
-          created_at: string;
-          updated_at: string;
-        };
+          business_type: Database["public"]["Enums"]["business_type"]
+          created_at: string
+          id: string
+          name: string
+          status: Database["public"]["Enums"]["company_status"]
+          updated_at: string
+        }
         Insert: {
-          id?: string;
-          name: string;
-          business_type?: BusinessType;
-          status?: CompanyStatus;
-          created_at?: string;
-          updated_at?: string;
-        };
+          business_type?: Database["public"]["Enums"]["business_type"]
+          created_at?: string
+          id?: string
+          name: string
+          status?: Database["public"]["Enums"]["company_status"]
+          updated_at?: string
+        }
         Update: {
-          id?: string;
-          name?: string;
-          business_type?: BusinessType;
-          status?: CompanyStatus;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
+          business_type?: Database["public"]["Enums"]["business_type"]
+          created_at?: string
+          id?: string
+          name?: string
+          status?: Database["public"]["Enums"]["company_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       company_members: {
         Row: {
-          id: string;
-          company_id: string;
-          user_id: string;
-          role: CompanyRole;
-          created_at: string;
-        };
+          company_id: string
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["company_role"]
+          user_id: string
+        }
         Insert: {
-          id?: string;
-          company_id: string;
-          user_id: string;
-          role?: CompanyRole;
-          created_at?: string;
-        };
+          company_id: string
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["company_role"]
+          user_id: string
+        }
         Update: {
-          id?: string;
-          company_id?: string;
-          user_id?: string;
-          role?: CompanyRole;
-          created_at?: string;
-        };
+          company_id?: string
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["company_role"]
+          user_id?: string
+        }
         Relationships: [
           {
-            foreignKeyName: "company_members_company_id_fkey";
-            columns: ["company_id"];
-            isOneToOne: false;
-            referencedRelation: "companies";
-            referencedColumns: ["id"];
-          }
-        ];
-      };
+            foreignKeyName: "company_members_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_raffle_entries: {
+        Row: {
+          company_id: string
+          customer_email_snapshot: string | null
+          customer_id: string | null
+          customer_name_snapshot: string
+          customer_phone_snapshot: string | null
+          id: string
+          is_winner: boolean
+          raffle_id: string
+          winner_position: number | null
+        }
+        Insert: {
+          company_id: string
+          customer_email_snapshot?: string | null
+          customer_id?: string | null
+          customer_name_snapshot: string
+          customer_phone_snapshot?: string | null
+          id?: string
+          is_winner?: boolean
+          raffle_id: string
+          winner_position?: number | null
+        }
+        Update: {
+          company_id?: string
+          customer_email_snapshot?: string | null
+          customer_id?: string | null
+          customer_name_snapshot?: string
+          customer_phone_snapshot?: string | null
+          id?: string
+          is_winner?: boolean
+          raffle_id?: string
+          winner_position?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_raffle_entries_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_raffle_entries_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_raffle_entries_raffle_id_fkey"
+            columns: ["raffle_id"]
+            isOneToOne: false
+            referencedRelation: "customer_raffles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_raffles: {
+        Row: {
+          company_id: string
+          criteria: Json
+          executed_at: string
+          executed_by: string
+          id: string
+          name: string | null
+          participant_count: number
+          winner_count: number
+        }
+        Insert: {
+          company_id: string
+          criteria?: Json
+          executed_at?: string
+          executed_by: string
+          id?: string
+          name?: string | null
+          participant_count: number
+          winner_count: number
+        }
+        Update: {
+          company_id?: string
+          criteria?: Json
+          executed_at?: string
+          executed_by?: string
+          id?: string
+          name?: string | null
+          participant_count?: number
+          winner_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_raffles_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
-          id: string;
-          company_id: string;
-          name: string;
-          document: string | null;
-          phone: string | null;
-          whatsapp: string | null;
-          email: string | null;
-          address: string | null;
-          address_number: string | null;
-          complement: string | null;
-          neighborhood: string | null;
-          city: string | null;
-          state: string | null;
-          postal_code: string | null;
-          notes: string | null;
-          status: CustomerStatus;
-          created_at: string;
-          updated_at: string;
-        };
+          address: string | null
+          address_number: string | null
+          city: string | null
+          company_id: string
+          complement: string | null
+          created_at: string
+          document: string | null
+          email: string | null
+          id: string
+          name: string
+          neighborhood: string | null
+          notes: string | null
+          phone: string | null
+          postal_code: string | null
+          state: string | null
+          status: Database["public"]["Enums"]["customer_status"]
+          updated_at: string
+          whatsapp: string | null
+        }
         Insert: {
-          id?: string;
-          company_id: string;
-          name: string;
-          document?: string | null;
-          phone?: string | null;
-          whatsapp?: string | null;
-          email?: string | null;
-          address?: string | null;
-          address_number?: string | null;
-          complement?: string | null;
-          neighborhood?: string | null;
-          city?: string | null;
-          state?: string | null;
-          postal_code?: string | null;
-          notes?: string | null;
-          status?: CustomerStatus;
-          created_at?: string;
-          updated_at?: string;
-        };
+          address?: string | null
+          address_number?: string | null
+          city?: string | null
+          company_id: string
+          complement?: string | null
+          created_at?: string
+          document?: string | null
+          email?: string | null
+          id?: string
+          name: string
+          neighborhood?: string | null
+          notes?: string | null
+          phone?: string | null
+          postal_code?: string | null
+          state?: string | null
+          status?: Database["public"]["Enums"]["customer_status"]
+          updated_at?: string
+          whatsapp?: string | null
+        }
         Update: {
-          id?: string;
-          company_id?: string;
-          name?: string;
-          document?: string | null;
-          phone?: string | null;
-          whatsapp?: string | null;
-          email?: string | null;
-          address?: string | null;
-          address_number?: string | null;
-          complement?: string | null;
-          neighborhood?: string | null;
-          city?: string | null;
-          state?: string | null;
-          postal_code?: string | null;
-          notes?: string | null;
-          status?: CustomerStatus;
-          created_at?: string;
-          updated_at?: string;
-        };
+          address?: string | null
+          address_number?: string | null
+          city?: string | null
+          company_id?: string
+          complement?: string | null
+          created_at?: string
+          document?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          neighborhood?: string | null
+          notes?: string | null
+          phone?: string | null
+          postal_code?: string | null
+          state?: string | null
+          status?: Database["public"]["Enums"]["customer_status"]
+          updated_at?: string
+          whatsapp?: string | null
+        }
         Relationships: [
           {
-            foreignKeyName: "customers_company_id_fkey";
-            columns: ["company_id"];
-            isOneToOne: false;
-            referencedRelation: "companies";
-            referencedColumns: ["id"];
-          }
-        ];
-      };
-    };
-    Views: Record<string, never>;
+            foreignKeyName: "customers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          last_login_at: string | null
+          role: Database["public"]["Enums"]["user_role"]
+          status: Database["public"]["Enums"]["user_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          last_login_at?: string | null
+          role?: Database["public"]["Enums"]["user_role"]
+          status?: Database["public"]["Enums"]["user_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          last_login_at?: string | null
+          role?: Database["public"]["Enums"]["user_role"]
+          status?: Database["public"]["Enums"]["user_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
     Functions: {
       create_company_with_owner: {
         Args: {
-          p_name: string;
-          p_business_type?: BusinessType;
-        };
+          p_business_type?: Database["public"]["Enums"]["business_type"]
+          p_name: string
+        }
         Returns: {
-          id: string;
-          name: string;
-          business_type: BusinessType;
-          status: CompanyStatus;
-          created_at: string;
-          updated_at: string;
-        };
-      };
-    };
+          business_type: Database["public"]["Enums"]["business_type"]
+          created_at: string
+          id: string
+          name: string
+          status: Database["public"]["Enums"]["company_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "companies"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+    }
     Enums: {
-      user_role: UserRole;
-      user_status: UserStatus;
-      business_type: BusinessType;
-      company_status: CompanyStatus;
-      company_role: CompanyRole;
-      customer_status: CustomerStatus;
-    };
-  };
-};
+      business_type:
+        | "bakery"
+        | "car_wash"
+        | "automotive_detailing"
+        | "grocery"
+        | "restaurant"
+        | "snack_bar"
+        | "beauty_salon"
+        | "workshop"
+        | "service_provider"
+        | "other"
+      company_role: "owner" | "admin" | "employee"
+      company_status: "active" | "inactive"
+      customer_status: "active" | "inactive"
+      user_role: "user" | "admin" | "super_admin"
+      user_status: "active" | "inactive" | "suspended"
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
+}
+
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
+
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
+
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
+
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  public: {
+    Enums: {
+      business_type: [
+        "bakery",
+        "car_wash",
+        "automotive_detailing",
+        "grocery",
+        "restaurant",
+        "snack_bar",
+        "beauty_salon",
+        "workshop",
+        "service_provider",
+        "other",
+      ],
+      company_role: ["owner", "admin", "employee"],
+      company_status: ["active", "inactive"],
+      customer_status: ["active", "inactive"],
+      user_role: ["user", "admin", "super_admin"],
+      user_status: ["active", "inactive", "suspended"],
+    },
+  },
+} as const

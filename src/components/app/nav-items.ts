@@ -1,22 +1,71 @@
+import type { LucideIcon } from "lucide-react";
+import {
+  LayoutDashboard,
+  Users,
+  Package,
+  Wrench,
+  ShoppingCart,
+  Warehouse,
+  Wallet,
+  LineChart,
+  FileText,
+  Settings,
+} from "lucide-react";
+
 export interface NavItem {
   label: string;
   href: string;
+  icon: LucideIcon;
   enabled: boolean;
 }
 
+export interface NavGroup {
+  /** Grupos sem título (Dashboard, Configurações) usam label undefined. */
+  label?: string;
+  items: NavItem[];
+}
+
 /**
- * Menu principal da área autenticada. Apenas Dashboard e Clientes estão
- * funcionais nesta etapa — os demais aparecem desabilitados ("Em breve")
- * para deixar claro o roadmap sem prometer funcionalidade que não existe.
+ * Menu principal da área autenticada, agrupado por área do negócio.
+ * Apenas Dashboard e Clientes estão funcionais nesta etapa — os demais
+ * aparecem desabilitados ("Em breve") para deixar claro o roadmap sem
+ * prometer funcionalidade que não existe.
  */
-export const NAV_ITEMS: NavItem[] = [
-  { label: "Dashboard", href: "/app", enabled: true },
-  { label: "Clientes", href: "/app/clientes", enabled: true },
-  { label: "Produtos", href: "/app/produtos", enabled: false },
-  { label: "Serviços", href: "/app/servicos", enabled: false },
-  { label: "Vendas", href: "/app/vendas", enabled: false },
-  { label: "Estoque", href: "/app/estoque", enabled: false },
-  { label: "Financeiro", href: "/app/financeiro", enabled: false },
-  { label: "Relatórios", href: "/app/relatorios", enabled: false },
-  { label: "Configurações", href: "/app/configuracoes", enabled: false },
+export const NAV_GROUPS: NavGroup[] = [
+  {
+    items: [{ label: "Dashboard", href: "/app", icon: LayoutDashboard, enabled: true }],
+  },
+  {
+    label: "Gestão",
+    items: [
+      { label: "Clientes", href: "/app/clientes", icon: Users, enabled: true },
+      { label: "Produtos", href: "/app/produtos", icon: Package, enabled: false },
+      { label: "Serviços", href: "/app/servicos", icon: Wrench, enabled: false },
+      { label: "Vendas", href: "/app/vendas", icon: ShoppingCart, enabled: false },
+    ],
+  },
+  {
+    label: "Operação",
+    items: [
+      { label: "Estoque", href: "/app/estoque", icon: Warehouse, enabled: false },
+      { label: "Caixa", href: "/app/caixa", icon: Wallet, enabled: false },
+    ],
+  },
+  {
+    label: "Análises",
+    items: [
+      { label: "Financeiro", href: "/app/financeiro", icon: LineChart, enabled: false },
+      { label: "Relatórios", href: "/app/relatorios", icon: FileText, enabled: false },
+    ],
+  },
+  {
+    items: [
+      {
+        label: "Configurações",
+        href: "/app/configuracoes",
+        icon: Settings,
+        enabled: false,
+      },
+    ],
+  },
 ];

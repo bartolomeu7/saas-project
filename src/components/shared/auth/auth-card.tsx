@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { siteConfig } from "@/config/site";
+import { Logo } from "@/components/shared/logo";
 
 export function AuthCard({
   title,
@@ -17,8 +17,11 @@ export function AuthCard({
     <main className="flex min-h-screen flex-col items-center justify-center px-6 py-12">
       <div className="w-full max-w-sm">
         <div className="mb-8 flex flex-col items-center gap-1 text-center">
-          <Link href="/" className="text-lg font-semibold tracking-tight">
-            {siteConfig.name}
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 text-lg font-semibold tracking-tight"
+          >
+            <Logo iconSize={28} />
           </Link>
         </div>
 

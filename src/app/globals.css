@@ -29,34 +29,59 @@
     --input: 214 32% 91%;
     --ring: 222 47% 11%;
 
+    --sidebar: 0 0% 100%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-border: 214 32% 91%;
+
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 26 40% 15%;
+
     --radius: 0.6rem;
   }
 
+  /*
+   * Prime Ges usa uma identidade "dark modern / premium" fixa — não é um
+   * dark mode alternável, é a aparência padrão do produto. Os valores de
+   * :root acima ficam disponíveis caso uma opção de tema claro seja
+   * adicionada no futuro, mas hoje <html> sempre carrega a classe .dark
+   * (ver src/app/layout.tsx).
+   */
   .dark {
-    --background: 222 47% 6%;
-    --foreground: 210 40% 98%;
+    --background: 212 31% 10%; /* #111820 */
+    --foreground: 212 39% 94%; /* #E8EEF5 */
 
-    --card: 222 47% 8%;
-    --card-foreground: 210 40% 98%;
+    --card: 211 31% 13%; /* #17212C */
+    --card-foreground: 212 39% 94%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222 47% 11%;
+    --primary: 207 100% 54%; /* #168BFF — azul Prime Ges */
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 217 33% 17%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 212 30% 16%; /* #1B2633 — cards secundários / hover */
+    --secondary-foreground: 212 39% 94%;
 
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
+    --muted: 212 30% 16%;
+    --muted-foreground: 213 15% 59%; /* #8795A6 */
 
-    --accent: 217 33% 17%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 212 30% 16%;
+    --accent-foreground: 212 39% 94%;
 
-    --destructive: 0 63% 31%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 84% 60%; /* #EF4444 */
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 217 33% 17%;
-    --input: 217 33% 17%;
-    --ring: 212 27% 84%;
+    --border: 211 28% 20%; /* #253342 */
+    --input: 211 28% 20%;
+    --ring: 207 100% 54%;
+
+    --sidebar: 212 36% 9%; /* #0F1720 */
+    --sidebar-foreground: 212 39% 94%;
+    --sidebar-border: 211 28% 20%;
+
+    --success: 142 71% 45%; /* #22C55E */
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%; /* #F59E0B */
+    --warning-foreground: 26 40% 15%;
   }
 }
 

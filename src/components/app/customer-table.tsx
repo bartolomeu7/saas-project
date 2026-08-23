@@ -3,6 +3,7 @@ import type { Customer } from "@/types/customer";
 import { formatDate } from "@/lib/format";
 import { CustomerStatusBadge } from "@/components/app/customer-status-badge";
 import { DeactivateCustomerButton } from "@/components/app/deactivate-customer-button";
+import { ReactivateCustomerButton } from "@/components/app/reactivate-customer-button";
 
 export function CustomerTable({ customers }: { customers: Customer[] }) {
   return (
@@ -48,8 +49,13 @@ export function CustomerTable({ customers }: { customers: Customer[] }) {
                   >
                     Editar
                   </Link>
-                  {customer.status === "active" && (
+                  {customer.status === "active" ? (
                     <DeactivateCustomerButton
+                      customerId={customer.id}
+                      customerName={customer.name}
+                    />
+                  ) : (
+                    <ReactivateCustomerButton
                       customerId={customer.id}
                       customerName={customer.name}
                     />

@@ -4,7 +4,10 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentCompany } from "@/lib/companies/queries";
+import { getCurrentUser } from "@/lib/auth/session";
 import { customerSchema } from "@/lib/validations/customer";
+import { writeAuditLog } from "@/lib/audit/log";
+import { AUDIT_ACTIONS } from "@/types/audit";
 import type { ActionResult } from "@/lib/auth/actions";
 
 /**
@@ -74,6 +77,16 @@ export async function createCustomerAction(
     return { error: "Não foi possível salvar o cliente. Tente novamente." };
   }
 
+  const user = await getCurrentUser();
+  await writeAuditLog(supabase, {
+    companyId: current.company.id,
+    actorUserId: user?.id ?? null,
+    entityType: "customer",
+    entityId: data.id,
+    action: AUDIT_ACTIONS.CUSTOMER_CREATED,
+    metadata: { name: parsed.data.name },
+  });
+
   revalidatePath("/app");
   revalidatePath("/app/clientes");
   redirect(`/app/clientes/${data.id}`);
@@ -129,6 +142,16 @@ export async function updateCustomerAction(
     return { error: "Não foi possível salvar as alterações. Tente novamente." };
   }
 
+  const user = await getCurrentUser();
+  await writeAuditLog(supabase, {
+    companyId: current.company.id,
+    actorUserId: user?.id ?? null,
+    entityType: "customer",
+    entityId: id,
+    action: AUDIT_ACTIONS.CUSTOMER_UPDATED,
+    metadata: { name: parsed.data.name, status: parsed.data.status },
+  });
+
   revalidatePath("/app");
   revalidatePath("/app/clientes");
   revalidatePath(`/app/clientes/${id}`);
@@ -152,8 +175,46 @@ export async function deactivateCustomerAction(id: string): Promise<void> {
     .eq("id", id)
     .eq("company_id", current.company.id);
 
+  const user = await getCurrentUser();
+  await writeAuditLog(supabase, {
+    companyId: current.company.id,
+    actorUserId: user?.id ?? null,
+    entityType: "customer",
+    entityId: id,
+    action: AUDIT_ACTIONS.CUSTOMER_DEACTIVATED,
+  });
+
   revalidatePath("/app");
   revalidatePath("/app/clientes");
   revalidatePath(`/app/clientes/${id}`);
   redirect("/app/clientes");
+}
+
+/** Reativa um cliente previamente desativado (status = active). */
+export async function reactivateCustomerAction(id: string): Promise<void> {
+  const current = await getCurrentCompany();
+  if (!current) {
+    return;
+  }
+
+  const supabase = createClient();
+  await supabase
+    .from("customers")
+    .update({ status: "active" })
+    .eq("id", id)
+    .eq("company_id", current.company.id);
+
+  const user = await getCurrentUser();
+  await writeAuditLog(supabase, {
+    companyId: current.company.id,
+    actorUserId: user?.id ?? null,
+    entityType: "customer",
+    entityId: id,
+    action: AUDIT_ACTIONS.CUSTOMER_REACTIVATED,
+  });
+
+  revalidatePath("/app");
+  revalidatePath("/app/clientes");
+  revalidatePath(`/app/clientes/${id}`);
+  redirect(`/app/clientes/${id}`);
 }

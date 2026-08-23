@@ -1,36 +1,40 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ShoppingCart, Wrench, Wallet } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getCurrentCompany } from "@/lib/companies/queries";
 import { getCustomerById } from "@/lib/customers/queries";
+import { listAuditLogsForEntity } from "@/lib/audit/queries";
 import { CustomerStatusBadge } from "@/components/app/customer-status-badge";
 import { DeactivateCustomerButton } from "@/components/app/deactivate-customer-button";
+import { ReactivateCustomerButton } from "@/components/app/reactivate-customer-button";
+import { CustomerProfileTabs } from "@/components/app/customer-profile-tabs";
+import { CustomerSummaryTab } from "@/components/app/customer-summary-tab";
+import { CustomerHistoryTab } from "@/components/app/customer-history-tab";
+import { EmptyState } from "@/components/app/empty-state";
 import { formatDate } from "@/lib/format";
 
 export const metadata: Metadata = {
   title: "Cliente",
 };
 
-const FIELDS: { label: string; key: keyof NonNullable<Awaited<ReturnType<typeof getCustomerById>>> }[] = [
-  { label: "Documento", key: "document" },
-  { label: "Telefone", key: "phone" },
-  { label: "WhatsApp", key: "whatsapp" },
-  { label: "E-mail", key: "email" },
-  { label: "CEP", key: "postal_code" },
-  { label: "Endereço", key: "address" },
-  { label: "Número", key: "address_number" },
-  { label: "Complemento", key: "complement" },
-  { label: "Bairro", key: "neighborhood" },
-  { label: "Cidade", key: "city" },
-  { label: "Estado", key: "state" },
-];
+const VALID_TABS = ["resumo", "historico", "compras", "servicos", "financeiro", "observacoes"] as const;
+type TabKey = (typeof VALID_TABS)[number];
+
+function parseTab(value?: string): TabKey {
+  return (VALID_TABS as readonly string[]).includes(value ?? "")
+    ? (value as TabKey)
+    : "resumo";
+}
 
 export default async function CustomerDetailPage({
   params,
+  searchParams,
 }: {
   params: { id: string };
+  searchParams?: { tab?: string };
 }) {
   const current = (await getCurrentCompany())!;
 
@@ -42,6 +46,15 @@ export default async function CustomerDetailPage({
   if (!customer) {
     notFound();
   }
+
+  const tab = parseTab(searchParams?.tab);
+
+  // Só busca o histórico quando a aba está aberta — evita consulta
+  // desnecessária nas outras abas.
+  const auditLogs =
+    tab === "historico"
+      ? await listAuditLogsForEntity(current.company.id, "customer", customer.id)
+      : [];
 
   return (
     <div className="flex flex-col gap-6 px-4 py-6 sm:px-6">
@@ -59,7 +72,7 @@ export default async function CustomerDetailPage({
           <CustomerStatusBadge status={customer.status} />
         </div>
         <p className="text-sm text-muted-foreground">
-          Cadastrado em {formatDate(customer.created_at)} · Atualizado em{" "}
+          Cadastrado em {formatDate(customer.created_at)} · Última movimentação em{" "}
           {formatDate(customer.updated_at)}
         </p>
       </div>
@@ -71,40 +84,71 @@ export default async function CustomerDetailPage({
         >
           Editar
         </Link>
-        {customer.status === "active" && (
+        {customer.status === "active" ? (
           <DeactivateCustomerButton
+            customerId={customer.id}
+            customerName={customer.name}
+          />
+        ) : (
+          <ReactivateCustomerButton
             customerId={customer.id}
             customerName={customer.name}
           />
         )}
       </div>
 
-      <div className="grid max-w-3xl grid-cols-1 gap-4 rounded-lg border border-border p-6 sm:grid-cols-2">
-        {FIELDS.map((field) => (
-          <div key={field.key}>
-            <p className="text-xs uppercase text-muted-foreground">
-              {field.label}
-            </p>
-            <p className="text-sm">{customer[field.key] ?? "—"}</p>
-          </div>
-        ))}
+      <div className="max-w-3xl">
+        <CustomerProfileTabs customerId={customer.id} activeTab={tab} />
 
-        {customer.notes && (
-          <div className="sm:col-span-2">
-            <p className="text-xs uppercase text-muted-foreground">
-              Observações
-            </p>
-            <p className="whitespace-pre-wrap text-sm">{customer.notes}</p>
-          </div>
-        )}
-      </div>
+        <div className="pt-6">
+          {tab === "resumo" && <CustomerSummaryTab customer={customer} />}
 
-      <div className="max-w-3xl rounded-lg border border-border p-6">
-        <h2 className="text-sm font-semibold">Histórico</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Histórico de vendas e serviços será disponibilizado nas próximas
-          versões.
-        </p>
+          {tab === "historico" && <CustomerHistoryTab logs={auditLogs} />}
+
+          {tab === "compras" && (
+            <EmptyState
+              icon={ShoppingCart}
+              title="Compras — Em breve"
+              description="O módulo de Vendas ainda não foi implementado. Quando estiver disponível, o histórico de compras deste cliente aparecerá aqui."
+            />
+          )}
+
+          {tab === "servicos" && (
+            <EmptyState
+              icon={Wrench}
+              title="Serviços — Em breve"
+              description="O módulo de Serviços ainda não foi implementado. Quando estiver disponível, o histórico de serviços deste cliente aparecerá aqui."
+            />
+          )}
+
+          {tab === "financeiro" && (
+            <EmptyState
+              icon={Wallet}
+              title="Financeiro — Em breve"
+              description="O módulo Financeiro ainda não foi implementado. Quando estiver disponível, pagamentos e pendências deste cliente aparecerão aqui."
+            />
+          )}
+
+          {tab === "observacoes" && (
+            <div className="rounded-lg border border-border bg-card p-6">
+              {customer.notes ? (
+                <p className="whitespace-pre-wrap text-sm text-foreground">
+                  {customer.notes}
+                </p>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Nenhuma observação registrada para este cliente.{" "}
+                  <Link
+                    href={`/app/clientes/${customer.id}/editar`}
+                    className="underline underline-offset-4 hover:text-foreground"
+                  >
+                    Adicionar
+                  </Link>
+                </p>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
