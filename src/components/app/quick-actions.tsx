@@ -11,7 +11,7 @@ interface QuickAction {
 }
 
 /**
- * "Novo cliente" e "Novo produto" habilitados — vendas, serviços e
+ * "Novo cliente", "Novo produto" e "Novo serviço" habilitados — vendas e
  * orçamentos ainda não existem no sistema (sem tabela no banco), então
  * aparecem desabilitados em vez de linkarem para uma rota inexistente.
  */
@@ -19,7 +19,7 @@ const ACTIONS: QuickAction[] = [
   { label: "Novo cliente", href: "/app/clientes/novo", icon: UserPlus, enabled: true },
   { label: "Novo produto", href: "/app/produtos/novo", icon: Package, enabled: true },
   { label: "Nova venda", href: "/app/vendas/novo", icon: ShoppingCart, enabled: false },
-  { label: "Novo serviço", href: "/app/servicos/novo", icon: Wrench, enabled: false },
+  { label: "Novo serviço", href: "/app/servicos/novo", icon: Wrench, enabled: true },
   { label: "Novo orçamento", href: "/app/orcamentos/novo", icon: FileText, enabled: false },
 ];
 

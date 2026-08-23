@@ -2,7 +2,7 @@
  * Tipos do banco de dados Supabase.
  *
  * Gerado a partir do projeto Supabase conectado (fpbcruinppjbwtinzrdg),
- * refletindo as migrations 001-003, 005 e 006 já aplicadas (004, de
+ * refletindo as migrations 001-003 e 005-007 já aplicadas (004, de
  * billing, permanece só como arquivo local, não aplicada). Para
  * regenerar:
  *
@@ -441,6 +441,101 @@ export type Database = {
         }
         Relationships: []
       }
+      service_categories: {
+        Row: {
+          company_id: string
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          status: Database["public"]["Enums"]["service_status"]
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          status?: Database["public"]["Enums"]["service_status"]
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          status?: Database["public"]["Enums"]["service_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_categories_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      services: {
+        Row: {
+          category_id: string | null
+          company_id: string
+          cost_price: number
+          created_at: string
+          description: string | null
+          duration_minutes: number
+          id: string
+          name: string
+          sale_price: number
+          status: Database["public"]["Enums"]["service_status"]
+          updated_at: string
+        }
+        Insert: {
+          category_id?: string | null
+          company_id: string
+          cost_price?: number
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number
+          id?: string
+          name: string
+          sale_price?: number
+          status?: Database["public"]["Enums"]["service_status"]
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string | null
+          company_id?: string
+          cost_price?: number
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number
+          id?: string
+          name?: string
+          sale_price?: number
+          status?: Database["public"]["Enums"]["service_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "services_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "service_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "services_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -484,6 +579,7 @@ export type Database = {
       customer_status: "active" | "inactive"
       product_status: "active" | "inactive"
       product_unit: "un" | "kg" | "g" | "l" | "ml" | "m" | "cx" | "pct" | "kit"
+      service_status: "active" | "inactive"
       user_role: "user" | "admin" | "super_admin"
       user_status: "active" | "inactive" | "suspended"
     }
@@ -630,6 +726,7 @@ export const Constants = {
       customer_status: ["active", "inactive"],
       product_status: ["active", "inactive"],
       product_unit: ["un", "kg", "g", "l", "ml", "m", "cx", "pct", "kit"],
+      service_status: ["active", "inactive"],
       user_role: ["user", "admin", "super_admin"],
       user_status: ["active", "inactive", "suspended"],
     },

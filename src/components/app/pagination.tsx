@@ -8,12 +8,18 @@ export function Pagination({
   total,
   basePath,
   searchParams,
+  itemLabel = "cliente",
+  itemLabelPlural = "clientes",
 }: {
   page: number;
   pageSize: number;
   total: number;
   basePath: string;
   searchParams: Record<string, string | undefined>;
+  /** Nome da entidade paginada, no singular (ex: "produto", "serviço"). */
+  itemLabel?: string;
+  /** Nome da entidade paginada, no plural (ex: "produtos", "serviços"). */
+  itemLabelPlural?: string;
 }) {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -34,7 +40,7 @@ export function Pagination({
     <div className="flex items-center justify-between text-sm">
       <p className="text-muted-foreground">
         Página {page} de {totalPages} · {total}{" "}
-        {total === 1 ? "cliente" : "clientes"}
+        {total === 1 ? itemLabel : itemLabelPlural}
       </p>
       <div className="flex gap-2">
         <Link

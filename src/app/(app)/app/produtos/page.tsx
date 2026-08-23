@@ -119,6 +119,8 @@ export default async function ProductsPage({
                 pageSize={result.pageSize}
                 total={result.total}
                 basePath="/app/produtos"
+                itemLabel="produto"
+                itemLabelPlural="produtos"
                 searchParams={{
                   q: searchParams?.q,
                   status: searchParams?.status,

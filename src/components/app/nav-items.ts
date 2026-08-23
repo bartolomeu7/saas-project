@@ -27,8 +27,8 @@ export interface NavGroup {
 
 /**
  * Menu principal da área autenticada, agrupado por área do negócio.
- * Dashboard, Clientes e Produtos estão funcionais nesta etapa — os
- * demais aparecem desabilitados ("Em breve") para deixar claro o
+ * Dashboard, Clientes, Produtos e Serviços estão funcionais nesta etapa
+ * — os demais aparecem desabilitados ("Em breve") para deixar claro o
  * roadmap sem prometer funcionalidade que não existe.
  */
 export const NAV_GROUPS: NavGroup[] = [
@@ -40,7 +40,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: "Clientes", href: "/app/clientes", icon: Users, enabled: true },
       { label: "Produtos", href: "/app/produtos", icon: Package, enabled: true },
-      { label: "Serviços", href: "/app/servicos", icon: Wrench, enabled: false },
+      { label: "Serviços", href: "/app/servicos", icon: Wrench, enabled: true },
       { label: "Vendas", href: "/app/vendas", icon: ShoppingCart, enabled: false },
     ],
   },

@@ -11,6 +11,7 @@ import { ClientesCadastradosCard } from "@/components/app/clientes-cadastrados-c
 import { ClientesStatsRow } from "@/components/app/clientes-stats-row";
 import { ClientesRecentesSection } from "@/components/app/clientes-recentes-section";
 import { ProdutosStatsRow } from "@/components/app/produtos-stats-row";
+import { ServicosStatsRow } from "@/components/app/servicos-stats-row";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -169,6 +170,15 @@ export default async function DashboardPage() {
         </h2>
         <Suspense fallback={<ProductStatsRowSkeleton />}>
           <ProdutosStatsRow companyId={company.id} businessType={company.business_type} />
+        </Suspense>
+      </section>
+
+      <section className="flex flex-col gap-3">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          Estatísticas de serviços
+        </h2>
+        <Suspense fallback={<StatsRowSkeleton />}>
+          <ServicosStatsRow companyId={company.id} />
         </Suspense>
       </section>
 

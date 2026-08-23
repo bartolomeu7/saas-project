@@ -18,7 +18,7 @@ export interface AuditLog {
   created_at: string;
 }
 
-/** Ações já em uso pelos módulos de Clientes (Fase 1) e Produtos (Fase 2). */
+/** Ações já em uso pelos módulos de Clientes (Fase 1), Produtos (Fase 2) e Serviços (Fase 3). */
 export const AUDIT_ACTIONS = {
   CUSTOMER_CREATED: "customer.created",
   CUSTOMER_UPDATED: "customer.updated",
@@ -34,4 +34,12 @@ export const AUDIT_ACTIONS = {
   CATEGORY_UPDATED: "category.updated",
   CATEGORY_ACTIVATED: "category.activated",
   CATEGORY_DEACTIVATED: "category.deactivated",
+  SERVICE_CREATED: "service.created",
+  SERVICE_UPDATED: "service.updated",
+  SERVICE_ACTIVATED: "service.activated",
+  SERVICE_DEACTIVATED: "service.deactivated",
+  SERVICE_CATEGORY_CREATED: "service_category.created",
+  SERVICE_CATEGORY_UPDATED: "service_category.updated",
+  SERVICE_CATEGORY_ACTIVATED: "service_category.activated",
+  SERVICE_CATEGORY_DEACTIVATED: "service_category.deactivated",
 } as const;
