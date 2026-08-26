@@ -2,6 +2,8 @@ import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import { UserPlus, Package, ShoppingCart, Wrench, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getSaleSegmentHints } from "@/config/sale-segments";
+import type { BusinessType } from "@/types/company";
 
 interface QuickAction {
   label: string;
@@ -11,17 +13,22 @@ interface QuickAction {
 }
 
 /**
- * "Novo cliente", "Novo produto" e "Novo serviço" habilitados — vendas e
- * orçamentos ainda não existem no sistema (sem tabela no banco), então
- * aparecem desabilitados em vez de linkarem para uma rota inexistente.
+ * "Novo cliente", "Novo produto", "Novo serviço" e "Nova venda"
+ * habilitados — orçamentos ainda não existem no sistema (sem tabela no
+ * banco), então aparece desabilitado em vez de linkar para uma rota
+ * inexistente. O rótulo de vendas se adapta por segmento (ex:
+ * "Novo atendimento" para lava-rápido/estética).
  */
-const ACTIONS: QuickAction[] = [
-  { label: "Novo cliente", href: "/app/clientes/novo", icon: UserPlus, enabled: true },
-  { label: "Novo produto", href: "/app/produtos/novo", icon: Package, enabled: true },
-  { label: "Nova venda", href: "/app/vendas/novo", icon: ShoppingCart, enabled: false },
-  { label: "Novo serviço", href: "/app/servicos/novo", icon: Wrench, enabled: true },
-  { label: "Novo orçamento", href: "/app/orcamentos/novo", icon: FileText, enabled: false },
-];
+function buildActions(businessType: BusinessType): QuickAction[] {
+  const saleLabel = getSaleSegmentHints(businessType).newSaleLabel;
+  return [
+    { label: "Novo cliente", href: "/app/clientes/novo", icon: UserPlus, enabled: true },
+    { label: "Novo produto", href: "/app/produtos/novo", icon: Package, enabled: true },
+    { label: saleLabel, href: "/app/vendas/nova", icon: ShoppingCart, enabled: true },
+    { label: "Novo serviço", href: "/app/servicos/novo", icon: Wrench, enabled: true },
+    { label: "Novo orçamento", href: "/app/orcamentos/novo", icon: FileText, enabled: false },
+  ];
+}
 
 function QuickActionButton({ action }: { action: QuickAction }) {
   const Icon = action.icon;
@@ -59,10 +66,11 @@ function QuickActionButton({ action }: { action: QuickAction }) {
   );
 }
 
-export function QuickActions() {
+export function QuickActions({ businessType }: { businessType: BusinessType }) {
+  const actions = buildActions(businessType);
   return (
     <div className="flex flex-wrap gap-3">
-      {ACTIONS.map((action) => (
+      {actions.map((action) => (
         <QuickActionButton key={action.label} action={action} />
       ))}
     </div>

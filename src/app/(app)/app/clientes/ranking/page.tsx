@@ -6,8 +6,10 @@ import {
   getCustomerRanking,
   resolvePeriodRange,
   type RankingPeriod,
+  type CustomerRankingEntry,
 } from "@/lib/customers/ranking";
 import { RankingPeriodSelector } from "@/components/app/ranking-period-selector";
+import { RankingSortSelector } from "@/components/app/ranking-sort-selector";
 import { EmptyState } from "@/components/app/empty-state";
 import { formatDate } from "@/lib/format";
 
@@ -21,15 +23,40 @@ function parsePeriod(value?: string): RankingPeriod {
     : "month";
 }
 
+type SortKey = "revenue" | "frequency" | "averageTicket" | "estimatedMargin";
+
+function parseSort(value?: string): SortKey {
+  return value === "frequency" || value === "averageTicket" || value === "estimatedMargin"
+    ? value
+    : "revenue";
+}
+
+const SORT_LABELS: Record<SortKey, string> = {
+  revenue: "Maior receita",
+  frequency: "Maior frequência",
+  averageTicket: "Maior ticket",
+  estimatedMargin: "Maior contribuição estimada",
+};
+
+function formatMoney(value: number): string {
+  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+function sortEntries(entries: CustomerRankingEntry[], sortBy: SortKey): CustomerRankingEntry[] {
+  return [...entries].sort((a, b) => b[sortBy] - a[sortBy]);
+}
+
 export default async function CustomerRankingPage({
   searchParams,
 }: {
-  searchParams?: { period?: string; from?: string; to?: string };
+  searchParams?: { period?: string; from?: string; to?: string; sort?: string };
 }) {
   const current = (await getCurrentCompany())!;
   const period = parsePeriod(searchParams?.period);
+  const sortBy = parseSort(searchParams?.sort);
   const range = resolvePeriodRange(period, searchParams?.from, searchParams?.to);
   const ranking = await getCustomerRanking(current.company.id, period, range);
+  const sorted = sortEntries(ranking.entries, sortBy);
 
   return (
     <div className="flex flex-col gap-6 px-4 py-6 sm:px-6">
@@ -58,14 +85,49 @@ export default async function CustomerRankingPage({
         <EmptyState
           icon={Trophy}
           title="Ainda não há dados suficientes para calcular o ranking."
-          description="Esse indicador estará disponível quando houver vendas/serviços registrados. Assim que o módulo de Vendas existir, os clientes mais lucrativos e o cliente destaque do período aparecerão aqui automaticamente."
+          description="Esse indicador aparece assim que houver vendas concluídas vinculadas a um cliente no período selecionado."
         />
       ) : (
-        // Preparado para quando houver dados reais de vendas/serviços —
-        // sem tabela/UI de ranking real ainda porque hasRevenueData
-        // nunca é true nesta fase.
-        <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
-          Ranking indisponível.
+        <div className="flex flex-col gap-3">
+          <RankingSortSelector current={sortBy} labels={SORT_LABELS} />
+
+          <div className="overflow-x-auto rounded-lg border border-border">
+            <table className="w-full min-w-[640px] text-sm">
+              <thead className="bg-secondary/50 text-left text-xs uppercase text-muted-foreground">
+                <tr>
+                  <th className="px-4 py-3 font-medium">#</th>
+                  <th className="px-4 py-3 font-medium">Cliente</th>
+                  <th className="px-4 py-3 font-medium">Receita</th>
+                  <th className="px-4 py-3 font-medium">Compras</th>
+                  <th className="px-4 py-3 font-medium">Ticket médio</th>
+                  <th className="px-4 py-3 font-medium">Contribuição estimada</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {sorted.map((entry, index) => (
+                  <tr key={entry.customerId} className="hover:bg-secondary/30">
+                    <td className="px-4 py-3 text-muted-foreground">{index + 1}</td>
+                    <td className="px-4 py-3 font-medium text-foreground">
+                      <Link
+                        href={`/app/clientes/${entry.customerId}`}
+                        className="underline-offset-4 hover:underline"
+                      >
+                        {entry.customerName}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3 text-foreground">{formatMoney(entry.revenue)}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{entry.frequency}</td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {formatMoney(entry.averageTicket)}
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {formatMoney(entry.estimatedMargin)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -74,15 +136,13 @@ export default async function CustomerRankingPage({
           Como o ranking é calculado
         </h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          Quando houver dados de vendas e serviços, o ranking considera
-          receita gerada, frequência de compras, recorrência e — quando
-          houver custo cadastrado — a margem/contribuição estimada.{" "}
+          Considera receita gerada, frequência de compras e — a partir do custo
+          registrado em cada produto/serviço no momento da venda — a{" "}
+          <strong className="text-foreground">contribuição estimada</strong>.{" "}
           <strong className="text-foreground">
-            Nunca é definido apenas pelo valor total gasto.
+            Nunca é definido apenas pelo valor total gasto, e nunca chamado de lucro líquido
           </strong>{" "}
-          Se ainda não houver dados de custo suficientes, o ranking deixa
-          explícito que está baseado em faturamento/receita, e não em
-          lucro.
+          — a contribuição estimada não inclui despesas operacionais, impostos ou taxas.
         </p>
       </div>
     </div>

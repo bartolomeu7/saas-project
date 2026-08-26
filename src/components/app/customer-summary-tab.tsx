@@ -1,9 +1,14 @@
-import { DollarSign, ShoppingCart, Wrench, Receipt, Calendar, Repeat } from "lucide-react";
+import { DollarSign, ShoppingCart, Receipt, Calendar, TrendingUp } from "lucide-react";
 import { DashboardCard } from "@/components/app/dashboard-card";
 import type { Customer } from "@/types/customer";
+import type { CustomerSalesStats } from "@/lib/sales/queries";
+import { formatDate } from "@/lib/format";
 
-const EMPTY_HINT =
-  "Esse indicador estará disponível quando houver vendas/serviços registrados.";
+const EMPTY_HINT = "Esse indicador estará disponível quando houver vendas registradas.";
+
+function formatMoney(value: number): string {
+  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
 
 const FIELDS: { label: string; key: keyof Customer }[] = [
   { label: "Documento", key: "document" },
@@ -20,11 +25,19 @@ const FIELDS: { label: string; key: keyof Customer }[] = [
 ];
 
 /**
- * Indicadores de vendas/serviços do cliente. Nesta fase os módulos de
- * Vendas e Serviços ainda não existem — nenhum número é inventado, só o
- * layout preparado para quando houver dados reais.
+ * Indicadores reais de vendas do cliente (Fase 4) — só considera vendas
+ * concluídas. "Margem estimada", nunca "lucro líquido": não inclui
+ * despesas operacionais, impostos ou taxas.
  */
-export function CustomerSummaryTab({ customer }: { customer: Customer }) {
+export function CustomerSummaryTab({
+  customer,
+  salesStats,
+}: {
+  customer: Customer;
+  salesStats: CustomerSalesStats;
+}) {
+  const hasSales = salesStats.purchaseCount > 0;
+
   return (
     <div className="flex flex-col gap-8">
       <div>
@@ -32,12 +45,44 @@ export function CustomerSummaryTab({ customer }: { customer: Customer }) {
           Indicadores
         </h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          <DashboardCard label="Total gasto" value="—" icon={DollarSign} hint={EMPTY_HINT} />
-          <DashboardCard label="Total de compras" value="—" icon={ShoppingCart} hint={EMPTY_HINT} />
-          <DashboardCard label="Total de serviços" value="—" icon={Wrench} hint={EMPTY_HINT} />
-          <DashboardCard label="Ticket médio" value="—" icon={Receipt} hint={EMPTY_HINT} />
-          <DashboardCard label="Última compra" value="—" icon={Calendar} hint={EMPTY_HINT} />
-          <DashboardCard label="Frequência" value="—" icon={Repeat} hint={EMPTY_HINT} />
+          <DashboardCard
+            label="Total gasto"
+            value={hasSales ? formatMoney(salesStats.totalSpent) : "—"}
+            icon={DollarSign}
+            hint={hasSales ? undefined : EMPTY_HINT}
+          />
+          <DashboardCard
+            label="Número de compras"
+            value={hasSales ? salesStats.purchaseCount : "—"}
+            icon={ShoppingCart}
+            hint={hasSales ? undefined : EMPTY_HINT}
+          />
+          <DashboardCard
+            label="Ticket médio"
+            value={
+              hasSales && salesStats.averageTicket !== null
+                ? formatMoney(salesStats.averageTicket)
+                : "—"
+            }
+            icon={Receipt}
+            hint={hasSales ? undefined : EMPTY_HINT}
+          />
+          <DashboardCard
+            label="Última compra"
+            value={
+              hasSales && salesStats.lastPurchaseAt
+                ? formatDate(salesStats.lastPurchaseAt)
+                : "—"
+            }
+            icon={Calendar}
+            hint={hasSales ? undefined : EMPTY_HINT}
+          />
+          <DashboardCard
+            label="Margem estimada"
+            value={hasSales ? formatMoney(salesStats.estimatedMargin) : "—"}
+            icon={TrendingUp}
+            hint={hasSales ? undefined : EMPTY_HINT}
+          />
         </div>
       </div>
 

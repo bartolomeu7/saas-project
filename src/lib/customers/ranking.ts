@@ -1,25 +1,25 @@
 import "server-only";
 
+import { createClient } from "@/lib/supabase/server";
+
 export type RankingPeriod = "month" | "quarter" | "semester" | "year" | "custom";
 
 export interface CustomerRankingEntry {
   customerId: string;
   customerName: string;
   revenue: number;
-  /** null = sem dados de custo cadastrados ainda para calcular margem real. */
-  margin: number | null;
+  /** Sempre disponível a partir da Fase 4 — cada venda já guarda o custo snapshot dos itens. */
+  estimatedMargin: number;
   frequency: number;
-  score: number;
+  averageTicket: number;
 }
 
 export interface CustomerRankingResult {
   period: RankingPeriod;
   from: string;
   to: string;
-  /** false enquanto não existirem vendas/serviços — nenhum número é inventado. */
+  /** false enquanto não houver nenhuma venda concluída no período — nenhum número é inventado. */
   hasRevenueData: boolean;
-  /** Deixa explícito se o ranking está baseado em receita bruta ou em margem real. */
-  basis: "revenue" | "margin";
   entries: CustomerRankingEntry[];
 }
 
@@ -65,31 +65,71 @@ export function resolvePeriodRange(
 }
 
 /**
- * Calcula o ranking de clientes (mais lucrativos / melhor cliente) no
- * período informado.
+ * Ranking de clientes (maior receita / maior frequência / maior ticket /
+ * maior contribuição estimada) no período informado — a partir de
+ * vendas `completed` reais (Fase 4). Nunca inclui draft/cancelled.
  *
- * Hoje sempre retorna `hasRevenueData: false` — não existem tabelas de
- * vendas/serviços ainda (Fases 3/4 do roadmap), então não há nenhuma
- * base real de receita ou margem para calcular. Nenhum valor é
- * inventado.
- *
- * Quando as tabelas de vendas/serviços existirem, esta função passa a
- * agregar receita e (quando houver custo cadastrado) margem real por
- * cliente, calcular frequência/recorrência e compor o `score` — sem
- * precisar alterar a UI que já consome este retorno, já que o shape
- * (CustomerRankingResult) já está pronto para isso.
+ * "Contribuição estimada" (estimatedMargin), nunca "lucro líquido": não
+ * inclui despesas operacionais, impostos ou taxas — só a diferença
+ * entre o total vendido e o custo snapshot dos itens.
  */
 export async function getCustomerRanking(
-  _companyId: string,
+  companyId: string,
   period: RankingPeriod,
   range: { from: string; to: string }
 ): Promise<CustomerRankingResult> {
+  const supabase = createClient();
+
+  const { data } = await supabase
+    .from("sales")
+    .select("customer_id, total_amount, estimated_margin, customers(name)")
+    .eq("company_id", companyId)
+    .eq("status", "completed")
+    .not("customer_id", "is", null)
+    .gte("completed_at", range.from)
+    .lte("completed_at", range.to);
+
+  const rows = (data ?? []) as Array<{
+    customer_id: string;
+    total_amount: number;
+    estimated_margin: number;
+    customers: { name: string } | null;
+  }>;
+
+  const byCustomer = new Map<
+    string,
+    { name: string; revenue: number; margin: number; frequency: number }
+  >();
+
+  for (const row of rows) {
+    const existing = byCustomer.get(row.customer_id) ?? {
+      name: row.customers?.name ?? "Cliente",
+      revenue: 0,
+      margin: 0,
+      frequency: 0,
+    };
+    existing.revenue += Number(row.total_amount);
+    existing.margin += Number(row.estimated_margin);
+    existing.frequency += 1;
+    byCustomer.set(row.customer_id, existing);
+  }
+
+  const entries: CustomerRankingEntry[] = Array.from(byCustomer.entries()).map(
+    ([customerId, agg]) => ({
+      customerId,
+      customerName: agg.name,
+      revenue: agg.revenue,
+      estimatedMargin: agg.margin,
+      frequency: agg.frequency,
+      averageTicket: agg.revenue / agg.frequency,
+    })
+  );
+
   return {
     period,
     from: range.from,
     to: range.to,
-    hasRevenueData: false,
-    basis: "revenue",
-    entries: [],
+    hasRevenueData: entries.length > 0,
+    entries,
   };
 }

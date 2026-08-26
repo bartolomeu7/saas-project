@@ -1,14 +1,3 @@
-/**
- * Tipos do banco de dados Supabase.
- *
- * Gerado a partir do projeto Supabase conectado (fpbcruinppjbwtinzrdg),
- * refletindo as migrations 001-003 e 005-007 já aplicadas (004, de
- * billing, permanece só como arquivo local, não aplicada). Para
- * regenerar:
- *
- *   npx supabase gen types typescript --project-id fpbcruinppjbwtinzrdg > src/types/supabase.ts
- */
-
 export type Json =
   | string
   | number
@@ -92,6 +81,66 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      company_entitlements: {
+        Row: {
+          access_expires_at: string | null
+          access_starts_at: string | null
+          company_id: string
+          early_access_enabled: boolean
+          exclusive_groups_enabled: boolean
+          id: string
+          max_additional_users: number
+          plan_id: string | null
+          status: Database["public"]["Enums"]["subscription_status"]
+          support_enabled: boolean
+          tickets_enabled: boolean
+          updated_at: string
+        }
+        Insert: {
+          access_expires_at?: string | null
+          access_starts_at?: string | null
+          company_id: string
+          early_access_enabled?: boolean
+          exclusive_groups_enabled?: boolean
+          id?: string
+          max_additional_users?: number
+          plan_id?: string | null
+          status: Database["public"]["Enums"]["subscription_status"]
+          support_enabled?: boolean
+          tickets_enabled?: boolean
+          updated_at?: string
+        }
+        Update: {
+          access_expires_at?: string | null
+          access_starts_at?: string | null
+          company_id?: string
+          early_access_enabled?: boolean
+          exclusive_groups_enabled?: boolean
+          id?: string
+          max_additional_users?: number
+          plan_id?: string | null
+          status?: Database["public"]["Enums"]["subscription_status"]
+          support_enabled?: boolean
+          tickets_enabled?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_entitlements_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_entitlements_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       company_members: {
         Row: {
@@ -295,6 +344,125 @@ export type Database = {
           },
         ]
       }
+      payment_events: {
+        Row: {
+          created_at: string
+          event_id: string
+          event_type: string
+          id: string
+          payload: Json | null
+          processed: boolean
+          processed_at: string | null
+          provider: string
+          subscription_payment_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          event_type: string
+          id?: string
+          payload?: Json | null
+          processed?: boolean
+          processed_at?: string | null
+          provider: string
+          subscription_payment_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          event_type?: string
+          id?: string
+          payload?: Json | null
+          processed?: boolean
+          processed_at?: string | null
+          provider?: string
+          subscription_payment_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_events_subscription_payment_id_fkey"
+            columns: ["subscription_payment_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plans: {
+        Row: {
+          access_duration_days: number | null
+          additional_user_limit: number
+          billing_interval:
+            | Database["public"]["Enums"]["billing_interval"]
+            | null
+          billing_interval_count: number | null
+          code: string
+          created_at: string
+          currency: string
+          description: string | null
+          early_access_enabled: boolean
+          exclusive_groups_enabled: boolean
+          id: string
+          name: string
+          price: number | null
+          provider: string | null
+          provider_plan_id: string | null
+          status: Database["public"]["Enums"]["plan_status"]
+          support_enabled: boolean
+          tickets_enabled: boolean
+          trial: boolean
+          updated_at: string
+        }
+        Insert: {
+          access_duration_days?: number | null
+          additional_user_limit?: number
+          billing_interval?:
+            | Database["public"]["Enums"]["billing_interval"]
+            | null
+          billing_interval_count?: number | null
+          code: string
+          created_at?: string
+          currency?: string
+          description?: string | null
+          early_access_enabled?: boolean
+          exclusive_groups_enabled?: boolean
+          id?: string
+          name: string
+          price?: number | null
+          provider?: string | null
+          provider_plan_id?: string | null
+          status?: Database["public"]["Enums"]["plan_status"]
+          support_enabled?: boolean
+          tickets_enabled?: boolean
+          trial?: boolean
+          updated_at?: string
+        }
+        Update: {
+          access_duration_days?: number | null
+          additional_user_limit?: number
+          billing_interval?:
+            | Database["public"]["Enums"]["billing_interval"]
+            | null
+          billing_interval_count?: number | null
+          code?: string
+          created_at?: string
+          currency?: string
+          description?: string | null
+          early_access_enabled?: boolean
+          exclusive_groups_enabled?: boolean
+          id?: string
+          name?: string
+          price?: number | null
+          provider?: string | null
+          provider_plan_id?: string | null
+          status?: Database["public"]["Enums"]["plan_status"]
+          support_enabled?: boolean
+          tickets_enabled?: boolean
+          trial?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       product_categories: {
         Row: {
           company_id: string
@@ -441,6 +609,221 @@ export type Database = {
         }
         Relationships: []
       }
+      sale_items: {
+        Row: {
+          company_id: string
+          created_at: string
+          description: string
+          discount_amount: number
+          id: string
+          item_type: Database["public"]["Enums"]["sale_item_type"]
+          product_id: string | null
+          quantity: number
+          sale_id: string
+          service_id: string | null
+          subtotal: number
+          total_amount: number
+          unit_cost: number
+          unit_price: number
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          description: string
+          discount_amount?: number
+          id?: string
+          item_type: Database["public"]["Enums"]["sale_item_type"]
+          product_id?: string | null
+          quantity: number
+          sale_id: string
+          service_id?: string | null
+          subtotal: number
+          total_amount: number
+          unit_cost?: number
+          unit_price: number
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          description?: string
+          discount_amount?: number
+          id?: string
+          item_type?: Database["public"]["Enums"]["sale_item_type"]
+          product_id?: string | null
+          quantity?: number
+          sale_id?: string
+          service_id?: string | null
+          subtotal?: number
+          total_amount?: number
+          unit_cost?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sale_items_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_items_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_items_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sale_payments: {
+        Row: {
+          amount: number
+          company_id: string
+          created_at: string
+          id: string
+          method: Database["public"]["Enums"]["sale_payment_method"]
+          notes: string | null
+          paid_at: string | null
+          sale_id: string
+          status: Database["public"]["Enums"]["sale_payment_status"]
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          company_id: string
+          created_at?: string
+          id?: string
+          method: Database["public"]["Enums"]["sale_payment_method"]
+          notes?: string | null
+          paid_at?: string | null
+          sale_id: string
+          status?: Database["public"]["Enums"]["sale_payment_status"]
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          company_id?: string
+          created_at?: string
+          id?: string
+          method?: Database["public"]["Enums"]["sale_payment_method"]
+          notes?: string | null
+          paid_at?: string | null
+          sale_id?: string
+          status?: Database["public"]["Enums"]["sale_payment_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sale_payments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_payments_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales: {
+        Row: {
+          cancelled_at: string | null
+          cancelled_by: string | null
+          cancelled_reason: string | null
+          company_id: string
+          completed_at: string | null
+          created_at: string
+          customer_id: string | null
+          discount_amount: number
+          estimated_margin: number
+          id: string
+          notes: string | null
+          payment_status: Database["public"]["Enums"]["sale_payment_status"]
+          sold_at: string
+          status: Database["public"]["Enums"]["sale_status"]
+          subtotal: number
+          total_amount: number
+          total_cost: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          cancelled_reason?: string | null
+          company_id: string
+          completed_at?: string | null
+          created_at?: string
+          customer_id?: string | null
+          discount_amount?: number
+          estimated_margin?: number
+          id?: string
+          notes?: string | null
+          payment_status?: Database["public"]["Enums"]["sale_payment_status"]
+          sold_at?: string
+          status?: Database["public"]["Enums"]["sale_status"]
+          subtotal?: number
+          total_amount?: number
+          total_cost?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          cancelled_reason?: string | null
+          company_id?: string
+          completed_at?: string | null
+          created_at?: string
+          customer_id?: string | null
+          discount_amount?: number
+          estimated_margin?: number
+          id?: string
+          notes?: string | null
+          payment_status?: Database["public"]["Enums"]["sale_payment_status"]
+          sold_at?: string
+          status?: Database["public"]["Enums"]["sale_status"]
+          subtotal?: number
+          total_amount?: number
+          total_cost?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_categories: {
         Row: {
           company_id: string
@@ -536,11 +919,231 @@ export type Database = {
           },
         ]
       }
+      subscription_payments: {
+        Row: {
+          amount: number
+          amount_with_tax: number | null
+          company_id: string
+          created_at: string
+          currency: string
+          due_at: string | null
+          end_to_end_id: string | null
+          external_reference: string | null
+          id: string
+          paid_at: string | null
+          payer_document: string | null
+          payer_name: string | null
+          pix_qr_code_base64: string | null
+          pix_qr_code_text: string | null
+          pix_qr_code_url: string | null
+          plan_id: string
+          provider: string
+          provider_transaction_id: string | null
+          status: Database["public"]["Enums"]["subscription_payment_status"]
+          subscription_id: string | null
+          tax_amount: number | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          amount_with_tax?: number | null
+          company_id: string
+          created_at?: string
+          currency?: string
+          due_at?: string | null
+          end_to_end_id?: string | null
+          external_reference?: string | null
+          id?: string
+          paid_at?: string | null
+          payer_document?: string | null
+          payer_name?: string | null
+          pix_qr_code_base64?: string | null
+          pix_qr_code_text?: string | null
+          pix_qr_code_url?: string | null
+          plan_id: string
+          provider?: string
+          provider_transaction_id?: string | null
+          status?: Database["public"]["Enums"]["subscription_payment_status"]
+          subscription_id?: string | null
+          tax_amount?: number | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          amount_with_tax?: number | null
+          company_id?: string
+          created_at?: string
+          currency?: string
+          due_at?: string | null
+          end_to_end_id?: string | null
+          external_reference?: string | null
+          id?: string
+          paid_at?: string | null
+          payer_document?: string | null
+          payer_name?: string | null
+          pix_qr_code_base64?: string | null
+          pix_qr_code_text?: string | null
+          pix_qr_code_url?: string | null
+          plan_id?: string
+          provider?: string
+          provider_transaction_id?: string | null
+          status?: Database["public"]["Enums"]["subscription_payment_status"]
+          subscription_id?: string | null
+          tax_amount?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_payments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_payments_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_payments_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscriptions: {
+        Row: {
+          cancelled_at: string | null
+          company_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          plan_id: string
+          provider: string | null
+          provider_customer_id: string | null
+          provider_subscription_id: string | null
+          starts_at: string
+          status: Database["public"]["Enums"]["subscription_status"]
+          trial_claimed_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          cancelled_at?: string | null
+          company_id: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          plan_id: string
+          provider?: string | null
+          provider_customer_id?: string | null
+          provider_subscription_id?: string | null
+          starts_at?: string
+          status: Database["public"]["Enums"]["subscription_status"]
+          trial_claimed_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cancelled_at?: string | null
+          company_id?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          plan_id?: string
+          provider?: string | null
+          provider_customer_id?: string | null
+          provider_subscription_id?: string | null
+          starts_at?: string
+          status?: Database["public"]["Enums"]["subscription_status"]
+          trial_claimed_by?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      cancel_sale: {
+        Args: { p_reason?: string; p_sale_id: string }
+        Returns: {
+          cancelled_at: string | null
+          cancelled_by: string | null
+          cancelled_reason: string | null
+          company_id: string
+          completed_at: string | null
+          created_at: string
+          customer_id: string | null
+          discount_amount: number
+          estimated_margin: number
+          id: string
+          notes: string | null
+          payment_status: Database["public"]["Enums"]["sale_payment_status"]
+          sold_at: string
+          status: Database["public"]["Enums"]["sale_status"]
+          subtotal: number
+          total_amount: number
+          total_cost: number
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "sales"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      complete_sale: {
+        Args: { p_sale_id: string }
+        Returns: {
+          cancelled_at: string | null
+          cancelled_by: string | null
+          cancelled_reason: string | null
+          company_id: string
+          completed_at: string | null
+          created_at: string
+          customer_id: string | null
+          discount_amount: number
+          estimated_margin: number
+          id: string
+          notes: string | null
+          payment_status: Database["public"]["Enums"]["sale_payment_status"]
+          sold_at: string
+          status: Database["public"]["Enums"]["sale_status"]
+          subtotal: number
+          total_amount: number
+          total_cost: number
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "sales"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       create_company_with_owner: {
         Args: {
           p_business_type?: Database["public"]["Enums"]["business_type"]
@@ -561,8 +1164,28 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      get_public_plans: {
+        Args: never
+        Returns: {
+          access_duration_days: number
+          additional_user_limit: number
+          code: string
+          currency: string
+          description: string
+          early_access_enabled: boolean
+          exclusive_groups_enabled: boolean
+          id: string
+          name: string
+          price: number
+          status: Database["public"]["Enums"]["plan_status"]
+          support_enabled: boolean
+          tickets_enabled: boolean
+          trial: boolean
+        }[]
+      }
     }
     Enums: {
+      billing_interval: "month" | "year"
       business_type:
         | "bakery"
         | "car_wash"
@@ -577,9 +1200,27 @@ export type Database = {
       company_role: "owner" | "admin" | "employee"
       company_status: "active" | "inactive"
       customer_status: "active" | "inactive"
+      plan_status: "active" | "inactive"
       product_status: "active" | "inactive"
       product_unit: "un" | "kg" | "g" | "l" | "ml" | "m" | "cx" | "pct" | "kit"
+      sale_item_type: "product" | "service"
+      sale_payment_method: "cash" | "pix" | "debit" | "credit" | "other"
+      sale_payment_status: "pending" | "paid" | "cancelled" | "refunded"
+      sale_status: "draft" | "completed" | "cancelled"
       service_status: "active" | "inactive"
+      subscription_payment_status:
+        | "pending"
+        | "paid"
+        | "expired"
+        | "cancelled"
+        | "failed"
+        | "refunded"
+      subscription_status:
+        | "trialing"
+        | "pending"
+        | "active"
+        | "expired"
+        | "cancelled"
       user_role: "user" | "admin" | "super_admin"
       user_status: "active" | "inactive" | "suspended"
     }
@@ -709,6 +1350,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      billing_interval: ["month", "year"],
       business_type: [
         "bakery",
         "car_wash",
@@ -724,9 +1366,29 @@ export const Constants = {
       company_role: ["owner", "admin", "employee"],
       company_status: ["active", "inactive"],
       customer_status: ["active", "inactive"],
+      plan_status: ["active", "inactive"],
       product_status: ["active", "inactive"],
       product_unit: ["un", "kg", "g", "l", "ml", "m", "cx", "pct", "kit"],
+      sale_item_type: ["product", "service"],
+      sale_payment_method: ["cash", "pix", "debit", "credit", "other"],
+      sale_payment_status: ["pending", "paid", "cancelled", "refunded"],
+      sale_status: ["draft", "completed", "cancelled"],
       service_status: ["active", "inactive"],
+      subscription_payment_status: [
+        "pending",
+        "paid",
+        "expired",
+        "cancelled",
+        "failed",
+        "refunded",
+      ],
+      subscription_status: [
+        "trialing",
+        "pending",
+        "active",
+        "expired",
+        "cancelled",
+      ],
       user_role: ["user", "admin", "super_admin"],
       user_status: ["active", "inactive", "suspended"],
     },

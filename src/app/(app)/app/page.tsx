@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { ShoppingCart, DollarSign, Wrench, Receipt, Activity } from "lucide-react";
+import { Activity } from "lucide-react";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { getCurrentCompany } from "@/lib/companies/queries";
-import { DashboardCard } from "@/components/app/dashboard-card";
 import { QuickActions } from "@/components/app/quick-actions";
 import { EmptyState } from "@/components/app/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -12,6 +11,8 @@ import { ClientesStatsRow } from "@/components/app/clientes-stats-row";
 import { ClientesRecentesSection } from "@/components/app/clientes-recentes-section";
 import { ProdutosStatsRow } from "@/components/app/produtos-stats-row";
 import { ServicosStatsRow } from "@/components/app/servicos-stats-row";
+import { VendasResumoCards } from "@/components/app/vendas-resumo-cards";
+import { VendasStatsRow } from "@/components/app/vendas-stats-row";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -58,6 +59,17 @@ function ProductStatsRowSkeleton() {
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
       {[0, 1, 2, 3].map((i) => (
+        <StatCardSkeleton key={i} />
+      ))}
+    </div>
+  );
+}
+
+// Grade igual à de SaleStats (5 colunas).
+function SaleStatsRowSkeleton() {
+  return (
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+      {[0, 1, 2, 3, 4].map((i) => (
         <StatCardSkeleton key={i} />
       ))}
     </div>
@@ -121,30 +133,16 @@ export default async function DashboardPage() {
           <Suspense fallback={<DashboardCardSkeleton />}>
             <ClientesCadastradosCard companyId={company.id} />
           </Suspense>
-          <DashboardCard
-            label="Vendas"
-            value="—"
-            icon={ShoppingCart}
-            hint="Você ainda não possui vendas registradas."
-          />
-          <DashboardCard
-            label="Faturamento"
-            value="—"
-            icon={DollarSign}
-            hint="Nenhum faturamento registrado ainda."
-          />
-          <DashboardCard
-            label="Serviços realizados"
-            value="—"
-            icon={Wrench}
-            hint="Nenhum serviço registrado ainda."
-          />
-          <DashboardCard
-            label="Valores a receber"
-            value="—"
-            icon={Receipt}
-            hint="Nenhum valor pendente registrado."
-          />
+          <Suspense
+            fallback={
+              <>
+                <DashboardCardSkeleton />
+                <DashboardCardSkeleton />
+              </>
+            }
+          >
+            <VendasResumoCards companyId={company.id} />
+          </Suspense>
         </div>
       </section>
 
@@ -152,7 +150,16 @@ export default async function DashboardPage() {
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           Ações rápidas
         </h2>
-        <QuickActions />
+        <QuickActions businessType={company.business_type} />
+      </section>
+
+      <section className="flex flex-col gap-3">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          Estatísticas de vendas (mês atual)
+        </h2>
+        <Suspense fallback={<SaleStatsRowSkeleton />}>
+          <VendasStatsRow companyId={company.id} />
+        </Suspense>
       </section>
 
       <section className="flex flex-col gap-3">
