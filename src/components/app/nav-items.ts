@@ -10,6 +10,7 @@ import {
   LineChart,
   FileText,
   Settings,
+  CreditCard,
 } from "lucide-react";
 
 export interface NavItem {
@@ -60,6 +61,7 @@ export const NAV_GROUPS: NavGroup[] = [
   },
   {
     items: [
+      { label: "Assinatura", href: "/app/assinatura", icon: CreditCard, enabled: true },
       {
         label: "Configurações",
         href: "/app/configuracoes",
