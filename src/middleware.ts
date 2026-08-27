@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
+import { getSubscriptionGuardStatus } from "@/lib/billing/guard";
 
 /**
  * Prefixos de rota que exigem usuário autenticado.
@@ -15,6 +16,13 @@ const PROTECTED_PREFIXES = ["/app", "/admin", "/onboarding"];
  */
 const AUTH_ROUTES = ["/login", "/register"];
 
+/**
+ * Prefixo isento do guard de assinatura — é justamente onde o usuário
+ * paga/renova, então precisa continuar acessível mesmo com assinatura
+ * expirada.
+ */
+const SUBSCRIPTION_EXEMPT_PREFIX = "/app/assinatura";
+
 function isProtectedRoute(pathname: string) {
   return PROTECTED_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
@@ -23,6 +31,14 @@ function isProtectedRoute(pathname: string) {
 
 function isAuthRoute(pathname: string) {
   return AUTH_ROUTES.includes(pathname);
+}
+
+function requiresActiveSubscription(pathname: string) {
+  return (
+    (pathname === "/app" || pathname.startsWith("/app/")) &&
+    pathname !== SUBSCRIPTION_EXEMPT_PREFIX &&
+    !pathname.startsWith(`${SUBSCRIPTION_EXEMPT_PREFIX}/`)
+  );
 }
 
 /**
@@ -39,7 +55,7 @@ function isAuthRoute(pathname: string) {
  * protegida.
  */
 export async function middleware(request: NextRequest) {
-  const { response, user } = await updateSession(request);
+  const { response, user, supabase } = await updateSession(request);
   const { pathname } = request.nextUrl;
 
   if (isProtectedRoute(pathname) && !user) {
@@ -50,6 +66,13 @@ export async function middleware(request: NextRequest) {
 
   if (isAuthRoute(pathname) && user) {
     return NextResponse.redirect(new URL("/app", request.url));
+  }
+
+  if (user && requiresActiveSubscription(pathname)) {
+    const { hasCompany, isActive } = await getSubscriptionGuardStatus(supabase, user.id);
+    if (hasCompany && !isActive) {
+      return NextResponse.redirect(new URL("/app/assinatura", request.url));
+    }
   }
 
   return response;

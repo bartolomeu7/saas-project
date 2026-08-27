@@ -1,5 +1,6 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import type { Database } from "@/types/supabase";
 
 /**
  * Atualiza a sessão Supabase a cada request (renova o token quando
@@ -14,7 +15,7 @@ export async function updateSession(request: NextRequest) {
     request: { headers: request.headers },
   });
 
-  const supabase = createServerClient(
+  const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -45,5 +46,8 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  return { response, user };
+  // Devolve também o client (não só response/user) para o middleware
+  // reaproveitar na consulta do guard de assinatura, em vez de criar um
+  // segundo client Supabase por request.
+  return { response, user, supabase };
 }
