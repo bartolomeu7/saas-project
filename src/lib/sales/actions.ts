@@ -28,6 +28,83 @@ function round2(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
+/** Margem para comparação de valores monetários (evita falso-positivo por ponto flutuante). */
+const ROUNDING_TOLERANCE = 0.005;
+
+function formatBRL(value: number): string {
+  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+/**
+ * Saldo restante de uma venda = total da venda - soma dos pagamentos com
+ * status 'paid' (mesmo critério do trigger recompute_sale_payment_status
+ * do banco). Retorna null se a leitura falhar — o chamador nunca deve
+ * tratar null como "saldo zero" ou "saldo livre".
+ */
+async function getSaleRemainingBalance(
+  supabase: SupabaseClient<Database>,
+  saleId: string,
+  totalAmount: number
+): Promise<number | null> {
+  const { data: payments, error } = await supabase
+    .from("sale_payments")
+    .select("amount")
+    .eq("sale_id", saleId)
+    .eq("status", "paid");
+
+  if (error) {
+    return null;
+  }
+
+  const totalPaid = round2((payments ?? []).reduce((sum, p) => sum + Number(p.amount), 0));
+  return round2(totalAmount - totalPaid);
+}
+
+/**
+ * Reconfere, depois do insert, se um pagamento específico ainda cabe
+ * dentro do saldo da venda quando somado em ordem de inserção com os
+ * demais pagamentos 'paid' já existentes — fecha a janela de corrida
+ * entre a checagem de saldo e o insert em addSalePaymentAction (duas
+ * requisições concorrentes podem ambas passar pela checagem antes de
+ * qualquer uma inserir). Sem uma função de banco dedicada (fora do
+ * escopo desta correção), este é o equivalente possível no nível da
+ * aplicação: insert otimista + reconferência determinística +
+ * compensação (delete) do pagamento que estourou o limite.
+ */
+async function confirmPaymentWithinBalance(
+  supabase: SupabaseClient<Database>,
+  saleId: string,
+  paymentId: string,
+  totalAmount: number
+): Promise<boolean> {
+  const { data: payments, error } = await supabase
+    .from("sale_payments")
+    .select("id, amount, created_at")
+    .eq("sale_id", saleId)
+    .eq("status", "paid")
+    .order("created_at", { ascending: true })
+    .order("id", { ascending: true });
+
+  if (error || !payments) {
+    return false;
+  }
+
+  let running = 0;
+  for (const payment of payments) {
+    running = round2(running + Number(payment.amount));
+    if (payment.id === paymentId) {
+      return running <= totalAmount + ROUNDING_TOLERANCE;
+    }
+  }
+
+  // O próprio pagamento não apareceu na releitura — trata como falha
+  // (nunca assume "ok" sem ter confirmado).
+  return false;
+}
+
+const RECALCULATE_TOTALS_ERROR =
+  "Não foi possível recalcular os totais da venda. Tente novamente.";
+
 /**
  * Recalcula subtotal/custo/total/margem de uma venda a partir dos itens
  * reais no banco — nunca a partir de um valor vindo do frontend. Único
@@ -38,16 +115,26 @@ function round2(value: number): number {
  * usuário removeu um item depois de já ter aplicado um desconto maior),
  * o desconto é reduzido automaticamente para não violar a constraint
  * `discount_amount <= subtotal` do banco.
+ *
+ * Cada chamada ao Supabase tem o `error` checado explicitamente: se
+ * qualquer uma falhar, interrompe e devolve erro em vez de seguir com
+ * dado parcial/zerado (ex.: `items` vindo `null` por causa de um erro
+ * silenciosamente calcularia subtotal 0 e sobrescreveria o total real
+ * da venda).
  */
 async function recalculateSaleTotals(
   supabase: SupabaseClient<Database>,
   saleId: string,
   companyId: string
-): Promise<void> {
-  const { data: items } = await supabase
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { data: items, error: itemsError } = await supabase
     .from("sale_items")
     .select("total_amount, quantity, unit_cost")
     .eq("sale_id", saleId);
+
+  if (itemsError) {
+    return { ok: false, error: RECALCULATE_TOTALS_ERROR };
+  }
 
   const rows = items ?? [];
   const subtotal = round2(rows.reduce((sum, row) => sum + Number(row.total_amount), 0));
@@ -55,17 +142,21 @@ async function recalculateSaleTotals(
     rows.reduce((sum, row) => sum + Number(row.quantity) * Number(row.unit_cost), 0)
   );
 
-  const { data: sale } = await supabase
+  const { data: sale, error: saleError } = await supabase
     .from("sales")
     .select("discount_amount")
     .eq("id", saleId)
     .single();
 
-  const discountAmount = Math.min(Number(sale?.discount_amount ?? 0), subtotal);
+  if (saleError || !sale) {
+    return { ok: false, error: RECALCULATE_TOTALS_ERROR };
+  }
+
+  const discountAmount = Math.min(Number(sale.discount_amount), subtotal);
   const totalAmount = round2(subtotal - discountAmount);
   const estimatedMargin = round2(totalAmount - totalCost);
 
-  await supabase
+  const { error: updateError } = await supabase
     .from("sales")
     .update({
       subtotal,
@@ -76,6 +167,12 @@ async function recalculateSaleTotals(
     })
     .eq("id", saleId)
     .eq("company_id", companyId);
+
+  if (updateError) {
+    return { ok: false, error: RECALCULATE_TOTALS_ERROR };
+  }
+
+  return { ok: true };
 }
 
 /** Garante que a venda existe, pertence à empresa e está em rascunho. */
@@ -229,7 +326,10 @@ export async function updateDraftSaleAction(
     }
   }
 
-  await recalculateSaleTotals(supabase, saleId, current.company.id);
+  const recalculated = await recalculateSaleTotals(supabase, saleId, current.company.id);
+  if (!recalculated.ok) {
+    return { error: recalculated.error };
+  }
 
   const user = await getCurrentUser();
   await writeAuditLog(supabase, {
@@ -339,7 +439,10 @@ export async function addSaleItemAction(
     return { error: "Não foi possível adicionar o item. Tente novamente." };
   }
 
-  await recalculateSaleTotals(supabase, saleId, current.company.id);
+  const recalculated = await recalculateSaleTotals(supabase, saleId, current.company.id);
+  if (!recalculated.ok) {
+    return { error: recalculated.error };
+  }
 
   const user = await getCurrentUser();
   await writeAuditLog(supabase, {
@@ -413,7 +516,10 @@ export async function updateSaleItemAction(
     return { error: "Não foi possível atualizar o item. Tente novamente." };
   }
 
-  await recalculateSaleTotals(supabase, saleId, current.company.id);
+  const recalculated = await recalculateSaleTotals(supabase, saleId, current.company.id);
+  if (!recalculated.ok) {
+    return { error: recalculated.error };
+  }
 
   const user = await getCurrentUser();
   await writeAuditLog(supabase, {
@@ -445,14 +551,29 @@ export async function removeSaleItemAction(saleId: string, itemId: string): Prom
     return;
   }
 
-  await supabase
+  const { error: deleteError } = await supabase
     .from("sale_items")
     .delete()
     .eq("id", itemId)
     .eq("sale_id", saleId)
     .eq("company_id", current.company.id);
 
-  await recalculateSaleTotals(supabase, saleId, current.company.id);
+  if (deleteError) {
+    console.error("[removeSaleItemAction] falha ao remover item", { saleId, itemId, deleteError });
+    revalidatePath(`/app/vendas/${saleId}`);
+    return;
+  }
+
+  // removeSaleItemAction não tem um canal de ActionResult (é chamada como
+  // fire-and-forget pela UI, sem formulário) — se o recálculo falhar
+  // aqui, o item já foi removido de verdade; a falha fica registrada no
+  // log do servidor para não passar despercebida, mas exibir esse erro
+  // ao usuário exigiria mudar o contrato da action e o componente que a
+  // chama, fora do escopo desta correção.
+  const recalculated = await recalculateSaleTotals(supabase, saleId, current.company.id);
+  if (!recalculated.ok) {
+    console.error("[removeSaleItemAction] falha ao recalcular totais", { saleId, itemId });
+  }
 
   const user = await getCurrentUser();
   await writeAuditLog(supabase, {
@@ -491,7 +612,7 @@ export async function addSalePaymentAction(
   const supabase = createClient();
   const { data: sale } = await supabase
     .from("sales")
-    .select("id, status")
+    .select("id, status, total_amount")
     .eq("id", saleId)
     .eq("company_id", current.company.id)
     .maybeSingle();
@@ -503,18 +624,59 @@ export async function addSalePaymentAction(
     return { error: "Não é possível registrar pagamento em uma venda cancelada." };
   }
 
-  const { error } = await supabase.from("sale_payments").insert({
-    company_id: current.company.id,
-    sale_id: saleId,
-    method: parsed.data.method,
-    amount: parsed.data.amount,
-    status: "paid",
-    paid_at: new Date().toISOString(),
-    notes: parsed.data.notes,
-  });
+  // Saldo restante = total da venda - soma dos pagamentos já 'paid'.
+  // Lido de novo (nunca aceito do frontend) logo antes do insert, para
+  // reduzir a janela de corrida, e reconferido depois do insert (abaixo)
+  // para os casos em que duas requisições passam por esta checagem ao
+  // mesmo tempo.
+  const remaining = await getSaleRemainingBalance(supabase, saleId, Number(sale.total_amount));
+  if (remaining === null) {
+    return { error: "Não foi possível verificar o saldo da venda. Tente novamente." };
+  }
+  if (parsed.data.amount > remaining + ROUNDING_TOLERANCE) {
+    return {
+      error: `O valor do pagamento (${formatBRL(parsed.data.amount)}) excede o saldo restante da venda (${formatBRL(remaining)}).`,
+    };
+  }
 
-  if (error) {
+  const { data: inserted, error: insertError } = await supabase
+    .from("sale_payments")
+    .insert({
+      company_id: current.company.id,
+      sale_id: saleId,
+      method: parsed.data.method,
+      amount: parsed.data.amount,
+      status: "paid",
+      paid_at: new Date().toISOString(),
+      notes: parsed.data.notes,
+    })
+    .select("id")
+    .single();
+
+  if (insertError || !inserted) {
     return { error: "Não foi possível registrar o pagamento. Tente novamente." };
+  }
+
+  // Reconfere depois do insert: se outra requisição concorrente também
+  // passou pela checagem acima antes de qualquer uma das duas ter
+  // inserido, a soma dos pagamentos 'paid' agora pode ultrapassar o
+  // total da venda. Desempate determinístico por ordem de inserção
+  // (created_at, id): mantém os pagamentos que couberem no saldo nessa
+  // ordem e desfaz (delete) este pagamento se ele for o que estourou o
+  // limite — nunca deixa o total pago passar do total da venda.
+  const survived = await confirmPaymentWithinBalance(
+    supabase,
+    saleId,
+    inserted.id,
+    Number(sale.total_amount)
+  );
+
+  if (!survived) {
+    await supabase.from("sale_payments").delete().eq("id", inserted.id);
+    return {
+      error:
+        "Outro pagamento foi registrado ao mesmo tempo e o saldo da venda já foi atingido. Atualize a página e tente novamente.",
+    };
   }
 
   const user = await getCurrentUser();
