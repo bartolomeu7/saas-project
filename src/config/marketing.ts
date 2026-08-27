@@ -325,7 +325,7 @@ export const COMPARISON_ROWS: ComparisonRow[] = [
   { label: "Acesso antecipado", values: [false, true, true, true] },
   {
     label: "Usuários adicionais",
-    values: ["—", "2", "5", "10"],
+    values: ["—", "2", "2", "2"],
     note: "Quantidade de usuários adicionais além do proprietário.",
   },
 ];

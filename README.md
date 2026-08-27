@@ -112,6 +112,11 @@ Definidas em `.env.example` (sem valores reais):
 | `NEXT_PUBLIC_APP_URL` | URL pública da aplicação | Sim |
 | `NEXT_PUBLIC_APP_ENV` | `development` \| `staging` \| `production` | Sim |
 
+Em produção (Vercel), `NEXT_PUBLIC_APP_URL` deve ser `https://primeges.com.br` —
+configurado nas variáveis de ambiente do projeto na Vercel, não neste
+repositório. Em desenvolvimento local, `.env.local` continua usando
+`http://localhost:3000`.
+
 Onde encontrar as chaves do Supabase: **Project Settings → API** no dashboard
 do seu projeto.
 

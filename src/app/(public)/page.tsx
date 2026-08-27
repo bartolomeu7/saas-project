@@ -29,9 +29,13 @@ const SEO_DESCRIPTION =
 export const metadata: Metadata = {
   title: "Prime Ges — Gestão simples para pequenas empresas",
   description: SEO_DESCRIPTION,
+  alternates: {
+    canonical: siteConfig.url,
+  },
   openGraph: {
     title: "Prime Ges — Gestão simples para pequenas empresas",
     description: SEO_DESCRIPTION,
+    url: siteConfig.url,
     type: "website",
     locale: "pt_BR",
     siteName: siteConfig.name,
