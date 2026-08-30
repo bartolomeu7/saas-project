@@ -35,6 +35,8 @@ export const AUDIT_ACTIONS = {
   CUSTOMER_REACTIVATED: "customer.reactivated",
   CUSTOMER_BIRTH_DATE_UPDATED: "customer.birth_date_updated",
   CUSTOMER_PREFERENCES_UPDATED: "customer.preferences_updated",
+  CUSTOMER_DOCUMENT_UPLOADED: "customer_document.uploaded",
+  CUSTOMER_DOCUMENT_DELETED: "customer_document.deleted",
   RAFFLE_EXECUTED: "raffle.executed",
   PRODUCT_CREATED: "product.created",
   PRODUCT_UPDATED: "product.updated",

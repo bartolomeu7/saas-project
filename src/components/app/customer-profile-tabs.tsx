@@ -7,6 +7,7 @@ const TABS = [
   { key: "compras", label: "Compras" },
   { key: "servicos", label: "Serviços" },
   { key: "financeiro", label: "Financeiro" },
+  { key: "documentos", label: "Documentos" },
   { key: "observacoes", label: "Observações" },
 ] as const;
 

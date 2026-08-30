@@ -14,6 +14,7 @@ import {
 import { getCustomerRevenueRank } from "@/lib/customers/ranking";
 import { classifyCustomer } from "@/lib/customers/classification";
 import { listAuditLogsForEntity } from "@/lib/audit/queries";
+import { listCustomerDocuments } from "@/lib/customer-documents/queries";
 import { SaleTable } from "@/components/app/sale-table";
 import { getCurrentUser } from "@/lib/auth/session";
 import { CustomerStatusBadge } from "@/components/app/customer-status-badge";
@@ -22,6 +23,7 @@ import { ReactivateCustomerButton } from "@/components/app/reactivate-customer-b
 import { CustomerProfileTabs } from "@/components/app/customer-profile-tabs";
 import { CustomerSummaryTab } from "@/components/app/customer-summary-tab";
 import { CustomerHistoryTab } from "@/components/app/customer-history-tab";
+import { CustomerDocumentsTab } from "@/components/app/customer-documents-tab";
 import { EmptyState } from "@/components/app/empty-state";
 import { formatDate } from "@/lib/format";
 
@@ -29,7 +31,15 @@ export const metadata: Metadata = {
   title: "Cliente",
 };
 
-const VALID_TABS = ["resumo", "historico", "compras", "servicos", "financeiro", "observacoes"] as const;
+const VALID_TABS = [
+  "resumo",
+  "historico",
+  "compras",
+  "servicos",
+  "financeiro",
+  "documentos",
+  "observacoes",
+] as const;
 type TabKey = (typeof VALID_TABS)[number];
 
 function parseTab(value?: string): TabKey {
@@ -95,6 +105,9 @@ export default async function CustomerDetailPage({
   const customerSales =
     tab === "compras" ? await listSalesByCustomer(current.company.id, customer.id) : [];
   const currentUser = tab === "compras" ? await getCurrentUser() : null;
+
+  const documents =
+    tab === "documentos" ? await listCustomerDocuments(current.company.id, customer.id) : [];
 
   return (
     <div className="flex flex-col gap-6 px-4 py-6 sm:px-6">
@@ -181,6 +194,10 @@ export default async function CustomerDetailPage({
               title="Financeiro — Em breve"
               description="O módulo Financeiro ainda não foi implementado. Quando estiver disponível, pagamentos e pendências deste cliente aparecerão aqui."
             />
+          )}
+
+          {tab === "documentos" && (
+            <CustomerDocumentsTab customerId={customer.id} documents={documents} />
           )}
 
           {tab === "observacoes" && (
