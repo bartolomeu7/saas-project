@@ -32,6 +32,19 @@ function pickRandomIndexes(poolSize: number, count: number): number[] {
   return indexes.slice(0, count);
 }
 
+/** Datas de compra em formato "YYYY-MM-DD" vindas de <input type="date">; retorna null se ausente/inválida. */
+function parseOptionalDate(value: FormDataEntryValue | null): string | null {
+  if (typeof value !== "string" || !value) return null;
+  return Number.isNaN(Date.parse(value)) ? null : value;
+}
+
+/** Número opcional vindo do formulário; retorna null se ausente/inválido/negativo. */
+function parseOptionalPositiveNumber(value: FormDataEntryValue | null): number | null {
+  if (typeof value !== "string" || value.trim() === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+}
+
 /**
  * Define os critérios, busca os clientes elegíveis e executa o sorteio
  * — tudo em uma única operação atômica no servidor. O resultado é
@@ -39,9 +52,9 @@ function pickRandomIndexes(poolSize: number, count: number): number[] {
  * dados do cliente) e nunca pode ser alterado depois: as tabelas não
  * têm policy de update/delete para usuários comuns.
  *
- * "Compraram no período" e "valor mínimo gasto" não são critérios
- * disponíveis ainda — dependem do módulo de Vendas, que não existe
- * nesta fase.
+ * "Compraram no período", "quantidade mínima de compras" e "valor
+ * mínimo gasto" (Etapa 1A) são calculados a partir de vendas `completed`
+ * reais — nunca de um valor estimado ou inventado.
  */
 export async function runRaffleAction(
   _prevState: ActionResult,
@@ -51,6 +64,10 @@ export async function runRaffleAction(
   const activeOnly = formData.get("activeOnly") === "on";
   const registeredFrom = (formData.get("registeredFrom") as string | null) || null;
   const registeredTo = (formData.get("registeredTo") as string | null) || null;
+  const purchasedFrom = parseOptionalDate(formData.get("purchasedFrom"));
+  const purchasedTo = parseOptionalDate(formData.get("purchasedTo"));
+  const minPurchases = parseOptionalPositiveNumber(formData.get("minPurchases"));
+  const minAmountSpent = parseOptionalPositiveNumber(formData.get("minAmountSpent"));
   const winnerCount = Number(formData.get("winnerCount"));
 
   if (!Number.isInteger(winnerCount) || winnerCount < 1 || winnerCount > MAX_WINNERS) {
@@ -92,7 +109,49 @@ export async function runRaffleAction(
     return { error: "Não foi possível buscar os clientes elegíveis. Tente novamente." };
   }
 
-  const pool = eligible ?? [];
+  let pool = eligible ?? [];
+
+  // Filtros por compra (opcionais) — agregados a partir de vendas reais
+  // concluídas, nunca inventados. Só consulta sales quando algum desses
+  // filtros foi realmente informado.
+  if (purchasedFrom || purchasedTo || minPurchases !== null || minAmountSpent !== null) {
+    let salesQuery = supabase
+      .from("sales")
+      .select("customer_id, total_amount")
+      .eq("company_id", current.company.id)
+      .eq("status", "completed")
+      .not("customer_id", "is", null);
+
+    if (purchasedFrom) {
+      salesQuery = salesQuery.gte("completed_at", new Date(purchasedFrom).toISOString());
+    }
+    if (purchasedTo) {
+      const end = new Date(purchasedTo);
+      end.setHours(23, 59, 59, 999);
+      salesQuery = salesQuery.lte("completed_at", end.toISOString());
+    }
+
+    const { data: purchases, error: purchasesError } = await salesQuery;
+    if (purchasesError) {
+      return { error: "Não foi possível calcular os filtros de compra. Tente novamente." };
+    }
+
+    const byCustomer = new Map<string, { count: number; total: number }>();
+    for (const row of purchases ?? []) {
+      const existing = byCustomer.get(row.customer_id!) ?? { count: 0, total: 0 };
+      existing.count += 1;
+      existing.total += Number(row.total_amount);
+      byCustomer.set(row.customer_id!, existing);
+    }
+
+    pool = pool.filter((customer) => {
+      const agg = byCustomer.get(customer.id);
+      if (!agg) return false;
+      if (minPurchases !== null && agg.count < minPurchases) return false;
+      if (minAmountSpent !== null && agg.total < minAmountSpent) return false;
+      return true;
+    });
+  }
 
   if (pool.length === 0) {
     return { error: "Nenhum cliente elegível encontrado com esses critérios." };
@@ -111,6 +170,10 @@ export async function runRaffleAction(
     activeOnly,
     registeredFrom,
     registeredTo,
+    purchasedFrom,
+    purchasedTo,
+    minPurchases,
+    minAmountSpent,
     winnerCount,
   };
 

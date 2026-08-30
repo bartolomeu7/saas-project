@@ -10,7 +10,7 @@ import { FormMessage } from "@/components/shared/auth/form-message";
 
 const initialState: ActionResult = {};
 
-export function RaffleForm() {
+export function RaffleForm({ hasAnySales }: { hasAnySales: boolean }) {
   const [state, formAction] = useFormState(runRaffleAction, initialState);
 
   return (
@@ -51,26 +51,59 @@ export function RaffleForm() {
         </Label>
       </div>
 
-      <div className="flex flex-col gap-3 rounded-md border border-dashed border-border p-3 opacity-60">
-        <div className="flex items-center gap-2">
-          <input type="checkbox" disabled className="h-4 w-4 rounded border-input" />
-          <Label className="font-normal">
-            Somente clientes que compraram no período
-          </Label>
-          <span className="rounded-full bg-white/5 px-1.5 py-0.5 text-[10px] font-medium uppercase text-muted-foreground">
-            Em breve
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <Label className="w-40 shrink-0 font-normal">Valor mínimo gasto</Label>
-          <Input disabled placeholder="R$ 0,00" className="w-32" />
-          <span className="rounded-full bg-white/5 px-1.5 py-0.5 text-[10px] font-medium uppercase text-muted-foreground">
-            Em breve
-          </span>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Esses critérios dependem do módulo de Vendas, que ainda não existe.
+      <div
+        className={
+          hasAnySales
+            ? "flex flex-col gap-4 rounded-md border border-border p-3"
+            : "flex flex-col gap-3 rounded-md border border-dashed border-border p-3 opacity-60"
+        }
+      >
+        <p className="text-xs font-medium uppercase text-muted-foreground">
+          Filtros por compras (opcional)
         </p>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="purchasedFrom">Compraram a partir de</Label>
+            <Input id="purchasedFrom" name="purchasedFrom" type="date" disabled={!hasAnySales} />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="purchasedTo">até</Label>
+            <Input id="purchasedTo" name="purchasedTo" type="date" disabled={!hasAnySales} />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="minPurchases">Quantidade mínima de compras</Label>
+            <Input
+              id="minPurchases"
+              name="minPurchases"
+              type="number"
+              min={1}
+              placeholder="Ex: 2"
+              disabled={!hasAnySales}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="minAmountSpent">Valor mínimo gasto</Label>
+            <Input
+              id="minAmountSpent"
+              name="minAmountSpent"
+              type="number"
+              min={0}
+              step="0.01"
+              placeholder="R$ 0,00"
+              disabled={!hasAnySales}
+            />
+          </div>
+        </div>
+
+        {!hasAnySales && (
+          <p className="text-xs text-muted-foreground">
+            Esses filtros ficam disponíveis assim que houver vendas concluídas vinculadas a clientes.
+          </p>
+        )}
       </div>
 
       <div className="flex flex-col gap-2 sm:w-52">

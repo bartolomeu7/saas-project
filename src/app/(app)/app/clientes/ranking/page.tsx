@@ -89,6 +89,27 @@ export default async function CustomerRankingPage({
         />
       ) : (
         <div className="flex flex-col gap-3">
+          {sorted[0] && (
+            <div className="flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 p-4">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <Trophy className="h-5 w-5" />
+              </span>
+              <div>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Cliente destaque do período · {SORT_LABELS[sortBy]}
+                </p>
+                <p className="text-sm font-semibold text-foreground">
+                  <Link
+                    href={`/app/clientes/${sorted[0].customerId}`}
+                    className="underline-offset-4 hover:underline"
+                  >
+                    {sorted[0].customerName}
+                  </Link>
+                </p>
+              </div>
+            </div>
+          )}
+
           <RankingSortSelector current={sortBy} labels={SORT_LABELS} />
 
           <div className="overflow-x-auto rounded-lg border border-border">

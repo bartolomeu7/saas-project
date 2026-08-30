@@ -277,6 +277,7 @@ export type Database = {
         Row: {
           address: string | null
           address_number: string | null
+          birth_date: string | null
           city: string | null
           company_id: string
           complement: string | null
@@ -289,6 +290,7 @@ export type Database = {
           notes: string | null
           phone: string | null
           postal_code: string | null
+          preferences: Json
           state: string | null
           status: Database["public"]["Enums"]["customer_status"]
           updated_at: string
@@ -297,6 +299,7 @@ export type Database = {
         Insert: {
           address?: string | null
           address_number?: string | null
+          birth_date?: string | null
           city?: string | null
           company_id: string
           complement?: string | null
@@ -309,6 +312,7 @@ export type Database = {
           notes?: string | null
           phone?: string | null
           postal_code?: string | null
+          preferences?: Json
           state?: string | null
           status?: Database["public"]["Enums"]["customer_status"]
           updated_at?: string
@@ -317,6 +321,7 @@ export type Database = {
         Update: {
           address?: string | null
           address_number?: string | null
+          birth_date?: string | null
           city?: string | null
           company_id?: string
           complement?: string | null
@@ -329,6 +334,7 @@ export type Database = {
           notes?: string | null
           phone?: string | null
           postal_code?: string | null
+          preferences?: Json
           state?: string | null
           status?: Database["public"]["Enums"]["customer_status"]
           updated_at?: string

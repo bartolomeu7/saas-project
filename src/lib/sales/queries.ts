@@ -382,6 +382,71 @@ export const getCustomerSalesStats = cache(async function getCustomerSalesStats(
   };
 });
 
+export interface CustomerTopProduct {
+  productId: string;
+  description: string;
+  totalQuantity: number;
+  totalSpent: number;
+}
+
+/**
+ * Produtos mais comprados por um cliente específico, a partir dos itens
+ * reais das vendas concluídas (nunca draft/cancelled). Só produtos (não
+ * serviços) — mesma distinção de item_type usada no resto do módulo.
+ */
+export const getCustomerTopProducts = cache(async function getCustomerTopProducts(
+  companyId: string,
+  customerId: string,
+  limit = 5
+): Promise<CustomerTopProduct[]> {
+  const supabase = createClient();
+
+  // Duas consultas simples (venda→itens) em vez de um filtro aninhado via
+  // dot-notation do PostgREST — mesmo padrão de simplicidade já usado no
+  // resto do módulo de vendas.
+  const { data: completedSales } = await supabase
+    .from("sales")
+    .select("id")
+    .eq("company_id", companyId)
+    .eq("customer_id", customerId)
+    .eq("status", "completed");
+
+  const saleIds = (completedSales ?? []).map((sale) => sale.id);
+  if (saleIds.length === 0) return [];
+
+  const { data } = await supabase
+    .from("sale_items")
+    .select("product_id, description, quantity, total_amount")
+    .eq("company_id", companyId)
+    .eq("item_type", "product")
+    .not("product_id", "is", null)
+    .in("sale_id", saleIds);
+
+  const rows = (data ?? []) as Array<{
+    product_id: string;
+    description: string;
+    quantity: number;
+    total_amount: number;
+  }>;
+
+  const byProduct = new Map<string, CustomerTopProduct>();
+  for (const row of rows) {
+    const existing = byProduct.get(row.product_id) ?? {
+      productId: row.product_id,
+      description: row.description,
+      totalQuantity: 0,
+      totalSpent: 0,
+    };
+    existing.totalQuantity += Number(row.quantity);
+    existing.totalSpent += Number(row.total_amount);
+    byProduct.set(row.product_id, existing);
+  }
+
+  return Array.from(byProduct.values())
+    .sort((a, b) => b.totalQuantity - a.totalQuantity)
+    .slice(0, limit);
+});
+
 const PRODUCT_SEARCH_LIMIT = 15;
 const SERVICE_SEARCH_LIMIT = 15;
 const CUSTOMER_SEARCH_LIMIT = 10;

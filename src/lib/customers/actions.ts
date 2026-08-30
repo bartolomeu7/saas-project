@@ -30,6 +30,8 @@ function parseCustomerForm(formData: FormData) {
     state: formData.get("state"),
     postalCode: formData.get("postalCode"),
     notes: formData.get("notes"),
+    birthDate: formData.get("birthDate"),
+    preferences: formData.get("preferences"),
     status: formData.get("status") || "active",
   });
 }
@@ -68,6 +70,8 @@ export async function createCustomerAction(
       state: parsed.data.state,
       postal_code: parsed.data.postalCode,
       notes: parsed.data.notes,
+      birth_date: parsed.data.birthDate,
+      preferences: parsed.data.preferences,
       status: parsed.data.status,
     })
     .select("id")
@@ -114,6 +118,17 @@ export async function updateCustomerAction(
   }
 
   const supabase = createClient();
+
+  // Lido antes do update só para saber se birth_date/preferences
+  // realmente mudaram — permite registrar eventos de auditoria
+  // específicos além do customer_updated genérico, sem duplicar lógica.
+  const { data: before } = await supabase
+    .from("customers")
+    .select("birth_date, preferences")
+    .eq("id", id)
+    .eq("company_id", current.company.id)
+    .maybeSingle();
+
   const { error } = await supabase
     .from("customers")
     .update({
@@ -130,6 +145,8 @@ export async function updateCustomerAction(
       state: parsed.data.state,
       postal_code: parsed.data.postalCode,
       notes: parsed.data.notes,
+      birth_date: parsed.data.birthDate,
+      preferences: parsed.data.preferences,
       status: parsed.data.status,
     })
     // Redundante com a RLS de propósito (defesa em profundidade): mesmo
@@ -151,6 +168,29 @@ export async function updateCustomerAction(
     action: AUDIT_ACTIONS.CUSTOMER_UPDATED,
     metadata: { name: parsed.data.name, status: parsed.data.status },
   });
+
+  if (before && before.birth_date !== parsed.data.birthDate) {
+    await writeAuditLog(supabase, {
+      companyId: current.company.id,
+      actorUserId: user?.id ?? null,
+      entityType: "customer",
+      entityId: id,
+      action: AUDIT_ACTIONS.CUSTOMER_BIRTH_DATE_UPDATED,
+    });
+  }
+
+  if (
+    before &&
+    JSON.stringify(before.preferences ?? {}) !== JSON.stringify(parsed.data.preferences ?? {})
+  ) {
+    await writeAuditLog(supabase, {
+      companyId: current.company.id,
+      actorUserId: user?.id ?? null,
+      entityType: "customer",
+      entityId: id,
+      action: AUDIT_ACTIONS.CUSTOMER_PREFERENCES_UPDATED,
+    });
+  }
 
   revalidatePath("/app");
   revalidatePath("/app/clientes");

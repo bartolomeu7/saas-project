@@ -7,6 +7,9 @@
 /** Espelha o enum public.customer_status. */
 export type CustomerStatus = "active" | "inactive";
 
+/** Preferências livres do cliente (chave/valor) — sem estrutura fixa, ver migration 010. */
+export type CustomerPreferences = Record<string, string>;
+
 /** Espelha a tabela public.customers. */
 export interface Customer {
   id: string;
@@ -24,6 +27,8 @@ export interface Customer {
   state: string | null;
   postal_code: string | null;
   notes: string | null;
+  birth_date: string | null;
+  preferences: CustomerPreferences;
   status: CustomerStatus;
   created_at: string;
   updated_at: string;
@@ -49,6 +54,8 @@ export type CustomerFormFields = Pick<
   | "state"
   | "postal_code"
   | "notes"
+  | "birth_date"
+  | "preferences"
   | "status"
 >;
 

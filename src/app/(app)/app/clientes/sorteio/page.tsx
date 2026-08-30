@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getCurrentCompany } from "@/lib/companies/queries";
+import { createClient } from "@/lib/supabase/server";
 import { listRaffles } from "@/lib/raffles/queries";
 import { RaffleForm } from "@/components/app/raffle-form";
 import { RaffleHistoryList } from "@/components/app/raffle-history-list";
@@ -12,7 +13,22 @@ export const metadata: Metadata = {
 
 export default async function CustomerRafflePage() {
   const current = (await getCurrentCompany())!;
-  const raffles = await listRaffles(current.company.id);
+  const supabase = createClient();
+
+  const [raffles, { count: completedSalesCount }] = await Promise.all([
+    listRaffles(current.company.id),
+    supabase
+      .from("sales")
+      .select("*", { count: "exact", head: true })
+      .eq("company_id", current.company.id)
+      .eq("status", "completed")
+      .not("customer_id", "is", null),
+  ]);
+
+  // Os filtros de compra do sorteio dependem de vendas concluídas
+  // vinculadas a um cliente — sem isso, ficam desabilitados em vez de
+  // mostrar um filtro que nunca vai encontrar ninguém.
+  const hasAnySales = (completedSalesCount ?? 0) > 0;
 
   return (
     <div className="flex flex-col gap-6 px-4 py-6 sm:px-6">
@@ -33,7 +49,7 @@ export default async function CustomerRafflePage() {
       </div>
 
       <div className="max-w-2xl">
-        <RaffleForm />
+        <RaffleForm hasAnySales={hasAnySales} />
       </div>
 
       <div className="flex flex-col gap-3">

@@ -133,3 +133,37 @@ export async function getCustomerRanking(
     entries,
   };
 }
+
+/** Quantos clientes no topo do ranking por receita (ano corrente) contam como "VIP" — reaproveita getCustomerRanking, nunca um valor de receita fixo/arbitrário. */
+const VIP_TOP_N = 3;
+
+export interface CustomerRevenueRank {
+  /** Posição (1 = maior receita) dentre os clientes com receita no ano corrente, ou null se o cliente não teve nenhuma venda concluída no ano. */
+  position: number | null;
+  totalRanked: number;
+  isTopTier: boolean;
+}
+
+/**
+ * Posição de um cliente específico no ranking de receita do ano corrente
+ * — reaproveita getCustomerRanking (nunca duplica a agregação) só para
+ * localizar a posição do cliente informado. Usado por classifyCustomer
+ * para decidir "VIP" de forma relativa à própria empresa, nunca por um
+ * valor de receita fixo (que não faria sentido comparando segmentos
+ * diferentes).
+ */
+export async function getCustomerRevenueRank(
+  companyId: string,
+  customerId: string
+): Promise<CustomerRevenueRank> {
+  const range = resolvePeriodRange("year");
+  const ranking = await getCustomerRanking(companyId, "year", range);
+  const sorted = [...ranking.entries].sort((a, b) => b.revenue - a.revenue);
+  const index = sorted.findIndex((entry) => entry.customerId === customerId);
+
+  return {
+    position: index === -1 ? null : index + 1,
+    totalRanked: sorted.length,
+    isTopTier: index !== -1 && index < VIP_TOP_N,
+  };
+}

@@ -1,14 +1,18 @@
 "use client";
 
+import { useState } from "react";
 import { useFormState } from "react-dom";
+import { Plus, X } from "lucide-react";
 import type { ActionResult } from "@/lib/auth/actions";
 import type { CustomerFormFields } from "@/types/customer";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { SubmitButton } from "@/components/shared/auth/submit-button";
 import { FormMessage } from "@/components/shared/auth/form-message";
 
 const initialState: ActionResult = {};
+const MAX_PREFERENCES = 10;
 
 interface CustomerFormProps {
   action: (prevState: ActionResult, formData: FormData) => Promise<ActionResult>;
@@ -22,6 +26,20 @@ export function CustomerForm({
   submitLabel,
 }: CustomerFormProps) {
   const [state, formAction] = useFormState(action, initialState);
+  const [preferences, setPreferences] = useState<{ key: string; value: string }[]>(() =>
+    Object.entries(defaultValues?.preferences ?? {}).map(([key, value]) => ({
+      key,
+      value: String(value),
+    }))
+  );
+
+  const preferencesJson = JSON.stringify(
+    Object.fromEntries(
+      preferences
+        .map((p) => [p.key.trim(), p.value.trim()] as const)
+        .filter(([key, value]) => key.length > 0 && value.length > 0)
+    )
+  );
 
   return (
     <form action={formAction} className="flex flex-col gap-6">
@@ -47,6 +65,16 @@ export function CustomerForm({
               id="document"
               name="document"
               defaultValue={defaultValues?.document ?? ""}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="birthDate">Aniversário</Label>
+            <Input
+              id="birthDate"
+              name="birthDate"
+              type="date"
+              max={new Date().toISOString().slice(0, 10)}
+              defaultValue={defaultValues?.birth_date ?? ""}
             />
           </div>
           <div className="flex flex-col gap-2">
@@ -161,6 +189,70 @@ export function CustomerForm({
             />
           </div>
         </div>
+      </section>
+
+      <section className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-muted-foreground">
+            Preferências
+          </h2>
+          {preferences.length < MAX_PREFERENCES && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => setPreferences((prev) => [...prev, { key: "", value: "" }])}
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Adicionar
+            </Button>
+          )}
+        </div>
+
+        {preferences.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Nenhuma preferência registrada. Ex.: forma de pagamento preferida, produto favorito.
+          </p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {preferences.map((pref, index) => (
+              <div key={index} className="flex items-center gap-2">
+                <Input
+                  aria-label="Nome da preferência"
+                  placeholder="Preferência (ex: forma de pagamento)"
+                  value={pref.key}
+                  maxLength={60}
+                  onChange={(event) =>
+                    setPreferences((prev) =>
+                      prev.map((p, i) => (i === index ? { ...p, key: event.target.value } : p))
+                    )
+                  }
+                />
+                <Input
+                  aria-label="Valor da preferência"
+                  placeholder="Valor (ex: Pix)"
+                  value={pref.value}
+                  maxLength={200}
+                  onChange={(event) =>
+                    setPreferences((prev) =>
+                      prev.map((p, i) => (i === index ? { ...p, value: event.target.value } : p))
+                    )
+                  }
+                />
+                <button
+                  type="button"
+                  aria-label="Remover preferência"
+                  onClick={() => setPreferences((prev) => prev.filter((_, i) => i !== index))}
+                  className="shrink-0 rounded-md p-2 text-muted-foreground hover:bg-secondary hover:text-foreground"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        <input type="hidden" name="preferences" value={preferencesJson} />
       </section>
 
       <section className="flex flex-col gap-2">

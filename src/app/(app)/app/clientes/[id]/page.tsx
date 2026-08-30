@@ -6,7 +6,13 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getCurrentCompany } from "@/lib/companies/queries";
 import { getCustomerById } from "@/lib/customers/queries";
-import { getCustomerSalesStats, listSalesByCustomer } from "@/lib/sales/queries";
+import {
+  getCustomerSalesStats,
+  getCustomerTopProducts,
+  listSalesByCustomer,
+} from "@/lib/sales/queries";
+import { getCustomerRevenueRank } from "@/lib/customers/ranking";
+import { classifyCustomer } from "@/lib/customers/classification";
 import { listAuditLogsForEntity } from "@/lib/audit/queries";
 import { SaleTable } from "@/components/app/sale-table";
 import { getCurrentUser } from "@/lib/auth/session";
@@ -64,6 +70,28 @@ export default async function CustomerDetailPage({
       ? await getCustomerSalesStats(current.company.id, customer.id)
       : { totalSpent: 0, purchaseCount: 0, averageTicket: null, lastPurchaseAt: null, estimatedMargin: 0 };
 
+  // Só busca posição no ranking/produtos mais comprados quando a aba
+  // Resumo está aberta e há pelo menos uma compra — evita consultas
+  // desnecessárias nas outras abas ou para clientes sem vendas ainda.
+  const revenueRank =
+    tab === "resumo" && salesStats.purchaseCount > 0
+      ? await getCustomerRevenueRank(current.company.id, customer.id)
+      : { position: null, totalRanked: 0, isTopTier: false };
+
+  const topProducts =
+    tab === "resumo" && salesStats.purchaseCount > 0
+      ? await getCustomerTopProducts(current.company.id, customer.id)
+      : [];
+
+  const classification =
+    tab === "resumo"
+      ? classifyCustomer({
+          stats: salesStats,
+          customerCreatedAt: customer.created_at,
+          isTopTier: revenueRank.isTopTier,
+        })
+      : null;
+
   const customerSales =
     tab === "compras" ? await listSalesByCustomer(current.company.id, customer.id) : [];
   const currentUser = tab === "compras" ? await getCurrentUser() : null;
@@ -113,8 +141,13 @@ export default async function CustomerDetailPage({
         <CustomerProfileTabs customerId={customer.id} activeTab={tab} />
 
         <div className="pt-6">
-          {tab === "resumo" && (
-            <CustomerSummaryTab customer={customer} salesStats={salesStats} />
+          {tab === "resumo" && classification && (
+            <CustomerSummaryTab
+              customer={customer}
+              salesStats={salesStats}
+              classification={classification}
+              topProducts={topProducts}
+            />
           )}
 
           {tab === "historico" && <CustomerHistoryTab logs={auditLogs} />}
