@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.15"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -397,6 +397,339 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loyalty_accounts: {
+        Row: {
+          balance: number
+          company_id: string
+          created_at: string
+          customer_id: string
+          id: string
+          lifetime_points: number
+          updated_at: string
+        }
+        Insert: {
+          balance?: number
+          company_id: string
+          created_at?: string
+          customer_id: string
+          id?: string
+          lifetime_points?: number
+          updated_at?: string
+        }
+        Update: {
+          balance?: number
+          company_id?: string
+          created_at?: string
+          customer_id?: string
+          id?: string
+          lifetime_points?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_accounts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_accounts_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: true
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loyalty_campaigns: {
+        Row: {
+          bonus_points: number | null
+          company_id: string
+          created_at: string
+          description: string | null
+          ends_at: string
+          id: string
+          multiplier: number | null
+          name: string
+          product_id: string | null
+          service_id: string | null
+          starts_at: string
+          status: Database["public"]["Enums"]["loyalty_campaign_status"]
+          updated_at: string
+        }
+        Insert: {
+          bonus_points?: number | null
+          company_id: string
+          created_at?: string
+          description?: string | null
+          ends_at: string
+          id?: string
+          multiplier?: number | null
+          name: string
+          product_id?: string | null
+          service_id?: string | null
+          starts_at: string
+          status?: Database["public"]["Enums"]["loyalty_campaign_status"]
+          updated_at?: string
+        }
+        Update: {
+          bonus_points?: number | null
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          ends_at?: string
+          id?: string
+          multiplier?: number | null
+          name?: string
+          product_id?: string | null
+          service_id?: string | null
+          starts_at?: string
+          status?: Database["public"]["Enums"]["loyalty_campaign_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_campaigns_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_campaigns_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_campaigns_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loyalty_multipliers: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          multiplier: number
+          product_id: string | null
+          service_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          multiplier: number
+          product_id?: string | null
+          service_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          multiplier?: number
+          product_id?: string | null
+          service_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_multipliers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_multipliers_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_multipliers_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loyalty_settings: {
+        Row: {
+          birthday_bonus_points: number
+          company_id: string
+          created_at: string
+          enabled: boolean
+          first_purchase_bonus_points: number
+          grant_on: Database["public"]["Enums"]["loyalty_grant_on"]
+          id: string
+          max_redeem_percent_per_sale: number | null
+          min_points_to_redeem: number
+          min_purchase_amount_for_points: number
+          points_expire: boolean
+          points_expire_after_days: number | null
+          points_per_currency_unit: number
+          redemption_value_per_point: number
+          updated_at: string
+        }
+        Insert: {
+          birthday_bonus_points?: number
+          company_id: string
+          created_at?: string
+          enabled?: boolean
+          first_purchase_bonus_points?: number
+          grant_on?: Database["public"]["Enums"]["loyalty_grant_on"]
+          id?: string
+          max_redeem_percent_per_sale?: number | null
+          min_points_to_redeem?: number
+          min_purchase_amount_for_points?: number
+          points_expire?: boolean
+          points_expire_after_days?: number | null
+          points_per_currency_unit?: number
+          redemption_value_per_point?: number
+          updated_at?: string
+        }
+        Update: {
+          birthday_bonus_points?: number
+          company_id?: string
+          created_at?: string
+          enabled?: boolean
+          first_purchase_bonus_points?: number
+          grant_on?: Database["public"]["Enums"]["loyalty_grant_on"]
+          id?: string
+          max_redeem_percent_per_sale?: number | null
+          min_points_to_redeem?: number
+          min_purchase_amount_for_points?: number
+          points_expire?: boolean
+          points_expire_after_days?: number | null
+          points_per_currency_unit?: number
+          redemption_value_per_point?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_settings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loyalty_tier_thresholds: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          min_lifetime_points: number
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          min_lifetime_points: number
+          name: string
+          sort_order: number
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          min_lifetime_points?: number
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_tier_thresholds_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loyalty_transactions: {
+        Row: {
+          balance_after: number
+          company_id: string
+          created_at: string
+          customer_id: string
+          expires_at: string | null
+          id: string
+          performed_by: string | null
+          points: number
+          reason: string | null
+          reference_id: string | null
+          reference_type: string | null
+          remaining_points: number
+          source: Database["public"]["Enums"]["loyalty_transaction_source"]
+          type: Database["public"]["Enums"]["loyalty_transaction_type"]
+        }
+        Insert: {
+          balance_after: number
+          company_id: string
+          created_at?: string
+          customer_id: string
+          expires_at?: string | null
+          id?: string
+          performed_by?: string | null
+          points: number
+          reason?: string | null
+          reference_id?: string | null
+          reference_type?: string | null
+          remaining_points?: number
+          source: Database["public"]["Enums"]["loyalty_transaction_source"]
+          type: Database["public"]["Enums"]["loyalty_transaction_type"]
+        }
+        Update: {
+          balance_after?: number
+          company_id?: string
+          created_at?: string
+          customer_id?: string
+          expires_at?: string | null
+          id?: string
+          performed_by?: string | null
+          points?: number
+          reason?: string | null
+          reference_id?: string | null
+          reference_type?: string | null
+          remaining_points?: number
+          source?: Database["public"]["Enums"]["loyalty_transaction_source"]
+          type?: Database["public"]["Enums"]["loyalty_transaction_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_transactions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_transactions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
             referencedColumns: ["id"]
           },
         ]
@@ -812,6 +1145,8 @@ export type Database = {
           discount_amount: number
           estimated_margin: number
           id: string
+          loyalty_discount_amount: number
+          loyalty_points_redeemed: number
           notes: string | null
           payment_status: Database["public"]["Enums"]["sale_payment_status"]
           sold_at: string
@@ -833,6 +1168,8 @@ export type Database = {
           discount_amount?: number
           estimated_margin?: number
           id?: string
+          loyalty_discount_amount?: number
+          loyalty_points_redeemed?: number
           notes?: string | null
           payment_status?: Database["public"]["Enums"]["sale_payment_status"]
           sold_at?: string
@@ -854,6 +1191,8 @@ export type Database = {
           discount_amount?: number
           estimated_margin?: number
           id?: string
+          loyalty_discount_amount?: number
+          loyalty_points_redeemed?: number
           notes?: string | null
           payment_status?: Database["public"]["Enums"]["sale_payment_status"]
           sold_at?: string
@@ -1141,6 +1480,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      adjust_loyalty_points: {
+        Args: { p_customer_id: string; p_points: number; p_reason: string }
+        Returns: number
+      }
       cancel_sale: {
         Args: { p_reason?: string; p_sale_id: string }
         Returns: {
@@ -1154,6 +1497,8 @@ export type Database = {
           discount_amount: number
           estimated_margin: number
           id: string
+          loyalty_discount_amount: number
+          loyalty_points_redeemed: number
           notes: string | null
           payment_status: Database["public"]["Enums"]["sale_payment_status"]
           sold_at: string
@@ -1184,6 +1529,8 @@ export type Database = {
           discount_amount: number
           estimated_margin: number
           id: string
+          loyalty_discount_amount: number
+          loyalty_points_redeemed: number
           notes: string | null
           payment_status: Database["public"]["Enums"]["sale_payment_status"]
           sold_at: string
@@ -1221,6 +1568,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      expire_loyalty_points_batch: { Args: never; Returns: number }
       get_public_plans: {
         Args: never
         Returns: {
@@ -1240,6 +1588,18 @@ export type Database = {
           trial: boolean
         }[]
       }
+      grant_loyalty_points_for_sale: {
+        Args: { p_sale_id: string }
+        Returns: undefined
+      }
+      redeem_loyalty_points: {
+        Args: { p_points: number; p_sale_id: string }
+        Returns: number
+      }
+      reverse_loyalty_points_for_sale: {
+        Args: { p_sale_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       billing_interval: "month" | "year"
@@ -1257,6 +1617,22 @@ export type Database = {
       company_role: "owner" | "admin" | "employee"
       company_status: "active" | "inactive"
       customer_status: "active" | "inactive"
+      loyalty_campaign_status: "active" | "inactive"
+      loyalty_grant_on: "completion" | "full_payment"
+      loyalty_transaction_source:
+        | "sale"
+        | "manual"
+        | "campaign"
+        | "birthday"
+        | "first_purchase"
+        | "expiration"
+        | "reversal"
+      loyalty_transaction_type:
+        | "ganho"
+        | "resgate"
+        | "ajuste"
+        | "expirado"
+        | "reversao"
       plan_status: "active" | "inactive"
       product_status: "active" | "inactive"
       product_unit: "un" | "kg" | "g" | "l" | "ml" | "m" | "cx" | "pct" | "kit"
@@ -1423,6 +1799,24 @@ export const Constants = {
       company_role: ["owner", "admin", "employee"],
       company_status: ["active", "inactive"],
       customer_status: ["active", "inactive"],
+      loyalty_campaign_status: ["active", "inactive"],
+      loyalty_grant_on: ["completion", "full_payment"],
+      loyalty_transaction_source: [
+        "sale",
+        "manual",
+        "campaign",
+        "birthday",
+        "first_purchase",
+        "expiration",
+        "reversal",
+      ],
+      loyalty_transaction_type: [
+        "ganho",
+        "resgate",
+        "ajuste",
+        "expirado",
+        "reversao",
+      ],
       plan_status: ["active", "inactive"],
       product_status: ["active", "inactive"],
       product_unit: ["un", "kg", "g", "l", "ml", "m", "cx", "pct", "kit"],

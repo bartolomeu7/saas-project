@@ -73,4 +73,9 @@ export const AUDIT_ACTIONS = {
   PAYMENT_CANCELLED: "subscription_payment.cancelled",
   PAYMENT_REFUNDED: "subscription_payment.refunded",
   PAYMENT_WEBHOOK_PROCESSED: "subscription_payment.webhook_processed",
+  LOYALTY_POINTS_EARNED: "loyalty.points_earned",
+  LOYALTY_POINTS_REDEEMED: "loyalty.points_redeemed",
+  LOYALTY_POINTS_ADJUSTED: "loyalty.points_adjusted",
+  LOYALTY_POINTS_EXPIRED: "loyalty.points_expired",
+  LOYALTY_POINTS_REVERSED: "loyalty.points_reversed",
 } as const;
