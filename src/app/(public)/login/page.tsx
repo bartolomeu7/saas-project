@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 export default function LoginPage({
   searchParams,
 }: {
-  searchParams?: { error?: string };
+  searchParams?: { error?: string; next?: string };
 }) {
   return (
     <AuthCard
@@ -43,7 +43,7 @@ export default function LoginPage({
         </div>
       )}
 
-      <GoogleAuthButton />
+      <GoogleAuthButton next={searchParams?.next} />
 
       <div className="my-4 flex items-center gap-3">
         <div className="h-px flex-1 bg-border" />
@@ -51,7 +51,7 @@ export default function LoginPage({
         <div className="h-px flex-1 bg-border" />
       </div>
 
-      <LoginForm />
+      <LoginForm next={searchParams?.next} />
       <div className="mt-4 text-center">
         <Link
           href="/forgot-password"

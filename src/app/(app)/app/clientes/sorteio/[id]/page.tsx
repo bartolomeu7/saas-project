@@ -29,6 +29,29 @@ function formatCriteria(criteria: Record<string, unknown>): string[] {
     lines.push("Sem filtro de data de cadastro");
   }
 
+  if (criteria.purchasedFrom || criteria.purchasedTo) {
+    const from = criteria.purchasedFrom
+      ? formatDate(new Date(criteria.purchasedFrom as string).toISOString())
+      : "início";
+    const to = criteria.purchasedTo
+      ? formatDate(new Date(criteria.purchasedTo as string).toISOString())
+      : "hoje";
+    lines.push(`Compras entre ${from} e ${to}`);
+  }
+
+  if (criteria.minPurchases != null) {
+    lines.push(`Mínimo de compras: ${criteria.minPurchases}`);
+  }
+
+  if (criteria.minAmountSpent != null) {
+    lines.push(
+      `Valor mínimo gasto: ${Number(criteria.minAmountSpent).toLocaleString("pt-BR", {
+        style: "currency",
+        currency: "BRL",
+      })}`
+    );
+  }
+
   lines.push(`Vencedores sorteados: ${criteria.winnerCount ?? "—"}`);
 
   return lines;

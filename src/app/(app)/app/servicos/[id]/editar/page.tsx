@@ -43,6 +43,7 @@ export default async function EditServicePage({
           action={action}
           defaultValues={service}
           categories={categories}
+          currentCategoryName={service.category_name}
           submitLabel="Salvar alterações"
         />
       </div>

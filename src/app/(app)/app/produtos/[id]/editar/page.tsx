@@ -45,6 +45,7 @@ export default async function EditProductPage({
           action={action}
           defaultValues={product}
           categories={categories}
+          currentCategoryName={product.category_name}
           segmentHints={hints}
           submitLabel="Salvar alterações"
         />
