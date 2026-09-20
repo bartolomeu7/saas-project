@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { getSaleById } from "@/lib/sales/queries";
 import { getSaleSegmentHints } from "@/config/sale-segments";
 import { listAuditLogsForEntity } from "@/lib/audit/queries";
+import { getLoyaltySettings, getLoyaltyAccount } from "@/lib/loyalty/queries";
 import { calculateMarginPercentage } from "@/types/sale";
 import { SaleStatusBadge } from "@/components/app/sale-status-badge";
 import { CustomerPicker } from "@/components/app/customer-picker";
@@ -13,6 +14,7 @@ import { ProductPicker } from "@/components/app/product-picker";
 import { ServicePicker } from "@/components/app/service-picker";
 import { SaleItemsTable } from "@/components/app/sale-items-table";
 import { SaleSummaryCard } from "@/components/app/sale-summary-card";
+import { UseLoyaltyPointsCard } from "@/components/app/use-loyalty-points-card";
 import { SalePaymentForm } from "@/components/app/sale-payment-form";
 import { SalePaymentList } from "@/components/app/sale-payment-list";
 import { CompleteSaleButton } from "@/components/app/complete-sale-button";
@@ -51,6 +53,18 @@ export default async function SaleDetailPage({ params }: { params: { id: string 
     (current.role === "owner" || current.role === "admin" || sale.user_id === user?.id);
 
   const marginPercentage = calculateMarginPercentage(sale.estimated_margin, sale.total_amount);
+
+  // Só busca fidelidade quando existe alguma chance real de mostrar o
+  // card: rascunho + cliente selecionado. loyaltySettings.enabled=false
+  // (ou nunca configurado) esconde o card por completo — ver "QUANDO
+  // MOSTRAR" na Etapa 1D.6C.
+  const loyaltySettings =
+    isDraft && sale.customer_id ? await getLoyaltySettings(current.company.id) : null;
+  const loyaltyAccount =
+    isDraft && sale.customer_id && loyaltySettings?.enabled
+      ? await getLoyaltyAccount(current.company.id, sale.customer_id)
+      : null;
+  const showLoyaltyCard = isDraft && !!sale.customer_id && !!loyaltySettings?.enabled;
 
   const productPicker = <ProductPicker key="products" saleId={sale.id} />;
   const servicePicker = <ServicePicker key="services" saleId={sale.id} />;
@@ -95,7 +109,11 @@ export default async function SaleDetailPage({ params }: { params: { id: string 
           {isDraft && (
             <div className="rounded-lg border border-border bg-card p-6">
               <h2 className="mb-3 text-sm font-semibold text-foreground">Cliente</h2>
-              <CustomerPicker saleId={sale.id} currentCustomerName={sale.customer_name} />
+              <CustomerPicker
+                saleId={sale.id}
+                currentCustomerName={sale.customer_name}
+                loyaltyPointsRedeemed={sale.loyalty_points_redeemed}
+              />
             </div>
           )}
 
@@ -110,6 +128,16 @@ export default async function SaleDetailPage({ params }: { params: { id: string 
             <h2 className="mb-3 text-sm font-semibold text-muted-foreground">Itens</h2>
             <SaleItemsTable saleId={sale.id} items={sale.items} editable={isDraft} />
           </div>
+
+          {showLoyaltyCard && loyaltyAccount && (
+            <UseLoyaltyPointsCard
+              saleId={sale.id}
+              settings={loyaltySettings!}
+              account={loyaltyAccount}
+              loyaltyPointsRedeemed={sale.loyalty_points_redeemed}
+              loyaltyDiscountAmount={sale.loyalty_discount_amount}
+            />
+          )}
 
           {sale.status !== "cancelled" && (
             <div className="rounded-lg border border-border bg-card p-6">

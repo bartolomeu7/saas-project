@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { ShoppingCart, Wrench, Wallet } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
@@ -24,6 +25,7 @@ import { CustomerProfileTabs } from "@/components/app/customer-profile-tabs";
 import { CustomerSummaryTab } from "@/components/app/customer-summary-tab";
 import { CustomerHistoryTab } from "@/components/app/customer-history-tab";
 import { CustomerDocumentsTab } from "@/components/app/customer-documents-tab";
+import { CustomerLoyaltyTab, CustomerLoyaltyTabSkeleton } from "@/components/app/customer-loyalty-tab";
 import { EmptyState } from "@/components/app/empty-state";
 import { formatDate } from "@/lib/format";
 
@@ -38,6 +40,7 @@ const VALID_TABS = [
   "servicos",
   "financeiro",
   "documentos",
+  "fidelidade",
   "observacoes",
 ] as const;
 type TabKey = (typeof VALID_TABS)[number];
@@ -198,6 +201,16 @@ export default async function CustomerDetailPage({
 
           {tab === "documentos" && (
             <CustomerDocumentsTab customerId={customer.id} documents={documents} />
+          )}
+
+          {tab === "fidelidade" && (
+            <Suspense fallback={<CustomerLoyaltyTabSkeleton />}>
+              <CustomerLoyaltyTab
+                companyId={current.company.id}
+                customerId={customer.id}
+                canConfigure={current.role === "owner" || current.role === "admin"}
+              />
+            </Suspense>
           )}
 
           {tab === "observacoes" && (
