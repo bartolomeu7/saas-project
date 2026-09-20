@@ -2,13 +2,15 @@
 
 Fundação de um produto **SaaS** moderno, modular, seguro e preparado para produção.
 
-> Status atual: **autenticação, multi-tenant, dashboard e módulo de Clientes
-> implementados** (Etapas 1–3). Pagamentos, planos, assinaturas, demais
-> módulos de negócio (produtos, serviços, vendas, estoque, financeiro) e o
-> painel administrativo global ainda não foram implementados — ver
-> [`docs/architecture.md`](./docs/architecture.md) para o roadmap e
-> [`docs/authentication.md`](./docs/authentication.md) para o fluxo de
-> autenticação.
+> Status atual: **autenticação, multi-tenant, dashboard, Clientes, Produtos,
+> Serviços, Vendas (com pagamentos, descontos e cancelamento), Fidelidade,
+> Documentos de cliente, Sorteio/Ranking e Billing/assinatura via EvoPay
+> (Pix) implementados.** O painel administrativo da plataforma (`/admin`)
+> tem o guard de acesso pronto, mas ainda nenhuma página de conteúdo.
+> Estoque, Caixa, Financeiro, Relatórios, Agenda e Equipe/Colaboradores ainda
+> não têm backend — ver [`docs/architecture.md`](./docs/architecture.md)
+> para o detalhe de cada módulo e [`docs/authentication.md`](./docs/authentication.md)
+> para o fluxo de autenticação.
 
 ## Stack
 
@@ -30,7 +32,7 @@ Fundação de um produto **SaaS** moderno, modular, seguro e preparado para prod
 
 ```
 src/
-├── middleware.ts      # protege /app, /admin, /onboarding; renova sessão
+├── middleware.ts      # protege /app, /admin, /onboarding; guard de role e de assinatura; renova sessão
 ├── app/
 │   ├── auth/callback/ # troca code por sessão (confirmação/recuperação)
 │   ├── onboarding/    # criação da primeira empresa (fora do route group (app))
@@ -38,28 +40,35 @@ src/
 │   ├── (app)/
 │   │   └── app/
 │   │       ├── page.tsx           # dashboard
-│   │       └── clientes/          # listagem, /novo, /[id], /[id]/editar
-│   ├── (admin)/       # painel administrativo (isolado, ainda vazio)
-│   └── api/           # route handlers (webhooks, endpoints internos)
+│   │       ├── clientes/          # listagem, /novo, /[id], /[id]/editar
+│   │       ├── produtos/          # produtos e categorias
+│   │       ├── servicos/          # serviços e categorias
+│   │       ├── vendas/            # nova venda, item, pagamento, cancelamento
+│   │       ├── fidelidade/        # configurações, níveis, campanhas
+│   │       └── assinatura/        # billing/assinatura (EvoPay)
+│   ├── admin/         # painel da plataforma — segmento real (não route group);
+│   │                  # guard pronto (src/lib/admin/guard.ts), sem página ainda
+│   └── api/           # route handlers (webhook EvoPay, criação de cobrança Pix)
 ├── components/
 │   ├── ui/            # componentes shadcn/ui (button, input, label, alert)
 │   ├── shared/         # reutilizáveis (auth forms, headers)
-│   ├── app/             # AppShell, sidebar, dashboard e módulo de clientes
-│   └── admin/            # específicos do admin
+│   ├── app/             # AppShell, sidebar e todos os módulos de negócio
+│   └── admin/            # específicos do admin (ainda sem conteúdo)
 ├── lib/
 │   ├── supabase/       # clientes Supabase (browser, server, admin, middleware)
 │   ├── auth/             # server actions de auth + leitura de sessão/perfil
+│   ├── admin/             # guard de acesso à plataforma (profiles.role)
+│   ├── billing/           # guard de assinatura + integração EvoPay
 │   ├── companies/         # leitura da empresa atual + criação (onboarding)
 │   ├── customers/          # queries e server actions do módulo de clientes
-│   └── validations/         # schemas Zod (auth, company, customer)
-├── hooks/
-├── types/               # Profile, Company, Customer + tipos do Supabase
+│   ├── products/, services/, sales/, loyalty/  # demais módulos de negócio
+│   └── validations/         # schemas Zod por módulo
+├── hooks/               # ainda vazio
+├── types/               # tipos de domínio por módulo + tipos do Supabase
 └── config/               # configuração estática do projeto
 
 supabase/
-└── migrations/
-    ├── 001_create_profiles.sql
-    └── 002_create_companies_customers.sql   # companies, company_members, customers, RLS
+└── migrations/          # 001 (profiles) até 016 (fundação + todos os módulos)
 
 docs/
 ├── architecture.md     # visão geral da arquitetura
@@ -92,10 +101,10 @@ docs/
 5. Acesse [http://localhost:3000](http://localhost:3000). Você deve ver o nome
    do projeto "Prime Ges" e o status "Aplicação Online".
 
-6. Aplique as migrations no seu projeto Supabase, em ordem, antes de testar
-   (`supabase/migrations/001_create_profiles.sql` e depois
-   `002_create_companies_customers.sql`), pelo SQL Editor do dashboard ou via
-   `supabase db push` se estiver usando o Supabase CLI.
+6. Aplique todas as migrations no seu projeto Supabase, em ordem numérica
+   (`supabase/migrations/001_create_profiles.sql` até a mais recente), pelo
+   SQL Editor do dashboard ou via `supabase db push` se estiver usando o
+   Supabase CLI.
 
 7. No primeiro acesso, você será redirecionado para `/onboarding` para criar
    sua empresa antes de chegar ao dashboard.

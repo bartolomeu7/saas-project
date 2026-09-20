@@ -69,7 +69,7 @@ do cliente `anon` do frontend.
 ### Logout (`signOutAction`)
 
 `supabase.auth.signOut()` + redirect para `/login`. Disparado por um form
-simples no `AppHeader` (`src/components/app/app-header.tsx`).
+simples no menu do usuário (`src/components/app/user-menu.tsx`).
 
 ### Recuperação de senha
 
@@ -94,10 +94,17 @@ simples no `AppHeader` (`src/components/app/app-header.tsx`).
 3. Se a rota é `/login` ou `/register` e o usuário já está autenticado,
    redireciona para `/app`.
 
-**Importante:** nesta etapa, `/admin` exige apenas estar autenticado — ainda
-não há checagem de `role`. Isso será adicionado quando o painel
-administrativo for implementado, junto com uma policy de RLS que restrinja
-o acesso a perfis de terceiros.
+4. Para `/admin` e `/admin/*`, além de autenticado, o middleware exige
+   `profiles.role` igual a `admin` ou `super_admin` — nunca
+   `company_members.role` (um owner de empresa cliente não é administrador
+   de plataforma só por isso). A checagem vive em `src/lib/admin/guard.ts`
+   (`getPlatformAdminGuardStatus`, `isPlatformAdminRole`), no mesmo molde
+   de `src/lib/billing/guard.ts`: uma função sem `"server-only"`/
+   `next/headers`, para poder ser chamada tanto pelo middleware (Edge
+   Runtime) quanto por uma futura página/layout do painel. Quem não
+   atende é redirecionado para `/app`. O painel em si (`src/app/admin/`)
+   ainda não tem nenhuma página — o guard já está pronto para quando
+   existir.
 
 ## Onde cada coisa vive
 
@@ -110,14 +117,17 @@ o acesso a perfis de terceiros.
 | Cliente Supabase (server) | `src/lib/supabase/server.ts` |
 | Cliente Supabase (admin/service_role) | `src/lib/supabase/admin.ts` |
 | Renovação de sessão + proteção de rota | `src/middleware.ts`, `src/lib/supabase/middleware.ts` |
+| Guard de acesso à plataforma (`/admin`) | `src/lib/admin/guard.ts` |
 | Callback de confirmação/recuperação | `src/app/auth/callback/route.ts` |
 | Migration (tabela, RLS, triggers) | `supabase/migrations/001_create_profiles.sql` |
 | Tipos de domínio | `src/types/profile.ts`, `src/types/supabase.ts` |
 
 ## Próximos passos (fora do escopo desta etapa)
 
-- Checagem de `role` no middleware/rotas para proteger `/admin` de fato.
 - Policies de RLS adicionais para administradores lerem/editarem perfis de
-  terceiros.
-- Painel administrativo completo (clientes, usuários, planos, pagamentos,
-  assinaturas, logs, cupons, configurações, auditoria).
+  terceiros (hoje `admin`/`super_admin` já leem entre empresas em algumas
+  tabelas de billing/auditoria/sorteio — ver `docs/architecture.md` — mas
+  não em `profiles`).
+- Painel administrativo completo em `src/app/admin/` (dashboard, empresas,
+  usuários, planos, pagamentos, assinaturas, tickets, auditoria,
+  configurações) — o guard de acesso já existe, falta só o conteúdo.
