@@ -14,6 +14,7 @@ const ACTION_META: Record<string, { label: string; icon: LucideIcon }> = {
 const dateTimeFormatter = new Intl.DateTimeFormat("pt-BR", {
   dateStyle: "short",
   timeStyle: "short",
+  timeZone: "America/Sao_Paulo",
 });
 
 function describeMetadata(log: AuditLog): string | null {

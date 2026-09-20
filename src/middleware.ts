@@ -1,14 +1,19 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 import { getSubscriptionGuardStatus } from "@/lib/billing/guard";
+import { getPlatformAdminGuardStatus } from "@/lib/admin/guard";
 
 /**
  * Prefixos de rota que exigem usuário autenticado.
- * /admin já está listado aqui para preparar a estrutura, mas ainda sem
- * verificação de role (isso será adicionado quando o painel administrativo
- * for implementado).
  */
 const PROTECTED_PREFIXES = ["/app", "/admin", "/onboarding"];
+
+/**
+ * Prefixo da área administrativa da plataforma — exige, além de
+ * autenticação, profiles.role igual a "admin" ou "super_admin"
+ * (nunca company_members.role; ver src/lib/admin/guard.ts).
+ */
+const ADMIN_PREFIX = "/admin";
 
 /**
  * Rotas de autenticação: se o usuário já está logado, não faz sentido
@@ -41,6 +46,10 @@ function requiresActiveSubscription(pathname: string) {
   );
 }
 
+function isAdminRoute(pathname: string) {
+  return pathname === ADMIN_PREFIX || pathname.startsWith(`${ADMIN_PREFIX}/`);
+}
+
 /**
  * Middleware raiz da aplicação.
  *
@@ -48,11 +57,12 @@ function requiresActiveSubscription(pathname: string) {
  * 2. Bloqueia acesso a rotas protegidas (/app, /admin) para quem não
  *    está autenticado, redirecionando para /login.
  * 3. Evita que um usuário já autenticado veja /login ou /register.
- *
- * Verificação de ROLE (ex: exigir admin para /admin) ainda não é feita
- * aqui — será adicionada junto com o painel administrativo. Nesta etapa,
- * /admin apenas exige estar autenticado, como qualquer outra rota
- * protegida.
+ * 4. Em /admin e /admin/*, além de autenticado, exige
+ *    profiles.role igual a "admin" ou "super_admin" — nunca
+ *    company_members.role (um owner de empresa não é administrador de
+ *    plataforma só por isso). Quem não atende é levado de volta a /app;
+ *    a consulta só roda para requests que batem em /admin*, sem custo
+ *    para o resto do app.
  */
 export async function middleware(request: NextRequest) {
   const { response, user, supabase } = await updateSession(request);
@@ -66,6 +76,13 @@ export async function middleware(request: NextRequest) {
 
   if (isAuthRoute(pathname) && user) {
     return NextResponse.redirect(new URL("/app", request.url));
+  }
+
+  if (user && isAdminRoute(pathname)) {
+    const { isPlatformAdmin } = await getPlatformAdminGuardStatus(supabase, user.id);
+    if (!isPlatformAdmin) {
+      return NextResponse.redirect(new URL("/app", request.url));
+    }
   }
 
   if (user && requiresActiveSubscription(pathname)) {

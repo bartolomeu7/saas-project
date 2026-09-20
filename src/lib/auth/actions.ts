@@ -24,6 +24,21 @@ const GENERIC_AUTH_ERROR =
   "Não foi possível concluir a operação. Verifique os dados e tente novamente.";
 
 /**
+ * O middleware guarda em `next` a rota que o usuário tentou acessar antes
+ * de ser redirecionado para /login (src/middleware.ts). Só aceitamos um
+ * path relativo interno (começa com uma única "/", nunca "//" ou
+ * "/\" — que navegadores tratam como protocol-relative — e nunca contém
+ * ":") como destino pós-login, para nunca virar um open redirect a partir
+ * de um valor de querystring.
+ */
+function safeNextPath(next: string | null | undefined): string | null {
+  if (!next) return null;
+  if (!next.startsWith("/") || next.startsWith("//") || next.startsWith("/\\")) return null;
+  if (next.includes(":")) return null;
+  return next;
+}
+
+/**
  * Cadastro de novo usuário.
  * A criação do registro em public.profiles é feita automaticamente pelo
  * trigger on_auth_user_created (migration 001) — nenhuma lógica de
@@ -66,8 +81,14 @@ export async function signUpAction(
   };
 }
 
-/** Login com e-mail e senha. */
+/**
+ * Login com e-mail e senha. `next` (rota original antes do redirect para
+ * /login feito pelo middleware) é passado via `.bind(null, next)` no
+ * componente — por isso é o primeiro parâmetro, antes do par
+ * (prevState, formData) que o useFormState exige.
+ */
 export async function signInAction(
+  next: string | null,
   _prevState: ActionResult,
   formData: FormData
 ): Promise<ActionResult> {
@@ -81,13 +102,23 @@ export async function signInAction(
   }
 
   const supabase = createClient();
-  const { error } = await supabase.auth.signInWithPassword(parsed.data);
+  const { data, error } = await supabase.auth.signInWithPassword(parsed.data);
 
   if (error) {
     return { error: "E-mail ou senha inválidos." };
   }
 
-  redirect("/app");
+  // Best-effort: profiles.last_login_at existe no schema desde a
+  // migration 001 mas nunca era escrito por nenhum código. Falha aqui
+  // nunca deve impedir o login — por isso o erro é ignorado de propósito.
+  if (data.user) {
+    await supabase
+      .from("profiles")
+      .update({ last_login_at: new Date().toISOString() })
+      .eq("user_id", data.user.id);
+  }
+
+  redirect(safeNextPath(next) ?? "/app");
 }
 
 /** Logout do usuário atual. */
@@ -106,13 +137,14 @@ export async function signOutAction(): Promise<void> {
  * Supabase (Client ID/Secret do Google Cloud Console); sem isso, o
  * Supabase retorna erro e o usuário é redirecionado de volta ao login.
  */
-export async function signInWithGoogleAction(): Promise<void> {
+export async function signInWithGoogleAction(next: string | null): Promise<void> {
   const supabase = createClient();
+  const target = safeNextPath(next) ?? "/app";
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: `${siteConfig.url}/auth/callback?next=/app`,
+      redirectTo: `${siteConfig.url}/auth/callback?next=${encodeURIComponent(target)}`,
     },
   });
 
@@ -155,9 +187,12 @@ export async function forgotPasswordAction(
 }
 
 /**
- * Conclusão da recuperação de senha. Só funciona se o usuário chegou
- * até aqui através do link de recuperação (que já criou uma sessão
- * temporária via /auth/callback).
+ * Conclusão da recuperação de senha. Só funciona se a sessão atual foi
+ * criada pelo fluxo de recuperação por e-mail (link → /auth/callback),
+ * nunca por uma sessão comum de usuário já autenticado — do contrário,
+ * /reset-password seria a única tela do sistema capaz de trocar a
+ * própria senha sem exigir a senha atual, para QUALQUER sessão logada
+ * (ex.: um computador compartilhado com sessão esquecida).
  */
 export async function resetPasswordAction(
   _prevState: ActionResult,
@@ -174,14 +209,29 @@ export async function resetPasswordAction(
 
   const supabase = createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: claimsData, error: claimsError } = await supabase.auth.getClaims();
 
-  if (!user) {
+  if (claimsError || !claimsData) {
     return {
       error:
         "Link inválido ou expirado. Solicite uma nova recuperação de senha.",
+    };
+  }
+
+  // amr (Authentication Method Reference) registra COMO esta sessão foi
+  // criada. O GoTrue inclui "recovery" só para sessões originadas do link
+  // de recuperação de senha (via /auth/callback → exchangeCodeForSession);
+  // login normal por senha/Google usa outros métodos ("password"/"oauth").
+  // Sem essa checagem, /reset-password trocaria a senha de QUALQUER sessão
+  // autenticada, sem exigir a senha atual (ex.: computador compartilhado
+  // com sessão esquecida).
+  const amr = claimsData.claims.amr as Array<{ method?: string }> | undefined;
+  const isRecoverySession = Array.isArray(amr) && amr.some((entry) => entry?.method === "recovery");
+
+  if (!isRecoverySession) {
+    return {
+      error:
+        "Esta ação só pode ser concluída a partir do link enviado por e-mail. Solicite uma nova recuperação de senha.",
     };
   }
 

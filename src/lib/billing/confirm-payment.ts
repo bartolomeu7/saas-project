@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getPixCharge, EvoPayError } from "@/lib/evopay/client";
 import { mapEvoPayStatus } from "@/lib/billing/mappers";
 import { AUDIT_ACTIONS } from "@/types/audit";
-import type { Database, Json } from "@/types/supabase";
+import type { Json } from "@/types/supabase";
 import type { SubscriptionPaymentStatus } from "@/types/billing";
 
 export interface ConfirmPaymentResult {
@@ -21,9 +21,15 @@ export interface ConfirmPaymentResult {
  * provider_transaction_id já salvo no nosso banco (não o que veio no
  * payload), pois a EvoPay não assina os webhooks.
  *
- * Idempotente via payment_events (provider, event_id) — event_id
- * sintético "{transactionId}:{status}", conforme a própria EvoPay
- * recomenda na documentação para deduplicar.
+ * A decisão de status + gravação + idempotência + renovação de assinatura
+ * é TODA delegada à função de banco `confirm_subscription_payment`
+ * (migration 019, SECURITY DEFINER, restrita a service_role), que trava a
+ * linha do pagamento com FOR UPDATE antes de decidir qualquer coisa — só
+ * assim duas confirmações concorrentes do MESMO pagamento (webhook
+ * duplicado, "Já paguei" clicado ao mesmo tempo em que o webhook chega,
+ * reenvio de webhook) não conseguem conceder o período pago em dobro.
+ * Esta função em TypeScript só cuida do que só pode ser feito aqui: a
+ * chamada HTTP real à EvoPay.
  */
 export async function confirmPaymentFromProvider(
   paymentId: string
@@ -74,78 +80,52 @@ export async function confirmPaymentFromProvider(
   const newStatus = mapEvoPayStatus(transaction.status);
   const eventId = `${transaction.id}:${transaction.status}`;
 
-  const { data: existingEvent } = await supabase
-    .from("payment_events")
-    .select("id, processed")
-    .eq("provider", "evopay")
-    .eq("event_id", eventId)
-    .maybeSingle();
+  const { data: rpcRows, error: rpcError } = await supabase.rpc("confirm_subscription_payment", {
+    p_payment_id: paymentId,
+    p_provider_status: newStatus,
+    // O parâmetro SQL aceita NULL de propósito (coalesce com o valor já
+    // salvo) — o gerador de tipos do Supabase não expressa nullability de
+    // argumentos de função, então o cast abaixo só contorna essa limitação
+    // de tipagem, sem mudar o valor realmente enviado.
+    p_end_to_end_id: (transaction.endToEndId ?? null) as unknown as string,
+    p_event_id: eventId,
+    p_event_type: "pix.status_check",
+    p_event_payload: transaction as unknown as Json,
+  });
 
-  if (existingEvent?.processed) {
-    return { ok: true, status: newStatus };
+  if (rpcError) {
+    return {
+      ok: false,
+      status: payment.status,
+      message: "Não foi possível confirmar o pagamento agora.",
+    };
   }
 
-  if (!existingEvent) {
-    await supabase.from("payment_events").insert({
-      provider: "evopay",
-      event_id: eventId,
-      event_type: "pix.status_check",
-      payload: transaction as unknown as Json,
-      subscription_payment_id: payment.id,
-      processed: false,
-    });
+  const result = rpcRows?.[0];
+  if (!result || result.not_found) {
+    return { ok: false, status: "pending", message: "Pagamento não encontrado." };
   }
 
-  if (newStatus === payment.status) {
-    await markEventProcessed(supabase, eventId);
-    return { ok: true, status: newStatus };
+  // already_processed=true (evento repetido já tratado) e "status não
+  // mudou" (idempotência de estado) não geram nova auditoria — só o
+  // primeiro processamento real de cada mudança de status grava o log.
+  if (!result.already_processed && result.new_status !== payment.status) {
+    const action = auditActionForStatus(result.new_status);
+    if (action) {
+      await supabase.from("audit_logs").insert({
+        company_id: payment.company_id,
+        entity_type: "subscription_payment",
+        entity_id: payment.id,
+        action,
+        metadata: {
+          provider_transaction_id: transaction.id,
+          provider_status: transaction.status,
+        },
+      });
+    }
   }
 
-  const paymentUpdates: Database["public"]["Tables"]["subscription_payments"]["Update"] = {
-    status: newStatus,
-    end_to_end_id: transaction.endToEndId ?? payment.end_to_end_id,
-  };
-  if (newStatus === "paid" && !payment.paid_at) {
-    paymentUpdates.paid_at = new Date().toISOString();
-  }
-
-  await supabase.from("subscription_payments").update(paymentUpdates).eq("id", payment.id);
-
-  if (newStatus === "paid") {
-    await activateOrRenewSubscription(supabase, {
-      companyId: payment.company_id,
-      planId: payment.plan_id,
-    });
-  }
-
-  await markEventProcessed(supabase, eventId);
-
-  const action = auditActionForStatus(newStatus);
-  if (action) {
-    await supabase.from("audit_logs").insert({
-      company_id: payment.company_id,
-      entity_type: "subscription_payment",
-      entity_id: payment.id,
-      action,
-      metadata: {
-        provider_transaction_id: transaction.id,
-        provider_status: transaction.status,
-      },
-    });
-  }
-
-  return { ok: true, status: newStatus };
-}
-
-async function markEventProcessed(
-  supabase: ReturnType<typeof createAdminClient>,
-  eventId: string
-) {
-  await supabase
-    .from("payment_events")
-    .update({ processed: true, processed_at: new Date().toISOString() })
-    .eq("provider", "evopay")
-    .eq("event_id", eventId);
+  return { ok: result.ok, status: result.new_status };
 }
 
 function auditActionForStatus(status: SubscriptionPaymentStatus): string | null {
@@ -163,88 +143,4 @@ function auditActionForStatus(status: SubscriptionPaymentStatus): string | null 
     default:
       return null;
   }
-}
-
-/**
- * Ativa/renova a assinatura da empresa após pagamento confirmado.
- *
- * Regra de renovação (nunca perde dias restantes): se a subscription
- * atual ainda está com status válido (active/trialing) e expires_at no
- * futuro, a nova validade soma access_duration_days à expires_at
- * ATUAL. Caso contrário (expirada/cancelada), soma a partir de agora.
- * Sempre um UPDATE na linha existente — nunca um INSERT novo (a
- * empresa já tem sua subscription criada em create_company_with_owner).
- */
-async function activateOrRenewSubscription(
-  supabase: ReturnType<typeof createAdminClient>,
-  { companyId, planId }: { companyId: string; planId: string }
-) {
-  const { data: plan } = await supabase
-    .from("plans")
-    .select("*")
-    .eq("id", planId)
-    .maybeSingle();
-
-  if (!plan || plan.access_duration_days == null) {
-    return;
-  }
-
-  const { data: subscription } = await supabase
-    .from("subscriptions")
-    .select("*")
-    .eq("company_id", companyId)
-    .maybeSingle();
-
-  const now = new Date();
-  const durationMs = plan.access_duration_days * 24 * 60 * 60 * 1000;
-
-  let baseDate = now;
-  if (subscription) {
-    const currentExpiresAt = new Date(subscription.expires_at);
-    const isCurrentlyValid =
-      (subscription.status === "active" || subscription.status === "trialing") &&
-      currentExpiresAt.getTime() > now.getTime();
-    if (isCurrentlyValid) {
-      baseDate = currentExpiresAt;
-    }
-  }
-
-  const newExpiresAt = new Date(baseDate.getTime() + durationMs);
-
-  if (subscription) {
-    await supabase
-      .from("subscriptions")
-      .update({
-        plan_id: plan.id,
-        status: "active",
-        expires_at: newExpiresAt.toISOString(),
-        provider: "evopay",
-      })
-      .eq("company_id", companyId);
-  } else {
-    await supabase.from("subscriptions").insert({
-      company_id: companyId,
-      plan_id: plan.id,
-      status: "active",
-      starts_at: now.toISOString(),
-      expires_at: newExpiresAt.toISOString(),
-      provider: "evopay",
-    });
-  }
-
-  await supabase.from("company_entitlements").upsert(
-    {
-      company_id: companyId,
-      plan_id: plan.id,
-      status: "active",
-      access_starts_at: subscription?.starts_at ?? now.toISOString(),
-      access_expires_at: newExpiresAt.toISOString(),
-      max_additional_users: plan.additional_user_limit,
-      support_enabled: plan.support_enabled,
-      tickets_enabled: plan.tickets_enabled,
-      exclusive_groups_enabled: plan.exclusive_groups_enabled,
-      early_access_enabled: plan.early_access_enabled,
-    },
-    { onConflict: "company_id" }
-  );
 }

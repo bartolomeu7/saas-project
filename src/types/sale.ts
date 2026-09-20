@@ -57,6 +57,9 @@ export interface Sale {
   cancelled_reason: string | null;
   created_at: string;
   updated_at: string;
+  /** Snapshot/auditoria do resgate de fidelidade aplicado nesta venda (0 se nenhum) — nunca fonte de verdade, ver public.loyalty_transactions. */
+  loyalty_points_redeemed: number;
+  loyalty_discount_amount: number;
 }
 
 /** Espelha a tabela public.sale_items — snapshot histórico, nunca depende do catálogo atual. */

@@ -9,8 +9,33 @@ function formatMoney(value: number): string {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-/** Busca de produto por nome/SKU/código de barras + quantidade, para adicionar a uma venda em rascunho. */
-export function ProductPicker({ saleId }: { saleId: string }) {
+/**
+ * Busca de produto por nome/SKU/código de barras.
+ *
+ * Dois modos:
+ * - "sale" (padrão, comportamento original) — mostra quantidade e
+ *   "Adicionar", que insere um item na venda `saleId` via
+ *   addSaleItemAction.
+ * - "select" — usado fora de Vendas (ex.: multiplicadores de
+ *   fidelidade) para só escolher um produto, sem quantidade/estoque:
+ *   chama `onSelect(product)` e não toca em nenhuma venda. `excludeIds`
+ *   marca itens já configurados alhures (ex.: já têm multiplicador) em
+ *   vez de deixá-los normais.
+ *
+ * `saleId` só é obrigatório no modo "sale" — nenhum chamador existente
+ * muda de comportamento, já que "sale" é o padrão.
+ */
+export function ProductPicker({
+  saleId,
+  mode = "sale",
+  onSelect,
+  excludeIds,
+}: {
+  saleId?: string;
+  mode?: "sale" | "select";
+  onSelect?: (product: ProductPick) => void;
+  excludeIds?: string[];
+}) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<ProductPick[]>([]);
   const [isSearching, startSearch] = useTransition();
@@ -36,6 +61,7 @@ export function ProductPicker({ saleId }: { saleId: string }) {
   }, [query]);
 
   function handleAdd(productId: string, quantity: string) {
+    if (!saleId) return; // Só chamado no modo "sale" — ver renderização condicional abaixo.
     setError(null);
     startAdding(async () => {
       const formData = new FormData();
@@ -53,6 +79,12 @@ export function ProductPicker({ saleId }: { saleId: string }) {
     });
   }
 
+  function handleSelect(product: ProductPick) {
+    onSelect?.(product);
+    setQuery("");
+    setResults([]);
+  }
+
   return (
     <div className="flex flex-col gap-2">
       <Input
@@ -67,14 +99,23 @@ export function ProductPicker({ saleId }: { saleId: string }) {
 
       {results.length > 0 && (
         <ul className="flex flex-col gap-1 rounded-md border border-border bg-card p-1">
-          {results.map((product) => (
-            <ProductResultRow
-              key={product.id}
-              product={product}
-              disabled={isAdding}
-              onAdd={(quantity) => handleAdd(product.id, quantity)}
-            />
-          ))}
+          {results.map((product) =>
+            mode === "select" ? (
+              <ProductSelectRow
+                key={product.id}
+                product={product}
+                alreadyConfigured={excludeIds?.includes(product.id) ?? false}
+                onSelect={() => handleSelect(product)}
+              />
+            ) : (
+              <ProductResultRow
+                key={product.id}
+                product={product}
+                disabled={isAdding}
+                onAdd={(quantity) => handleAdd(product.id, quantity)}
+              />
+            )
+          )}
         </ul>
       )}
     </div>
@@ -120,6 +161,42 @@ function ProductResultRow({
           {outOfStock ? "Sem estoque" : "Adicionar"}
         </button>
       </div>
+    </li>
+  );
+}
+
+/** Linha de resultado do modo "select" — sem quantidade/estoque, só escolher o produto. */
+function ProductSelectRow({
+  product,
+  alreadyConfigured,
+  onSelect,
+}: {
+  product: ProductPick;
+  alreadyConfigured: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <li className="flex flex-wrap items-center justify-between gap-2 rounded px-2 py-1.5 hover:bg-secondary">
+      <div className="flex flex-col">
+        <span className="text-sm text-foreground">{product.name}</span>
+        <span className="text-xs text-muted-foreground">
+          {product.sku ? `SKU ${product.sku} · ` : ""}
+          {formatMoney(product.sale_price)}
+        </span>
+      </div>
+      {alreadyConfigured ? (
+        <span className="rounded-md bg-secondary px-2.5 py-1 text-xs font-medium text-muted-foreground">
+          Já configurado
+        </span>
+      ) : (
+        <button
+          type="button"
+          onClick={onSelect}
+          className="rounded-md border border-border px-2.5 py-1 text-xs font-medium text-foreground hover:bg-secondary"
+        >
+          Selecionar
+        </button>
+      )}
     </li>
   );
 }

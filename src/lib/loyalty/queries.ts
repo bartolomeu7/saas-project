@@ -2,6 +2,8 @@ import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type {
   LoyaltyAccount,
+  LoyaltyCampaign,
+  LoyaltyMultiplier,
   LoyaltySettings,
   LoyaltyTierThreshold,
   LoyaltyTransaction,
@@ -83,19 +85,146 @@ export const listLoyaltyTransactions = cache(async function listLoyaltyTransacti
   }));
 });
 
-/** Thresholds de nível configurados pela empresa — vazio se ainda não configurou (usar DEFAULT_TIER_THRESHOLDS nesse caso). */
+/**
+ * Thresholds de nível configurados pela empresa — vazio se ainda não
+ * configurou (usar DEFAULT_TIER_THRESHOLDS nesse caso). Inclui `id`/
+ * `sortOrder` (além de name/minLifetimePoints já usados desde a Etapa
+ * 1C) para permitir editar/excluir cada nível na Etapa 1D.3 — mesma
+ * query, só com mais colunas selecionadas, nunca uma segunda query.
+ */
 export const getLoyaltyTierThresholds = cache(async function getLoyaltyTierThresholds(
   companyId: string
 ): Promise<LoyaltyTierThreshold[]> {
   const supabase = createClient();
   const { data } = await supabase
     .from("loyalty_tier_thresholds")
-    .select("name, min_lifetime_points")
+    .select("id, name, min_lifetime_points, sort_order")
     .eq("company_id", companyId)
     .order("sort_order", { ascending: true });
 
   return (data ?? []).map((row) => ({
+    id: row.id,
     name: row.name,
     minLifetimePoints: row.min_lifetime_points,
+    sortOrder: row.sort_order,
   }));
+});
+
+/**
+ * Multiplicadores de pontos por produto/serviço. loyalty_multipliers só
+ * guarda product_id/service_id — o nome do item é resolvido aqui com 2
+ * consultas simples (produtos, depois serviços), mesmo padrão de
+ * getCustomerTopProducts/listCustomerDocuments em vez de um join via
+ * dot-notation aninhado do PostgREST.
+ */
+export const getLoyaltyMultipliers = cache(async function getLoyaltyMultipliers(
+  companyId: string
+): Promise<LoyaltyMultiplier[]> {
+  const supabase = createClient();
+
+  const { data } = await supabase
+    .from("loyalty_multipliers")
+    .select("id, product_id, service_id, multiplier")
+    .eq("company_id", companyId)
+    .order("created_at", { ascending: true });
+
+  const rows = data ?? [];
+  if (rows.length === 0) return [];
+
+  const productIds = rows.filter((row) => row.product_id).map((row) => row.product_id as string);
+  const serviceIds = rows.filter((row) => row.service_id).map((row) => row.service_id as string);
+
+  const [{ data: products }, { data: services }] = await Promise.all([
+    productIds.length > 0
+      ? supabase.from("products").select("id, name").in("id", productIds)
+      : Promise.resolve({ data: [] as { id: string; name: string }[] }),
+    serviceIds.length > 0
+      ? supabase.from("services").select("id, name").in("id", serviceIds)
+      : Promise.resolve({ data: [] as { id: string; name: string }[] }),
+  ]);
+
+  const productNames = new Map((products ?? []).map((p) => [p.id, p.name]));
+  const serviceNames = new Map((services ?? []).map((s) => [s.id, s.name]));
+
+  return rows.map((row) => {
+    if (row.product_id) {
+      return {
+        id: row.id,
+        targetType: "product" as const,
+        targetId: row.product_id,
+        targetName: productNames.get(row.product_id) ?? "Produto removido",
+        multiplier: Number(row.multiplier),
+      };
+    }
+    return {
+      id: row.id,
+      targetType: "service" as const,
+      targetId: row.service_id as string,
+      targetName: serviceNames.get(row.service_id as string) ?? "Serviço removido",
+      multiplier: Number(row.multiplier),
+    };
+  });
+});
+
+/**
+ * Campanhas de fidelidade da empresa, mais recentes primeiro. O nome do
+ * produto/serviço só é resolvido para linhas legadas com escopo específico
+ * (nenhuma criada por esta versão da UI terá product_id/service_id) — mesmo
+ * padrão de 2 consultas de getLoyaltyMultipliers, sem join aninhado.
+ */
+export const getLoyaltyCampaigns = cache(async function getLoyaltyCampaigns(
+  companyId: string
+): Promise<LoyaltyCampaign[]> {
+  const supabase = createClient();
+
+  const { data } = await supabase
+    .from("loyalty_campaigns")
+    .select(
+      "id, name, description, multiplier, bonus_points, product_id, service_id, starts_at, ends_at, status"
+    )
+    .eq("company_id", companyId)
+    .order("starts_at", { ascending: false });
+
+  const rows = data ?? [];
+  if (rows.length === 0) return [];
+
+  const productIds = rows.filter((row) => row.product_id).map((row) => row.product_id as string);
+  const serviceIds = rows.filter((row) => row.service_id).map((row) => row.service_id as string);
+
+  const [{ data: products }, { data: services }] = await Promise.all([
+    productIds.length > 0
+      ? supabase.from("products").select("id, name").in("id", productIds)
+      : Promise.resolve({ data: [] as { id: string; name: string }[] }),
+    serviceIds.length > 0
+      ? supabase.from("services").select("id, name").in("id", serviceIds)
+      : Promise.resolve({ data: [] as { id: string; name: string }[] }),
+  ]);
+
+  const productNames = new Map((products ?? []).map((p) => [p.id, p.name]));
+  const serviceNames = new Map((services ?? []).map((s) => [s.id, s.name]));
+
+  return rows.map((row) => {
+    let targetType: "product" | "service" | null = null;
+    let targetName: string | null = null;
+    if (row.product_id) {
+      targetType = "product";
+      targetName = productNames.get(row.product_id) ?? "Produto removido";
+    } else if (row.service_id) {
+      targetType = "service";
+      targetName = serviceNames.get(row.service_id) ?? "Serviço removido";
+    }
+
+    return {
+      id: row.id,
+      name: row.name,
+      description: row.description,
+      multiplier: row.multiplier === null ? null : Number(row.multiplier),
+      bonusPoints: row.bonus_points,
+      targetType,
+      targetName,
+      startsAt: row.starts_at,
+      endsAt: row.ends_at,
+      status: row.status,
+    };
+  });
 });

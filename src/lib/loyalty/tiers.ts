@@ -7,10 +7,10 @@ import type { LoyaltyTierThreshold } from "@/types/loyalty";
  * sempre calculado, nunca armazenado).
  */
 export const DEFAULT_TIER_THRESHOLDS: LoyaltyTierThreshold[] = [
-  { name: "Bronze", minLifetimePoints: 0 },
-  { name: "Prata", minLifetimePoints: 500 },
-  { name: "Ouro", minLifetimePoints: 2000 },
-  { name: "Platinum", minLifetimePoints: 5000 },
+  { name: "Bronze", minLifetimePoints: 0, sortOrder: 0 },
+  { name: "Prata", minLifetimePoints: 500, sortOrder: 1 },
+  { name: "Ouro", minLifetimePoints: 2000, sortOrder: 2 },
+  { name: "Platinum", minLifetimePoints: 5000, sortOrder: 3 },
 ];
 
 /**

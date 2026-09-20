@@ -1,6 +1,13 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import {
+  startOfDaySaoPaulo,
+  endOfDaySaoPaulo,
+  startOfMonthSaoPaulo,
+  startOfYearSaoPaulo,
+  currentMonthSaoPaulo,
+} from "@/lib/timezone";
 
 export type RankingPeriod = "month" | "quarter" | "semester" | "year" | "custom";
 
@@ -33,33 +40,31 @@ export function resolvePeriodRange(
   }
 
   const now = new Date();
-  const start = new Date(now);
-  const end = new Date(now);
+  const end = endOfDaySaoPaulo(now);
+  const currentMonth = currentMonthSaoPaulo(now);
+  let start: Date;
 
   switch (period) {
     case "month":
-      start.setDate(1);
+      start = startOfMonthSaoPaulo(0, now);
       break;
     case "quarter": {
-      const quarterStartMonth = Math.floor(now.getMonth() / 3) * 3;
-      start.setMonth(quarterStartMonth, 1);
+      const quarterStartMonth = Math.floor(currentMonth / 3) * 3;
+      start = startOfMonthSaoPaulo(quarterStartMonth - currentMonth, now);
       break;
     }
     case "semester": {
-      const semesterStartMonth = now.getMonth() < 6 ? 0 : 6;
-      start.setMonth(semesterStartMonth, 1);
+      const semesterStartMonth = currentMonth < 6 ? 0 : 6;
+      start = startOfMonthSaoPaulo(semesterStartMonth - currentMonth, now);
       break;
     }
     case "year":
-      start.setMonth(0, 1);
+      start = startOfYearSaoPaulo(now);
       break;
     default:
       // "custom" sem from/to definidos: últimos 30 dias como padrão razoável.
-      start.setDate(start.getDate() - 30);
+      start = startOfDaySaoPaulo(new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000));
   }
-
-  start.setHours(0, 0, 0, 0);
-  end.setHours(23, 59, 59, 999);
 
   return { from: start.toISOString(), to: end.toISOString() };
 }

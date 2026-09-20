@@ -10,8 +10,25 @@ function formatMoney(value: number): string {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-/** Busca de serviço por nome/categoria + quantidade, para adicionar a uma venda em rascunho. */
-export function ServicePicker({ saleId }: { saleId: string }) {
+/**
+ * Busca de serviço por nome/categoria.
+ *
+ * Dois modos — ver documentação equivalente em product-picker.tsx:
+ * "sale" (padrão, comportamento original, exige `saleId`) e "select"
+ * (usado fora de Vendas, ex.: multiplicadores de fidelidade — chama
+ * `onSelect(service)`, sem quantidade/venda envolvida).
+ */
+export function ServicePicker({
+  saleId,
+  mode = "sale",
+  onSelect,
+  excludeIds,
+}: {
+  saleId?: string;
+  mode?: "sale" | "select";
+  onSelect?: (service: ServicePick) => void;
+  excludeIds?: string[];
+}) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<ServicePick[]>([]);
   const [isSearching, startSearch] = useTransition();
@@ -37,6 +54,7 @@ export function ServicePicker({ saleId }: { saleId: string }) {
   }, [query]);
 
   function handleAdd(serviceId: string, quantity: string) {
+    if (!saleId) return; // Só chamado no modo "sale" — ver renderização condicional abaixo.
     setError(null);
     startAdding(async () => {
       const formData = new FormData();
@@ -54,6 +72,12 @@ export function ServicePicker({ saleId }: { saleId: string }) {
     });
   }
 
+  function handleSelect(service: ServicePick) {
+    onSelect?.(service);
+    setQuery("");
+    setResults([]);
+  }
+
   return (
     <div className="flex flex-col gap-2">
       <Input
@@ -68,17 +92,62 @@ export function ServicePicker({ saleId }: { saleId: string }) {
 
       {results.length > 0 && (
         <ul className="flex flex-col gap-1 rounded-md border border-border bg-card p-1">
-          {results.map((service) => (
-            <ServiceResultRow
-              key={service.id}
-              service={service}
-              disabled={isAdding}
-              onAdd={(quantity) => handleAdd(service.id, quantity)}
-            />
-          ))}
+          {results.map((service) =>
+            mode === "select" ? (
+              <ServiceSelectRow
+                key={service.id}
+                service={service}
+                alreadyConfigured={excludeIds?.includes(service.id) ?? false}
+                onSelect={() => handleSelect(service)}
+              />
+            ) : (
+              <ServiceResultRow
+                key={service.id}
+                service={service}
+                disabled={isAdding}
+                onAdd={(quantity) => handleAdd(service.id, quantity)}
+              />
+            )
+          )}
         </ul>
       )}
     </div>
+  );
+}
+
+/** Linha de resultado do modo "select" — sem quantidade, só escolher o serviço. */
+function ServiceSelectRow({
+  service,
+  alreadyConfigured,
+  onSelect,
+}: {
+  service: ServicePick;
+  alreadyConfigured: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <li className="flex flex-wrap items-center justify-between gap-2 rounded px-2 py-1.5 hover:bg-secondary">
+      <div className="flex flex-col">
+        <span className="text-sm text-foreground">{service.name}</span>
+        <span className="text-xs text-muted-foreground">
+          {service.category_name ? `${service.category_name} · ` : ""}
+          {formatMoney(service.sale_price)}
+        </span>
+      </div>
+      {alreadyConfigured ? (
+        <span className="rounded-md bg-secondary px-2.5 py-1 text-xs font-medium text-muted-foreground">
+          Já configurado
+        </span>
+      ) : (
+        <button
+          type="button"
+          onClick={onSelect}
+          className="rounded-md border border-border px-2.5 py-1 text-xs font-medium text-foreground hover:bg-secondary"
+        >
+          Selecionar
+        </button>
+      )}
+    </li>
   );
 }
 

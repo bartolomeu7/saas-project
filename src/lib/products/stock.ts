@@ -43,14 +43,29 @@ export async function adjustProductStock({
 
   const previousStock = current.stock_quantity;
 
-  const { error: updateError } = await supabase
+  // Concorrência otimista: só grava se stock_quantity ainda for o mesmo
+  // valor lido acima. Sem isso, uma venda concluída (complete_sale, que
+  // debita atomicamente) entre o SELECT e este UPDATE teria sua baixa
+  // sobrescrita silenciosamente pelo ajuste manual. `.select()` no update
+  // devolve as linhas realmente afetadas — 0 linhas significa que o
+  // estoque mudou nesse meio-tempo.
+  const { data: updated, error: updateError } = await supabase
     .from("products")
     .update({ stock_quantity: newQuantity })
     .eq("id", productId)
-    .eq("company_id", companyId);
+    .eq("company_id", companyId)
+    .eq("stock_quantity", previousStock)
+    .select("id");
 
   if (updateError) {
     return { error: "Não foi possível ajustar o estoque. Tente novamente." };
+  }
+
+  if (!updated || updated.length === 0) {
+    return {
+      error:
+        "O estoque foi alterado por outra operação enquanto você fazia esse ajuste (ex.: uma venda concluída ao mesmo tempo). Recarregue a página para ver o valor atual e tente novamente.",
+    };
   }
 
   await writeAuditLog(supabase, {

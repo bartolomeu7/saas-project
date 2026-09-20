@@ -154,7 +154,14 @@ export async function updateProductAction(
       unit: parsed.data.unit,
       cost_price: parsed.data.costPrice,
       sale_price: parsed.data.salePrice,
-      stock_quantity: parsed.data.stockQuantity,
+      // stock_quantity NUNCA é escrito por aqui, de propósito: o campo é
+      // só leitura no formulário de edição, mas mesmo que alguém reative
+      // manualmente o input (devtools) e envie outro valor, ele é
+      // ignorado — o único caminho de escrita para o estoque real é
+      // adjustStockAction/adjustProductStock (histórico + auditoria).
+      // Corrige o bug em que editar qualquer outro campo do cadastro
+      // podia reverter silenciosamente uma baixa de estoque concorrente
+      // (ex.: uma venda concluída enquanto a tela de edição estava aberta).
       minimum_stock: parsed.data.minimumStock,
       status: parsed.data.status,
     })

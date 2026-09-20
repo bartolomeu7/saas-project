@@ -2,6 +2,12 @@ import "server-only";
 
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
+import {
+  startOfDaySaoPaulo,
+  endOfDaySaoPaulo,
+  startOfMonthSaoPaulo,
+  startOfYearSaoPaulo,
+} from "@/lib/timezone";
 import type {
   Sale,
   SaleDetail,
@@ -64,29 +70,25 @@ export function resolveSalePeriodRange(
     return { from: from ?? null, to: to ?? null };
   }
 
-  const start = new Date();
-  const end = new Date();
-  end.setHours(23, 59, 59, 999);
+  const now = new Date();
+  const end = endOfDaySaoPaulo(now);
+  let start: Date;
 
   switch (period) {
     case "today":
-      start.setHours(0, 0, 0, 0);
+      start = startOfDaySaoPaulo(now);
       break;
     case "7d":
-      start.setDate(start.getDate() - 6);
-      start.setHours(0, 0, 0, 0);
+      start = startOfDaySaoPaulo(new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000));
       break;
     case "30d":
-      start.setDate(start.getDate() - 29);
-      start.setHours(0, 0, 0, 0);
+      start = startOfDaySaoPaulo(new Date(now.getTime() - 29 * 24 * 60 * 60 * 1000));
       break;
     case "month":
-      start.setDate(1);
-      start.setHours(0, 0, 0, 0);
+      start = startOfMonthSaoPaulo(0, now);
       break;
     case "year":
-      start.setMonth(0, 1);
-      start.setHours(0, 0, 0, 0);
+      start = startOfYearSaoPaulo(now);
       break;
   }
 

@@ -40,7 +40,7 @@ export function SaleSummaryCard({ sale, editable }: { sale: Sale; editable: bool
         </div>
 
         <div className="flex items-center justify-between">
-          <dt className="text-muted-foreground">Desconto</dt>
+          <dt className="text-muted-foreground">Desconto manual</dt>
           {editable ? (
             <div className="flex items-center gap-2">
               <Input
@@ -67,6 +67,17 @@ export function SaleSummaryCard({ sale, editable }: { sale: Sale; editable: bool
           )}
         </div>
         {error && <p className="text-xs text-destructive">{error}</p>}
+
+        {/* Origem separada de discount_amount desde a Etapa 1D.6A/B — nunca
+            somadas numa única linha "Desconto", para nunca dar a entender
+            que são a mesma coisa. Só aparece com resgate ativo, para não
+            poluir o resumo das vendas sem fidelidade. */}
+        {sale.loyalty_discount_amount > 0 && (
+          <div className="flex items-center justify-between">
+            <dt className="text-muted-foreground">Desconto de fidelidade</dt>
+            <dd className="text-foreground">{formatMoney(sale.loyalty_discount_amount)}</dd>
+          </div>
+        )}
 
         <div className="flex items-center justify-between border-t border-border pt-3 text-base font-semibold">
           <dt className="text-foreground">Total</dt>

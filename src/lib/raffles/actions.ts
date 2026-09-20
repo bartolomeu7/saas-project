@@ -9,6 +9,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { writeAuditLog } from "@/lib/audit/log";
 import { AUDIT_ACTIONS } from "@/types/audit";
 import type { ActionResult } from "@/lib/auth/actions";
+import { startOfDaySaoPauloFromDateString, endOfDaySaoPauloFromDateString } from "@/lib/timezone";
 
 const MAX_WINNERS = 50;
 
@@ -95,11 +96,11 @@ export async function runRaffleAction(
     eligibleQuery = eligibleQuery.eq("status", "active");
   }
   if (registeredFrom) {
-    eligibleQuery = eligibleQuery.gte("created_at", new Date(registeredFrom).toISOString());
+    const start = startOfDaySaoPauloFromDateString(registeredFrom) ?? new Date(registeredFrom);
+    eligibleQuery = eligibleQuery.gte("created_at", start.toISOString());
   }
   if (registeredTo) {
-    const end = new Date(registeredTo);
-    end.setHours(23, 59, 59, 999);
+    const end = endOfDaySaoPauloFromDateString(registeredTo) ?? new Date(registeredTo);
     eligibleQuery = eligibleQuery.lte("created_at", end.toISOString());
   }
 
@@ -123,11 +124,11 @@ export async function runRaffleAction(
       .not("customer_id", "is", null);
 
     if (purchasedFrom) {
-      salesQuery = salesQuery.gte("completed_at", new Date(purchasedFrom).toISOString());
+      const start = startOfDaySaoPauloFromDateString(purchasedFrom) ?? new Date(purchasedFrom);
+      salesQuery = salesQuery.gte("completed_at", start.toISOString());
     }
     if (purchasedTo) {
-      const end = new Date(purchasedTo);
-      end.setHours(23, 59, 59, 999);
+      const end = endOfDaySaoPauloFromDateString(purchasedTo) ?? new Date(purchasedTo);
       salesQuery = salesQuery.lte("completed_at", end.toISOString());
     }
 

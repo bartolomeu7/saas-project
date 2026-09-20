@@ -78,4 +78,13 @@ export const AUDIT_ACTIONS = {
   LOYALTY_POINTS_ADJUSTED: "loyalty.points_adjusted",
   LOYALTY_POINTS_EXPIRED: "loyalty.points_expired",
   LOYALTY_POINTS_REVERSED: "loyalty.points_reversed",
+  // CASH_REGISTER_OPENED/CLOSED e CASH_MOVEMENT_CREATED são gravados
+  // dentro das funções transacionais do banco (open_cash_register,
+  // close_cash_register, create_cash_movement e o trigger
+  // create_cash_movement_from_sale_payment — migration 021), não pela
+  // aplicação — os valores aqui precisam bater exatamente com as strings
+  // usadas lá, mesmo padrão de SALE_COMPLETED/SALE_CANCELLED acima.
+  CASH_REGISTER_OPENED: "cash_register.opened",
+  CASH_REGISTER_CLOSED: "cash_register.closed",
+  CASH_MOVEMENT_CREATED: "cash_movement.created",
 } as const;

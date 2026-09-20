@@ -9,8 +9,9 @@ import { FormMessage } from "@/components/shared/auth/form-message";
 
 const initialState: ActionResult = {};
 
-export function LoginForm() {
-  const [state, formAction] = useFormState(signInAction, initialState);
+export function LoginForm({ next }: { next?: string }) {
+  const boundAction = signInAction.bind(null, next ?? null);
+  const [state, formAction] = useFormState(boundAction, initialState);
 
   return (
     <form action={formAction} className="flex flex-col gap-4">

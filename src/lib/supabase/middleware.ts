@@ -1,4 +1,4 @@
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "@/types/supabase";
 
@@ -7,8 +7,10 @@ import type { Database } from "@/types/supabase";
  * necessário) e devolve a response já com os cookies atualizados, além
  * do usuário autenticado atual (ou null).
  *
- * Regras de autorização por role (ex: proteger /admin) ainda não foram
- * implementadas — apenas autenticação (usuário logado ou não).
+ * Padrão `getAll`/`setAll` (ver src/lib/supabase/server.ts para a
+ * justificativa completa da migração a partir de `get`/`set`/`remove`).
+ * Autorização por role (/admin) e por assinatura (/app) já são aplicadas
+ * em src/middleware.ts, que usa o `user`/`supabase` devolvidos aqui.
  */
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({
@@ -20,22 +22,22 @@ export async function updateSession(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value;
+        getAll() {
+          return request.cookies.getAll();
         },
-        set(name: string, value: string, options: CookieOptions) {
-          request.cookies.set({ name, value, ...options });
+        setAll(cookiesToSet) {
+          // Precisa ser espelhado tanto na request (para que o restante
+          // deste mesmo ciclo de middleware enxergue o cookie atualizado)
+          // quanto na response (para que o navegador realmente o receba).
+          cookiesToSet.forEach(({ name, value }) => {
+            request.cookies.set(name, value);
+          });
           response = NextResponse.next({
             request: { headers: request.headers },
           });
-          response.cookies.set({ name, value, ...options });
-        },
-        remove(name: string, options: CookieOptions) {
-          request.cookies.set({ name, value: "", ...options });
-          response = NextResponse.next({
-            request: { headers: request.headers },
+          cookiesToSet.forEach(({ name, value, options }) => {
+            response.cookies.set(name, value, options);
           });
-          response.cookies.set({ name, value: "", ...options });
         },
       },
     }

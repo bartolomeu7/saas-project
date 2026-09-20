@@ -89,7 +89,13 @@ function EditableSaleItemRow({ saleId, item }: { saleId: string; item: SaleItem 
 
   function handleRemove() {
     if (!window.confirm(`Remover "${item.description}" da venda?`)) return;
-    startRemoving(() => removeSaleItemAction(saleId, item.id));
+    setError(null);
+    startRemoving(async () => {
+      const result = await removeSaleItemAction(saleId, item.id);
+      if (!result.ok) {
+        setError(result.error);
+      }
+    });
   }
 
   return (

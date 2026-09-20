@@ -27,6 +27,10 @@ export async function getCurrentCompany(): Promise<CurrentCompany | null> {
     .from("company_members")
     .select("company_id, role")
     .eq("user_id", user.id)
+    // Determinístico mesmo se uma duplicidade histórica existir: sempre a
+    // membership mais antiga (a "empresa original" do usuário), nunca uma
+    // ordem dependente do plano de execução do banco. Ver migration 017.
+    .order("created_at", { ascending: true })
     .limit(1)
     .maybeSingle();
 

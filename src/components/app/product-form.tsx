@@ -25,6 +25,15 @@ interface ProductFormProps {
   action: (prevState: ActionResult, formData: FormData) => Promise<ActionResult>;
   defaultValues?: Partial<ProductFormFields>;
   categories: ProductCategory[];
+  /**
+   * Nome da categoria atual do produto, mesmo que ela já tenha sido
+   * desativada (e por isso não apareça em `categories`, que só lista
+   * ativas). Sem isso, o `<select>` não teria nenhuma opção
+   * correspondente ao `category_id` atual, o navegador cairia para a
+   * primeira opção ("Sem categoria") e salvar sem tocar o campo apagaria
+   * a categoria do produto silenciosamente.
+   */
+  currentCategoryName?: string | null;
   segmentHints: ProductSegmentHints;
   submitLabel: string;
 }
@@ -33,18 +42,30 @@ export function ProductForm({
   action,
   defaultValues,
   categories,
+  currentCategoryName,
   segmentHints,
   submitLabel,
 }: ProductFormProps) {
   const [state, formAction] = useFormState(action, initialState);
   const [costPrice, setCostPrice] = useState(String(defaultValues?.cost_price ?? ""));
   const [salePrice, setSalePrice] = useState(String(defaultValues?.sale_price ?? ""));
+  // Edição (defaultValues presente) nunca deve poder sobrescrever o
+  // estoque real através do formulário de cadastro — só a criação de um
+  // produto novo define o estoque inicial livremente.
+  const isEditing = defaultValues != null;
 
   const margin = useMemo(() => {
     const cost = Number(costPrice.replace(",", ".")) || 0;
     const sale = Number(salePrice.replace(",", ".")) || 0;
     return calculateMargin(cost, sale);
   }, [costPrice, salePrice]);
+
+  // A categoria atual só precisa de uma opção extra se ela não estiver
+  // entre as ativas (categoria já desativada) — nesse caso `categories`
+  // (só ativas) não a contém.
+  const currentCategoryIsInactive =
+    !!defaultValues?.category_id &&
+    !categories.some((category) => category.id === defaultValues.category_id);
 
   const identificationEmphasis = segmentHints.emphasize === "barcode";
   const stockEmphasis = segmentHints.emphasize === "unit_stock";
@@ -69,6 +90,11 @@ export function ProductForm({
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               <option value="">Sem categoria</option>
+              {currentCategoryIsInactive && (
+                <option value={defaultValues!.category_id!}>
+                  {currentCategoryName ?? "Categoria atual"} (inativa)
+                </option>
+              )}
               {categories.map((category) => (
                 <option key={category.id} value={category.id}>
                   {category.name}
@@ -207,7 +233,17 @@ export function ProductForm({
               step="0.001"
               min="0"
               defaultValue={defaultValues?.stock_quantity ?? 0}
+              disabled={isEditing}
+              readOnly={isEditing}
+              className={cn(isEditing && "cursor-not-allowed opacity-70")}
             />
+            {isEditing && (
+              <p className="text-xs text-muted-foreground">
+                Editar o cadastro não altera o estoque — use &ldquo;Ajustar estoque&rdquo;
+                na página do produto para isso (mantém histórico e evita perder uma
+                baixa/entrada registrada nesse meio-tempo).
+              </p>
+            )}
           </div>
           <div className="flex flex-col gap-2">
             <Label htmlFor="minimumStock">Estoque mínimo</Label>

@@ -20,6 +20,8 @@ interface ServiceFormProps {
   action: (prevState: ActionResult, formData: FormData) => Promise<ActionResult>;
   defaultValues?: Partial<ServiceFormFields>;
   categories: ServiceCategory[];
+  /** Ver o mesmo parâmetro em ProductForm — evita apagar silenciosamente a categoria do serviço quando ela já foi desativada. */
+  currentCategoryName?: string | null;
   submitLabel: string;
 }
 
@@ -27,8 +29,13 @@ export function ServiceForm({
   action,
   defaultValues,
   categories,
+  currentCategoryName,
   submitLabel,
 }: ServiceFormProps) {
+  const currentCategoryIsInactive =
+    !!defaultValues?.category_id &&
+    !categories.some((category) => category.id === defaultValues.category_id);
+
   const [state, formAction] = useFormState(action, initialState);
   const [costPrice, setCostPrice] = useState(String(defaultValues?.cost_price ?? ""));
   const [salePrice, setSalePrice] = useState(String(defaultValues?.sale_price ?? ""));
@@ -69,6 +76,11 @@ export function ServiceForm({
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               <option value="">Sem categoria</option>
+              {currentCategoryIsInactive && (
+                <option value={defaultValues!.category_id!}>
+                  {currentCategoryName ?? "Categoria atual"} (inativa)
+                </option>
+              )}
               {categories.map((category) => (
                 <option key={category.id} value={category.id}>
                   {category.name}

@@ -24,9 +24,10 @@ function GoogleIcon() {
   );
 }
 
-export function GoogleAuthButton() {
+export function GoogleAuthButton({ next }: { next?: string }) {
+  const boundAction = signInWithGoogleAction.bind(null, next ?? null);
   return (
-    <form action={signInWithGoogleAction}>
+    <form action={boundAction}>
       <Button type="submit" variant="outline" className="w-full gap-2">
         <GoogleIcon />
         Continuar com Google

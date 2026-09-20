@@ -23,13 +23,12 @@ import {
 import type { ActionResult } from "@/lib/auth/actions";
 import type { Database } from "@/types/supabase";
 import type { CustomerPick, ProductPick, ServicePick } from "@/types/sale";
-
-function round2(value: number): number {
-  return Math.round(value * 100) / 100;
-}
-
-/** Margem para comparação de valores monetários (evita falso-positivo por ponto flutuante). */
-const ROUNDING_TOLERANCE = 0.005;
+import {
+  round2,
+  ROUNDING_TOLERANCE,
+  LOYALTY_DISCOUNT_EXCEEDS_SUBTOTAL_ERROR,
+  recalculateSaleTotals,
+} from "@/lib/sales/totals";
 
 function formatBRL(value: number): string {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -102,88 +101,27 @@ async function confirmPaymentWithinBalance(
   return false;
 }
 
-const RECALCULATE_TOTALS_ERROR =
-  "Não foi possível recalcular os totais da venda. Tente novamente.";
-
-/**
- * Recalcula subtotal/custo/total/margem de uma venda a partir dos itens
- * reais no banco — nunca a partir de um valor vindo do frontend. Único
- * caminho de escrita para esses campos agregados enquanto a venda é
- * rascunho (chamado depois de toda mutação de item ou de desconto).
- *
- * Se o desconto atual da venda ficar maior que o novo subtotal (ex:
- * usuário removeu um item depois de já ter aplicado um desconto maior),
- * o desconto é reduzido automaticamente para não violar a constraint
- * `discount_amount <= subtotal` do banco.
- *
- * Cada chamada ao Supabase tem o `error` checado explicitamente: se
- * qualquer uma falhar, interrompe e devolve erro em vez de seguir com
- * dado parcial/zerado (ex.: `items` vindo `null` por causa de um erro
- * silenciosamente calcularia subtotal 0 e sobrescreveria o total real
- * da venda).
- */
-async function recalculateSaleTotals(
-  supabase: SupabaseClient<Database>,
-  saleId: string,
-  companyId: string
-): Promise<{ ok: true } | { ok: false; error: string }> {
-  const { data: items, error: itemsError } = await supabase
-    .from("sale_items")
-    .select("total_amount, quantity, unit_cost")
-    .eq("sale_id", saleId);
-
-  if (itemsError) {
-    return { ok: false, error: RECALCULATE_TOTALS_ERROR };
-  }
-
-  const rows = items ?? [];
-  const subtotal = round2(rows.reduce((sum, row) => sum + Number(row.total_amount), 0));
-  const totalCost = round2(
-    rows.reduce((sum, row) => sum + Number(row.quantity) * Number(row.unit_cost), 0)
-  );
-
-  const { data: sale, error: saleError } = await supabase
-    .from("sales")
-    .select("discount_amount")
-    .eq("id", saleId)
-    .single();
-
-  if (saleError || !sale) {
-    return { ok: false, error: RECALCULATE_TOTALS_ERROR };
-  }
-
-  const discountAmount = Math.min(Number(sale.discount_amount), subtotal);
-  const totalAmount = round2(subtotal - discountAmount);
-  const estimatedMargin = round2(totalAmount - totalCost);
-
-  const { error: updateError } = await supabase
-    .from("sales")
-    .update({
-      subtotal,
-      discount_amount: discountAmount,
-      total_amount: totalAmount,
-      total_cost: totalCost,
-      estimated_margin: estimatedMargin,
-    })
-    .eq("id", saleId)
-    .eq("company_id", companyId);
-
-  if (updateError) {
-    return { ok: false, error: RECALCULATE_TOTALS_ERROR };
-  }
-
-  return { ok: true };
-}
-
 /** Garante que a venda existe, pertence à empresa e está em rascunho. */
 async function getDraftSaleOrError(
   supabase: SupabaseClient<Database>,
   companyId: string,
   saleId: string
-): Promise<{ error: string } | { sale: { id: string; status: string; subtotal: number } }> {
+): Promise<
+  | { error: string }
+  | {
+      sale: {
+        id: string;
+        status: string;
+        subtotal: number;
+        customer_id: string | null;
+        loyalty_points_redeemed: number;
+        loyalty_discount_amount: number;
+      };
+    }
+> {
   const { data: sale } = await supabase
     .from("sales")
-    .select("id, status, subtotal")
+    .select("id, status, subtotal, customer_id, loyalty_points_redeemed, loyalty_discount_amount")
     .eq("id", saleId)
     .eq("company_id", companyId)
     .maybeSingle();
@@ -288,6 +226,20 @@ export async function updateDraftSaleAction(
     if (!parsed.success) {
       return { error: parsed.error.issues[0]?.message ?? "Cliente inválido." };
     }
+
+    // Trocar ou remover o cliente de uma venda com resgate de pontos ativo
+    // deixaria o desconto de fidelidade "órfão" (pontos já debitados de um
+    // cliente que deixou de ser o desta venda). Reselecionar o MESMO
+    // cliente (no-op) continua permitido mesmo com resgate ativo.
+    if (
+      guard.sale.loyalty_points_redeemed > 0 &&
+      parsed.data.customerId !== guard.sale.customer_id
+    ) {
+      return {
+        error: "Remova o uso de pontos antes de alterar o cliente desta venda.",
+      };
+    }
+
     if (parsed.data.customerId) {
       const { data: customer } = await supabase
         .from("customers")
@@ -309,8 +261,18 @@ export async function updateDraftSaleAction(
     if (!parsed.success || parsed.data.discountAmount === undefined) {
       return { error: parsed.error?.issues[0]?.message ?? "Desconto inválido." };
     }
-    if (parsed.data.discountAmount > guard.sale.subtotal) {
-      return { error: "O desconto não pode ser maior que o subtotal da venda." };
+    // O valor deste campo é só o desconto MANUAL — nunca sobrescreve
+    // loyalty_discount_amount. A soma dos dois nunca pode ultrapassar o
+    // subtotal (mesma regra de recalculateSaleTotals, checada aqui também
+    // porque este campo não passa por lá antes de ser gravado).
+    const combined = round2(parsed.data.discountAmount + guard.sale.loyalty_discount_amount);
+    if (combined > guard.sale.subtotal + ROUNDING_TOLERANCE) {
+      return {
+        error:
+          guard.sale.loyalty_discount_amount > 0
+            ? `O desconto manual somado ao desconto de fidelidade (${formatBRL(guard.sale.loyalty_discount_amount)}) não pode ultrapassar o subtotal da venda (${formatBRL(guard.sale.subtotal)}).`
+            : "O desconto não pode ser maior que o subtotal da venda.",
+      };
     }
     updates.discount_amount = parsed.data.discountAmount;
   }
@@ -358,8 +320,16 @@ export async function addSaleItemAction(
 ): Promise<ActionResult> {
   const parsed = addSaleItemSchema.safeParse({
     itemType: formData.get("itemType"),
-    productId: formData.get("productId"),
-    serviceId: formData.get("serviceId"),
+    // ProductPicker/ServicePicker só enviam o id do tipo escolhido — a
+    // chave do outro nunca é setada no FormData, e formData.get() de uma
+    // chave ausente retorna null (não undefined). O schema aceita
+    // string | undefined | "", mas nunca null, então isso sempre falhava
+    // com o erro genérico de união do Zod ("Invalid input") antes de
+    // chegar em qualquer validação de negócio. Normaliza aqui, no único
+    // ponto de entrada, em vez de exigir que cada picker lembre de
+    // mandar os dois campos.
+    productId: formData.get("productId") ?? "",
+    serviceId: formData.get("serviceId") ?? "",
     quantity: formData.get("quantity"),
     discountAmount: formData.get("discountAmount") || "0",
   });
@@ -388,12 +358,25 @@ export async function addSaleItemAction(
     // itemType === "product" — TypeScript não enxerga essa invariante.
     const { data: product } = await supabase
       .from("products")
-      .select("id, name, sale_price, cost_price, status")
+      .select("id, name, sale_price, cost_price, status, stock_quantity")
       .eq("id", parsed.data.productId!)
       .eq("company_id", current.company.id)
       .maybeSingle();
     if (!product || product.status !== "active") {
       return { error: "Produto não encontrado ou inativo." };
+    }
+    // Validação de disponibilidade no momento de adicionar — não é uma
+    // reserva de estoque (nada é debitado aqui; a baixa real e atômica
+    // continua só em complete_sale) nem substitui a checagem final, só
+    // evita montar/pagar uma venda inteira para só então descobrir falta
+    // de estoque na conclusão.
+    if (parsed.data.quantity > product.stock_quantity) {
+      return {
+        error:
+          product.stock_quantity <= 0
+            ? `"${product.name}" está sem estoque.`
+            : `Estoque insuficiente para "${product.name}" (disponível: ${product.stock_quantity}).`,
+      };
     }
     description = product.name;
     unitPrice = product.sale_price;
@@ -487,7 +470,7 @@ export async function updateSaleItemAction(
 
   const { data: item } = await supabase
     .from("sale_items")
-    .select("unit_price")
+    .select("unit_price, total_amount, item_type, product_id")
     .eq("id", itemId)
     .eq("sale_id", saleId)
     .maybeSingle();
@@ -495,11 +478,38 @@ export async function updateSaleItemAction(
     return { error: "Item não encontrado." };
   }
 
+  if (item.item_type === "product" && item.product_id) {
+    const { data: product } = await supabase
+      .from("products")
+      .select("name, stock_quantity")
+      .eq("id", item.product_id)
+      .maybeSingle();
+    if (product && parsed.data.quantity > product.stock_quantity) {
+      return {
+        error: `Estoque insuficiente para "${product.name}" (disponível: ${product.stock_quantity}).`,
+      };
+    }
+  }
+
   const grossSubtotal = round2(parsed.data.quantity * item.unit_price);
   if (parsed.data.discountAmount > grossSubtotal) {
     return { error: "O desconto do item não pode ser maior que o subtotal do item." };
   }
   const totalAmount = round2(grossSubtotal - parsed.data.discountAmount);
+
+  // Checagem antecipada (antes de gravar): evita persistir a alteração do
+  // item e só depois rejeitar no recalculateSaleTotals, o que deixaria o
+  // item já alterado com os totais da venda desatualizados até a próxima
+  // mutação bem-sucedida. recalculateSaleTotals mantém a MESMA regra como
+  // rede de segurança (ex.: corrida entre duas edições concorrentes).
+  if (guard.sale.loyalty_discount_amount > 0) {
+    const projectedSubtotal = round2(
+      guard.sale.subtotal - Number(item.total_amount) + totalAmount
+    );
+    if (projectedSubtotal < guard.sale.loyalty_discount_amount - ROUNDING_TOLERANCE) {
+      return { error: LOYALTY_DISCOUNT_EXCEEDS_SUBTOTAL_ERROR };
+    }
+  }
 
   const { error } = await supabase
     .from("sale_items")
@@ -536,19 +546,52 @@ export async function updateSaleItemAction(
 }
 
 /**
+ * Resultado de removeSaleItemAction — desde a Etapa 1D.6A a action deixou
+ * de ser fire-and-forget (Promise<void>): remover um item pode ser
+ * legitimamente rejeitado (desconto de fidelidade maior que o novo
+ * subtotal) e isso precisa chegar até o usuário, nunca falhar em silêncio.
+ */
+export type RemoveSaleItemResult = { ok: true } | { ok: false; error: string };
+
+/**
  * Remove um item de uma venda em rascunho. A RLS só permite este DELETE
  * quando a venda-pai está em `draft` (ver migration 008) — a checagem
  * de status aqui é defesa em profundidade, a garantia real é do banco.
  */
-export async function removeSaleItemAction(saleId: string, itemId: string): Promise<void> {
+export async function removeSaleItemAction(
+  saleId: string,
+  itemId: string
+): Promise<RemoveSaleItemResult> {
   const current = await getCurrentCompany();
-  if (!current) return;
+  if (!current) {
+    return { ok: false, error: "Nenhuma empresa encontrada para o usuário atual." };
+  }
 
   const supabase = createClient();
   const guard = await getDraftSaleOrError(supabase, current.company.id, saleId);
   if ("error" in guard) {
     revalidatePath(`/app/vendas/${saleId}`);
-    return;
+    return { ok: false, error: guard.error };
+  }
+
+  // Checagem antecipada (antes de excluir): remover o item primeiro e só
+  // depois rejeitar no recalculateSaleTotals apagaria o item sem
+  // possibilidade de desfazer o DELETE — pior que rejeitar a alteração de
+  // quantidade (updateSaleItemAction), onde a linha do item ainda existe.
+  // recalculateSaleTotals mantém a mesma regra como rede de segurança.
+  if (guard.sale.loyalty_discount_amount > 0) {
+    const { data: item } = await supabase
+      .from("sale_items")
+      .select("total_amount")
+      .eq("id", itemId)
+      .eq("sale_id", saleId)
+      .maybeSingle();
+    if (item) {
+      const projectedSubtotal = round2(guard.sale.subtotal - Number(item.total_amount));
+      if (projectedSubtotal < guard.sale.loyalty_discount_amount - ROUNDING_TOLERANCE) {
+        return { ok: false, error: LOYALTY_DISCOUNT_EXCEEDS_SUBTOTAL_ERROR };
+      }
+    }
   }
 
   const { error: deleteError } = await supabase
@@ -561,18 +604,19 @@ export async function removeSaleItemAction(saleId: string, itemId: string): Prom
   if (deleteError) {
     console.error("[removeSaleItemAction] falha ao remover item", { saleId, itemId, deleteError });
     revalidatePath(`/app/vendas/${saleId}`);
-    return;
+    return { ok: false, error: "Não foi possível remover o item. Tente novamente." };
   }
 
-  // removeSaleItemAction não tem um canal de ActionResult (é chamada como
-  // fire-and-forget pela UI, sem formulário) — se o recálculo falhar
-  // aqui, o item já foi removido de verdade; a falha fica registrada no
-  // log do servidor para não passar despercebida, mas exibir esse erro
-  // ao usuário exigiria mudar o contrato da action e o componente que a
-  // chama, fora do escopo desta correção.
   const recalculated = await recalculateSaleTotals(supabase, saleId, current.company.id);
   if (!recalculated.ok) {
+    // O item já foi excluído (delete já comitado) — mesma limitação
+    // pré-existente de add/updateSaleItemAction (a escrita do item e o
+    // recálculo dos totais não são uma única transação). A checagem
+    // antecipada acima cobre o caso normal; isto só é alcançado numa
+    // corrida real entre duas requisições concorrentes.
     console.error("[removeSaleItemAction] falha ao recalcular totais", { saleId, itemId });
+    revalidatePath(`/app/vendas/${saleId}`);
+    return { ok: false, error: recalculated.error };
   }
 
   const user = await getCurrentUser();
@@ -586,6 +630,7 @@ export async function removeSaleItemAction(saleId: string, itemId: string): Prom
   });
 
   revalidatePath(`/app/vendas/${saleId}`);
+  return { ok: true };
 }
 
 /** Registra um pagamento para a venda. Não permite pagamento em venda cancelada. */
