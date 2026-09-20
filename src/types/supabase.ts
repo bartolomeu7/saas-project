@@ -55,6 +55,129 @@ export type Database = {
           },
         ]
       }
+      cash_movements: {
+        Row: {
+          amount: number
+          cash_register_id: string
+          company_id: string
+          created_at: string
+          created_by: string
+          description: string
+          direction: Database["public"]["Enums"]["cash_movement_direction"]
+          id: string
+          method: Database["public"]["Enums"]["sale_payment_method"]
+          sale_payment_id: string | null
+          source: Database["public"]["Enums"]["cash_movement_source"]
+        }
+        Insert: {
+          amount: number
+          cash_register_id: string
+          company_id: string
+          created_at?: string
+          created_by: string
+          description: string
+          direction: Database["public"]["Enums"]["cash_movement_direction"]
+          id?: string
+          method: Database["public"]["Enums"]["sale_payment_method"]
+          sale_payment_id?: string | null
+          source: Database["public"]["Enums"]["cash_movement_source"]
+        }
+        Update: {
+          amount?: number
+          cash_register_id?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string
+          description?: string
+          direction?: Database["public"]["Enums"]["cash_movement_direction"]
+          id?: string
+          method?: Database["public"]["Enums"]["sale_payment_method"]
+          sale_payment_id?: string | null
+          source?: Database["public"]["Enums"]["cash_movement_source"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_movements_cash_register_id_fkey"
+            columns: ["cash_register_id"]
+            isOneToOne: false
+            referencedRelation: "cash_registers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_movements_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_movements_sale_payment_id_fkey"
+            columns: ["sale_payment_id"]
+            isOneToOne: false
+            referencedRelation: "sale_payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cash_registers: {
+        Row: {
+          cash_difference: number | null
+          closed_at: string | null
+          closed_by: string | null
+          company_id: string
+          created_at: string
+          expected_cash_balance: number | null
+          id: string
+          informed_cash_balance: number | null
+          notes: string | null
+          opened_at: string
+          opened_by: string
+          opening_balance: number
+          status: Database["public"]["Enums"]["cash_register_status"]
+          updated_at: string
+        }
+        Insert: {
+          cash_difference?: number | null
+          closed_at?: string | null
+          closed_by?: string | null
+          company_id: string
+          created_at?: string
+          expected_cash_balance?: number | null
+          id?: string
+          informed_cash_balance?: number | null
+          notes?: string | null
+          opened_at?: string
+          opened_by: string
+          opening_balance?: number
+          status?: Database["public"]["Enums"]["cash_register_status"]
+          updated_at?: string
+        }
+        Update: {
+          cash_difference?: number | null
+          closed_at?: string | null
+          closed_by?: string | null
+          company_id?: string
+          created_at?: string
+          expected_cash_balance?: number | null
+          id?: string
+          informed_cash_balance?: number | null
+          notes?: string | null
+          opened_at?: string
+          opened_by?: string
+          opening_balance?: number
+          status?: Database["public"]["Enums"]["cash_register_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_registers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       companies: {
         Row: {
           business_type: Database["public"]["Enums"]["business_type"]
@@ -1516,6 +1639,35 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      close_cash_register: {
+        Args: {
+          p_cash_register_id: string
+          p_informed_cash_balance: number
+          p_notes?: string
+        }
+        Returns: {
+          cash_difference: number | null
+          closed_at: string | null
+          closed_by: string | null
+          company_id: string
+          created_at: string
+          expected_cash_balance: number | null
+          id: string
+          informed_cash_balance: number | null
+          notes: string | null
+          opened_at: string
+          opened_by: string
+          opening_balance: number
+          status: Database["public"]["Enums"]["cash_register_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "cash_registers"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       complete_sale: {
         Args: { p_sale_id: string }
         Returns: {
@@ -1544,6 +1696,49 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "sales"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      confirm_subscription_payment: {
+        Args: {
+          p_end_to_end_id: string
+          p_event_id: string
+          p_event_payload: Json
+          p_event_type: string
+          p_payment_id: string
+          p_provider_status: Database["public"]["Enums"]["subscription_payment_status"]
+        }
+        Returns: {
+          already_processed: boolean
+          new_status: Database["public"]["Enums"]["subscription_payment_status"]
+          not_found: boolean
+          ok: boolean
+        }[]
+      }
+      create_cash_movement: {
+        Args: {
+          p_amount: number
+          p_description: string
+          p_direction: Database["public"]["Enums"]["cash_movement_direction"]
+          p_method: Database["public"]["Enums"]["sale_payment_method"]
+        }
+        Returns: {
+          amount: number
+          cash_register_id: string
+          company_id: string
+          created_at: string
+          created_by: string
+          description: string
+          direction: Database["public"]["Enums"]["cash_movement_direction"]
+          id: string
+          method: Database["public"]["Enums"]["sale_payment_method"]
+          sale_payment_id: string | null
+          source: Database["public"]["Enums"]["cash_movement_source"]
+        }
+        SetofOptions: {
+          from: "*"
+          to: "cash_movements"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -1592,11 +1787,40 @@ export type Database = {
         Args: { p_sale_id: string }
         Returns: undefined
       }
+      open_cash_register: {
+        Args: { p_notes?: string; p_opening_balance: number }
+        Returns: {
+          cash_difference: number | null
+          closed_at: string | null
+          closed_by: string | null
+          company_id: string
+          created_at: string
+          expected_cash_balance: number | null
+          id: string
+          informed_cash_balance: number | null
+          notes: string | null
+          opened_at: string
+          opened_by: string
+          opening_balance: number
+          status: Database["public"]["Enums"]["cash_register_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "cash_registers"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       redeem_loyalty_points: {
         Args: { p_points: number; p_sale_id: string }
         Returns: number
       }
       reverse_loyalty_points_for_sale: {
+        Args: { p_sale_id: string }
+        Returns: undefined
+      }
+      undo_loyalty_redemption_for_draft_sale: {
         Args: { p_sale_id: string }
         Returns: undefined
       }
@@ -1614,6 +1838,9 @@ export type Database = {
         | "workshop"
         | "service_provider"
         | "other"
+      cash_movement_direction: "in" | "out"
+      cash_movement_source: "sale_payment" | "manual"
+      cash_register_status: "open" | "closed"
       company_role: "owner" | "admin" | "employee"
       company_status: "active" | "inactive"
       customer_status: "active" | "inactive"
@@ -1671,12 +1898,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1700,11 +1927,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1725,11 +1952,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1750,11 +1977,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1767,11 +1994,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1796,6 +2023,9 @@ export const Constants = {
         "service_provider",
         "other",
       ],
+      cash_movement_direction: ["in", "out"],
+      cash_movement_source: ["sale_payment", "manual"],
+      cash_register_status: ["open", "closed"],
       company_role: ["owner", "admin", "employee"],
       company_status: ["active", "inactive"],
       customer_status: ["active", "inactive"],
