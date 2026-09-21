@@ -5,8 +5,8 @@ para as próximas etapas. Além da fundação (auth, multi-tenant, clientes),
 já estão implementados: Produtos, Serviços, Vendas (com pagamentos,
 descontos e cancelamento), Fidelidade (configurações, níveis,
 multiplicadores, campanhas, resgate de pontos), Documentos de cliente
-(upload/Storage), Sorteio e Ranking de clientes, e Billing/assinatura via
-EvoPay (Pix). O painel administrativo da plataforma (`/admin`) tem o guard
+(upload/Storage), Sorteio e Ranking de clientes, Caixa e Billing/assinatura
+via EvoPay (Pix). O painel administrativo da plataforma (`/admin`) tem o guard
 de acesso pronto, mas ainda nenhuma página de conteúdo.
 
 ## Visão geral
@@ -144,13 +144,14 @@ de acesso pronto, mas ainda nenhuma página de conteúdo.
 - **Dashboard (`/app`):** cada seção (Clientes, Vendas, Produtos, Serviços)
   usa dados reais do banco, um componente assíncrono por seção dentro de
   `<Suspense>` — nenhum dado fictício é exibido para indicadores que ainda
-  não existem (Estoque, Caixa, Financeiro, Relatórios continuam sem
-  indicador, pois essas tabelas ainda não existem).
+  não existem (Estoque, Financeiro e Relatórios continuam sem indicador;
+  Caixa possui módulo próprio, mas não é tratado como indicador do dashboard).
 - **Sidebar:** `AppShell` (`src/components/app/app-shell.tsx`) renderiza a
   navegação lateral (fixa no desktop, drawer no mobile). Habilitados hoje:
-  Dashboard, Clientes, Produtos, Serviços, Vendas, Fidelidade, Assinatura.
-  Estoque, Caixa, Financeiro, Relatórios e Configurações continuam
-  desabilitados ("Em breve") — exigem schema/decisão de produto ainda
+  Dashboard, Clientes, Produtos, Serviços, Vendas, Fidelidade, Caixa,
+  Assinatura.
+  Estoque, Financeiro, Relatórios e Configurações continuam desabilitados
+  ("Em breve") — exigem schema/decisão de produto ainda
   inexistente. A lista completa vive em `src/components/app/nav-items.ts`.
 
 ## Painel administrativo (guard implementado — conteúdo planejado)
@@ -183,6 +184,14 @@ de acesso pronto, mas ainda nenhuma página de conteúdo.
 - `src/middleware.ts` bloqueia `/app/*` (qualquer role, incluindo owner) para
   empresas sem assinatura `trialing`/`active` não expirada, redirecionando
   para `/app/assinatura`.
+
+## Caixa (implementado)
+
+- O módulo de caixa vive em `src/app/(app)/app/caixa/` e em `src/lib/cash-register/`.
+- A migration `021_cash_register_foundation.sql` cria `cash_registers` e `cash_movements`, com operações protegidas por RPCs `SECURITY DEFINER`.
+- Owner/admin podem abrir, fechar e lançar movimentações manuais; employee é somente leitura.
+- Pagamentos de vendas confirmados geram movimentações automáticas quando existe caixa aberto. O saldo físico em dinheiro é separado do total de movimentações por método de pagamento.
+- Cancelamento de venda não estorna automaticamente a movimentação de caixa; isso permanece como limitação conhecida até a implementação de estorno financeiro.
 
 ## APIs externas
 

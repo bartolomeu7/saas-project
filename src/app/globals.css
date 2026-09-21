@@ -93,3 +93,22 @@
     @apply bg-background text-foreground;
   }
 }
+
+
+@layer utilities {
+  .prime-nav-link--active { color: hsl(var(--foreground)); }
+  .prime-nav-link--active::after { left: 0; right: 0; }
+  .prime-mobile-link--active {
+    color: hsl(var(--foreground));
+    border-color: hsl(var(--primary) / .16);
+    background: hsl(var(--primary) / .08);
+  }
+  section[id] { scroll-margin-top: 84px; }
+  .prime-site-header :focus-visible,
+  .prime-mobile-panel :focus-visible,
+  .prime-hero a:focus-visible,
+  .prime-cta-section a:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 3px;
+  }
+}

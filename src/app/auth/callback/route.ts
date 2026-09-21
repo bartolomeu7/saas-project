@@ -1,6 +1,21 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
+function safeNextPath(next: string | null | undefined): string {
+  if (
+    !next ||
+    !next.startsWith("/") ||
+    next.startsWith("//") ||
+    next.startsWith("/\\") ||
+    next.includes(":")
+  ) {
+    return "/app";
+  }
+
+  return next;
+}
+
+
 /**
  * Endpoint de callback do Supabase Auth.
  *
@@ -15,18 +30,18 @@ import { createClient } from "@/lib/supabase/server";
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/app";
+  const next = safeNextPath(searchParams.get("next"));
 
   if (code) {
     const supabase = createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
-      return NextResponse.redirect(`${origin}${next}`);
+      return NextResponse.redirect(new URL(next, origin));
     }
   }
 
   // Código ausente ou inválido/expirado — volta para o login com um
   // indicador genérico de erro (sem detalhar a causa).
-  return NextResponse.redirect(`${origin}/login?error=auth_callback_failed`);
+  return NextResponse.redirect(new URL("/login?error=auth_callback_failed", origin));
 }

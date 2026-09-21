@@ -4,10 +4,10 @@ Fundação de um produto **SaaS** moderno, modular, seguro e preparado para prod
 
 > Status atual: **autenticação, multi-tenant, dashboard, Clientes, Produtos,
 > Serviços, Vendas (com pagamentos, descontos e cancelamento), Fidelidade,
-> Documentos de cliente, Sorteio/Ranking e Billing/assinatura via EvoPay
-> (Pix) implementados.** O painel administrativo da plataforma (`/admin`)
+> Documentos de cliente, Sorteio/Ranking, Caixa e Billing/assinatura via
+> EvoPay (Pix) implementados.** O painel administrativo da plataforma (`/admin`)
 > tem o guard de acesso pronto, mas ainda nenhuma página de conteúdo.
-> Estoque, Caixa, Financeiro, Relatórios, Agenda e Equipe/Colaboradores ainda
+> Estoque, Financeiro, Relatórios, Agenda e Equipe/Colaboradores ainda
 > não têm backend — ver [`docs/architecture.md`](./docs/architecture.md)
 > para o detalhe de cada módulo e [`docs/authentication.md`](./docs/authentication.md)
 > para o fluxo de autenticação.
@@ -68,7 +68,7 @@ src/
 └── config/               # configuração estática do projeto
 
 supabase/
-└── migrations/          # 001 (profiles) até 016 (fundação + todos os módulos)
+└── migrations/          # 001–021 (fundação, módulos e caixa)
 
 docs/
 ├── architecture.md     # visão geral da arquitetura

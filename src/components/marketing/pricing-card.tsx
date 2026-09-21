@@ -20,7 +20,7 @@ export function PricingCard({ plan }: { plan: PricingPlan }) {
         : "bg-secondary text-muted-foreground";
 
   return (
-    <div className={cn("flex flex-col rounded-xl border p-6", highlightStyles)}>
+    <div className={cn("flex flex-col rounded-xl border p-6 transition-transform duration-300 hover:-translate-y-1 hover:shadow-card motion-reduce:transform-none", highlightStyles)}>
       {plan.tagline && (
         <span
           className={cn(
