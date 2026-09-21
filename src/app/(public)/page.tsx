@@ -270,7 +270,7 @@ export default function HomePage() {
             <div className="home-segment-row">
               {SEGMENTS.map((segment, index) => (
                 <Reveal key={segment.name} delay={index * 45}>
-                  <article className="home-segment-item">
+                  <article className={cn("home-segment-item", `home-segment-item--${index}`)}>
                     <span className="home-segment-icon"><segment.icon size={17} /></span>
                     <div>
                       <strong>{segment.name}</strong>
