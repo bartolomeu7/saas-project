@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Menu, X } from "lucide-react";
+import { MoreHorizontal, X } from "lucide-react";
 import { Logo } from "@/components/shared/logo";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -10,7 +10,7 @@ import { NAV_LINKS } from "@/config/marketing";
 import { siteConfig } from "@/config/site";
 
 export function SiteHeader() {
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [activeHref, setActiveHref] = useState("#topo");
 
@@ -22,22 +22,26 @@ export function SiteHeader() {
   }, []);
 
   useEffect(() => {
-    if (!mobileOpen) return;
+    if (!menuOpen) return;
+
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setMobileOpen(false);
+      if (event.key === "Escape") setMenuOpen(false);
     };
-    document.addEventListener("keydown", onKeyDown);
+
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", onKeyDown);
+
     return () => {
-      document.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", onKeyDown);
     };
-  }, [mobileOpen]);
+  }, [menuOpen]);
 
   useEffect(() => {
     const sections = NAV_LINKS.map((item) => document.getElementById(item.href.slice(1)))
       .filter((section): section is HTMLElement => Boolean(section));
+
     if (!sections.length) return;
 
     const observer = new IntersectionObserver(
@@ -45,6 +49,7 @@ export function SiteHeader() {
         const visible = entries
           .filter((entry) => entry.isIntersecting)
           .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+
         if (visible?.target.id) setActiveHref("#" + visible.target.id);
       },
       { threshold: [0.15, 0.3, 0.55], rootMargin: "-12% 0px -55% 0px" },
@@ -54,56 +59,62 @@ export function SiteHeader() {
     return () => observer.disconnect();
   }, []);
 
+  const closeMenu = () => setMenuOpen(false);
+
   return (
     <header className={cn("prime-site-header", scrolled && "prime-site-header--scrolled")}>
-      <div className="container flex h-16 items-center justify-between gap-6">
+      <div className="container prime-site-header__inner">
         <Link href="#topo" className="inline-flex items-center gap-2 font-semibold tracking-tight" aria-label="Prime Ges — início">
           <Logo iconSize={24} />
+          <span>Prime Ges</span>
         </Link>
 
-        <nav className="hidden items-center gap-7 lg:flex" aria-label="Navegação principal">
+        <button
+          type="button"
+          className="prime-menu-trigger"
+          onClick={() => setMenuOpen((value) => !value)}
+          aria-label={menuOpen ? "Fechar menu" : "Abrir menu"}
+          aria-expanded={menuOpen}
+          aria-controls="prime-menu-panel"
+        >
+          {menuOpen ? <X size={22} strokeWidth={1.8} /> : <MoreHorizontal size={24} strokeWidth={1.8} />}
+        </button>
+      </div>
+
+      {menuOpen && <button type="button" className="prime-menu-backdrop" aria-label="Fechar menu" onClick={closeMenu} />}
+
+      <div id="prime-menu-panel" className={cn("prime-menu-panel", menuOpen && "is-open")} aria-hidden={!menuOpen}>
+        <nav className="prime-menu-panel__nav" aria-label="Navegação principal">
           {NAV_LINKS.map((item) => (
             <a
               key={item.label}
               href={item.href}
+              onClick={closeMenu}
               aria-current={activeHref === item.href ? "location" : undefined}
-              className={cn("prime-nav-link", activeHref === item.href && "prime-nav-link--active")}
+              className={cn("prime-menu-link", activeHref === item.href && "prime-menu-link--active")}
             >
-              {item.label}
+              <span>{item.label}</span>
+              <span aria-hidden="true">↗</span>
             </a>
           ))}
         </nav>
 
-        <div className="hidden items-center gap-2 lg:flex">
-          <Link href={siteConfig.links.login} className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "prime-button-soft")}>Entrar</Link>
-          <Link href={siteConfig.links.register} className={cn(buttonVariants({ variant: "outline", size: "sm" }), "prime-button-outline")}>Criar conta</Link>
-          <Link href={siteConfig.links.register} className={cn(buttonVariants({ size: "sm" }), "prime-button-primary")}>Começar agora</Link>
+        <div className="prime-menu-actions">
+          <Link
+            href={siteConfig.links.login}
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }), "prime-menu-button prime-menu-button--ghost")}
+            onClick={closeMenu}
+          >
+            Entrar
+          </Link>
+          <Link
+            href={siteConfig.links.register}
+            className={cn(buttonVariants({ size: "sm" }), "prime-menu-button prime-menu-button--primary")}
+            onClick={closeMenu}
+          >
+            Começar agora
+          </Link>
         </div>
-
-        <button type="button" className="prime-menu-button lg:hidden" onClick={() => setMobileOpen((value) => !value)} aria-label={mobileOpen ? "Fechar menu" : "Abrir menu"} aria-expanded={mobileOpen} aria-controls="prime-mobile-menu">
-          {mobileOpen ? <X size={19} /> : <Menu size={19} />}
-        </button>
-      </div>
-
-      <div id="prime-mobile-menu" className={cn("prime-mobile-panel lg:hidden", mobileOpen && "prime-mobile-panel--open")} aria-hidden={!mobileOpen}>
-        <nav className="container flex flex-col gap-2 py-4" aria-label="Menu móvel">
-          {NAV_LINKS.map((item, index) => (
-            <a
-              key={item.label}
-              href={item.href}
-              onClick={() => setMobileOpen(false)}
-              aria-current={activeHref === item.href ? "location" : undefined}
-              className={cn("prime-mobile-link", activeHref === item.href && "prime-mobile-link--active")}
-              style={{ "--mobile-delay": index * 50 + "ms" } as CSSProperties}
-            >
-              {item.label}
-            </a>
-          ))}
-          <div className="mt-2 grid grid-cols-2 gap-2">
-            <Link href={siteConfig.links.login} className={cn(buttonVariants({ variant: "outline", size: "sm" }), "prime-button-outline")} onClick={() => setMobileOpen(false)}>Entrar</Link>
-            <Link href={siteConfig.links.register} className={cn(buttonVariants({ size: "sm" }), "prime-button-primary")} onClick={() => setMobileOpen(false)}>Começar agora</Link>
-          </div>
-        </nav>
       </div>
     </header>
   );
