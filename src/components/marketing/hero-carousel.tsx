@@ -163,7 +163,7 @@ function DashboardVisual() {
 function ModuleVisual({ index }: { index: number }) {
   const data = MODULE_CARDS[index] ?? MODULE_CARDS[0];
   const [label, Icon] = data;
-  const slide = SLIDES[index + 1];
+  const slide = SLIDES[index + 1] ?? SLIDES[1];
   const rows = [
     ["Hoje", "Atividade recente", "Organizado"],
     ["Agora", "Acesso rápido", "Disponível"],
@@ -240,7 +240,7 @@ function WomanVisual() {
 export function HeroCarousel() {
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
-  const slide = SLIDES[index];
+  const slide = SLIDES[index] ?? SLIDES[0];
 
   useEffect(() => {
     if (paused) return;
@@ -325,7 +325,7 @@ export function HeroCarousel() {
               onClick={() => setIndex(railIndex + 1)}
               aria-label={"Mostrar " + label}
             >
-              <span className={cn("hero-module-rail-icon", "hero-tone--" + SLIDES[railIndex + 1].tone)}><Icon size={15} /></span>
+              <span className={cn("hero-module-rail-icon", "hero-tone--" + (SLIDES[railIndex + 1] ?? SLIDES[1]).tone)}><Icon size={15} /></span>
               <span className="hero-module-rail-copy"><strong>{label}</strong><small>{description}</small></span>
             </button>
           ))}
