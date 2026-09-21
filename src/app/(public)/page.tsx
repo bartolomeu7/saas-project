@@ -405,7 +405,7 @@ export default function HomePage() {
               <div className="home-module-rail-inner home-reference-rail">
                 <span className="home-module-rail-label">Já disponível no Prime Ges</span>
                 {HERO_CHIPS.map((chip, index) => {
-                  const module = MODULES[index];
+                  const module = MODULES[index]!;
                   return (
                     <span key={chip} className={cn("home-reference-module", index === 0 && "is-featured")}>
                       <span className={cn("home-reference-module__icon", "home-tone--" + module.tone)}>
@@ -541,7 +541,7 @@ export default function HomePage() {
                     <article className="home-segment-item home-segment-item--photo">
                       <div className="home-segment-media">
                         <img
-                          src={image?.src}
+                          src={image?.src ?? HERO_IMAGE}
                           alt={"Imagem ilustrativa para " + segment.name}
                           loading="lazy"
                           style={{ objectPosition: image?.position ?? "50% 50%" }}
