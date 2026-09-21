@@ -79,7 +79,7 @@ export default async function SalesPage({
   const hasAnySale = stats.totalInPeriod > 0 || result.total > 0;
 
   return (
-    <div className="flex flex-col gap-6 px-4 py-6 sm:px-6">
+    <div className="prime-module-page prime-module-page--vendas flex flex-col gap-6 px-4 py-6 sm:px-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Vendas</h1>

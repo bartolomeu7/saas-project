@@ -48,7 +48,7 @@ export default async function LoyaltyPage({
   const tierThresholds = usingDefaultTiers ? DEFAULT_TIER_THRESHOLDS : tierThresholdsFromDb;
 
   return (
-    <div className="flex flex-col gap-6 px-4 py-6 sm:px-6">
+    <div className="prime-module-page prime-module-page--fidelidade flex flex-col gap-6 px-4 py-6 sm:px-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Fidelidade</h1>
         <p className="text-sm text-muted-foreground">

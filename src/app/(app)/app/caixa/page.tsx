@@ -43,7 +43,7 @@ export default async function CashRegisterPage() {
     const lastClosed = await getLastClosedCashRegister(current.company.id);
 
     return (
-      <div className="flex flex-col gap-6 px-4 py-6 sm:px-6">
+      <div className="prime-module-page prime-module-page--caixa flex flex-col gap-6 px-4 py-6 sm:px-6">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Caixa</h1>
           <p className="text-sm text-muted-foreground">Controle de abertura, movimentações e fechamento do caixa.</p>
