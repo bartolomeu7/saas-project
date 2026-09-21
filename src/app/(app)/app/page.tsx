@@ -73,12 +73,13 @@ export default async function DashboardPage() {
   ]);
 
   const company = current!.company;
+  const monthRange = resolveSalePeriodRange("month");
   const [customerStats, productStats, serviceStats, saleStats, recentCustomers] =
     await Promise.all([
       getCustomerStats(company.id),
       getProductStats(company.id),
       getServiceStats(company.id),
-      getSaleStats(company.id, ...Object.values(resolveSalePeriodRange("month"))),
+      getSaleStats(company.id, monthRange.from, monthRange.to),
       getRecentCustomers(company.id, 5),
     ]);
 
