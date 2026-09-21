@@ -5,7 +5,6 @@ import {
   Banknote,
   Check,
   Gift,
-  LineChart,
   Package,
   ShoppingCart,
   Sparkles,
