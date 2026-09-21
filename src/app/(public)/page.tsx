@@ -1,26 +1,38 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Check, ChevronDown, Sparkles } from "lucide-react";
+import {
+  ArrowRight,
+  ArrowUpRight,
+  BarChart3,
+  Banknote,
+  Check,
+  ChevronDown,
+  CircleDollarSign,
+  Clock3,
+  Command,
+  Gift,
+  LayoutDashboard,
+  Package,
+  Play,
+  Sparkles,
+  Users,
+  Wrench,
+} from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { siteConfig } from "@/config/site";
 import { SiteHeader } from "@/components/marketing/site-header";
 import { SiteFooter } from "@/components/marketing/site-footer";
-import { SectionHeading } from "@/components/marketing/section-heading";
 import { PricingCard } from "@/components/marketing/pricing-card";
-import { AnimatedHeroVisual } from "@/components/marketing/animated-hero-visual";
 import { Reveal, ScrollProgress } from "@/components/marketing/motion";
 import {
   SEGMENTS,
   FEATURES,
+  PRICING_PLANS,
   TRUST_ITEMS,
   PROBLEMS,
   SOLUTION_ITEMS,
-  DEMO_SCREENS,
   HOW_IT_WORKS_STEPS,
-  BENEFITS,
-  PRICING_PLANS,
-  COMPARISON_ROWS,
   CUSTOM_PLAN,
 } from "@/config/marketing";
 
@@ -30,9 +42,7 @@ const SEO_DESCRIPTION =
 export const metadata: Metadata = {
   title: "Prime Ges — Gestão simples, moderna e organizada",
   description: SEO_DESCRIPTION,
-  alternates: {
-    canonical: siteConfig.url,
-  },
+  alternates: { canonical: siteConfig.url },
   openGraph: {
     title: "Prime Ges — Gestão simples, moderna e organizada",
     description: SEO_DESCRIPTION,
@@ -43,13 +53,222 @@ export const metadata: Metadata = {
   },
 };
 
-const HERO_POINTS = [
-  "Clientes, produtos, serviços, vendas, fidelidade e caixa centralizados",
-  "Acesso rápido de qualquer lugar",
-  "Interface feita para trabalhar, não para complicar",
-];
+const MODULES = [
+  { label: "Clientes", icon: Users, tone: "blue" },
+  { label: "Produtos", icon: Package, tone: "violet" },
+  { label: "Serviços", icon: Wrench, tone: "cyan" },
+  { label: "Vendas", icon: BarChart3, tone: "green" },
+  { label: "Fidelidade", icon: Gift, tone: "pink" },
+  { label: "Caixa", icon: Banknote, tone: "amber" },
+] as const;
 
-const DEMO_BARS = [35, 55, 42, 76, 62, 88];
+const HERO_CHIPS = ["Clientes", "Produtos", "Serviços", "Vendas", "Fidelidade", "Caixa"];
+
+const BENTO_ITEMS = [
+  {
+    title: "Clientes no centro",
+    description: "Cadastre, encontre e acompanhe clientes sem espalhar informação em várias ferramentas.",
+    icon: Users,
+    className: "home-bento-card--wide",
+    tone: "blue",
+  },
+  {
+    title: "Vendas sem atrito",
+    description: "Registre itens, pagamentos, descontos e cancelamentos em um fluxo direto.",
+    icon: BarChart3,
+    className: "",
+    tone: "violet",
+  },
+  {
+    title: "Caixa sob controle",
+    description: "Abra, movimente e feche o caixa com uma visão clara do dia.",
+    icon: CircleDollarSign,
+    className: "",
+    tone: "green",
+  },
+  {
+    title: "Produtos + serviços",
+    description: "Deixe catálogo, preços e serviços organizados para sua operação.",
+    icon: Package,
+    className: "home-bento-card--tall",
+    tone: "cyan",
+  },
+  {
+    title: "Fidelidade que conversa com a venda",
+    description: "Níveis, campanhas, multiplicadores e resgate de pontos no mesmo ecossistema.",
+    icon: Gift,
+    className: "home-bento-card--wide",
+    tone: "pink",
+  },
+] as const;
+
+function ProductWindow() {
+  return (
+    <div className="home-product-window">
+      <div className="home-window-glow" aria-hidden="true" />
+      <div className="home-window-toolbar">
+        <div className="home-window-dots" aria-hidden="true">
+          <span /><span /><span />
+        </div>
+        <div className="home-window-address">
+          <span className="home-window-address-dot" />
+          primeges.com.br/app
+        </div>
+        <div className="home-window-profile" />
+      </div>
+
+      <div className="home-product-body">
+        <aside className="home-product-sidebar" aria-hidden="true">
+          <div className="home-sidebar-logo">PG</div>
+          {[LayoutDashboard, Users, Package, Wrench, BarChart3, Gift, Banknote].map((Icon, index) => (
+            <span key={index} className={cn("home-sidebar-item", index === 0 && "is-active")}>
+              <Icon size={15} />
+            </span>
+          ))}
+        </aside>
+
+        <div className="home-product-main">
+          <div className="home-product-topline">
+            <div>
+              <span className="home-product-kicker">Visão geral</span>
+              <h3>Seu negócio, no seu ritmo.</h3>
+            </div>
+            <span className="home-product-status">
+              <i /> Sistema online
+            </span>
+          </div>
+
+          <div className="home-module-grid">
+            {MODULES.slice(0, 4).map((module) => (
+              <div key={module.label} className="home-module-mini">
+                <span className={cn("home-module-mini-icon", `home-tone--${module.tone}`)}>
+                  <module.icon size={15} />
+                </span>
+                <div>
+                  <small>{module.label}</small>
+                  <strong>Disponível</strong>
+                </div>
+                <ArrowUpRight size={12} className="home-module-mini-arrow" />
+              </div>
+            ))}
+          </div>
+
+          <div className="home-chart-card">
+            <div className="home-chart-heading">
+              <div>
+                <span>Visual ilustrativo</span>
+                <strong>Atividade da operação</strong>
+              </div>
+              <span className="home-chart-badge">Prime Ges</span>
+            </div>
+            <div className="home-chart">
+              {[25, 45, 65, 85].map((value) => (
+                <span key={value} style={{ bottom: value + "%" }} />
+              ))}
+              <div className="home-chart-bars" aria-hidden="true">
+                {[34, 54, 43, 68, 57, 76, 61, 84].map((height, index) => (
+                  <i key={index} style={{ "--bar-height": height + "%", "--bar-delay": index * 55 + "ms" } as React.CSSProperties} />
+                ))}
+              </div>
+            </div>
+            <div className="home-chart-footer">
+              <span>Dados reais no app</span>
+              <span>Interface demonstrativa</span>
+            </div>
+          </div>
+
+          <div className="home-quick-grid">
+            <div className="home-quick-card">
+              <span><Users size={14} /></span>
+              <div>
+                <small>Acesso rápido</small>
+                <strong>Clientes</strong>
+              </div>
+              <ArrowRight size={13} />
+            </div>
+            <div className="home-quick-card">
+              <span><Banknote size={14} /></span>
+              <div>
+                <small>Acesso rápido</small>
+                <strong>Caixa</strong>
+              </div>
+              <ArrowRight size={13} />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="home-float home-float--top">
+        <span className="home-float-icon"><Gift size={15} /></span>
+        <div>
+          <small>Programa</small>
+          <strong>Fidelidade</strong>
+        </div>
+        <b>Ativo</b>
+      </div>
+
+      <div className="home-float home-float--bottom">
+        <span className="home-float-icon home-float-icon--green"><CircleDollarSign size={15} /></span>
+        <div>
+          <small>Módulo</small>
+          <strong>Caixa</strong>
+        </div>
+        <span className="home-float-check">✓</span>
+      </div>
+    </div>
+  );
+}
+
+function ShowcasePanel({ kind }: { kind: "clientes" | "vendas" | "caixa" }) {
+  const configs = {
+    clientes: {
+      eyebrow: "Clientes",
+      title: "Relacionamento sem bagunça.",
+      icon: Users,
+      rows: ["Ana Souza", "Mercado Central", "João Santos"],
+    },
+    vendas: {
+      eyebrow: "Vendas",
+      title: "Venda com o contexto certo.",
+      icon: BarChart3,
+      rows: ["Venda #1042", "Venda #1041", "Venda #1040"],
+    },
+    caixa: {
+      eyebrow: "Caixa",
+      title: "O dia termina com clareza.",
+      icon: Banknote,
+      rows: ["Abertura do caixa", "Movimentação", "Fechamento"],
+    },
+  }[kind];
+
+  return (
+    <div className="home-showcase-window">
+      <div className="home-showcase-top">
+        <span className="home-showcase-icon"><configs.icon size={15} /></span>
+        <div>
+          <small>{configs.eyebrow}</small>
+          <strong>{configs.title}</strong>
+        </div>
+      </div>
+      <div className="home-showcase-lines">
+        {configs.rows.map((row, index) => (
+          <div key={row} className="home-showcase-row">
+            <span className="home-showcase-avatar">{index + 1}</span>
+            <div>
+              <strong>{row}</strong>
+              <small>{index === 0 ? "Agora" : "Hoje"}</small>
+            </div>
+            <span className="home-showcase-bar"><i style={{ width: (68 - index * 12) + "%" }} /></span>
+          </div>
+        ))}
+      </div>
+      <div className="home-showcase-foot">
+        <span><Clock3 size={12} /> Visão ilustrativa</span>
+        <ArrowUpRight size={13} />
+      </div>
+    </div>
+  );
+}
 
 export default function HomePage() {
   return (
@@ -58,384 +277,346 @@ export default function HomePage() {
       <SiteHeader />
 
       <main>
-        <section id="topo" className="prime-hero relative overflow-hidden">
-          <div className="prime-hero-grid" aria-hidden="true" />
-          <div className="prime-hero-sheen" aria-hidden="true" />
+        <section id="topo" className="home-hero">
+          <div className="home-hero-aurora home-hero-aurora--a" aria-hidden="true" />
+          <div className="home-hero-aurora home-hero-aurora--b" aria-hidden="true" />
+          <div className="home-hero-grid" aria-hidden="true" />
 
-          <div className="container relative z-10 grid grid-cols-1 items-center gap-10 py-16 sm:py-20 lg:grid-cols-[.9fr_1.1fr] lg:gap-8 lg:py-24 xl:py-28">
-            <div>
+          <div className="container relative z-10">
+            <div className="home-hero-copy">
               <Reveal>
-                <div className="prime-eyebrow">
-                  <span className="prime-eyebrow-dot" />
-                  Gestão SaaS para pequenas empresas
+                <div className="home-kicker">
+                  <span className="home-kicker-dot" />
+                  Gestão SaaS para pequenos negócios
                   <Sparkles size={13} />
                 </div>
               </Reveal>
 
-              <Reveal delay={80}>
-                <h1 className="mt-5 max-w-2xl text-4xl font-semibold leading-[1.02] tracking-[-0.04em] text-foreground sm:text-5xl lg:text-6xl xl:text-[4.45rem]">
-                  Sua empresa mais organizada.
-                  <span className="prime-gradient-text block">Seu dia mais leve.</span>
+              <Reveal delay={70}>
+                <h1>
+                  A gestão do seu negócio.
+                  <span>Finalmente no mesmo lugar.</span>
                 </h1>
               </Reveal>
 
-              <Reveal delay={150}>
-                <p className="mt-6 max-w-xl text-base leading-7 text-muted-foreground sm:text-lg">
-                  Clientes, produtos, serviços, vendas, fidelidade e caixa reunidos em uma experiência moderna para você administrar melhor o negócio — sem perder tempo procurando informação.
+              <Reveal delay={140}>
+                <p>
+                  Clientes, produtos, serviços, vendas, fidelidade e caixa em uma experiência
+                  moderna para você operar melhor — com menos cliques e mais clareza.
                 </p>
               </Reveal>
 
-              <Reveal delay={220}>
-                <div className="mt-7 flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
+              <Reveal delay={210}>
+                <div className="home-hero-actions">
                   <Link
                     href={siteConfig.links.register}
-                    className={cn(
-                      buttonVariants({ size: "lg" }),
-                      "prime-button-primary h-12 gap-2 px-7",
-                    )}
+                    className={cn(buttonVariants({ size: "lg" }), "home-btn-primary")}
                   >
                     Começar agora
                     <ArrowRight size={17} />
                   </Link>
-                  <a
-                    href="#recursos"
-                    className={cn(
-                      buttonVariants({ variant: "outline", size: "lg" }),
-                      "prime-button-outline h-12 gap-2 px-7",
-                    )}
-                  >
-                    Conhecer o Prime Ges
-                    <ChevronDown size={16} />
+                  <a href="#produto" className={cn(buttonVariants({ variant: "outline", size: "lg" }), "home-btn-secondary")}>
+                    Ver por dentro
+                    <Play size={14} fill="currentColor" />
                   </a>
                 </div>
               </Reveal>
 
-              <Reveal delay={290}>
-                <div className="mt-8 flex flex-col gap-3">
-                  {HERO_POINTS.map((item) => (
-                    <div key={item} className="flex items-center gap-2.5 text-sm text-muted-foreground">
-                      <span className="prime-check">
-                        <Check size={12} />
-                      </span>
-                      {item}
-                    </div>
-                  ))}
-                </div>
-              </Reveal>
-
-              <Reveal delay={350}>
-                <div className="mt-9 flex flex-wrap gap-2 text-xs text-muted-foreground/70">
-                  {["Sem complicação", "Na nuvem", "Dados organizados", "Acesso rápido"].map((item) => (
-                    <span key={item} className="prime-trust-chip">
-                      {item}
-                    </span>
-                  ))}
+              <Reveal delay={275}>
+                <div className="home-hero-note">
+                  <span><Check size={13} /> Sem complicação</span>
+                  <span><Check size={13} /> Na nuvem</span>
+                  <span><Check size={13} /> Acesso rápido</span>
                 </div>
               </Reveal>
             </div>
 
-            <Reveal delay={120} distance={28} duration={780}>
-              <AnimatedHeroVisual />
+            <Reveal delay={120} distance={24} duration={800}>
+              <div className="home-hero-visual">
+                <ProductWindow />
+              </div>
             </Reveal>
           </div>
 
-          <a href="#beneficios" className="prime-scroll-cue" aria-label="Ir para benefícios">
-            <span>Explore</span>
-            <ChevronDown size={15} />
-          </a>
-        </section>
-
-        <section className="prime-trust-strip">
-          <div className="container flex flex-col gap-5 py-6 lg:flex-row lg:items-center lg:justify-between">
-            <Reveal>
-              <p className="text-sm text-muted-foreground">
-                Tudo o que você precisa para ter mais clareza na operação.
-              </p>
-            </Reveal>
-
-            <div className="flex flex-wrap items-center gap-x-7 gap-y-3">
-              {TRUST_ITEMS.map((item, index) => (
-                <Reveal key={item.label} delay={index * 60}>
-                  <div className="flex items-center gap-2 text-sm text-foreground/90">
-                    <Check size={15} className="text-success" />
-                    {item.label}
-                  </div>
-                </Reveal>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section id="beneficios" className="prime-section container py-20 sm:py-24 lg:py-28">
-          <Reveal>
-            <SectionHeading
-              eyebrow="Benefícios"
-              title="Uma interface que trabalha no ritmo do seu negócio."
-              description="Menos cliques para chegar ao que importa. Mais clareza para decidir e executar."
-            />
-          </Reveal>
-
-          <div className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {BENEFITS.map((benefit, index) => (
-              <Reveal key={benefit.title} delay={index * 80}>
-                <article className="prime-feature-card h-full">
-                  <span className="prime-icon-tile">
-                    <benefit.icon size={20} />
+          <div className="home-hero-module-rail" aria-label="Módulos disponíveis">
+            <div className="container">
+              <div className="home-module-rail-inner">
+                <span className="home-module-rail-label">Já disponível no Prime Ges</span>
+                {HERO_CHIPS.map((chip, index) => (
+                  <span key={chip} className={cn("home-module-chip", index === 0 && "is-featured")}>
+                    <i />
+                    {chip}
                   </span>
-                  <h3 className="mt-5 text-base font-semibold text-foreground">{benefit.title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-muted-foreground">{benefit.description}</p>
-                  <span className="prime-card-arrow">
-                    <ArrowRight size={15} />
-                  </span>
-                </article>
-              </Reveal>
-            ))}
-          </div>
-        </section>
-
-        <section id="segmentos" className="prime-surface-section py-20 sm:py-24 lg:py-28">
-          <div className="container">
-            <Reveal>
-              <SectionHeading
-                eyebrow="Para quem é"
-                title="Feito para quem precisa de gestão sem enrolação."
-                description="Uma base flexível para pequenos negócios de comércio e serviços, com espaço para crescer."
-              />
-            </Reveal>
-
-            <div className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {SEGMENTS.map((segment, index) => (
-                <Reveal key={segment.name} delay={index * 70}>
-                  <article className="prime-segment-card">
-                    <span className="prime-icon-tile prime-icon-tile--soft">
-                      <segment.icon size={20} />
-                    </span>
-                    <h3 className="mt-5 text-base font-semibold text-foreground">{segment.name}</h3>
-                    <p className="mt-2 text-sm leading-6 text-muted-foreground">{segment.description}</p>
-                    <span className="prime-card-arrow">
-                      <ArrowRight size={15} />
-                    </span>
-                  </article>
-                </Reveal>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         </section>
 
-        <section className="prime-section container py-20 sm:py-24 lg:py-28">
-          <div className="grid grid-cols-1 gap-10 lg:grid-cols-2 lg:items-center">
+        <section id="produto" className="home-intro-section">
+          <div className="container">
             <Reveal>
-              <div>
-                <SectionHeading
-                  align="left"
-                  eyebrow="Antes e depois"
-                  title="Menos planilhas. Menos confusão. Mais controle."
-                  description="Quando as informações ficam espalhadas, o dia vira uma sequência de buscas. O Prime Ges transforma isso em uma rotina centralizada."
-                />
-                <ul className="mt-8 flex flex-col gap-3">
-                  {PROBLEMS.map((problem) => (
-                    <li key={problem.title} className="prime-problem-item">
-                      <span className="prime-problem-dot" />
-                      {problem.title}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </Reveal>
-
-            <Reveal delay={140}>
-              <div className="prime-solution-card">
-                <div className="prime-solution-glow" aria-hidden="true" />
-                <div className="relative">
-                  <p className="text-sm font-semibold text-foreground">Com o Prime Ges</p>
-                  <p className="mt-2 text-2xl font-semibold tracking-tight text-foreground">
-                    Você enxerga a operação sem trocar de ferramenta.
-                  </p>
-                  <div className="mt-7 grid gap-3 sm:grid-cols-2">
-                    {SOLUTION_ITEMS.map((item) => (
-                      <div key={item} className="prime-solution-item">
-                        <span><Check size={13} /></span>
-                        {item}
-                      </div>
-                    ))}
-                  </div>
+              <div className="home-intro-grid">
+                <div>
+                  <span className="home-section-eyebrow">Pensado como produto, não como planilha</span>
+                  <h2>Uma home que mostra o que importa antes mesmo de você clicar.</h2>
                 </div>
-              </div>
-            </Reveal>
-          </div>
-        </section>
-
-        <section id="recursos" className="prime-surface-section py-20 sm:py-24 lg:py-28">
-          <div className="container">
-            <Reveal>
-              <SectionHeading
-                eyebrow="Recursos"
-                title="Tudo em uma experiência que faz sentido."
-                description="Veja os módulos já disponíveis e acompanhe a evolução da plataforma em um só lugar."
-              />
-            </Reveal>
-
-            <div className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {FEATURES.map((feature, index) => (
-                <Reveal key={feature.name} delay={index * 65}>
-                  <article className={cn("prime-resource-card", !feature.available && "prime-resource-card--muted")}>
-                    <div className="flex items-center justify-between gap-3">
-                      <span className={cn("prime-icon-tile", !feature.available && "prime-icon-tile--muted")}>
-                        <feature.icon size={20} />
-                      </span>
-                      {!feature.available && <span className="prime-coming-soon">Em breve</span>}
-                    </div>
-                    <h3 className="mt-5 text-base font-semibold text-foreground">{feature.name}</h3>
-                    <p className="mt-2 text-sm leading-6 text-muted-foreground">{feature.description}</p>
-                  </article>
-                </Reveal>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="prime-section container py-20 sm:py-24 lg:py-28">
-          <div className="grid grid-cols-1 gap-10 lg:grid-cols-[.75fr_1.25fr] lg:items-center">
-            <Reveal>
-              <SectionHeading
-                align="left"
-                eyebrow="Demonstração"
-                title="Uma ideia clara de como a gestão se organiza."
-                description="Informação importante primeiro, ações rápidas depois — a linguagem visual do produto em três cenas."
-              />
-            </Reveal>
-
-            <div className="grid gap-5 sm:grid-cols-3">
-              {DEMO_SCREENS.map((screen, index) => (
-                <Reveal key={screen.title} delay={index * 90}>
-                  <div className="prime-demo-card">
-                    <DemoMock variant={screen.variant} />
-                    <h3 className="mt-4 text-sm font-semibold text-foreground">{screen.title}</h3>
-                    <p className="mt-1.5 text-xs leading-5 text-muted-foreground">{screen.description}</p>
-                  </div>
-                </Reveal>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="prime-surface-section py-20 sm:py-24 lg:py-28">
-          <div className="container">
-            <Reveal>
-              <SectionHeading
-                title="Comece em poucos minutos."
-                description="Um caminho curto da conta criada até a empresa organizada."
-              />
-            </Reveal>
-
-            <div className="mx-auto mt-12 grid max-w-4xl gap-4 md:grid-cols-3">
-              {HOW_IT_WORKS_STEPS.map((step, index) => (
-                <Reveal key={step.number} delay={index * 100}>
-                  <div className="prime-step-card">
-                    <span className="prime-step-number">{step.number}</span>
-                    <div>
-                      <p className="text-sm font-semibold text-foreground">{step.title}</p>
-                      <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                        Configure o essencial e comece a trabalhar.
-                      </p>
-                    </div>
-                  </div>
-                </Reveal>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section id="precos" className="prime-section container py-20 sm:py-24 lg:py-28">
-          <Reveal>
-            <SectionHeading
-              eyebrow="Preços"
-              title="Comece simples. Cresça quando precisar."
-              description="Planos claros para começar sem surpresa e evoluir conforme sua empresa cresce."
-            />
-          </Reveal>
-
-          <div className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {PRICING_PLANS.map((plan, index) => (
-              <Reveal key={plan.id} delay={index * 80}>
-                <PricingCard plan={plan} />
-              </Reveal>
-            ))}
-          </div>
-
-          <Reveal delay={160}>
-            <div className="prime-comparison-wrap mt-10 overflow-x-auto">
-              <table className="w-full min-w-[620px] text-sm">
-                <thead className="bg-white/[.025] text-left text-[11px] uppercase tracking-[.14em] text-muted-foreground">
-                  <tr>
-                    <th className="px-4 py-3.5 font-medium">Recursos</th>
-                    {PRICING_PLANS.map((plan) => (
-                      <th key={plan.id} className="px-4 py-3.5 text-center font-medium">{plan.name}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/70">
-                  {COMPARISON_ROWS.map((row) => (
-                    <tr key={row.label} className="transition-colors hover:bg-white/[.02]">
-                      <td className="px-4 py-3.5 text-foreground">
-                        {row.label}
-                        {row.note && <span className="mt-0.5 block text-xs text-muted-foreground">{row.note}</span>}
-                      </td>
-                      {row.values.map((value, index) => (
-                        <td key={index} className="px-4 py-3.5 text-center">
-                          {typeof value === "boolean" ? (
-                            value ? (
-                              <Check className="mx-auto h-4 w-4 text-success" />
-                            ) : (
-                              <span className="text-muted-foreground/40">—</span>
-                            )
-                          ) : (
-                            <span className="text-foreground">{value}</span>
-                          )}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Reveal>
-
-          <Reveal delay={220}>
-            <div className="mt-8 flex flex-col items-start gap-4 rounded-2xl border border-border/80 bg-card/50 p-6 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <span className="prime-trust-chip">{CUSTOM_PLAN.tagline}</span>
-                <p className="mt-3 text-base font-semibold text-foreground">{CUSTOM_PLAN.title}</p>
-                <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{CUSTOM_PLAN.description}</p>
-              </div>
-              <span aria-disabled="true" className={cn(buttonVariants({ variant: "outline" }), "shrink-0 cursor-not-allowed opacity-50")}>
-                {CUSTOM_PLAN.ctaLabel}
-              </span>
-            </div>
-          </Reveal>
-        </section>
-
-        <section className="prime-cta-section border-t border-border/80">
-          <div className="container relative flex flex-col items-center gap-6 py-20 text-center sm:py-24 lg:py-28">
-            <div className="prime-cta-glow" aria-hidden="true" />
-            <Reveal>
-              <div className="relative">
-                <span className="prime-eyebrow">Pronto para organizar melhor?</span>
-                <h2 className="mt-5 max-w-3xl text-3xl font-semibold tracking-[-.03em] text-foreground sm:text-5xl">
-                  Seu próximo passo pode ser mais simples.
-                </h2>
-                <p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-muted-foreground sm:text-base">
-                  Comece no Prime Ges e coloque clientes, produtos, vendas e operação para trabalhar no mesmo ritmo.
+                <p>
+                  A direção visual do Prime Ges combina referência de ERPs modernos com uma experiência
+                  mais leve: destaque para o produto, atalhos claros, cards com hierarquia e movimento
+                  apenas onde ele ajuda a orientar.
                 </p>
-                <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-                  <Link href={siteConfig.links.register} className={cn(buttonVariants({ size: "lg" }), "prime-button-primary h-12 gap-2 px-8")}>
+              </div>
+            </Reveal>
+
+            <div className="home-bento-grid">
+              {BENTO_ITEMS.map((item, index) => (
+                <Reveal key={item.title} delay={index * 60}>
+                  <article className={cn("home-bento-card", item.className)}>
+                    <div className="home-bento-top">
+                      <span className={cn("home-bento-icon", `home-tone--${item.tone}`)}>
+                        <item.icon size={18} />
+                      </span>
+                      <ArrowUpRight size={15} />
+                    </div>
+                    <div className="home-bento-content">
+                      <h3>{item.title}</h3>
+                      <p>{item.description}</p>
+                    </div>
+                    {item.title === "Clientes no centro" && (
+                      <div className="home-mini-list" aria-hidden="true">
+                        {["Cliente 01", "Cliente 02", "Cliente 03"].map((label, itemIndex) => (
+                          <span key={label}>
+                            <i>{itemIndex + 1}</i>
+                            {label}
+                            <b />
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {item.title === "Vendas sem atrito" && (
+                      <div className="home-mini-spark" aria-hidden="true">
+                        {[32, 52, 44, 64, 58, 76].map((height, itemIndex) => (
+                          <i key={itemIndex} style={{ height: height + "%" }} />
+                        ))}
+                      </div>
+                    )}
+                    {item.title === "Caixa sob controle" && (
+                      <div className="home-cash-orbit" aria-hidden="true"><span /><i /><b /></div>
+                    )}
+                  </article>
+                </Reveal>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section id="recursos" className="home-modules-section">
+          <div className="container">
+            <Reveal>
+              <div className="home-modules-heading">
+                <div>
+                  <span className="home-section-eyebrow">O que já está no produto</span>
+                  <h2>Os módulos certos, organizados do jeito certo.</h2>
+                </div>
+                <p>
+                  Sem prometer o que ainda não existe. O Prime Ges destaca o que está pronto hoje
+                  e deixa o restante claramente sinalizado para o futuro.
+                </p>
+              </div>
+            </Reveal>
+
+            <div className="home-module-grid-large">
+              {FEATURES.map((feature, index) => (
+                <Reveal key={feature.name} delay={index * 50}>
+                  <article className={cn("home-module-card", !feature.available && "is-soon")}>
+                    <div className="home-module-card-top">
+                      <span className="home-module-card-icon">
+                        <feature.icon size={19} />
+                      </span>
+                      {feature.available ? (
+                        <span className="home-available-dot"><i /> Disponível</span>
+                      ) : (
+                        <span className="home-soon-pill">Em breve</span>
+                      )}
+                    </div>
+                    <h3>{feature.name}</h3>
+                    <p>{feature.description}</p>
+                    {feature.available && <ArrowUpRight size={15} className="home-module-card-arrow" />}
+                  </article>
+                </Reveal>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section id="segmentos" className="home-segments-section">
+          <div className="container">
+            <Reveal>
+              <div className="home-segments-intro">
+                <span className="home-section-eyebrow">Para quem é</span>
+                <h2>Pequeno negócio merece uma experiência grande.</h2>
+                <p>
+                  A proposta é simples: uma base de gestão flexível para comércio e serviços,
+                  sem a sensação de estar pilotando um sistema feito para uma corporação.
+                </p>
+              </div>
+            </Reveal>
+
+            <div className="home-segment-row">
+              {SEGMENTS.map((segment, index) => (
+                <Reveal key={segment.name} delay={index * 45}>
+                  <article className="home-segment-item">
+                    <span className="home-segment-icon"><segment.icon size={17} /></span>
+                    <div>
+                      <strong>{segment.name}</strong>
+                      <span>{segment.description}</span>
+                    </div>
+                    <ArrowRight size={14} />
+                  </article>
+                </Reveal>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="home-showcase-section">
+          <div className="container">
+            <div className="home-showcase-header">
+              <Reveal>
+                <div>
+                  <span className="home-section-eyebrow">Fluxo visual</span>
+                  <h2>Uma interface que explica o produto sozinha.</h2>
+                </div>
+              </Reveal>
+              <Reveal delay={90}>
+                <span className="home-showcase-caption"><Command size={14} /> Visual ilustrativo do produto</span>
+              </Reveal>
+            </div>
+
+            <div className="home-showcase-grid">
+              <Reveal>
+                <ShowcasePanel kind="clientes" />
+              </Reveal>
+              <Reveal delay={80}>
+                <ShowcasePanel kind="vendas" />
+              </Reveal>
+              <Reveal delay={160}>
+                <ShowcasePanel kind="caixa" />
+              </Reveal>
+            </div>
+          </div>
+        </section>
+
+        <section className="home-story-section">
+          <div className="container">
+            <div className="home-story-grid">
+              <Reveal>
+                <div className="home-story-card home-story-card--problem">
+                  <span className="home-section-eyebrow">Antes</span>
+                  <h3>Quando a operação cresce, a informação começa a escapar.</h3>
+                  <div className="home-problem-list">
+                    {PROBLEMS.map((problem) => (
+                      <span key={problem.title}><i /> {problem.title}</span>
+                    ))}
+                  </div>
+                </div>
+              </Reveal>
+
+              <Reveal delay={120}>
+                <div className="home-story-card home-story-card--solution">
+                  <span className="home-section-eyebrow">Com o Prime Ges</span>
+                  <h3>Você concentra o essencial em um lugar que foi feito para o dia a dia.</h3>
+                  <div className="home-solution-list">
+                    {SOLUTION_ITEMS.map((item) => (
+                      <span key={item}><Check size={13} /> {item}</span>
+                    ))}
+                  </div>
+                </div>
+              </Reveal>
+            </div>
+          </div>
+        </section>
+
+        <section id="precos" className="home-pricing-section">
+          <div className="container">
+            <Reveal>
+              <div className="home-pricing-intro">
+                <span className="home-section-eyebrow">Preços</span>
+                <h2>Comece simples. Evolua no seu ritmo.</h2>
+                <p>Planos claros, sem criar uma floresta de opções para uma operação que ainda está crescendo.</p>
+              </div>
+            </Reveal>
+
+            <div className="home-pricing-grid">
+              {PRICING_PLANS.map((plan, index) => (
+                <Reveal key={plan.id} delay={index * 70}>
+                  <PricingCard plan={plan} />
+                </Reveal>
+              ))}
+            </div>
+
+            <Reveal delay={180}>
+              <div className="home-custom-plan">
+                <div>
+                  <span className="home-section-eyebrow">{CUSTOM_PLAN.tagline}</span>
+                  <h3>{CUSTOM_PLAN.title}</h3>
+                  <p>{CUSTOM_PLAN.description}</p>
+                </div>
+                <span className={cn(buttonVariants({ variant: "outline" }), "home-disabled-cta")}>
+                  {CUSTOM_PLAN.ctaLabel}
+                </span>
+              </div>
+            </Reveal>
+          </div>
+        </section>
+
+        <section className="home-start-section">
+          <div className="container">
+            <Reveal>
+              <div className="home-start-heading">
+                <span className="home-section-eyebrow">Comece sem enrolação</span>
+                <h2>Do cadastro para a operação em três passos.</h2>
+              </div>
+            </Reveal>
+
+            <div className="home-start-steps">
+              {HOW_IT_WORKS_STEPS.map((step, index) => (
+                <Reveal key={step.number} delay={index * 90}>
+                  <div className="home-start-step">
+                    <span>{step.number}</span>
+                    <div>
+                      <strong>{step.title}</strong>
+                      <p>Configure o essencial e siga para o próximo passo.</p>
+                    </div>
+                  </div>
+                </Reveal>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="home-final-cta">
+          <div className="home-final-orbit home-final-orbit--a" aria-hidden="true" />
+          <div className="home-final-orbit home-final-orbit--b" aria-hidden="true" />
+          <div className="container relative">
+            <Reveal>
+              <div className="home-final-inner">
+                <span className="home-final-badge"><Sparkles size={13} /> Prime Ges</span>
+                <h2>Seu negócio merece uma gestão que parece simples.</h2>
+                <p>Comece com o que já está pronto. Expanda quando fizer sentido.</p>
+                <div className="home-final-actions">
+                  <Link href={siteConfig.links.register} className={cn(buttonVariants({ size: "lg" }), "home-btn-primary")}>
                     Começar agora
                     <ArrowRight size={17} />
                   </Link>
-                  <Link href={siteConfig.links.login} className={cn(buttonVariants({ variant: "outline", size: "lg" }), "prime-button-outline h-12 px-8")}>
+                  <Link href={siteConfig.links.login} className={cn(buttonVariants({ variant: "outline", size: "lg" }), "home-btn-secondary")}>
                     Entrar
                   </Link>
                 </div>
+                <a href="#topo" className="home-back-top">
+                  Voltar ao topo <ChevronDown size={14} className="-rotate-180" />
+                </a>
               </div>
             </Reveal>
           </div>
@@ -444,37 +625,5 @@ export default function HomePage() {
 
       <SiteFooter />
     </>
-  );
-}
-
-function DemoMock({ variant }: { variant: "dashboard" | "clientes" | "gestao" }) {
-  if (variant === "clientes") {
-    return (
-      <div className="prime-demo-mock">
-        <div className="prime-demo-title" />
-        <div className="prime-demo-lines"><i /><i /><i /><i /></div>
-        <div className="prime-demo-row"><span /><b /><em /></div>
-      </div>
-    );
-  }
-
-  if (variant === "gestao") {
-    return (
-      <div className="prime-demo-mock">
-        <div className="prime-demo-title" />
-        <div className="prime-demo-grid"><i /><i /><i /><i /></div>
-        <div className="prime-demo-chart-line" />
-      </div>
-    );
-  }
-
-  return (
-    <div className="prime-demo-mock">
-      <div className="prime-demo-title" />
-      <div className="prime-demo-grid prime-demo-grid--stats"><i /><i /><i /><i /></div>
-      <div className="prime-demo-bars">
-        {DEMO_BARS.map((height, index) => <i key={index} style={{ height: height + "%" }} />)}
-      </div>
-    </div>
   );
 }
