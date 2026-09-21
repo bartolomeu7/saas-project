@@ -368,13 +368,12 @@ export default function HomePage() {
 
               <Reveal delay={120} distance={24} duration={900}>
                 <div className="home-reference-visual" aria-label="Prévia visual do Prime Ges">
-                  <div className="home-reference-photo">
-                    <img
-                      src={HERO_IMAGE}
-                      alt="Pessoa empreendedora trabalhando em um notebook"
-                      loading="eager"
-                      fetchPriority="high"
-                    />
+                  <div
+                    className="home-reference-photo"
+                    role="img"
+                    aria-label="Pessoa empreendedora trabalhando em um notebook"
+                    style={{ backgroundImage: "url(" + HERO_IMAGE + ")" }}
+                  >
                     <div className="home-reference-photo__overlay" aria-hidden="true" />
                     <div className="home-reference-photo__shine" aria-hidden="true" />
                   </div>
@@ -539,13 +538,15 @@ export default function HomePage() {
                 return (
                   <Reveal key={segment.name} delay={index * 55}>
                     <article className="home-segment-item home-segment-item--photo">
-                      <div className="home-segment-media">
-                        <img
-                          src={image?.src ?? HERO_IMAGE}
-                          alt={"Imagem ilustrativa para " + segment.name}
-                          loading="lazy"
-                          style={{ objectPosition: image?.position ?? "50% 50%" }}
-                        />
+                      <div
+                        className="home-segment-media"
+                        role="img"
+                        aria-label={"Imagem ilustrativa para " + segment.name}
+                        style={{
+                          backgroundImage: "url(" + (image?.src ?? HERO_IMAGE) + ")",
+                          backgroundPosition: image?.position ?? "50% 50%",
+                        }}
+                      >
                         <span className="home-segment-icon">
                           <segment.icon size={17} />
                         </span>
