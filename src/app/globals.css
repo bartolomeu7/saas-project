@@ -2242,3 +2242,233 @@
     animation: none !important;
   }
 }
+
+
+/* =========================================================
+   Prime Ges Home — organization pass
+   Stronger hierarchy, tighter rhythm, less repetition.
+   ========================================================= */
+
+@layer components {
+  .home-hero--reference {
+    min-height: 720px;
+  }
+
+  .home-section-eyebrow {
+    gap: 7px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: hsl(var(--primary));
+    font-size: 10px;
+    letter-spacing: .16em;
+  }
+
+  .home-section-eyebrow::before {
+    content: "";
+    width: 5px;
+    height: 5px;
+    flex: 0 0 auto;
+    border-radius: 999px;
+    background: currentColor;
+    box-shadow: 0 0 12px hsl(var(--primary) / .5);
+  }
+
+  .home-intro-section,
+  .home-modules-section,
+  .home-segments-section,
+  .home-showcase-section,
+  .home-story-section,
+  .home-pricing-section,
+  .home-start-section {
+    padding: 92px 0;
+    border-top: 1px solid hsl(var(--foreground) / .055);
+  }
+
+  .home-intro-grid,
+  .home-modules-heading {
+    gap: 48px;
+  }
+
+  .home-intro-grid h2,
+  .home-modules-heading h2,
+  .home-segments-intro h2,
+  .home-showcase-header h2,
+  .home-pricing-intro h2,
+  .home-start-heading h2 {
+    margin-top: 12px;
+    font-size: clamp(2rem, 3.7vw, 3.55rem);
+    line-height: 1;
+  }
+
+  .home-intro-grid p,
+  .home-modules-heading p,
+  .home-segments-intro p,
+  .home-pricing-intro p {
+    font-size: 14px;
+    line-height: 1.75;
+  }
+
+  .home-bento-grid {
+    gap: 12px;
+    margin-top: 38px;
+  }
+
+  .home-bento-card {
+    min-height: 198px;
+    border-radius: 20px;
+    padding: 20px;
+  }
+
+  .home-bento-card--tall .home-bento-content {
+    margin-top: 56px;
+  }
+
+  .home-bento-content {
+    margin-top: 34px;
+  }
+
+  .home-bento-content h3 {
+    font-size: 18px;
+  }
+
+  .home-module-grid-large {
+    gap: 12px;
+    margin-top: 38px;
+  }
+
+  .home-module-card {
+    min-height: 194px;
+    padding: 20px;
+    border-radius: 18px;
+  }
+
+  .home-module-card h3 {
+    margin-top: 22px;
+    font-size: 17px;
+  }
+
+  .home-module-card p {
+    line-height: 1.65;
+  }
+
+  .home-showcase-grid {
+    gap: 12px;
+    margin-top: 36px;
+  }
+
+  .home-showcase-window {
+    min-height: 312px;
+    padding: 17px;
+    border-radius: 18px;
+  }
+
+  .home-segment-row--photo {
+    margin-top: 34px;
+    gap: 12px;
+  }
+
+  .home-story-grid {
+    gap: 12px;
+  }
+
+  .home-story-card {
+    min-height: 312px;
+    padding: 28px;
+    border-radius: 22px;
+  }
+
+  .home-story-card h3 {
+    margin-top: 15px;
+    font-size: clamp(1.45rem, 2.6vw, 2.25rem);
+  }
+
+  .home-problem-list,
+  .home-solution-list {
+    gap: 8px;
+    margin-top: 26px;
+  }
+
+  .home-pricing-grid {
+    gap: 12px;
+    margin-top: 38px;
+  }
+
+  .home-custom-plan {
+    margin-top: 12px;
+    padding: 20px 22px;
+    border-radius: 18px;
+  }
+
+  .home-start-steps {
+    gap: 12px;
+    max-width: 980px;
+    margin-top: 36px;
+  }
+
+  .home-start-step {
+    min-height: 128px;
+    padding: 20px;
+    border-radius: 16px;
+  }
+
+  .home-start-step strong {
+    margin-top: 16px;
+  }
+
+  .home-final-cta {
+    padding: 92px 0 72px;
+    border-top: 1px solid hsl(var(--foreground) / .055);
+  }
+
+  .home-final-inner h2 {
+    font-size: clamp(2.2rem, 4.5vw, 4.5rem);
+  }
+
+  .home-back-top {
+    margin-top: 26px;
+  }
+
+  @media (max-width: 700px) {
+    .home-hero--reference {
+      min-height: 0;
+    }
+
+    .home-intro-section,
+    .home-modules-section,
+    .home-segments-section,
+    .home-showcase-section,
+    .home-story-section,
+    .home-pricing-section,
+    .home-start-section {
+      padding: 70px 0;
+    }
+
+    .home-bento-grid,
+    .home-module-grid-large,
+    .home-segment-row--photo,
+    .home-showcase-grid,
+    .home-story-grid,
+    .home-start-steps,
+    .home-pricing-grid {
+      gap: 10px;
+    }
+
+    .home-bento-card {
+      min-height: 190px;
+    }
+
+    .home-showcase-grid {
+      margin-top: 28px;
+    }
+
+    .home-story-card {
+      min-height: 290px;
+      padding: 23px;
+    }
+
+    .home-final-cta {
+      padding: 76px 0 60px;
+    }
+  }
+}
