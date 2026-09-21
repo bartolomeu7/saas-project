@@ -398,13 +398,11 @@ export default function HomePage() {
             <Reveal>
               <div className="home-intro-grid">
                 <div>
-                  <span className="home-section-eyebrow">Pensado como produto, não como planilha</span>
-                  <h2>Uma home que mostra o que importa antes mesmo de você clicar.</h2>
+                  <span className="home-section-eyebrow">Tudo em um só lugar</span>
+                  <h2>O essencial da sua operação, sem trocar de sistema.</h2>
                 </div>
                 <p>
-                  A direção visual do Prime Ges combina referência de ERPs modernos com uma experiência
-                  mais leve: destaque para o produto, atalhos claros, cards com hierarquia e movimento
-                  apenas onde ele ajuda a orientar.
+                  Clientes, produtos, serviços, vendas, fidelidade e caixa reunidos em uma experiência feita para a rotina. Menos troca de telas, mais clareza para decidir e agir.
                 </p>
               </div>
             </Reveal>
@@ -456,12 +454,11 @@ export default function HomePage() {
             <Reveal>
               <div className="home-modules-heading">
                 <div>
-                  <span className="home-section-eyebrow">O que já está no produto</span>
-                  <h2>Os módulos certos, organizados do jeito certo.</h2>
+                  <span className="home-section-eyebrow">Módulos do Prime Ges</span>
+                  <h2>Tudo o que você precisa para cuidar da operação.</h2>
                 </div>
                 <p>
-                  Sem prometer o que ainda não existe. O Prime Ges destaca o que está pronto hoje
-                  e deixa o restante claramente sinalizado para o futuro.
+                  Os recursos disponíveis hoje aparecem em primeiro plano. O que ainda está em desenvolvimento fica sinalizado com clareza.
                 </p>
               </div>
             </Reveal>
@@ -490,15 +487,42 @@ export default function HomePage() {
           </div>
         </section>
 
+        <section className="home-showcase-section">
+          <div className="container">
+            <div className="home-showcase-header">
+              <Reveal>
+                <div>
+                  <span className="home-section-eyebrow">Veja por dentro</span>
+                  <h2>Uma experiência pensada para você entender em poucos segundos.</h2>
+                </div>
+              </Reveal>
+              <Reveal delay={90}>
+                <span className="home-showcase-caption"><Command size={14} /> Prévia do sistema</span>
+              </Reveal>
+            </div>
+
+            <div className="home-showcase-grid">
+              <Reveal>
+                <ShowcasePanel kind="clientes" />
+              </Reveal>
+              <Reveal delay={80}>
+                <ShowcasePanel kind="vendas" />
+              </Reveal>
+              <Reveal delay={160}>
+                <ShowcasePanel kind="caixa" />
+              </Reveal>
+            </div>
+          </div>
+        </section>
+
         <section id="segmentos" className="home-segments-section">
           <div className="container">
             <Reveal>
               <div className="home-segments-intro">
-                <span className="home-section-eyebrow">Para quem é</span>
-                <h2>Pequeno negócio merece uma experiência grande.</h2>
+                <span className="home-section-eyebrow">Feito para o seu negócio</span>
+                <h2>Um sistema que acompanha o jeito que o seu negócio funciona.</h2>
                 <p>
-                  A proposta é simples: uma base de gestão flexível para comércio e serviços,
-                  sem a sensação de estar pilotando um sistema feito para uma corporação.
+                  Padarias, mercadinhos, restaurantes, lanchonetes e operações automotivas podem organizar a rotina na mesma base, com módulos que você usa de verdade.
                 </p>
               </div>
             </Reveal>
@@ -536,41 +560,13 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="home-showcase-section">
-          <div className="container">
-            <div className="home-showcase-header">
-              <Reveal>
-                <div>
-                  <span className="home-section-eyebrow">Fluxo visual</span>
-                  <h2>Uma interface que explica o produto sozinha.</h2>
-                </div>
-              </Reveal>
-              <Reveal delay={90}>
-                <span className="home-showcase-caption"><Command size={14} /> Visual ilustrativo do produto</span>
-              </Reveal>
-            </div>
-
-            <div className="home-showcase-grid">
-              <Reveal>
-                <ShowcasePanel kind="clientes" />
-              </Reveal>
-              <Reveal delay={80}>
-                <ShowcasePanel kind="vendas" />
-              </Reveal>
-              <Reveal delay={160}>
-                <ShowcasePanel kind="caixa" />
-              </Reveal>
-            </div>
-          </div>
-        </section>
-
         <section className="home-story-section">
           <div className="container">
             <div className="home-story-grid">
               <Reveal>
                 <div className="home-story-card home-story-card--problem">
-                  <span className="home-section-eyebrow">Antes</span>
-                  <h3>Quando a operação cresce, a informação começa a escapar.</h3>
+                  <span className="home-section-eyebrow">O problema</span>
+                  <h3>Quando tudo fica espalhado, a operação perde ritmo.</h3>
                   <div className="home-problem-list">
                     {PROBLEMS.map((problem) => (
                       <span key={problem.title}><i /> {problem.title}</span>
@@ -582,7 +578,7 @@ export default function HomePage() {
               <Reveal delay={120}>
                 <div className="home-story-card home-story-card--solution">
                   <span className="home-section-eyebrow">Com o Prime Ges</span>
-                  <h3>Você concentra o essencial em um lugar que foi feito para o dia a dia.</h3>
+                  <h3>Você concentra o essencial em um só lugar e mantém a rotina visível.</h3>
                   <div className="home-solution-list">
                     {SOLUTION_ITEMS.map((item) => (
                       <span key={item}><Check size={13} /> {item}</span>
@@ -594,13 +590,38 @@ export default function HomePage() {
           </div>
         </section>
 
+        <section className="home-start-section">
+          <div className="container">
+            <Reveal>
+              <div className="home-start-heading">
+                <span className="home-section-eyebrow">Como começar</span>
+                <h2>Da conta criada à gestão do dia a dia em três passos.</h2>
+              </div>
+            </Reveal>
+
+            <div className="home-start-steps">
+              {HOW_IT_WORKS_STEPS.map((step, index) => (
+                <Reveal key={step.number} delay={index * 90}>
+                  <div className="home-start-step">
+                    <span>{step.number}</span>
+                    <div>
+                      <strong>{step.title}</strong>
+                      <p>Configure o essencial e siga para o próximo passo.</p>
+                    </div>
+                  </div>
+                </Reveal>
+              ))}
+            </div>
+          </div>
+        </section>
+
         <section id="precos" className="home-pricing-section">
           <div className="container">
             <Reveal>
               <div className="home-pricing-intro">
                 <span className="home-section-eyebrow">Preços</span>
-                <h2>Comece simples. Evolua no seu ritmo.</h2>
-                <p>Planos claros, sem criar uma floresta de opções para uma operação que ainda está crescendo.</p>
+                <h2>Escolha o plano e comece a organizar.</h2>
+                <p>Planos diretos para começar agora e crescer junto com a operação.</p>
               </div>
             </Reveal>
 
@@ -624,31 +645,6 @@ export default function HomePage() {
                 </span>
               </div>
             </Reveal>
-          </div>
-        </section>
-
-        <section className="home-start-section">
-          <div className="container">
-            <Reveal>
-              <div className="home-start-heading">
-                <span className="home-section-eyebrow">Comece sem enrolação</span>
-                <h2>Do cadastro para a operação em três passos.</h2>
-              </div>
-            </Reveal>
-
-            <div className="home-start-steps">
-              {HOW_IT_WORKS_STEPS.map((step, index) => (
-                <Reveal key={step.number} delay={index * 90}>
-                  <div className="home-start-step">
-                    <span>{step.number}</span>
-                    <div>
-                      <strong>{step.title}</strong>
-                      <p>Configure o essencial e siga para o próximo passo.</p>
-                    </div>
-                  </div>
-                </Reveal>
-              ))}
-            </div>
           </div>
         </section>
 
