@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Inter } from "next/font/google";
 import { siteConfig } from "@/config/site";
 import "./globals.css";
+import "./home-v2.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -12,12 +13,6 @@ export const metadata: Metadata = {
   description: siteConfig.description,
 };
 
-/**
- * Prime Ges usa a identidade "dark modern / premium" como aparência
- * padrão e única do produto (não é um tema alternável pelo usuário) —
- * por isso a classe .dark fica fixa em <html>, não depende de
- * prefers-color-scheme nem de estado de UI.
- */
 export default function RootLayout({
   children,
 }: {
