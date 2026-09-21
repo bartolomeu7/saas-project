@@ -1595,3 +1595,25 @@
   }
 }
 
+
+@media (prefers-reduced-motion: reduce) {
+  .home-v2-hero__orb,
+  .home-v2-hero__copy h1 span,
+  .home-v2-hero-mockup__card,
+  .home-v2-hero-mockup__halo,
+  .home-v2-hero-badge,
+  .home-v2-hero-chart-bars b,
+  .home-v2-bars b,
+  .home-v2-dashboard,
+  .home-v2-segment-card__media::after {
+    animation: none !important;
+  }
+
+  .home-v2-primary-btn,
+  .home-v2-secondary-btn,
+  .home-v2-tab,
+  .home-v2-module-card,
+  .home-v2-segment-card {
+    transition: none !important;
+  }
+}
