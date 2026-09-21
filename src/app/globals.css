@@ -876,7 +876,7 @@
   .home-bento-card:hover {
     transform: translateY(-4px);
     border-color: hsl(var(--primary) / .2);
-    box-shadow: 0 22px 50px hsl(212 50% 3% / .18), inset 0 1px 0 hsl(255 255% 255% / .035);
+    box-shadow: 0 22px 50px hsl(212 50% 3% / .18), inset 0 1px 0 hsl(0 0% 100% / .035);
   }
 
   .home-bento-card--wide {
