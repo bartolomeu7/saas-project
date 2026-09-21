@@ -1,4 +1,3 @@
-import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
@@ -12,9 +11,7 @@ import {
   Clock3,
   Command,
   Gift,
-  LayoutDashboard,
   Package,
-  Play,
   Sparkles,
   Users,
   Wrench,
@@ -26,6 +23,7 @@ import { SiteHeader } from "@/components/marketing/site-header";
 import { SiteFooter } from "@/components/marketing/site-footer";
 import { PricingCard } from "@/components/marketing/pricing-card";
 import { Reveal, ScrollProgress } from "@/components/marketing/motion";
+import { HeroCarousel } from "@/components/marketing/hero-carousel";
 import {
   SEGMENTS,
   FEATURES,
@@ -52,17 +50,6 @@ export const metadata: Metadata = {
     siteName: siteConfig.name,
   },
 };
-
-const MODULES = [
-  { label: "Clientes", icon: Users, tone: "blue" },
-  { label: "Produtos", icon: Package, tone: "violet" },
-  { label: "Serviços", icon: Wrench, tone: "cyan" },
-  { label: "Vendas", icon: BarChart3, tone: "green" },
-  { label: "Fidelidade", icon: Gift, tone: "pink" },
-  { label: "Caixa", icon: Banknote, tone: "amber" },
-] as const;
-
-const HERO_CHIPS = ["Clientes", "Produtos", "Serviços", "Vendas", "Fidelidade", "Caixa"];
 
 const BENTO_ITEMS = [
   {
@@ -101,123 +88,6 @@ const BENTO_ITEMS = [
     tone: "pink",
   },
 ] as const;
-
-function ProductWindow() {
-  return (
-    <div className="home-product-window">
-      <div className="home-window-glow" aria-hidden="true" />
-      <div className="home-window-toolbar">
-        <div className="home-window-dots" aria-hidden="true">
-          <span /><span /><span />
-        </div>
-        <div className="home-window-address">
-          <span className="home-window-address-dot" />
-          primeges.com.br/app
-        </div>
-        <div className="home-window-profile" />
-      </div>
-
-      <div className="home-product-body">
-        <aside className="home-product-sidebar" aria-hidden="true">
-          <div className="home-sidebar-logo">PG</div>
-          {[LayoutDashboard, Users, Package, Wrench, BarChart3, Gift, Banknote].map((Icon, index) => (
-            <span key={index} className={cn("home-sidebar-item", index === 0 && "is-active")}>
-              <Icon size={15} />
-            </span>
-          ))}
-        </aside>
-
-        <div className="home-product-main">
-          <div className="home-product-topline">
-            <div>
-              <span className="home-product-kicker">Visão geral</span>
-              <h3>Seu negócio, no seu ritmo.</h3>
-            </div>
-            <span className="home-product-status">
-              <i /> Sistema online
-            </span>
-          </div>
-
-          <div className="home-module-grid">
-            {MODULES.slice(0, 4).map((module) => (
-              <div key={module.label} className="home-module-mini">
-                <span className={cn("home-module-mini-icon", `home-tone--${module.tone}`)}>
-                  <module.icon size={15} />
-                </span>
-                <div>
-                  <small>{module.label}</small>
-                  <strong>Disponível</strong>
-                </div>
-                <ArrowUpRight size={12} className="home-module-mini-arrow" />
-              </div>
-            ))}
-          </div>
-
-          <div className="home-chart-card">
-            <div className="home-chart-heading">
-              <div>
-                <span>Visual ilustrativo</span>
-                <strong>Atividade da operação</strong>
-              </div>
-              <span className="home-chart-badge">Prime Ges</span>
-            </div>
-            <div className="home-chart">
-              {[25, 45, 65, 85].map((value) => (
-                <span key={value} style={{ bottom: value + "%" }} />
-              ))}
-              <div className="home-chart-bars" aria-hidden="true">
-                {[34, 54, 43, 68, 57, 76, 61, 84].map((height, index) => (
-                  <i key={index} style={{ "--bar-height": height + "%", "--bar-delay": index * 55 + "ms" } as CSSProperties} />
-                ))}
-              </div>
-            </div>
-            <div className="home-chart-footer">
-              <span>Dados reais no app</span>
-              <span>Interface demonstrativa</span>
-            </div>
-          </div>
-
-          <div className="home-quick-grid">
-            <div className="home-quick-card">
-              <span><Users size={14} /></span>
-              <div>
-                <small>Acesso rápido</small>
-                <strong>Clientes</strong>
-              </div>
-              <ArrowRight size={13} />
-            </div>
-            <div className="home-quick-card">
-              <span><Banknote size={14} /></span>
-              <div>
-                <small>Acesso rápido</small>
-                <strong>Caixa</strong>
-              </div>
-              <ArrowRight size={13} />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="home-float home-float--top">
-        <span className="home-float-icon"><Gift size={15} /></span>
-        <div>
-          <small>Programa</small>
-          <strong>Fidelidade</strong>
-        </div>
-        <b>Ativo</b>
-      </div>
-
-      <div className="home-float home-float--bottom">
-        <span className="home-float-icon home-float-icon--green"><CircleDollarSign size={15} /></span>
-        <div>
-          <small>Módulo</small>
-          <strong>Caixa</strong>
-        </div>
-        <span className="home-float-check">✓</span>
-      </div>
-    </div>
-  );
-}
 
 function ShowcasePanel({ kind }: { kind: "clientes" | "vendas" | "caixa" }) {
   const configs = {
@@ -283,73 +153,7 @@ export default function HomePage() {
           <div className="home-hero-grid" aria-hidden="true" />
 
           <div className="container relative z-10">
-            <div className="home-hero-copy">
-              <Reveal>
-                <div className="home-kicker">
-                  <span className="home-kicker-dot" />
-                  Gestão SaaS para pequenos negócios
-                  <Sparkles size={13} />
-                </div>
-              </Reveal>
-
-              <Reveal delay={70}>
-                <h1>
-                  A gestão do seu negócio.
-                  <span>Finalmente no mesmo lugar.</span>
-                </h1>
-              </Reveal>
-
-              <Reveal delay={140}>
-                <p>
-                  Clientes, produtos, serviços, vendas, fidelidade e caixa em uma experiência
-                  moderna para você operar melhor — com menos cliques e mais clareza.
-                </p>
-              </Reveal>
-
-              <Reveal delay={210}>
-                <div className="home-hero-actions">
-                  <Link
-                    href={siteConfig.links.register}
-                    className={cn(buttonVariants({ size: "lg" }), "home-btn-primary")}
-                  >
-                    Começar agora
-                    <ArrowRight size={17} />
-                  </Link>
-                  <a href="#produto" className={cn(buttonVariants({ variant: "outline", size: "lg" }), "home-btn-secondary")}>
-                    Ver por dentro
-                    <Play size={14} fill="currentColor" />
-                  </a>
-                </div>
-              </Reveal>
-
-              <Reveal delay={275}>
-                <div className="home-hero-note">
-                  <span><Check size={13} /> Sem complicação</span>
-                  <span><Check size={13} /> Na nuvem</span>
-                  <span><Check size={13} /> Acesso rápido</span>
-                </div>
-              </Reveal>
-            </div>
-
-            <Reveal delay={120} distance={24} duration={800}>
-              <div className="home-hero-visual">
-                <ProductWindow />
-              </div>
-            </Reveal>
-          </div>
-
-          <div className="home-hero-module-rail" aria-label="Módulos disponíveis">
-            <div className="container">
-              <div className="home-module-rail-inner">
-                <span className="home-module-rail-label">Já disponível no Prime Ges</span>
-                {HERO_CHIPS.map((chip, index) => (
-                  <span key={chip} className={cn("home-module-chip", index === 0 && "is-featured")}>
-                    <i />
-                    {chip}
-                  </span>
-                ))}
-              </div>
-            </div>
+            <HeroCarousel />
           </div>
         </section>
 
