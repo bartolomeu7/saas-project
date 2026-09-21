@@ -1445,3 +1445,17 @@
   .home-v2-upcoming__items {
     justify-content: flex-start;
   }
+
+  .home-v2-flow-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .home-v2-flow-grid::before {
+    display: none;
+  }
+
+  .home-v2-flow-card {
+    min-height: 150px;
+  }
+}
+
