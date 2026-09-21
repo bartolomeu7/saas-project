@@ -314,6 +314,23 @@ export function HeroCarousel() {
           {paused ? <Play size={13} /> : <Pause size={13} />}
         </button>
       </div>
+
+      <div className="hero-carousel-module-rail" aria-label="Módulos do Prime Ges">
+        <div className="hero-module-rail-grid">
+          {MODULE_CARDS.map(([label, Icon, description], railIndex) => (
+            <button
+              type="button"
+              key={label}
+              className={cn("hero-module-rail-item", index === railIndex + 1 && "is-active")}
+              onClick={() => setIndex(railIndex + 1)}
+              aria-label={"Mostrar " + label}
+            >
+              <span className={cn("hero-module-rail-icon", "hero-tone--" + SLIDES[railIndex + 1].tone)}><Icon size={15} /></span>
+              <span className="hero-module-rail-copy"><strong>{label}</strong><small>{description}</small></span>
+            </button>
+          ))}
+        </div>
+      </div>
     </section>
   );
 }
