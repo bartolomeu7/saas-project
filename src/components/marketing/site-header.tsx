@@ -57,7 +57,11 @@ export function SiteHeader() {
   return (
     <header className={cn("prime-site-header", scrolled && "prime-site-header--scrolled")}>
       <div className="container flex h-16 items-center justify-between gap-6">
-        <Link href="#topo" className="inline-flex items-center gap-2 font-semibold tracking-tight" aria-label="Prime Ges — início">
+        <Link
+          href="#topo"
+          className="inline-flex items-center gap-2 font-semibold tracking-tight"
+          aria-label="Prime Ges — início"
+        >
           <Logo iconSize={24} />
         </Link>
 
@@ -75,17 +79,37 @@ export function SiteHeader() {
         </nav>
 
         <div className="hidden items-center gap-2 lg:flex">
-          <Link href={siteConfig.links.login} className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "prime-button-soft")}>Entrar</Link>
-          <Link href={siteConfig.links.register} className={cn(buttonVariants({ variant: "outline", size: "sm" }), "prime-button-outline")}>Criar conta</Link>
-          <Link href={siteConfig.links.register} className={cn(buttonVariants({ size: "sm" }), "prime-button-primary")}>Começar agora</Link>
+          <Link
+            href={siteConfig.links.login}
+            className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "prime-button-soft")}
+          >
+            Entrar
+          </Link>
+          <Link
+            href={siteConfig.links.register}
+            className={cn(buttonVariants({ size: "sm" }), "prime-button-primary")}
+          >
+            Começar agora
+          </Link>
         </div>
 
-        <button type="button" className="prime-menu-button lg:hidden" onClick={() => setMobileOpen((value) => !value)} aria-label={mobileOpen ? "Fechar menu" : "Abrir menu"} aria-expanded={mobileOpen} aria-controls="prime-mobile-menu">
+        <button
+          type="button"
+          className="prime-menu-button lg:hidden"
+          onClick={() => setMobileOpen((value) => !value)}
+          aria-label={mobileOpen ? "Fechar menu" : "Abrir menu"}
+          aria-expanded={mobileOpen}
+          aria-controls="prime-mobile-menu"
+        >
           {mobileOpen ? <X size={19} /> : <Menu size={19} />}
         </button>
       </div>
 
-      <div id="prime-mobile-menu" className={cn("prime-mobile-panel lg:hidden", mobileOpen && "prime-mobile-panel--open")} aria-hidden={!mobileOpen}>
+      <div
+        id="prime-mobile-menu"
+        className={cn("prime-mobile-panel lg:hidden", mobileOpen && "prime-mobile-panel--open")}
+        aria-hidden={!mobileOpen}
+      >
         <nav className="container flex flex-col gap-2 py-4" aria-label="Menu móvel">
           {NAV_LINKS.map((item, index) => (
             <a
@@ -93,15 +117,33 @@ export function SiteHeader() {
               href={item.href}
               onClick={() => setMobileOpen(false)}
               aria-current={activeHref === item.href ? "location" : undefined}
-              className={cn("prime-mobile-link", activeHref === item.href && "prime-mobile-link--active")}
+              className={cn(
+                "prime-mobile-link",
+                activeHref === item.href && "prime-mobile-link--active",
+              )}
               style={{ "--mobile-delay": index * 50 + "ms" } as CSSProperties}
             >
               {item.label}
             </a>
           ))}
           <div className="mt-2 grid grid-cols-2 gap-2">
-            <Link href={siteConfig.links.login} className={cn(buttonVariants({ variant: "outline", size: "sm" }), "prime-button-outline")} onClick={() => setMobileOpen(false)}>Entrar</Link>
-            <Link href={siteConfig.links.register} className={cn(buttonVariants({ size: "sm" }), "prime-button-primary")} onClick={() => setMobileOpen(false)}>Começar agora</Link>
+            <Link
+              href={siteConfig.links.login}
+              className={cn(
+                buttonVariants({ variant: "outline", size: "sm" }),
+                "prime-button-outline",
+              )}
+              onClick={() => setMobileOpen(false)}
+            >
+              Entrar
+            </Link>
+            <Link
+              href={siteConfig.links.register}
+              className={cn(buttonVariants({ size: "sm" }), "prime-button-primary")}
+              onClick={() => setMobileOpen(false)}
+            >
+              Começar agora
+            </Link>
           </div>
         </nav>
       </div>
