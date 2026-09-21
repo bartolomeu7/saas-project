@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
@@ -29,7 +30,6 @@ import {
   SEGMENTS,
   FEATURES,
   PRICING_PLANS,
-  TRUST_ITEMS,
   PROBLEMS,
   SOLUTION_ITEMS,
   HOW_IT_WORKS_STEPS,
@@ -167,7 +167,7 @@ function ProductWindow() {
               ))}
               <div className="home-chart-bars" aria-hidden="true">
                 {[34, 54, 43, 68, 57, 76, 61, 84].map((height, index) => (
-                  <i key={index} style={{ "--bar-height": height + "%", "--bar-delay": index * 55 + "ms" } as React.CSSProperties} />
+                  <i key={index} style={{ "--bar-height": height + "%", "--bar-delay": index * 55 + "ms" } as CSSProperties} />
                 ))}
               </div>
             </div>
