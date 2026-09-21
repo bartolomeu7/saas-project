@@ -1,16 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import {
-  ArrowRight,
-  Banknote,
-  Check,
-  Gift,
-  Package,
-  ShoppingCart,
-  Sparkles,
-  Users,
-  Wrench,
-} from "lucide-react";
+import { ArrowRight, Check, Sparkles } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { siteConfig } from "@/config/site";
@@ -25,7 +15,10 @@ import {
   HOW_IT_WORKS_STEPS,
   CUSTOM_PLAN,
 } from "@/config/marketing";
-import { HomeHeroMockup, HomeProductShowcase } from "@/components/marketing/home-product-showcase";
+import {
+  HomeHeroMockup,
+  HomeProductShowcase,
+} from "@/components/marketing/home-product-showcase";
 
 const SEO_DESCRIPTION =
   "Gerencie clientes, produtos, serviços, vendas, fidelidade e caixa em um só lugar com o Prime Ges.";
@@ -69,15 +62,6 @@ const SEGMENT_IMAGES: Record<string, string> = {
     "https://images.unsplash.com/photo-1779723045199-66fc523a842d?auto=format&fit=crop&fm=jpg&q=82&w=1000",
   "Estética automotiva":
     "https://images.unsplash.com/photo-1779723045199-66fc523a842d?auto=format&fit=crop&fm=jpg&q=82&w=1000",
-};
-
-const SEGMENT_ICONS: Record<string, typeof Users> = {
-  Padarias: Package,
-  Mercadinhos: ShoppingCart,
-  Restaurantes: Users,
-  Lanchonetes: ShoppingCart,
-  "Lava-rápidos": Wrench,
-  "Estética automotiva": Sparkles,
 };
 
 export default function HomePage() {
@@ -209,7 +193,10 @@ export default function HomePage() {
                   <div>
                     <span className="home-section-eyebrow">Em desenvolvimento</span>
                     <h3>Próximas expansões</h3>
-                    <p>Alguns módulos já aparecem no planejamento do produto, mas ainda não fazem parte do uso atual.</p>
+                    <p>
+                      Alguns módulos já aparecem no planejamento do produto, mas ainda não
+                      fazem parte do uso atual.
+                    </p>
                   </div>
                   <div className="home-v2-upcoming__items">
                     {UPCOMING_FEATURES.map((feature) => (
@@ -240,7 +227,7 @@ export default function HomePage() {
 
             <div className="home-v2-segment-grid">
               {SEGMENTS.map((segment, index) => {
-                const Icon = SEGMENT_ICONS[segment.name] ?? Users;
+                const Icon = segment.icon;
                 const modules = SEGMENT_DETAILS[segment.name] ?? [];
 
                 return (
@@ -248,12 +235,14 @@ export default function HomePage() {
                     <article className="home-v2-segment-card">
                       <div
                         className="home-v2-segment-card__media"
-                        style={{ backgroundImage: "url(" + (SEGMENT_IMAGES[segment.name] ?? "") + ")" }}
+                        style={{
+                          backgroundImage:
+                            "url(" + (SEGMENT_IMAGES[segment.name] ?? "") + ")",
+                        }}
                         role="img"
                         aria-label={"Imagem ilustrativa para " + segment.name}
                       >
                         <span><Icon size={17} /></span>
-                        <div aria-hidden="true" />
                       </div>
                       <div className="home-v2-segment-card__body">
                         <strong>{segment.name}</strong>
@@ -278,7 +267,9 @@ export default function HomePage() {
               <div className="home-v2-section-heading home-v2-section-heading--center">
                 <span className="home-section-eyebrow">Como funciona</span>
                 <h2>Da conta criada à rotina organizada em três passos.</h2>
-                <p>Sem fluxo complicado. Você entra, configura o essencial e começa a administrar.</p>
+                <p>
+                  Sem fluxo complicado. Você entra, configura o essencial e começa a administrar.
+                </p>
               </div>
             </Reveal>
 
@@ -329,7 +320,9 @@ export default function HomePage() {
                   <h3>{CUSTOM_PLAN.title}</h3>
                   <p>{CUSTOM_PLAN.description}</p>
                 </div>
-                <span className="home-v2-custom-note">Canal comercial será ativado nesta etapa.</span>
+                <span className="home-v2-custom-note">
+                  Canal comercial será ativado nesta etapa.
+                </span>
               </div>
             </Reveal>
           </div>
@@ -341,7 +334,9 @@ export default function HomePage() {
           <div className="container relative">
             <Reveal>
               <div className="home-v2-final__inner">
-                <span className="home-v2-final__badge"><Sparkles size={13} /> Prime Ges</span>
+                <span className="home-v2-final__badge">
+                  <Sparkles size={13} /> Prime Ges
+                </span>
                 <h2>Organize a operação. Simplifique o dia a dia.</h2>
                 <p>
                   Veja o Prime Ges em ação e comece com os recursos que a sua empresa realmente
