@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { Logo } from "@/components/shared/logo";
@@ -11,23 +11,63 @@ import { siteConfig } from "@/config/site";
 
 export function SiteHeader() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const [activeHref, setActiveHref] = useState("#topo");
+
+  useEffect(() => {
+    const update = () => setScrolled(window.scrollY > 16);
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    return () => window.removeEventListener("scroll", update);
+  }, []);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMobileOpen(false);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [mobileOpen]);
+
+  useEffect(() => {
+    const sections = NAV_LINKS.map((item) => document.getElementById(item.href.slice(1)))
+      .filter((section): section is HTMLElement => Boolean(section));
+    if (!sections.length) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        if (visible?.target.id) setActiveHref("#" + visible.target.id);
+      },
+      { threshold: [0.15, 0.3, 0.55], rootMargin: "-12% 0px -55% 0px" },
+    );
+
+    sections.forEach((section) => observer.observe(section));
+    return () => observer.disconnect();
+  }, []);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border/60 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center justify-between">
-        <Link
-          href="#topo"
-          className="inline-flex items-center gap-2 font-semibold tracking-tight"
-        >
+    <header className={cn("prime-site-header", scrolled && "prime-site-header--scrolled")}>
+      <div className="container flex h-16 items-center justify-between gap-6">
+        <Link href="#topo" className="inline-flex items-center gap-2 font-semibold tracking-tight" aria-label="Prime Ges — início">
           <Logo iconSize={24} />
         </Link>
 
-        <nav className="hidden items-center gap-7 lg:flex">
+        <nav className="hidden items-center gap-7 lg:flex" aria-label="Navegação principal">
           {NAV_LINKS.map((item) => (
             <a
               key={item.label}
               href={item.href}
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              aria-current={activeHref === item.href ? "location" : undefined}
+              className={cn("prime-nav-link", activeHref === item.href && "prime-nav-link--active")}
             >
               {item.label}
             </a>
@@ -35,69 +75,36 @@ export function SiteHeader() {
         </nav>
 
         <div className="hidden items-center gap-2 lg:flex">
-          <Link
-            href={siteConfig.links.login}
-            className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
-          >
-            Entrar
-          </Link>
-          <Link
-            href={siteConfig.links.register}
-            className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
-          >
-            Criar conta
-          </Link>
-          <Link
-            href={siteConfig.links.register}
-            className={cn(buttonVariants({ size: "sm" }))}
-          >
-            Começar agora
-          </Link>
+          <Link href={siteConfig.links.login} className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "prime-button-soft")}>Entrar</Link>
+          <Link href={siteConfig.links.register} className={cn(buttonVariants({ variant: "outline", size: "sm" }), "prime-button-outline")}>Criar conta</Link>
+          <Link href={siteConfig.links.register} className={cn(buttonVariants({ size: "sm" }), "prime-button-primary")}>Começar agora</Link>
         </div>
 
-        <button
-          type="button"
-          className="text-muted-foreground hover:text-foreground lg:hidden"
-          onClick={() => setMobileOpen((value) => !value)}
-          aria-label={mobileOpen ? "Fechar menu" : "Abrir menu"}
-          aria-expanded={mobileOpen}
-        >
-          {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        <button type="button" className="prime-menu-button lg:hidden" onClick={() => setMobileOpen((value) => !value)} aria-label={mobileOpen ? "Fechar menu" : "Abrir menu"} aria-expanded={mobileOpen} aria-controls="prime-mobile-menu">
+          {mobileOpen ? <X size={19} /> : <Menu size={19} />}
         </button>
       </div>
 
-      {mobileOpen && (
-        <div className="border-t border-border/60 bg-background px-6 py-4 lg:hidden">
-          <nav className="flex flex-col gap-3">
-            {NAV_LINKS.map((item) => (
-              <a
-                key={item.label}
-                href={item.href}
-                onClick={() => setMobileOpen(false)}
-                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-              >
-                {item.label}
-              </a>
-            ))}
-          </nav>
-          <div className="mt-4 flex flex-col gap-2">
-            <Link
-              href={siteConfig.links.login}
-              className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+      <div id="prime-mobile-menu" className={cn("prime-mobile-panel lg:hidden", mobileOpen && "prime-mobile-panel--open")} aria-hidden={!mobileOpen}>
+        <nav className="container flex flex-col gap-2 py-4" aria-label="Menu móvel">
+          {NAV_LINKS.map((item, index) => (
+            <a
+              key={item.label}
+              href={item.href}
               onClick={() => setMobileOpen(false)}
+              aria-current={activeHref === item.href ? "location" : undefined}
+              className={cn("prime-mobile-link", activeHref === item.href && "prime-mobile-link--active")}
+              style={{ "--mobile-delay": index * 50 + "ms" } as CSSProperties}
             >
-              Entrar
-            </Link>
-            <Link
-              href={siteConfig.links.register}
-              className={cn(buttonVariants({ size: "sm" }))}
-              onClick={() => setMobileOpen(false)}
-            >
-              Começar agora
-            </Link>
+              {item.label}
+            </a>
+          ))}
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <Link href={siteConfig.links.login} className={cn(buttonVariants({ variant: "outline", size: "sm" }), "prime-button-outline")} onClick={() => setMobileOpen(false)}>Entrar</Link>
+            <Link href={siteConfig.links.register} className={cn(buttonVariants({ size: "sm" }), "prime-button-primary")} onClick={() => setMobileOpen(false)}>Começar agora</Link>
           </div>
-        </div>
-      )}
+        </nav>
+      </div>
     </header>
   );
 }
