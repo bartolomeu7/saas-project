@@ -3004,3 +3004,144 @@
     }
   }
 }
+
+
+/* =========================================================
+   Prime Ges — Internal Modules Visual System
+   Shared language for Clientes, Produtos, Serviços, Vendas,
+   Caixa and Fidelidade. CSS-only, no new dependency.
+   ========================================================= */
+
+@layer components {
+  .prime-module-page {
+    position: relative;
+    isolation: isolate;
+    animation: prime-module-page-enter .42s cubic-bezier(.2,.8,.2,1) both;
+  }
+
+  .prime-module-page > :first-child {
+    position: relative;
+  }
+
+  .prime-module-page > :first-child h1 {
+    color: hsl(var(--foreground));
+    letter-spacing: -.035em;
+  }
+
+  .prime-module-page > :first-child p {
+    line-height: 1.55;
+  }
+
+  .prime-module-page .rounded-lg {
+    transition:
+      border-color .22s ease,
+      background-color .22s ease,
+      box-shadow .22s ease,
+      transform .22s ease;
+  }
+
+  .prime-module-page .rounded-lg.border-border.bg-card:hover {
+    border-color: hsl(var(--primary) / .18);
+    box-shadow: 0 10px 28px hsl(212 50% 3% / .12);
+  }
+
+  .prime-module-page table tbody tr {
+    transition: background-color .18s ease, box-shadow .18s ease;
+  }
+
+  .prime-module-page table tbody tr:hover {
+    background: hsl(var(--primary) / .035);
+    box-shadow: inset 3px 0 0 hsl(var(--primary) / .5);
+  }
+
+  .prime-module-page a[class*="bg-primary"],
+  .prime-module-page button[class*="bg-primary"] {
+    transition:
+      transform .2s ease,
+      box-shadow .2s ease,
+      filter .2s ease;
+  }
+
+  .prime-module-page a[class*="bg-primary"]:hover,
+  .prime-module-page button[class*="bg-primary"]:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 20px hsl(var(--primary) / .14);
+  }
+
+  .prime-module-page input,
+  .prime-module-page select,
+  .prime-module-page textarea {
+    transition:
+      border-color .18s ease,
+      box-shadow .18s ease,
+      background-color .18s ease;
+  }
+
+  .prime-module-page input:focus,
+  .prime-module-page select:focus,
+  .prime-module-page textarea:focus {
+    border-color: hsl(var(--primary) / .48);
+    box-shadow: 0 0 0 3px hsl(var(--primary) / .08);
+    outline: none;
+  }
+
+  .prime-module-page .border-dashed {
+    transition: border-color .2s ease, background-color .2s ease;
+  }
+
+  .prime-module-page .border-dashed:hover {
+    border-color: hsl(var(--primary) / .25);
+    background-color: hsl(var(--primary) / .025);
+  }
+
+  .prime-module-page--caixa [class*="bg-emerald"] {
+    transition: border-color .2s ease, background-color .2s ease, transform .2s ease;
+  }
+
+  .prime-module-page--caixa [class*="bg-emerald"]:hover {
+    transform: translateY(-1px);
+  }
+
+  .prime-module-page--fidelidade .max-w-3xl {
+    animation: prime-module-section-enter .48s cubic-bezier(.2,.8,.2,1) 80ms both;
+  }
+
+  .prime-module-page--fidelidade [role="tablist"] button,
+  .prime-module-page--fidelidade button {
+    transition:
+      transform .18s ease,
+      background-color .18s ease,
+      border-color .18s ease,
+      box-shadow .18s ease;
+  }
+
+  .prime-module-page--fidelidade [role="tablist"] button:hover {
+    transform: translateY(-1px);
+  }
+
+  @keyframes prime-module-page-enter {
+    from { opacity: 0; transform: translateY(7px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes prime-module-section-enter {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .prime-module-page,
+    .prime-module-page--fidelidade .max-w-3xl {
+      animation: none;
+    }
+
+    .prime-module-page .rounded-lg,
+    .prime-module-page table tbody tr,
+    .prime-module-page input,
+    .prime-module-page select,
+    .prime-module-page textarea,
+    .prime-module-page--fidelidade button {
+      transition: none;
+    }
+  }
+}
