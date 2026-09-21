@@ -25,6 +25,7 @@ import { siteConfig } from "@/config/site";
 import { SiteHeader } from "@/components/marketing/site-header";
 import { SiteFooter } from "@/components/marketing/site-footer";
 import { PricingCard } from "@/components/marketing/pricing-card";
+import { AnimatedHeroVisual } from "@/components/marketing/animated-hero-visual";
 import { Reveal, ScrollProgress } from "@/components/marketing/motion";
 import {
   SEGMENTS,
@@ -63,6 +64,9 @@ const MODULES = [
 ] as const;
 
 const HERO_CHIPS = ["Clientes", "Produtos", "Serviços", "Vendas", "Fidelidade", "Caixa"];
+
+const HERO_IMAGE =
+  "https://images.unsplash.com/photo-1758876017801-f5a892ee460a?auto=format&fit=crop&fm=jpg&q=82&w=1500";
 
 const BENTO_ITEMS = [
   {
@@ -277,75 +281,102 @@ export default function HomePage() {
       <SiteHeader />
 
       <main>
-        <section id="topo" className="home-hero">
+        <section id="topo" className="home-hero home-hero--reference">
           <div className="home-hero-aurora home-hero-aurora--a" aria-hidden="true" />
           <div className="home-hero-aurora home-hero-aurora--b" aria-hidden="true" />
           <div className="home-hero-grid" aria-hidden="true" />
 
           <div className="container relative z-10">
-            <div className="home-hero-copy">
-              <Reveal>
-                <div className="home-kicker">
-                  <span className="home-kicker-dot" />
-                  Gestão SaaS para pequenos negócios
-                  <Sparkles size={13} />
-                </div>
-              </Reveal>
+            <div className="home-reference-hero-grid">
+              <div className="home-hero-copy home-reference-copy">
+                <Reveal>
+                  <div className="home-kicker">
+                    <span className="home-kicker-dot" />
+                    Gestão SaaS para pequenos negócios
+                    <Sparkles size={13} />
+                  </div>
+                </Reveal>
+                <Reveal delay={70}>
+                  <h1>
+                    A gestão do seu negócio.
+                    <span>Finalmente no mesmo lugar.</span>
+                  </h1>
+                </Reveal>
+                <Reveal delay={140}>
+                  <p>
+                    Clientes, produtos, serviços, vendas, fidelidade e caixa em uma experiência
+                    moderna e simples, para você focar no que realmente importa: o crescimento.
+                  </p>
+                </Reveal>
+                <Reveal delay={210}>
+                  <div className="home-hero-actions home-reference-actions">
+                    <Link href={siteConfig.links.register} className={cn(buttonVariants({ size: "lg" }), "home-btn-primary")}>
+                      Começar agora <ArrowRight size={17} />
+                    </Link>
+                    <a href="#produto" className={cn(buttonVariants({ variant: "outline", size: "lg" }), "home-btn-secondary")}>
+                      Ver por dentro <Play size={14} fill="currentColor" />
+                    </a>
+                  </div>
+                </Reveal>
+                <Reveal delay={275}>
+                  <div className="home-hero-note home-reference-note">
+                    <span><Check size={13} /> Sem complicação</span>
+                    <span><Check size={13} /> Na nuvem</span>
+                    <span><Check size={13} /> Acesso rápido</span>
+                  </div>
+                </Reveal>
+              </div>
 
-              <Reveal delay={70}>
-                <h1>
-                  A gestão do seu negócio.
-                  <span>Finalmente no mesmo lugar.</span>
-                </h1>
-              </Reveal>
-
-              <Reveal delay={140}>
-                <p>
-                  Clientes, produtos, serviços, vendas, fidelidade e caixa em uma experiência
-                  moderna para você operar melhor — com menos cliques e mais clareza.
-                </p>
-              </Reveal>
-
-              <Reveal delay={210}>
-                <div className="home-hero-actions">
-                  <Link
-                    href={siteConfig.links.register}
-                    className={cn(buttonVariants({ size: "lg" }), "home-btn-primary")}
+              <Reveal delay={120} distance={24} duration={900}>
+                <div className="home-reference-visual" aria-label="Prévia visual do Prime Ges">
+                  <div
+                    className="home-reference-photo"
+                    role="img"
+                    aria-label="Pessoa empreendedora trabalhando em um notebook"
+                    style={{ backgroundImage: "url(" + HERO_IMAGE + ")" }}
                   >
-                    Começar agora
-                    <ArrowRight size={17} />
-                  </Link>
-                  <a href="#produto" className={cn(buttonVariants({ variant: "outline", size: "lg" }), "home-btn-secondary")}>
-                    Ver por dentro
-                    <Play size={14} fill="currentColor" />
-                  </a>
-                </div>
-              </Reveal>
-
-              <Reveal delay={275}>
-                <div className="home-hero-note">
-                  <span><Check size={13} /> Sem complicação</span>
-                  <span><Check size={13} /> Na nuvem</span>
-                  <span><Check size={13} /> Acesso rápido</span>
+                    <div className="home-reference-photo__overlay" aria-hidden="true" />
+                    <div className="home-reference-photo__shine" aria-hidden="true" />
+                  </div>
+                  <div className="home-reference-dashboard">
+                    <AnimatedHeroVisual />
+                  </div>
+                  <div className="home-reference-status home-reference-status--top">
+                    <span><i /> Sistema online</span>
+                    <strong>Prime Ges</strong>
+                  </div>
+                  <div className="home-reference-status home-reference-status--bottom">
+                    <span className="home-reference-status__icon"><Sparkles size={14} /></span>
+                    <div>
+                      <small>Mais controle</small>
+                      <strong>para o seu dia a dia</strong>
+                    </div>
+                  </div>
                 </div>
               </Reveal>
             </div>
-
-            <Reveal delay={120} distance={24} duration={800}>
-              <div className="home-hero-visual">
-                <ProductWindow />
-              </div>
-            </Reveal>
           </div>
 
           <div className="home-hero-module-rail" aria-label="Módulos disponíveis">
             <div className="container">
-              <div className="home-module-rail-inner">
+              <div className="home-module-rail-inner home-reference-rail">
                 <span className="home-module-rail-label">Já disponível no Prime Ges</span>
-                {HERO_CHIPS.map((chip, index) => (
-                  <span key={chip} className={cn("home-module-chip", index === 0 && "is-featured")}>
-                    <i />
-                    {chip}
+                {MODULES.map((module, index) => (
+                  <span key={module.label} className={cn("home-reference-module", index === 0 && "is-featured")}>
+                    <span className={cn("home-reference-module__icon", "home-tone--" + module.tone)}>
+                      <module.icon size={14} />
+                    </span>
+                    <span>
+                      <strong>{module.label}</strong>
+                      <small>
+                        {module.label === "Clientes" && "Organize sua base"}
+                        {module.label === "Produtos" && "Controle seu estoque"}
+                        {module.label === "Serviços" && "Gerencie serviços"}
+                        {module.label === "Vendas" && "Venda mais"}
+                        {module.label === "Fidelidade" && "Clientes sempre com você"}
+                        {module.label === "Caixa" && "Tenha tudo sob controle"}
+                      </small>
+                    </span>
                   </span>
                 ))}
               </div>
