@@ -101,6 +101,9 @@ const SLIDES = [
   },
 ] as const;
 
+const FIRST_SLIDE = SLIDES[0]!;
+const FIRST_MODULE_SLIDE = SLIDES[1]!;
+
 const MODULE_CARDS = [
   ["Clientes", Users, "Veja cadastros, histórico e informações do relacionamento."],
   ["Produtos", Package, "Organize catálogo e preços sem espalhar a informação."],
@@ -163,7 +166,7 @@ function DashboardVisual() {
 function ModuleVisual({ index }: { index: number }) {
   const data = MODULE_CARDS[index] ?? MODULE_CARDS[0];
   const [label, Icon] = data;
-  const slide = SLIDES[index + 1] ?? SLIDES[1];
+  const slide = SLIDES[index + 1] ?? FIRST_MODULE_SLIDE;
   const rows = [
     ["Hoje", "Atividade recente", "Organizado"],
     ["Agora", "Acesso rápido", "Disponível"],
@@ -240,7 +243,7 @@ function WomanVisual() {
 export function HeroCarousel() {
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
-  const slide = SLIDES[index] ?? SLIDES[0];
+  const slide = SLIDES[index] ?? FIRST_SLIDE;
 
   useEffect(() => {
     if (paused) return;
@@ -325,7 +328,7 @@ export function HeroCarousel() {
               onClick={() => setIndex(railIndex + 1)}
               aria-label={"Mostrar " + label}
             >
-              <span className={cn("hero-module-rail-icon", "hero-tone--" + (SLIDES[railIndex + 1] ?? SLIDES[1]).tone)}><Icon size={15} /></span>
+              <span className={cn("hero-module-rail-icon", "hero-tone--" + (SLIDES[railIndex + 1] ?? FIRST_MODULE_SLIDE).tone)}><Icon size={15} /></span>
               <span className="hero-module-rail-copy"><strong>{label}</strong><small>{description}</small></span>
             </button>
           ))}
