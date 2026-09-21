@@ -2982,7 +2982,7 @@
   }
 
   @media (max-width: 640px) {
-    .prime-dashboard { gap: 5rem; }
+    .prime-dashboard { gap: 1.5rem; }
     .prime-dashboard-hero { align-items: flex-start; flex-direction: column; gap: 12px; }
     .prime-dashboard-panel { padding: 14px; }
     .prime-kpi-card { min-height: 116px; }
