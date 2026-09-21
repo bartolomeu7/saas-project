@@ -68,6 +68,15 @@ const HERO_CHIPS = ["Clientes", "Produtos", "Serviços", "Vendas", "Fidelidade",
 const HERO_IMAGE =
   "https://images.unsplash.com/photo-1758876017801-f5a892ee460a?auto=format&fit=crop&fm=jpg&q=82&w=1500";
 
+const SEGMENT_IMAGES: Record<string, string> = {
+  Padarias: "https://images.unsplash.com/photo-1567995512752-015cd3edb4e8?auto=format&fit=crop&fm=jpg&q=82&w=900",
+  Mercadinhos: "https://images.unsplash.com/photo-1751151950056-cfaf797f4653?auto=format&fit=crop&fm=jpg&q=82&w=900",
+  Restaurantes: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&fm=jpg&q=82&w=900",
+  Lanchonetes: "https://images.unsplash.com/photo-1783499218612-b2cb8767a68e?auto=format&fit=crop&fm=jpg&q=82&w=900",
+  "Lava-rápidos": "https://images.unsplash.com/photo-1779723045199-66fc523a842d?auto=format&fit=crop&fm=jpg&q=82&w=900",
+  "Estética automotiva": "https://images.unsplash.com/photo-1779723045199-66fc523a842d?auto=format&fit=crop&fm=jpg&q=82&w=900",
+};
+
 const BENTO_ITEMS = [
   {
     title: "Clientes no centro",
@@ -494,19 +503,35 @@ export default function HomePage() {
               </div>
             </Reveal>
 
-            <div className="home-segment-row">
-              {SEGMENTS.map((segment, index) => (
-                <Reveal key={segment.name} delay={index * 45}>
-                  <article className="home-segment-item">
-                    <span className="home-segment-icon"><segment.icon size={17} /></span>
-                    <div>
-                      <strong>{segment.name}</strong>
-                      <span>{segment.description}</span>
-                    </div>
-                    <ArrowRight size={14} />
-                  </article>
-                </Reveal>
-              ))}
+            <div className="home-segment-row home-segment-row--photo">
+              {SEGMENTS.map((segment, index) => {
+                const image = SEGMENT_IMAGES[segment.name] ?? HERO_IMAGE;
+                return (
+                  <Reveal key={segment.name} delay={index * 55}>
+                    <article className="home-segment-item home-segment-item--photo">
+                      <div
+                        className="home-segment-media"
+                        role="img"
+                        aria-label={"Imagem ilustrativa para " + segment.name}
+                        style={{
+                          backgroundImage: "url(" + image + ")",
+                          backgroundPosition: "50% 50%",
+                        }}
+                      >
+                        <span className="home-segment-icon">
+                          <segment.icon size={17} />
+                        </span>
+                        <span className="home-segment-media__sheen" aria-hidden="true" />
+                      </div>
+                      <div className="home-segment-copy">
+                        <strong>{segment.name}</strong>
+                        <span>{segment.description}</span>
+                      </div>
+                      <ArrowRight size={14} />
+                    </article>
+                  </Reveal>
+                );
+              })}
             </div>
           </div>
         </section>
