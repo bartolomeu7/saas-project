@@ -2472,3 +2472,110 @@
     }
   }
 }
+
+
+/* Prime Ges — compact navigation menu */
+@layer components {
+  .prime-site-header {
+    position: relative;
+    z-index: 100;
+  }
+
+  .prime-menu-button {
+    display: inline-grid;
+    place-items: center;
+    width: 46px;
+    height: 46px;
+    border: 1px solid hsl(var(--foreground) / .12);
+    border-radius: 12px;
+    background: hsl(var(--foreground) / .035);
+    color: hsl(var(--foreground));
+    cursor: pointer;
+    transition: border-color .2s ease, background .2s ease, transform .2s ease;
+  }
+
+  .prime-menu-button:hover {
+    border-color: hsl(var(--primary) / .35);
+    background: hsl(var(--primary) / .07);
+    transform: translateY(-1px);
+  }
+
+  .prime-mobile-panel {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: max(16px, calc((100vw - 1200px) / 2));
+    width: min(330px, calc(100vw - 32px));
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(-8px) scale(.98);
+    transform-origin: top right;
+    border: 1px solid transparent;
+    border-radius: 16px;
+    background: hsl(212 34% 10% / .96);
+    box-shadow: 0 24px 60px hsl(212 55% 2% / .35);
+    backdrop-filter: blur(18px);
+    transition:
+      max-height .28s ease,
+      opacity .2s ease,
+      transform .28s ease,
+      visibility .28s ease,
+      border-color .28s ease;
+  }
+
+  .prime-mobile-panel--open {
+    max-height: 520px;
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0) scale(1);
+    border-color: hsl(var(--foreground) / .1);
+  }
+
+  .prime-mobile-menu-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 10px;
+  }
+
+  .prime-mobile-link {
+    display: flex;
+    align-items: center;
+    min-height: 43px;
+    padding: 0 12px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    color: hsl(var(--foreground) / .82);
+    font-size: 14px;
+    text-decoration: none;
+    transition: background .2s ease, border-color .2s ease, color .2s ease;
+  }
+
+  .prime-mobile-link:hover {
+    border-color: hsl(var(--primary) / .16);
+    background: hsl(var(--primary) / .07);
+    color: hsl(var(--foreground));
+  }
+
+  .prime-mobile-link--active {
+    color: hsl(var(--foreground));
+    border-color: hsl(var(--primary) / .16);
+    background: hsl(var(--primary) / .08);
+  }
+
+  .prime-mobile-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 5px;
+    padding-top: 9px;
+    border-top: 1px solid hsl(var(--foreground) / .07);
+  }
+
+  .prime-mobile-actions > a {
+    min-height: 42px;
+  }
+}
