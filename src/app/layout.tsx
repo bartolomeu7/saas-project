@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Inter } from "next/font/google";
 import { siteConfig } from "@/config/site";
 import "./globals.css";
+import "./home-v2.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
