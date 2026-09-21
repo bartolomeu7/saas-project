@@ -23,11 +23,12 @@ import {
   Smartphone,
   FolderKanban,
   Gauge,
+  Gift,
+  Banknote,
 } from "lucide-react";
 
 export const NAV_LINKS = [
   { label: "Início", href: "#topo" },
-  { label: "Soluções", href: "#recursos" },
   { label: "Para quem é", href: "#segmentos" },
   { label: "Preços", href: "#precos" },
   { label: "Recursos", href: "#recursos" },
@@ -42,11 +43,11 @@ export interface Segment {
 /** Máximo 6, conforme definido para a home — não é a lista completa de business_type. */
 export const SEGMENTS: Segment[] = [
   { name: "Padarias", description: "Tenha controle sobre vendas, produtos e operação.", icon: Croissant },
-  { name: "Mercadinhos", description: "Organize produtos, vendas, estoque e caixa.", icon: ShoppingBasket },
-  { name: "Restaurantes", description: "Controle pedidos, clientes e operação do seu negócio.", icon: UtensilsCrossed },
-  { name: "Lanchonetes", description: "Organize atendimentos, vendas e clientes no dia a dia.", icon: Sandwich },
+  { name: "Mercadinhos", description: "Organize produtos, vendas e caixa.", icon: ShoppingBasket },
+  { name: "Restaurantes", description: "Controle clientes, vendas e operação do seu negócio.", icon: UtensilsCrossed },
+  { name: "Lanchonetes", description: "Organize vendas, clientes e operação no dia a dia.", icon: Sandwich },
   { name: "Lava-rápidos", description: "Organize clientes, veículos, serviços e atendimentos.", icon: Car },
-  { name: "Estética automotiva", description: "Acompanhe clientes, serviços e agenda em um só lugar.", icon: Sparkles },
+  { name: "Estética automotiva", description: "Acompanhe clientes e serviços em um só lugar.", icon: Sparkles },
 ];
 
 export interface FeatureModule {
@@ -58,12 +59,14 @@ export interface FeatureModule {
 
 /** Espelha os módulos reais do produto — "available" decide o badge "Em breve". */
 export const FEATURES: FeatureModule[] = [
-  { name: "Clientes", description: "Tenha seus clientes organizados e encontre tudo rapidamente.", icon: Users, available: true },
-  { name: "Produtos", description: "Controle preços, produtos e estoque.", icon: Package, available: false },
-  { name: "Serviços", description: "Cadastre e acompanhe os serviços oferecidos.", icon: Wrench, available: false },
-  { name: "Vendas", description: "Registre suas vendas de forma simples.", icon: ShoppingCart, available: false },
-  { name: "Estoque", description: "Saiba o que entrou, saiu e o que precisa ser reposto.", icon: Warehouse, available: false },
-  { name: "Financeiro", description: "Tenha visão das entradas, saídas e resultados.", icon: LineChart, available: false },
+  { name: "Clientes", description: "Cadastre, busque e acompanhe clientes, com documentos, ranking e sorteio.", icon: Users, available: true },
+  { name: "Produtos", description: "Cadastre produtos, categorias e preços.", icon: Package, available: true },
+  { name: "Serviços", description: "Cadastre serviços e categorias oferecidos.", icon: Wrench, available: true },
+  { name: "Vendas", description: "Registre vendas com itens, pagamentos, descontos e cancelamento.", icon: ShoppingCart, available: true },
+  { name: "Fidelidade", description: "Configure níveis, campanhas, multiplicadores e resgate de pontos.", icon: Gift, available: true },
+  { name: "Caixa", description: "Abra e feche o caixa, lance movimentações e confira o saldo no fechamento.", icon: Banknote, available: true },
+  { name: "Estoque", description: "Controle de entrada, saída e reposição — em breve.", icon: Warehouse, available: false },
+  { name: "Financeiro", description: "Visão de entradas, saídas e resultados além do caixa do dia — em breve.", icon: LineChart, available: false },
 ];
 
 export interface TrustItem {
@@ -87,7 +90,7 @@ export const PROBLEMS: Problem[] = [
   { title: "Falta de visão dos resultados" },
 ];
 
-export const SOLUTION_ITEMS = ["Clientes", "Vendas", "Serviços", "Estoque", "Financeiro"];
+export const SOLUTION_ITEMS = ["Clientes", "Produtos", "Serviços", "Vendas", "Fidelidade", "Caixa"];
 
 export interface DemoScreen {
   title: string;
@@ -262,8 +265,8 @@ export const PRICING_PLANS: PricingPlan[] = [
     periodDays: 93,
     periodLabel: "93 dias",
     description: "Acesso ao Prime Ges garantido por 93 dias.",
-    includedFeatures: paidPlanBenefits(5),
-    additionalUsersLimit: 5,
+    includedFeatures: paidPlanBenefits(2),
+    additionalUsersLimit: 2,
     hasSupport: true,
     hasTickets: true,
     hasGroups: true,
@@ -279,8 +282,8 @@ export const PRICING_PLANS: PricingPlan[] = [
     periodDays: 365,
     periodLabel: "365 dias",
     description: "Acesso ao Prime Ges garantido por 365 dias.",
-    includedFeatures: paidPlanBenefits(10),
-    additionalUsersLimit: 10,
+    includedFeatures: paidPlanBenefits(2),
+    additionalUsersLimit: 2,
     hasSupport: true,
     hasTickets: true,
     hasGroups: true,
