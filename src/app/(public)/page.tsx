@@ -90,7 +90,7 @@ const SEGMENT_IMAGES: Record<string, { src: string; position?: string }> = {
     position: "50% 52%",
   },
   "Estética automotiva": {
-    src: "https://images.unsplash.com/photo-1680051801719-1a9c1df0f7d7?auto=format&fit=crop&fm=jpg&q=82&w=900",
+    src: "https://images.unsplash.com/photo-1779723045199-66fc523a842d?auto=format&fit=crop&fm=jpg&q=82&w=900",
     position: "58% 50%",
   },
 };
