@@ -29,9 +29,10 @@ import {
 
 export const NAV_LINKS = [
   { label: "Início", href: "#topo" },
+  { label: "Produto", href: "#produto" },
+  { label: "Recursos", href: "#recursos" },
   { label: "Para quem é", href: "#segmentos" },
   { label: "Preços", href: "#precos" },
-  { label: "Recursos", href: "#recursos" },
 ] as const;
 
 export interface Segment {
