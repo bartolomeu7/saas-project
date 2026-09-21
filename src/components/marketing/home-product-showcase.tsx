@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
+import type { LucideIcon } from "lucide-react";
 import {
   ArrowRight,
   Banknote,
@@ -244,7 +245,7 @@ function DashboardVisual({ activeTab }: { activeTab: TabId }) {
 
 export function HomeProductShowcase() {
   const [activeTab, setActiveTab] = useState<TabId>("clientes");
-  const active = useMemo(() => TAB_DATA[activeTab], [activeTab]);
+  const active = TAB_DATA[activeTab];
 
   return (
     <div className="home-v2-showcase">
@@ -271,9 +272,9 @@ export function HomeProductShowcase() {
       <div className="home-v2-showcase__copy">
         <div>
           <span className={cn("home-section-eyebrow", "home-v2-eyebrow-" + active.accent)}>{active.eyebrow}</span>
-          <h3 key={activeTab}>{active.title}</h3>
+          <h3>{active.title}</h3>
         </div>
-        <p key={activeTab + "-description"}>{active.description}</p>
+        <p>{active.description}</p>
       </div>
 
       <div className="home-v2-showcase__screen">
@@ -287,6 +288,11 @@ export function HomeProductShowcase() {
       </div>
     </div>
   );
+}
+
+function segmentIcon(id: TabId): LucideIcon {
+  const tab = TABS.find((item) => item.id === id);
+  return tab?.icon ?? Users;
 }
 
 export function HomeHeroMockup() {
@@ -343,7 +349,9 @@ export function HomeHeroMockup() {
       </div>
 
       <div className="home-v2-hero-badge home-v2-hero-badge--bottom">
-        <span className="home-v2-badge-icon home-v2-tone-green"><BarChart3 size={13} /></span>
+        <span className="home-v2-badge-icon home-v2-tone-green">
+          {segmentIcon("vendas")( {size:13} )}
+        </span>
         <div><small>Vendas</small><strong>Fluxo simples</strong></div>
       </div>
     </div>
