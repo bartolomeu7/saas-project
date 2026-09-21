@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import type { LucideIcon } from "lucide-react";
 import {
   ArrowRight,
   Banknote,
@@ -150,7 +149,13 @@ function DashboardVisual({ activeTab }: { activeTab: TabId }) {
           {TABS.map((tab) => {
             const Icon = tab.icon;
             return (
-              <span key={tab.id} className={cn("home-v2-sidebar-icon", tab.id === activeTab && "is-active")}>
+              <span
+                key={tab.id}
+                className={cn(
+                  "home-v2-sidebar-icon",
+                  tab.id === activeTab && "is-active",
+                )}
+              >
                 <Icon size={14} />
               </span>
             );
@@ -194,16 +199,24 @@ function DashboardVisual({ activeTab }: { activeTab: TabId }) {
                 </div>
                 <span>Dados demonstrativos</span>
               </div>
+
               <div className="home-v2-chart-grid">
                 {[25, 50, 75].map((value) => (
                   <i key={value} style={{ bottom: value + "%" }} />
                 ))}
                 <div className="home-v2-bars" aria-hidden="true">
                   {bars.map((height, index) => (
-                    <b key={index} style={{ height: height + "%", animationDelay: index * 55 + "ms" }} />
+                    <b
+                      key={index}
+                      style={{
+                        height: height + "%",
+                        animationDelay: index * 55 + "ms",
+                      }}
+                    />
                   ))}
                 </div>
               </div>
+
               <div className="home-v2-chart-foot">
                 <span>Seg</span>
                 <span>Ter</span>
@@ -222,7 +235,14 @@ function DashboardVisual({ activeTab }: { activeTab: TabId }) {
               </div>
               {data.rows.map((row, index) => (
                 <div className="home-v2-row" key={row.label}>
-                  <span className={cn("home-v2-row-number", "home-v2-tone-" + data.accent)}>{String(index + 1).padStart(2, "0")}</span>
+                  <span
+                    className={cn(
+                      "home-v2-row-number",
+                      "home-v2-tone-" + data.accent,
+                    )}
+                  >
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
                   <div>
                     <strong>{row.label}</strong>
                     <small>{row.meta}</small>
@@ -234,7 +254,9 @@ function DashboardVisual({ activeTab }: { activeTab: TabId }) {
           </div>
 
           <div className="home-v2-dashboard__footer">
-            <span><Check size={12} /> Interface demonstrativa</span>
+            <span>
+              <Check size={12} /> Interface demonstrativa
+            </span>
             <span>{data.footer}</span>
           </div>
         </div>
@@ -249,10 +271,15 @@ export function HomeProductShowcase() {
 
   return (
     <div className="home-v2-showcase">
-      <div className="home-v2-showcase__tabs" role="tablist" aria-label="Módulos do Prime Ges">
+      <div
+        className="home-v2-showcase__tabs"
+        role="tablist"
+        aria-label="Módulos do Prime Ges"
+      >
         {TABS.map((tab) => {
           const Icon = tab.icon;
           const selected = activeTab === tab.id;
+
           return (
             <button
               key={tab.id}
@@ -271,7 +298,14 @@ export function HomeProductShowcase() {
 
       <div className="home-v2-showcase__copy">
         <div>
-          <span className={cn("home-section-eyebrow", "home-v2-eyebrow-" + active.accent)}>{active.eyebrow}</span>
+          <span
+            className={cn(
+              "home-section-eyebrow",
+              "home-v2-eyebrow-" + active.accent,
+            )}
+          >
+            {active.eyebrow}
+          </span>
           <h3>{active.title}</h3>
         </div>
         <p>{active.description}</p>
@@ -290,28 +324,41 @@ export function HomeProductShowcase() {
   );
 }
 
-function segmentIcon(id: TabId): LucideIcon {
-  const tab = TABS.find((item) => item.id === id);
-  return tab?.icon ?? Users;
-}
-
 export function HomeHeroMockup() {
   return (
-    <div className="home-v2-hero-mockup" aria-label="Prévia ilustrativa do painel Prime Ges">
+    <div
+      className="home-v2-hero-mockup"
+      aria-label="Prévia ilustrativa do painel Prime Ges"
+    >
       <div className="home-v2-hero-mockup__halo" aria-hidden="true" />
+
       <div className="home-v2-hero-mockup__card">
         <div className="home-v2-hero-mockup__top">
           <div>
             <small>PAINEL DO NEGÓCIO</small>
             <strong>Organize. Venda. Acompanhe.</strong>
           </div>
-          <span><i /> online</span>
+          <span>
+            <i /> online
+          </span>
         </div>
 
         <div className="home-v2-hero-mockup__metrics">
-          <div><small>Clientes</small><strong>Organizados</strong><span>↗</span></div>
-          <div><small>Vendas</small><strong>Em um só lugar</strong><span>↗</span></div>
-          <div><small>Caixa</small><strong>Sob controle</strong><span>↗</span></div>
+          <div>
+            <small>Clientes</small>
+            <strong>Organizados</strong>
+            <span>↗</span>
+          </div>
+          <div>
+            <small>Vendas</small>
+            <strong>Em um só lugar</strong>
+            <span>↗</span>
+          </div>
+          <div>
+            <small>Caixa</small>
+            <strong>Sob controle</strong>
+            <span>↗</span>
+          </div>
         </div>
 
         <div className="home-v2-hero-mockup__chart">
@@ -320,20 +367,41 @@ export function HomeHeroMockup() {
               <i key={value} style={{ bottom: value + "%" }} />
             ))}
           </div>
+
           <div className="home-v2-hero-chart-bars" aria-hidden="true">
-            {[34, 48, 42, 66, 54, 76, 64, 84, 72, 91].map((height, index) => (
-              <b key={index} style={{ height: height + "%", animationDelay: index * 45 + "ms" }} />
-            ))}
+            {[34, 48, 42, 66, 54, 76, 64, 84, 72, 91].map(
+              (height, index) => (
+                <b
+                  key={index}
+                  style={{
+                    height: height + "%",
+                    animationDelay: index * 45 + "ms",
+                  }}
+                />
+              ),
+            )}
           </div>
-          <div className="home-v2-hero-chart-label">Atividade da operação · dados demonstrativos</div>
+
+          <div className="home-v2-hero-chart-label">
+            Atividade da operação · dados demonstrativos
+          </div>
         </div>
 
         <div className="home-v2-hero-mockup__row">
           {TABS.slice(0, 4).map((tab) => {
             const Icon = tab.icon;
+            const tone =
+              tab.id === "clientes"
+                ? "blue"
+                : tab.id === "produtos"
+                  ? "violet"
+                  : tab.id === "servicos"
+                    ? "cyan"
+                    : "green";
+
             return (
               <div key={tab.id}>
-                <span className={"home-v2-dot home-v2-tone-" + (tab.id === "clientes" ? "blue" : tab.id === "produtos" ? "violet" : tab.id === "servicos" ? "cyan" : "green")}>
+                <span className={"home-v2-dot home-v2-tone-" + tone}>
                   <Icon size={12} />
                 </span>
                 <small>{tab.label}</small>
@@ -344,15 +412,23 @@ export function HomeHeroMockup() {
       </div>
 
       <div className="home-v2-hero-badge home-v2-hero-badge--top">
-        <span className="home-v2-badge-icon"><Users size={13} /></span>
-        <div><small>Clientes</small><strong>Tudo organizado</strong></div>
+        <span className="home-v2-badge-icon">
+          <Users size={13} />
+        </span>
+        <div>
+          <small>Clientes</small>
+          <strong>Tudo organizado</strong>
+        </div>
       </div>
 
       <div className="home-v2-hero-badge home-v2-hero-badge--bottom">
         <span className="home-v2-badge-icon home-v2-tone-green">
-          {segmentIcon("vendas")( {size:13} )}
+          <BarChart3 size={13} />
         </span>
-        <div><small>Vendas</small><strong>Fluxo simples</strong></div>
+        <div>
+          <small>Vendas</small>
+          <strong>Fluxo simples</strong>
+        </div>
       </div>
     </div>
   );
