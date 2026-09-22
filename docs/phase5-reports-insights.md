@@ -25,7 +25,8 @@ A Fase 5 é uma camada de consulta e apresentação sobre os dados transacionais
 - agenda por status;
 - estoque crítico;
 - contas a receber e a pagar em aberto;
-- quantidade de títulos vencidos;
+- títulos a pagar vencidos;
+- recebíveis em aberto há mais de 1 dia, como indicador de idade do saldo;
 - exportação CSV.
 
 ## Períodos
@@ -43,8 +44,9 @@ A Fase 5 é uma camada de consulta e apresentação sobre os dados transacionais
 3. Recebimentos por método usam somente pagamentos confirmados.
 4. Compra de estoque não é contada novamente como despesa operacional quando já representa custo de estoque.
 5. A receber e a pagar são saldos em aberto atuais e aparecem explicitamente como tal.
-6. Todas as consultas são filtradas pela empresa atual.
-7. O CSV reutiliza o mesmo workspace do painel.
+6. Como a tabela de vendas não possui due_date, o indicador de recebíveis não é chamado de "vencido": ele mede vendas concluídas ainda não pagas e com mais de um dia de idade.
+7. Todas as consultas são filtradas pela empresa atual.
+8. O CSV reutiliza o mesmo workspace do painel.
 
 ## Reuso
 
