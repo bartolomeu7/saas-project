@@ -24,7 +24,7 @@ export async function GET(request: Request) {
     ["Resultado operacional", report.summary.netResult.toFixed(2)],
     ["Contas a receber", report.summary.accountsReceivable.toFixed(2)],
     ["Contas a pagar", report.summary.accountsPayable.toFixed(2)],
-    ["Recebíveis vencidos", report.summary.overdueReceivables],
+    ["Recebíveis em aberto há mais de 1 dia", report.summary.overdueReceivables],
     ["Pagamentos vencidos", report.summary.overduePayables],
     ["Agendamentos", report.appointments.total],
     ["Agendamentos concluídos", report.appointments.completed],
