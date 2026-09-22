@@ -1,0 +1,3 @@
+-- Phase 4 — Agenda + Equipe
+-- Native Prime Ges implementation using reusable open-source scheduling patterns.
+-- No external scheduling platform or proprietary dependency is introduced.
