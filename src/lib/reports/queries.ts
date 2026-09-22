@@ -52,7 +52,7 @@ function dayLabel(value: string) {
 
 async function getSalesLayer(companyId: string, range: ReportRange) {
   const supabase = createClient();
-  const { data: sales } = await supabase.from("sales").select("id, total_amount, completed_at").eq("company_id", companyId).eq("status", "completed").gte("completed_at", range.from).lte("completed_at", range.to).order("completed_at", { ascending: true });
+  const { data: sales } = await supabase.from("sales").select("id, total_amount, total_cost, completed_at").eq("company_id", companyId).eq("status", "completed").gte("completed_at", range.from).lte("completed_at", range.to).order("completed_at", { ascending: true });
   const rows = sales ?? [];
   const saleIds = rows.map((row) => row.id);
   let items: Array<{ description: string; quantity: number; total_amount: number; item_type: string }> = [];
@@ -68,6 +68,7 @@ async function getSalesLayer(companyId: string, range: ReportRange) {
   }
 
   const revenue = rows.reduce((sum, row) => sum + money(row.total_amount), 0);
+  const costOfGoods = rows.reduce((sum, row) => sum + money(row.total_cost), 0);
   const trendMap = new Map<string, number>();
   for (const row of rows) {
     if (!row.completed_at) continue;
@@ -91,7 +92,7 @@ async function getSalesLayer(companyId: string, range: ReportRange) {
   for (const row of payments) paymentMap.set(row.method, (paymentMap.get(row.method) ?? 0) + money(row.amount));
   const paymentMethods: ReportPaymentMethod[] = Array.from(paymentMap.entries()).map(([method, amount]) => ({ method, label: PAYMENT_LABELS[method] ?? method, amount })).sort((a, b) => b.amount - a.amount);
 
-  return { revenue, completedSales: rows.length, averageTicket: rows.length ? revenue / rows.length : null, salesTrend, topItems, paymentMethods };
+  return { revenue, costOfGoods, completedSales: rows.length, averageTicket: rows.length ? revenue / rows.length : null, salesTrend, topItems, paymentMethods };
 }
 
 async function getFinanceLayer(companyId: string, range: ReportRange) {
@@ -155,7 +156,7 @@ export const getReportsWorkspace = cache(async function getReportsWorkspace(comp
   const [sales, finance, appointments, inventory] = await Promise.all([getSalesLayer(companyId, range), getFinanceLayer(companyId, range), getAppointmentsLayer(companyId, range), getInventoryLayer(companyId)]);
   return {
     range,
-    summary: { revenue: sales.revenue, completedSales: sales.completedSales, averageTicket: sales.averageTicket, operatingExpenses: finance.operatingExpenses, netResult: sales.revenue - finance.operatingExpenses, accountsReceivable: finance.accountsReceivable, accountsPayable: finance.accountsPayable, overdueReceivables: finance.overdueReceivables, overduePayables: finance.overduePayables },
+    summary: { revenue: sales.revenue, costOfGoods: sales.costOfGoods, completedSales: sales.completedSales, averageTicket: sales.averageTicket, operatingExpenses: finance.operatingExpenses, netResult: sales.revenue - sales.costOfGoods - finance.operatingExpenses, accountsReceivable: finance.accountsReceivable, accountsPayable: finance.accountsPayable, overdueReceivables: finance.overdueReceivables, overduePayables: finance.overduePayables },
     salesTrend: sales.salesTrend,
     topItems: sales.topItems,
     paymentMethods: sales.paymentMethods,
