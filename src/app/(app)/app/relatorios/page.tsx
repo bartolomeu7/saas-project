@@ -155,7 +155,7 @@ export default async function ReportsPage({ searchParams }: { searchParams?: { p
         <div className="prime-dashboard-panel">
           <div className="prime-panel-heading"><div><p className="prime-panel-eyebrow">Financeiro</p><h2>Valores em aberto</h2></div></div>
           <div className="mt-4 grid grid-cols-2 gap-3">
-            <div className="prime-mini-stat"><span>A receber</span><strong>{money(report.summary.accountsReceivable)}</strong><small>{report.summary.overdueReceivables} vencido(s)</small></div>
+            <div className="prime-mini-stat"><span>A receber</span><strong>{money(report.summary.accountsReceivable)}</strong><small>{report.summary.overdueReceivables} em aberto há mais de 1 dia</small></div>
             <div className="prime-mini-stat"><span>A pagar</span><strong>{money(report.summary.accountsPayable)}</strong><small>{report.summary.overduePayables} vencido(s)</small></div>
           </div>
           <Link href="/app/financeiro" className="mt-4 inline-flex items-center gap-2 text-xs font-medium text-primary hover:underline">Abrir financeiro</Link>
