@@ -13,6 +13,8 @@ import {
   Settings,
   CreditCard,
   Gift,
+  CalendarDays,
+  UserCog,
 } from "lucide-react";
 
 export interface NavItem {
@@ -55,6 +57,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: "Compras", href: "/app/compras", icon: ClipboardList, enabled: true },
       { label: "Caixa", href: "/app/caixa", icon: Wallet, enabled: true },
       { label: "Fornecedores", href: "/app/fornecedores", icon: Users, enabled: true },
+      { label: "Agenda", href: "/app/agenda", icon: CalendarDays, enabled: true },
     ],
   },
   {
@@ -65,7 +68,9 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    label: "Empresa",
     items: [
+      { label: "Equipe", href: "/app/equipe", icon: UserCog, enabled: true },
       { label: "Assinatura", href: "/app/assinatura", icon: CreditCard, enabled: true },
       {
         label: "Configurações",
