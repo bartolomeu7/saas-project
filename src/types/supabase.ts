@@ -2144,6 +2144,33 @@ export type Database = {
         Args: { p_customer_id: string; p_points: number; p_reason: string }
         Returns: number
       }
+      cancel_purchase_order: {
+        Args: { p_purchase_order_id: string; p_reason?: string }
+        Returns: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          discount_amount: number
+          due_date: string | null
+          expected_at: string | null
+          id: string
+          notes: string | null
+          order_number: string | null
+          ordered_at: string | null
+          received_at: string | null
+          status: Database["public"]["Enums"]["purchase_order_status"]
+          subtotal: number
+          supplier_id: string
+          total_amount: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "purchase_orders"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       cancel_purchase_receipt: {
         Args: { p_purchase_receipt_id: string; p_reason?: string }
         Returns: {
