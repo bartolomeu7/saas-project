@@ -75,7 +75,7 @@ export default async function ReportsPage({ searchParams }: { searchParams?: { p
           <div className="prime-kpi-icon"><CircleDollarSign className="h-4 w-4" /></div>
           <p>Resultado operacional</p>
           <strong>{money(report.summary.netResult)}</strong>
-          <span>receita menos despesas operacionais</span>
+          <span>receita menos custo das vendas e despesas operacionais</span>
         </article>
         <article className="prime-kpi-card" data-alert={report.inventory.lowStock + report.inventory.outOfStock > 0 ? "true" : "false"}>
           <div className="prime-kpi-icon"><Package className="h-4 w-4" /></div>
