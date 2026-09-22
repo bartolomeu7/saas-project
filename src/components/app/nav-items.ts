@@ -60,7 +60,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: "Análises",
     items: [
-      { label: "Financeiro", href: "/app/financeiro", icon: LineChart, enabled: false },
+      { label: "Financeiro", href: "/app/financeiro", icon: LineChart, enabled: true },
       { label: "Relatórios", href: "/app/relatorios", icon: FileText, enabled: false },
     ],
   },
