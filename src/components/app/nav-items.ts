@@ -50,8 +50,9 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: "Operação",
     items: [
-      { label: "Estoque", href: "/app/estoque", icon: Warehouse, enabled: false },
+      { label: "Estoque", href: "/app/estoque", icon: Warehouse, enabled: true },
       { label: "Caixa", href: "/app/caixa", icon: Wallet, enabled: true },
+      { label: "Fornecedores", href: "/app/fornecedores", icon: Users, enabled: true },
     ],
   },
   {
