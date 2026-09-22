@@ -9,6 +9,7 @@ export interface ReportRange {
 
 export interface ReportSummary {
   revenue: number;
+  costOfGoods: number;
   completedSales: number;
   averageTicket: number | null;
   operatingExpenses: number;
