@@ -43,9 +43,9 @@ export async function createPurchaseOrderAction(
   const { data, error } = await supabase.rpc("create_purchase_order", {
     p_supplier_id: supplierId,
     p_items: items,
-    p_expected_at: parseDateValue(formData.get("expectedAt")),
-    p_due_date: String(formData.get("dueDate") ?? "").trim() || null,
-    p_notes: String(formData.get("notes") ?? "").trim() || null,
+    p_expected_at: parseDateValue(formData.get("expectedAt")) ?? undefined,
+    p_due_date: String(formData.get("dueDate") ?? "").trim() || undefined,
+    p_notes: String(formData.get("notes") ?? "").trim() || undefined,
   });
 
   if (error || !data) {
@@ -116,7 +116,7 @@ export async function cancelPurchaseOrderAction(
   const supabase = createClient();
   const { error } = await supabase.rpc("cancel_purchase_order", {
     p_purchase_order_id: purchaseOrderId,
-    p_reason: String(formData.get("reason") ?? "").trim() || null,
+    p_reason: String(formData.get("reason") ?? "").trim() || undefined,
   });
 
   if (error) throw new Error(error.message);
