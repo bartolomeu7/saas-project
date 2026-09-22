@@ -19,6 +19,7 @@ export async function GET(request: Request) {
     ["Faturamento", report.summary.revenue.toFixed(2)],
     ["Vendas concluídas", report.summary.completedSales],
     ["Ticket médio", report.summary.averageTicket?.toFixed(2) ?? ""],
+    ["Custo das vendas", report.summary.costOfGoods.toFixed(2)],
     ["Despesas operacionais", report.summary.operatingExpenses.toFixed(2)],
     ["Resultado operacional", report.summary.netResult.toFixed(2)],
     ["Contas a receber", report.summary.accountsReceivable.toFixed(2)],
