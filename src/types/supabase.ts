@@ -17,14 +17,19 @@ export type Database = {
       accounts_payable: {
         Row: {
           amount: number
+          category_id: string | null
           company_id: string
+          cost_center_id: string | null
           created_at: string
           created_by: string | null
           description: string
           due_date: string | null
           id: string
           issue_date: string
+          notes: string | null
+          paid_amount: number
           paid_at: string | null
+          paid_method: Database["public"]["Enums"]["sale_payment_method"] | null
           purchase_order_id: string | null
           purchase_receipt_id: string | null
           status: Database["public"]["Enums"]["accounts_payable_status"]
@@ -33,14 +38,21 @@ export type Database = {
         }
         Insert: {
           amount: number
+          category_id?: string | null
           company_id: string
+          cost_center_id?: string | null
           created_at?: string
           created_by?: string | null
           description: string
           due_date?: string | null
           id?: string
           issue_date?: string
+          notes?: string | null
+          paid_amount?: number
           paid_at?: string | null
+          paid_method?:
+            | Database["public"]["Enums"]["sale_payment_method"]
+            | null
           purchase_order_id?: string | null
           purchase_receipt_id?: string | null
           status?: Database["public"]["Enums"]["accounts_payable_status"]
@@ -49,14 +61,21 @@ export type Database = {
         }
         Update: {
           amount?: number
+          category_id?: string | null
           company_id?: string
+          cost_center_id?: string | null
           created_at?: string
           created_by?: string | null
           description?: string
           due_date?: string | null
           id?: string
           issue_date?: string
+          notes?: string | null
+          paid_amount?: number
           paid_at?: string | null
+          paid_method?:
+            | Database["public"]["Enums"]["sale_payment_method"]
+            | null
           purchase_order_id?: string | null
           purchase_receipt_id?: string | null
           status?: Database["public"]["Enums"]["accounts_payable_status"]
@@ -377,6 +396,41 @@ export type Database = {
           },
         ]
       }
+      cost_centers: {
+        Row: {
+          active: boolean
+          company_id: string
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          company_id: string
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          company_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cost_centers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_documents: {
         Row: {
           company_id: string
@@ -600,6 +654,166 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      finance_default_seed_guard: {
+        Row: {
+          company_id: string
+        }
+        Insert: {
+          company_id: string
+        }
+        Update: {
+          company_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finance_default_seed_guard_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financial_categories: {
+        Row: {
+          active: boolean
+          company_id: string
+          created_at: string
+          id: string
+          kind: Database["public"]["Enums"]["financial_category_kind"]
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          company_id: string
+          created_at?: string
+          id?: string
+          kind: Database["public"]["Enums"]["financial_category_kind"]
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          company_id?: string
+          created_at?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["financial_category_kind"]
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_categories_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financial_entries: {
+        Row: {
+          amount: number
+          category_id: string | null
+          company_id: string
+          cost_center_id: string | null
+          created_at: string
+          created_by: string | null
+          customer_id: string | null
+          description: string
+          direction: Database["public"]["Enums"]["financial_entry_direction"]
+          id: string
+          method: Database["public"]["Enums"]["sale_payment_method"] | null
+          notes: string | null
+          occurred_on: string
+          paid_at: string | null
+          source_id: string | null
+          source_type: string | null
+          status: Database["public"]["Enums"]["financial_entry_status"]
+          supplier_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          category_id?: string | null
+          company_id: string
+          cost_center_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          description: string
+          direction: Database["public"]["Enums"]["financial_entry_direction"]
+          id?: string
+          method?: Database["public"]["Enums"]["sale_payment_method"] | null
+          notes?: string | null
+          occurred_on?: string
+          paid_at?: string | null
+          source_id?: string | null
+          source_type?: string | null
+          status?: Database["public"]["Enums"]["financial_entry_status"]
+          supplier_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          category_id?: string | null
+          company_id?: string
+          cost_center_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          description?: string
+          direction?: Database["public"]["Enums"]["financial_entry_direction"]
+          id?: string
+          method?: Database["public"]["Enums"]["sale_payment_method"] | null
+          notes?: string | null
+          occurred_on?: string
+          paid_at?: string | null
+          source_id?: string | null
+          source_type?: string | null
+          status?: Database["public"]["Enums"]["financial_entry_status"]
+          supplier_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_entries_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "financial_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_entries_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_entries_cost_center_id_fkey"
+            columns: ["cost_center_id"]
+            isOneToOne: false
+            referencedRelation: "cost_centers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_entries_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_entries_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
         ]
@@ -2348,6 +2562,83 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      create_cost_center: {
+        Args: { p_name: string }
+        Returns: {
+          active: boolean
+          company_id: string
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "cost_centers"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_financial_category: {
+        Args: {
+          p_kind: Database["public"]["Enums"]["financial_category_kind"]
+          p_name: string
+        }
+        Returns: {
+          active: boolean
+          company_id: string
+          created_at: string
+          id: string
+          kind: Database["public"]["Enums"]["financial_category_kind"]
+          name: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "financial_categories"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_financial_entry: {
+        Args: {
+          p_amount: number
+          p_category_id?: string
+          p_cost_center_id?: string
+          p_description: string
+          p_direction: Database["public"]["Enums"]["financial_entry_direction"]
+          p_method: Database["public"]["Enums"]["sale_payment_method"]
+          p_notes?: string
+          p_occurred_on: string
+        }
+        Returns: {
+          amount: number
+          category_id: string | null
+          company_id: string
+          cost_center_id: string | null
+          created_at: string
+          created_by: string | null
+          customer_id: string | null
+          description: string
+          direction: Database["public"]["Enums"]["financial_entry_direction"]
+          id: string
+          method: Database["public"]["Enums"]["sale_payment_method"] | null
+          notes: string | null
+          occurred_on: string
+          paid_at: string | null
+          source_id: string | null
+          source_type: string | null
+          status: Database["public"]["Enums"]["financial_entry_status"]
+          supplier_id: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "financial_entries"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       create_purchase_order: {
         Args: {
           p_due_date?: string
@@ -2430,6 +2721,42 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      pay_accounts_payable: {
+        Args: {
+          p_amount: number
+          p_method: Database["public"]["Enums"]["sale_payment_method"]
+          p_notes?: string
+          p_payable_id: string
+          p_payment_date?: string
+        }
+        Returns: {
+          amount: number
+          category_id: string | null
+          company_id: string
+          cost_center_id: string | null
+          created_at: string
+          created_by: string | null
+          description: string
+          due_date: string | null
+          id: string
+          issue_date: string
+          notes: string | null
+          paid_amount: number
+          paid_at: string | null
+          paid_method: Database["public"]["Enums"]["sale_payment_method"] | null
+          purchase_order_id: string | null
+          purchase_receipt_id: string | null
+          status: Database["public"]["Enums"]["accounts_payable_status"]
+          supplier_id: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "accounts_payable"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       postgres_fdw_disconnect: { Args: { "": string }; Returns: boolean }
       postgres_fdw_disconnect_all: { Args: never; Returns: boolean }
       postgres_fdw_get_connections: {
@@ -2458,6 +2785,33 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      receive_sale_payment: {
+        Args: {
+          p_amount: number
+          p_method: Database["public"]["Enums"]["sale_payment_method"]
+          p_notes?: string
+          p_paid_at?: string
+          p_sale_id: string
+        }
+        Returns: {
+          amount: number
+          company_id: string
+          created_at: string
+          id: string
+          method: Database["public"]["Enums"]["sale_payment_method"]
+          notes: string | null
+          paid_at: string | null
+          sale_id: string
+          status: Database["public"]["Enums"]["sale_payment_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "sale_payments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       redeem_loyalty_points: {
         Args: { p_points: number; p_sale_id: string }
         Returns: number
@@ -2466,13 +2820,18 @@ export type Database = {
         Args: { p_sale_id: string }
         Returns: undefined
       }
+      seed_financial_defaults: {
+        Args: { p_company_id: string }
+        Returns: undefined
+      }
       undo_loyalty_redemption_for_draft_sale: {
         Args: { p_sale_id: string }
         Returns: undefined
       }
     }
     Enums: {
-      accounts_payable_status: "open" | "paid" | "cancelled"
+      accounts_payable_status: "open" | "paid" | "cancelled" | "partial"
+      accounts_receivable_status: "open" | "paid" | "cancelled"
       billing_interval: "month" | "year"
       business_type:
         | "bakery"
@@ -2491,6 +2850,9 @@ export type Database = {
       company_role: "owner" | "admin" | "employee"
       company_status: "active" | "inactive"
       customer_status: "active" | "inactive"
+      financial_category_kind: "income" | "expense"
+      financial_entry_direction: "income" | "expense"
+      financial_entry_status: "posted" | "cancelled"
       loyalty_campaign_status: "active" | "inactive"
       loyalty_grant_on: "completion" | "full_payment"
       loyalty_transaction_source:
@@ -2673,7 +3035,8 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      accounts_payable_status: ["open", "paid", "cancelled"],
+      accounts_payable_status: ["open", "paid", "cancelled", "partial"],
+      accounts_receivable_status: ["open", "paid", "cancelled"],
       billing_interval: ["month", "year"],
       business_type: [
         "bakery",
@@ -2693,6 +3056,9 @@ export const Constants = {
       company_role: ["owner", "admin", "employee"],
       company_status: ["active", "inactive"],
       customer_status: ["active", "inactive"],
+      financial_category_kind: ["income", "expense"],
+      financial_entry_direction: ["income", "expense"],
+      financial_entry_status: ["posted", "cancelled"],
       loyalty_campaign_status: ["active", "inactive"],
       loyalty_grant_on: ["completion", "full_payment"],
       loyalty_transaction_source: [
