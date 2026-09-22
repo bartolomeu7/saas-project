@@ -13,8 +13,12 @@
 
 ## 1. Visão do produto
 
-**AgroContábil** será uma plataforma SaaS brasileira de gestão agro, fiscal,
-contábil e tributária para:
+**AgroContábil** será uma plataforma SaaS brasileira de gestão **contábil,
+tributária e financeira** para o agronegócio. Essas três áreas formam o núcleo
+do produto. Os demais módulos são funcionalidades complementares e podem ser
+ativados conforme a necessidade do cliente.
+
+Públicos e perfis atendidos:
 
 - produtor rural pessoa física;
 - produtor rural pessoa jurídica;
@@ -327,7 +331,38 @@ componente mais adequado para cada documento/obrigação.
 
 # 6. Público e edição do produto
 
-## 6.1 Agro Start — pequeno produtor
+## 6.1 Núcleo obrigatório — Contábil + Tributário + Financeiro
+
+Todo cliente entra pela mesma base de negócio. O pacote principal concentra:
+
+- contabilidade;
+- tributação;
+- financeiro;
+- documentos e obrigações relacionados a essas três áreas;
+- dashboard e alertas;
+- controle de usuários e permissões;
+- acesso web responsivo.
+
+Os módulos complementares não devem bloquear o uso do núcleo.
+
+### Funcionalidades complementares opcionais
+
+**Agro:** propriedades, talhões, safras, culturas, produção, rebanho,
+máquinas, insumos e estoques.
+
+**Comercial:** clientes, fornecedores, compras, vendas, contratos e pedidos.
+
+**RH:** colaboradores, cargos, departamentos, admissões, férias, afastamentos,
+documentos, jornada, benefícios e integrações de folha quando aplicáveis.
+
+**Operação:** estoque, agenda, frota, manutenção, armazém e logística.
+
+**Inteligência:** análises, simuladores, copilotos e automações.
+
+Esses módulos devem aparecer claramente como **EXTRAS**. O cliente pode usar
+somente o núcleo Contábil + Tributário + Financeiro.
+
+## 6.2 Agro Start — pequeno produtor
 
 Foco em simplicidade.
 
@@ -362,7 +397,7 @@ fechamento fiscal.
 
 ---
 
-## 6.2 Agro Pro — produtor médio
+## 6.3 Agro Pro — produtor médio
 
 Adicionar:
 
@@ -389,7 +424,7 @@ Adicionar:
 
 ---
 
-## 6.3 Agro Enterprise — grande empresa
+## 6.4 Agro Enterprise — grande empresa
 
 A prioridade muda de "lançar despesas" para "governar um grupo".
 
@@ -528,6 +563,36 @@ Adicionar:
 - margem por unidade;
 - obrigações críticas;
 - alertas de compliance.
+
+
+# 8. Experiência web, mobile e desktop
+
+O produto será um **SaaS web responsivo**, acessível pelo navegador no
+computador, tablet e celular. Não precisamos de aplicativo nativo na primeira
+versão.
+
+### Desktop
+- sidebar completa;
+- tabelas e filtros avançados;
+- fechamento contábil e fiscal;
+- conciliação;
+- apuração;
+- auditoria;
+- relatórios e controladoria.
+
+### Mobile
+- navegação compacta/drawer;
+- indicadores em cards;
+- consulta de saldo e contas;
+- lançamento financeiro;
+- envio de XML/PDF/documentos;
+- consulta de notas;
+- alertas;
+- aprovações;
+- ações rápidas.
+
+O mobile não deve ser apenas o desktop espremido. As tarefas rápidas precisam
+ter fluxos próprios; as operações pesadas ficam priorizadas no desktop.
 
 ---
 
