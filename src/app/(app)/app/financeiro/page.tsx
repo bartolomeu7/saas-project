@@ -34,7 +34,7 @@ const directionLabels = {
   expense: "Despesa",
 };
 
-type SearchParams = Promise<{ view?: string }>;
+type SearchParams = { view?: string | string[] | undefined };
 
 function Kpi({ label, value, detail }: { label: string; value: string; detail?: string }) {
   return (
@@ -96,10 +96,11 @@ function PageShell({
   );
 }
 
-export default async function FinancePage({ searchParams }: { searchParams: SearchParams }) {
+export default async function FinancePage({ searchParams }: { searchParams?: SearchParams }) {
   const current = (await getCurrentCompany())!;
   const workspace = await getFinanceWorkspace(current.company.id);
-  const requestedView = (await searchParams)?.view;
+  const rawView = searchParams?.view;
+  const requestedView = Array.isArray(rawView) ? rawView[0] : rawView;
   const view = requestedView ?? "visao";
   const { dashboard, payables, receivables, entries, categories, costCenters } = workspace;
   const canOperate = current.role === "owner" || current.role === "admin";
