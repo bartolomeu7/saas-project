@@ -3,13 +3,12 @@ import Link from "next/link";
 import { getCurrentCompany } from "@/lib/companies/queries";
 import { getFinanceWorkspace } from "@/lib/finance/queries";
 import {
-  createCostCenterAction,
-  createFinancialCategoryAction,
-  createFinancialEntryAction,
-  payAccountsPayableAction,
-  receiveSalePaymentAction,
-} from "@/lib/finance/actions";
-import { Button } from "@/components/ui/button";
+  AccountsPayablePaymentForm,
+  CostCenterForm,
+  FinancialCategoryForm,
+  FinancialEntryForm,
+  SalePaymentForm,
+} from "@/components/app/finance-action-forms";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 
@@ -147,15 +146,7 @@ export default async function FinancePage({ searchParams }: { searchParams?: Sea
                     <td className="p-3 text-right font-semibold">{money(balance)}</td>
                     <td className="p-3">
                       {canOperate ? (
-                        <form action={payAccountsPayableAction} className="grid gap-2 sm:grid-cols-[120px_130px_110px_auto]">
-                          <input type="hidden" name="payableId" value={payable.id} />
-                          <input name="amount" defaultValue={balance.toFixed(2)} inputMode="decimal" className="h-9 rounded-md border bg-background px-2 text-sm" />
-                          <select name="method" defaultValue="pix" className="h-9 rounded-md border bg-background px-2 text-sm">
-                            {Object.entries(paymentLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
-                          </select>
-                          <input name="paymentDate" type="date" defaultValue={new Date().toISOString().slice(0,10)} className="h-9 rounded-md border bg-background px-2 text-sm" />
-                          <Button type="submit" size="sm">Baixar</Button>
-                        </form>
+                        <AccountsPayablePaymentForm payableId={payable.id} balance={balance} />
                       ) : (
                         <span className="text-xs text-muted-foreground">Somente leitura</span>
                       )}
@@ -210,14 +201,7 @@ export default async function FinancePage({ searchParams }: { searchParams?: Sea
                   <td className="p-3 text-right font-semibold">{money(row.outstanding_amount)}</td>
                   <td className="p-3">
                     {canOperate ? (
-                      <form action={receiveSalePaymentAction} className="grid gap-2 sm:grid-cols-[120px_120px_auto]">
-                        <input type="hidden" name="saleId" value={row.sale_id} />
-                        <input name="amount" defaultValue={row.outstanding_amount.toFixed(2)} inputMode="decimal" className="h-9 rounded-md border bg-background px-2 text-sm" />
-                        <select name="method" defaultValue="pix" className="h-9 rounded-md border bg-background px-2 text-sm">
-                          {Object.entries(paymentLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
-                        </select>
-                        <Button type="submit" size="sm">Receber</Button>
-                      </form>
+                      <SalePaymentForm saleId={row.sale_id} balance={row.outstanding_amount} />
                     ) : (
                       <span className="text-xs text-muted-foreground">Somente leitura</span>
                     )}
@@ -242,54 +226,7 @@ export default async function FinancePage({ searchParams }: { searchParams?: Sea
               Use para receitas/despesas que não passam por vendas ou compras.
             </p>
             {canOperate ? (
-              <form action={createFinancialEntryAction} className="mt-5 grid gap-4">
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <label className="grid gap-1 text-sm">
-                    Tipo
-                    <select name="direction" defaultValue="expense" className="h-10 rounded-md border bg-background px-3">
-                      <option value="expense">Despesa</option>
-                      <option value="income">Receita</option>
-                    </select>
-                  </label>
-                  <label className="grid gap-1 text-sm">
-                    Valor
-                    <input name="amount" required inputMode="decimal" placeholder="0,00" className="h-10 rounded-md border bg-background px-3" />
-                  </label>
-                </div>
-                <label className="grid gap-1 text-sm">
-                  Descrição
-                  <input name="description" required placeholder="Ex.: energia elétrica" className="h-10 rounded-md border bg-background px-3" />
-                </label>
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <label className="grid gap-1 text-sm">
-                    Data
-                    <input name="occurredOn" type="date" defaultValue={new Date().toISOString().slice(0,10)} className="h-10 rounded-md border bg-background px-3" />
-                  </label>
-                  <label className="grid gap-1 text-sm">
-                    Forma
-                    <select name="method" defaultValue="pix" className="h-10 rounded-md border bg-background px-3">
-                      {Object.entries(paymentLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
-                    </select>
-                  </label>
-                  <label className="grid gap-1 text-sm">
-                    Categoria
-                    <select name="categoryId" className="h-10 rounded-md border bg-background px-3">
-                      {categories.filter((c) => c.kind === "expense").map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                    </select>
-                  </label>
-                </div>
-                <label className="grid gap-1 text-sm">
-                  Centro de custo
-                  <select name="costCenterId" className="h-10 rounded-md border bg-background px-3">
-                    {costCenters.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
-                </label>
-                <label className="grid gap-1 text-sm">
-                  Observação
-                  <textarea name="notes" rows={3} className="rounded-md border bg-background px-3 py-2" />
-                </label>
-                <Button type="submit">Registrar lançamento</Button>
-              </form>
+              <FinancialEntryForm categories={categories} costCenters={costCenters} />
             ) : (
               <p className="mt-5 text-sm text-muted-foreground">Somente owner/admin podem registrar lançamentos.</p>
             )}
@@ -332,16 +269,7 @@ export default async function FinancePage({ searchParams }: { searchParams?: Sea
                 </div>
               ))}
             </div>
-            {canOperate && (
-              <form action={createFinancialCategoryAction} className="mt-5 grid gap-3 sm:grid-cols-[1fr_150px_auto]">
-                <input name="name" placeholder="Nova categoria" className="h-10 rounded-md border bg-background px-3" />
-                <select name="kind" defaultValue="expense" className="h-10 rounded-md border bg-background px-3">
-                  <option value="expense">Despesa</option>
-                  <option value="income">Receita</option>
-                </select>
-                <Button type="submit">Adicionar</Button>
-              </form>
-            )}
+            {canOperate && <FinancialCategoryForm />}
           </div>
 
           <div className="rounded-xl border bg-card p-5">
@@ -351,12 +279,7 @@ export default async function FinancePage({ searchParams }: { searchParams?: Sea
                 <div key={center.id} className="rounded-lg border px-3 py-2 text-sm">{center.name}</div>
               ))}
             </div>
-            {canOperate && (
-              <form action={createCostCenterAction} className="mt-5 flex gap-2">
-                <input name="name" placeholder="Novo centro de custo" className="h-10 min-w-0 flex-1 rounded-md border bg-background px-3" />
-                <Button type="submit">Adicionar</Button>
-              </form>
-            )}
+            {canOperate && <CostCenterForm />}
           </div>
         </div>
       </PageShell>
