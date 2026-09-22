@@ -30,7 +30,7 @@ function shiftDate(dateValue: string, amount: number) {
 }
 
 function dateLabel(dateValue: string) {
-  const [year, month, day] = dateValue.split("-").map(Number);
+  const [year = 1970, month = 1, day = 1] = dateValue.split("-").map(Number);
   return new Intl.DateTimeFormat("pt-BR", {
     weekday: "long",
     day: "2-digit",
