@@ -113,6 +113,99 @@ export type Database = {
           },
         ]
       }
+      appointments: {
+        Row: {
+          cancellation_reason: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          customer_id: string | null
+          duration_minutes: number
+          ends_at: string
+          id: string
+          notes: string | null
+          price: number
+          professional_id: string | null
+          sale_id: string | null
+          service_id: string
+          starts_at: string
+          status: Database["public"]["Enums"]["appointment_status"]
+          updated_at: string
+        }
+        Insert: {
+          cancellation_reason?: string | null
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          duration_minutes: number
+          ends_at: string
+          id?: string
+          notes?: string | null
+          price?: number
+          professional_id?: string | null
+          sale_id?: string | null
+          service_id: string
+          starts_at: string
+          status?: Database["public"]["Enums"]["appointment_status"]
+          updated_at?: string
+        }
+        Update: {
+          cancellation_reason?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          duration_minutes?: number
+          ends_at?: string
+          id?: string
+          notes?: string | null
+          price?: number
+          professional_id?: string | null
+          sale_id?: string | null
+          service_id?: string
+          starts_at?: string
+          status?: Database["public"]["Enums"]["appointment_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professional_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: string
@@ -1377,6 +1470,194 @@ export type Database = {
           },
         ]
       }
+      professional_availability: {
+        Row: {
+          active: boolean
+          created_at: string
+          end_time: string
+          id: string
+          professional_id: string
+          start_time: string
+          updated_at: string
+          weekday: number
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          end_time: string
+          id?: string
+          professional_id: string
+          start_time: string
+          updated_at?: string
+          weekday: number
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          end_time?: string
+          id?: string
+          professional_id?: string
+          start_time?: string
+          updated_at?: string
+          weekday?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_availability_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professional_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      professional_blocks: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          ends_at: string
+          id: string
+          professional_id: string
+          reason: string | null
+          starts_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          ends_at: string
+          id?: string
+          professional_id: string
+          reason?: string | null
+          starts_at: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          ends_at?: string
+          id?: string
+          professional_id?: string
+          reason?: string | null
+          starts_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_blocks_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_blocks_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professional_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      professional_profiles: {
+        Row: {
+          active: boolean
+          color: string
+          company_id: string
+          company_member_id: string
+          created_at: string
+          display_name: string
+          id: string
+          notes: string | null
+          phone: string | null
+          specialty: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          color?: string
+          company_id: string
+          company_member_id: string
+          created_at?: string
+          display_name: string
+          id?: string
+          notes?: string | null
+          phone?: string | null
+          specialty?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          color?: string
+          company_id?: string
+          company_member_id?: string
+          created_at?: string
+          display_name?: string
+          id?: string
+          notes?: string | null
+          phone?: string | null
+          specialty?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_profiles_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_profiles_company_member_id_fkey"
+            columns: ["company_member_id"]
+            isOneToOne: true
+            referencedRelation: "company_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      professional_services: {
+        Row: {
+          created_at: string
+          duration_override_minutes: number | null
+          id: string
+          price_override: number | null
+          professional_id: string
+          service_id: string
+        }
+        Insert: {
+          created_at?: string
+          duration_override_minutes?: number | null
+          id?: string
+          price_override?: number | null
+          professional_id: string
+          service_id: string
+        }
+        Update: {
+          created_at?: string
+          duration_override_minutes?: number | null
+          id?: string
+          price_override?: number | null
+          professional_id?: string
+          service_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_services_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professional_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_services_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -2354,6 +2635,25 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_existing_company_member: {
+        Args: {
+          p_email: string
+          p_role?: Database["public"]["Enums"]["company_role"]
+        }
+        Returns: {
+          company_id: string
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["company_role"]
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "company_members"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       adjust_loyalty_points: {
         Args: { p_customer_id: string; p_points: number; p_reason: string }
         Returns: number
@@ -2515,6 +2815,41 @@ export type Database = {
           ok: boolean
         }[]
       }
+      create_appointment: {
+        Args: {
+          p_customer_id?: string
+          p_duration_minutes?: number
+          p_notes?: string
+          p_price?: number
+          p_professional_id?: string
+          p_service_id?: string
+          p_starts_at?: string
+        }
+        Returns: {
+          cancellation_reason: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          customer_id: string | null
+          duration_minutes: number
+          ends_at: string
+          id: string
+          notes: string | null
+          price: number
+          professional_id: string | null
+          sale_id: string | null
+          service_id: string
+          starts_at: string
+          status: Database["public"]["Enums"]["appointment_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "appointments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       create_cash_movement: {
         Args: {
           p_amount: number
@@ -2639,6 +2974,30 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      create_professional_block: {
+        Args: {
+          p_ends_at: string
+          p_professional_id: string
+          p_reason?: string
+          p_starts_at: string
+        }
+        Returns: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          ends_at: string
+          id: string
+          professional_id: string
+          reason: string | null
+          starts_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "professional_blocks"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       create_purchase_order: {
         Args: {
           p_due_date?: string
@@ -2672,6 +3031,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      delete_professional_block: {
+        Args: { p_block_id: string }
+        Returns: undefined
+      }
       expire_loyalty_points_batch: { Args: never; Returns: number }
       get_public_plans: {
         Args: never
@@ -2695,6 +3058,24 @@ export type Database = {
       grant_loyalty_points_for_sale: {
         Args: { p_sale_id: string }
         Returns: undefined
+      }
+      list_company_team: {
+        Args: never
+        Returns: {
+          avatar_url: string
+          color: string
+          display_name: string
+          email: string
+          full_name: string
+          member_id: string
+          notes: string
+          phone: string
+          professional_active: boolean
+          professional_id: string
+          role: Database["public"]["Enums"]["company_role"]
+          specialty: string
+          user_id: string
+        }[]
       }
       open_cash_register: {
         Args: { p_notes?: string; p_opening_balance: number }
@@ -2816,6 +3197,37 @@ export type Database = {
         Args: { p_points: number; p_sale_id: string }
         Returns: number
       }
+      remove_company_member: {
+        Args: { p_member_id: string }
+        Returns: undefined
+      }
+      reschedule_appointment: {
+        Args: { p_appointment_id: string; p_starts_at: string }
+        Returns: {
+          cancellation_reason: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          customer_id: string | null
+          duration_minutes: number
+          ends_at: string
+          id: string
+          notes: string | null
+          price: number
+          professional_id: string | null
+          sale_id: string | null
+          service_id: string
+          starts_at: string
+          status: Database["public"]["Enums"]["appointment_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "appointments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       reverse_loyalty_points_for_sale: {
         Args: { p_sale_id: string }
         Returns: undefined
@@ -2824,14 +3236,108 @@ export type Database = {
         Args: { p_company_id: string }
         Returns: undefined
       }
+      set_appointment_status: {
+        Args: {
+          p_appointment_id: string
+          p_reason?: string
+          p_status: Database["public"]["Enums"]["appointment_status"]
+        }
+        Returns: {
+          cancellation_reason: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          customer_id: string | null
+          duration_minutes: number
+          ends_at: string
+          id: string
+          notes: string | null
+          price: number
+          professional_id: string | null
+          sale_id: string | null
+          service_id: string
+          starts_at: string
+          status: Database["public"]["Enums"]["appointment_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "appointments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      set_professional_availability: {
+        Args: { p_professional_id: string; p_schedule: Json }
+        Returns: undefined
+      }
+      set_professional_services: {
+        Args: { p_professional_id: string; p_services: Json }
+        Returns: undefined
+      }
       undo_loyalty_redemption_for_draft_sale: {
         Args: { p_sale_id: string }
         Returns: undefined
+      }
+      update_company_member_role: {
+        Args: {
+          p_member_id: string
+          p_role: Database["public"]["Enums"]["company_role"]
+        }
+        Returns: {
+          company_id: string
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["company_role"]
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "company_members"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      upsert_professional_profile: {
+        Args: {
+          p_active?: boolean
+          p_color?: string
+          p_company_member_id: string
+          p_display_name: string
+          p_notes?: string
+          p_phone?: string
+          p_specialty?: string
+        }
+        Returns: {
+          active: boolean
+          color: string
+          company_id: string
+          company_member_id: string
+          created_at: string
+          display_name: string
+          id: string
+          notes: string | null
+          phone: string | null
+          specialty: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "professional_profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
     }
     Enums: {
       accounts_payable_status: "open" | "paid" | "cancelled" | "partial"
       accounts_receivable_status: "open" | "paid" | "cancelled"
+      appointment_status:
+        | "scheduled"
+        | "confirmed"
+        | "completed"
+        | "cancelled"
+        | "no_show"
       billing_interval: "month" | "year"
       business_type:
         | "bakery"
@@ -3037,6 +3543,13 @@ export const Constants = {
     Enums: {
       accounts_payable_status: ["open", "paid", "cancelled", "partial"],
       accounts_receivable_status: ["open", "paid", "cancelled"],
+      appointment_status: [
+        "scheduled",
+        "confirmed",
+        "completed",
+        "cancelled",
+        "no_show",
+      ],
       billing_interval: ["month", "year"],
       business_type: [
         "bakery",
