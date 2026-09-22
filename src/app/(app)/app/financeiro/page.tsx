@@ -34,7 +34,7 @@ const directionLabels = {
   expense: "Despesa",
 };
 
-type SearchParams = { view?: string | string[] | undefined };
+type SearchParams = Record<string, string | string[] | undefined>;
 
 function Kpi({ label, value, detail }: { label: string; value: string; detail?: string }) {
   return (
