@@ -87,7 +87,7 @@ export async function receivePurchaseOrderAction(
   const { error } = await supabase.rpc("receive_purchase_order", {
     p_purchase_order_id: purchaseOrderId,
     p_items: items,
-    p_notes: String(formData.get("notes") ?? "").trim() || null,
+    p_notes: String(formData.get("notes") ?? "").trim() || undefined,
   });
 
   if (error) {
@@ -137,7 +137,7 @@ export async function cancelPurchaseReceiptAction(
   const supabase = createClient();
   const { error } = await supabase.rpc("cancel_purchase_receipt", {
     p_purchase_receipt_id: purchaseReceiptId,
-    p_reason: String(formData.get("reason") ?? "").trim() || null,
+    p_reason: String(formData.get("reason") ?? "").trim() || undefined,
   });
 
   if (error) throw new Error(error.message);
