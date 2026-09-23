@@ -3250,13 +3250,6 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      postgres_fdw_disconnect: { Args: { "": string }; Returns: boolean }
-      postgres_fdw_disconnect_all: { Args: never; Returns: boolean }
-      postgres_fdw_get_connections: {
-        Args: never
-        Returns: Record<string, unknown>[]
-      }
-      postgres_fdw_handler: { Args: never; Returns: unknown }
       receive_purchase_order: {
         Args: { p_items: Json; p_notes?: string; p_purchase_order_id: string }
         Returns: {
