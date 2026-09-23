@@ -13,6 +13,8 @@ Data: 2026-09-23
   - adiciona auditoria transacional a inclusão, alteração de papel e remoção de colaboradores.
 - `20260923115406_phase2_rls_initplan_hardening`
   - transforma chamadas de `auth.uid()` em políticas RLS para o padrão de avaliação por init-plan.
+- `20260923115529_phase2_loyalty_rbac_hardening`
+  - restringe a escrita de configurações, multiplicadores e faixas de fidelidade a `owner/admin`.
 
 ### GitHub
 Branch: `fix/phase2-rpc-rbac-governance`
@@ -51,6 +53,7 @@ O inventário dos RPCs expostos confirmou que as funções de negócio chamadas 
 - Acesso `authenticated` a `payment_events`: removido.
 - `postgres_fdw`: schema `extensions`.
 - Advisor de performance: alerta de init-plan RLS removido.
+- Escritas de `loyalty_settings`, `loyalty_multipliers` e `loyalty_tier_thresholds`: somente `owner/admin`.
 - Permanecem 34 FKs sem índice de cobertura e 96 índices marcados como não utilizados; não foram alterados nesta etapa porque isso exige validação por caminho real de consulta antes de criar/remover índices.
 
 ## Drift conhecido
