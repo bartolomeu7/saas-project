@@ -268,11 +268,9 @@ export async function adjustStockAction(
 
   const result = await adjustProductStock({
     supabase,
-    companyId: current.company.id,
     productId: id,
     newQuantity: parsed.data.newQuantity,
     reason: parsed.data.reason,
-    actorUserId: user?.id ?? null,
   });
 
   if (result.error) {

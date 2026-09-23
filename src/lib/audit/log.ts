@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { Database, Json } from "@/types/supabase";
 
 interface WriteAuditLogParams {
@@ -29,16 +30,36 @@ export async function writeAuditLog(
   supabase: SupabaseClient<Database>,
   params: WriteAuditLogParams
 ): Promise<void> {
-  const { error } = await supabase.from("audit_logs").insert({
-    company_id: params.companyId,
-    actor_user_id: params.actorUserId,
-    entity_type: params.entityType,
-    entity_id: params.entityId,
-    action: params.action,
-    metadata: (params.metadata ?? {}) as Json,
-  });
+  try {
+    const admin = createAdminClient();
 
-  if (error) {
-    console.error("[audit] falha ao gravar audit_logs", error, params);
+    if (params.actorUserId) {
+      const { data: member, error: membershipError } = await admin
+        .from("company_members")
+        .select("id")
+        .eq("company_id", params.companyId)
+        .eq("user_id", params.actorUserId)
+        .maybeSingle();
+
+      if (membershipError || !member) {
+        console.error("[audit] ator não pertence à empresa", membershipError, params);
+        return;
+      }
+    }
+
+    const { error } = await admin.from("audit_logs").insert({
+      company_id: params.companyId,
+      actor_user_id: params.actorUserId,
+      entity_type: params.entityType,
+      entity_id: params.entityId,
+      action: params.action,
+      metadata: (params.metadata ?? {}) as Json,
+    });
+
+    if (error) {
+      console.error("[audit] falha ao gravar audit_logs", error, params);
+    }
+  } catch (error) {
+    console.error("[audit] exceção ao gravar audit_logs", error, params);
   }
 }
