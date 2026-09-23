@@ -32,9 +32,7 @@ export interface NavGroup {
 
 /**
  * Menu principal da área autenticada, agrupado por área do negócio.
- * Dashboard, Clientes, Produtos, Serviços e Vendas estão funcionais
- * nesta etapa — os demais aparecem desabilitados ("Em breve") para
- * deixar claro o roadmap sem prometer funcionalidade que não existe.
+ * Os módulos habilitados representam funcionalidades já implementadas.
  */
 export const NAV_GROUPS: NavGroup[] = [
   {
@@ -64,7 +62,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Análises",
     items: [
       { label: "Financeiro", href: "/app/financeiro", icon: LineChart, enabled: true },
-      { label: "Relatórios", href: "/app/relatorios", icon: FileText, enabled: false },
+      { label: "Relatórios", href: "/app/relatorios", icon: FileText, enabled: true },
     ],
   },
   {
