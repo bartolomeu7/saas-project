@@ -13,7 +13,7 @@ function formatAction(action: string) {
 export default async function SettingsPage() {
   const current = (await getCurrentCompany())!;
   const [settings, rawPreferences, auditLogs] = await Promise.all([
-    getCompanySettings(),
+    getCompanySettings(current.company.id),
     getUserPreferences(),
     listRecentAuditLogs(current.company.id),
   ]);
@@ -23,20 +23,12 @@ export default async function SettingsPage() {
     theme: "system" as const,
     density: "comfortable" as const,
     locale: "pt-BR",
-    timezone: settings?.timezone ?? "America/Sao_Paulo",
+    timezone: settings.timezone,
     notifications_enabled: true,
     email_notifications_enabled: true,
     created_at: "",
     updated_at: "",
   };
-
-  if (!settings) {
-    return (
-      <div className="px-4 py-6 sm:px-6">
-        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-5 text-sm">Não foi possível carregar as configurações. Atualize a página e tente novamente.</div>
-      </div>
-    );
-  }
 
   const canManage = current.role === "owner" || current.role === "admin";
 
@@ -46,9 +38,13 @@ export default async function SettingsPage() {
         <div>
           <p className="text-xs font-medium uppercase tracking-[0.16em] text-primary">Empresa</p>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight">Configurações e governança</h1>
-          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Preferências da empresa, preferências pessoais, papéis de acesso e trilha recente de alterações.</p>
+          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+            Preferências da empresa, preferências pessoais, papéis de acesso e trilha recente de alterações.
+          </p>
         </div>
-        <Link href="/app/equipe" className="inline-flex h-9 items-center justify-center rounded-md border px-3 text-sm font-medium hover:bg-muted">Gerenciar equipe</Link>
+        <Link href="/app/equipe" className="inline-flex h-9 items-center justify-center rounded-md border px-3 text-sm font-medium hover:bg-muted">
+          Gerenciar equipe
+        </Link>
       </div>
 
       <section className="rounded-xl border bg-card p-5">

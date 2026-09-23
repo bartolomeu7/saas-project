@@ -3121,28 +3121,6 @@ export type Database = {
         Args: { p_block_id: string }
         Returns: undefined
       }
-      ensure_company_settings: {
-        Args: never
-        Returns: {
-          company_id: string
-          created_at: string
-          currency: string
-          email_notifications_enabled: boolean
-          locale: string
-          notifications_enabled: boolean
-          operational_preferences: Json
-          timezone: string
-          updated_at: string
-          updated_by: string | null
-          week_starts_on: number
-        }
-        SetofOptions: {
-          from: "*"
-          to: "company_settings"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
       expire_loyalty_points_batch: { Args: never; Returns: number }
       get_platform_admin_overview: {
         Args: never
