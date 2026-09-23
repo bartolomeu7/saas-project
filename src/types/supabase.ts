@@ -2744,6 +2744,32 @@ export type Database = {
         Args: { p_customer_id: string; p_points: number; p_reason: string }
         Returns: number
       }
+      adjust_product_stock: {
+        Args: { p_new_quantity: number; p_product_id: string; p_reason: string }
+        Returns: {
+          barcode: string | null
+          category_id: string | null
+          company_id: string
+          cost_price: number
+          created_at: string
+          description: string | null
+          id: string
+          minimum_stock: number
+          name: string
+          sale_price: number
+          sku: string | null
+          status: Database["public"]["Enums"]["product_status"]
+          stock_quantity: number
+          unit: Database["public"]["Enums"]["product_unit"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "products"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       cancel_purchase_order: {
         Args: { p_purchase_order_id: string; p_reason?: string }
         Returns: {
