@@ -18,7 +18,6 @@ Fundação de um produto **SaaS** moderno, modular, seguro e preparado para prod
 - [Tailwind CSS](https://tailwindcss.com/) + [shadcn/ui](https://ui.shadcn.com/)
 - [Supabase](https://supabase.com/) (Postgres, Auth, Storage, Edge Functions)
 - [GitHub](https://github.com/) para versionamento
-- [Vercel](https://vercel.com/) para deploy
 
 ## Requisitos
 
@@ -152,3 +151,9 @@ Este projeto é preparado para deploy na Vercel a partir do repositório GitHub,
 com variáveis de ambiente configuradas separadamente para os ambientes
 **Production**, **Preview** e **Development**. Ver `docs/architecture.md` para
 mais detalhes.
+
+## Deploy online
+
+O Prime Ges é preparado para hospedagem Node.js na **Hostinger**, conectado ao GitHub. O fluxo recomendado é **CI → deploy → health check → promoção**, mantendo o Supabase separado do processo de build.
+
+Consulte o documento `docs/deployment-hostinger.md` para as cinco fases de subida, configuração e regras de atualização segura.
