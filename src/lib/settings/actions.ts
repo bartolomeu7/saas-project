@@ -4,9 +4,10 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentCompany } from "@/lib/companies/queries";
 import type { ActionResult } from "@/lib/auth/actions";
+import { writeAuditLog } from "@/lib/audit/log";
 
 const VALID_THEMES = new Set(["light", "dark", "system"]);
-const VALID_DENSITIES = new Set(["comfortable", "compact");
+const VALID_DENSITIES = new Set(["comfortable", "compact"]);
 const VALID_WEEKDAYS = new Set(["0", "1", "2", "3", "4", "5", "6"]);
 
 export async function updateCompanySettingsAction(
