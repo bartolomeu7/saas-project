@@ -108,6 +108,11 @@ create policy "purchase_order_items_select_own_company" on public.purchase_order
 create policy "purchase_order_items_insert_own_company" on public.purchase_order_items for insert to authenticated with check(company_id in(select company_id from public.company_members where user_id=auth.uid()));
 create policy "purchase_order_items_update_own_company" on public.purchase_order_items for update to authenticated using(company_id in(select company_id from public.company_members where user_id=auth.uid())) with check(company_id in(select company_id from public.company_members where user_id=auth.uid()));
 
+-- Reconciliação com o live: índices presentes no SQL aplicado (versão 20260921235749)
+-- que não estavam neste arquivo.
+create index stock_movements_company_source_idx on public.stock_movements using btree (company_id, source);
+create index suppliers_name_idx on public.suppliers using btree (name);
+
 comment on table public.stock_movements is 'Ledger imutável de estoque da Fase 1.';
 comment on table public.supplier_products is 'Relação fornecedor-produto preparada para Compras.';
 comment on table public.purchase_orders is 'Fundação do fluxo de Compras; recebimento e integração financeira entram na Fase 2.';
