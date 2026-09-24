@@ -11,25 +11,32 @@ de acesso pronto, mas ainda nenhuma página de conteúdo.
 
 ## Visão geral
 
-```
-                     ┌───────────────────────┐
-                     │        Vercel         │
-                     │   (build + deploy)    │
-                     └───────────┬───────────┘
-                                 │
-                     ┌───────────▼───────────┐
-                     │   Next.js (App Router) │
-                     │  React + TypeScript    │
-                     │                        │
-                     │  (public) (app)  admin │
-                     │        api/            │
-                     └───────────┬───────────┘
-                                 │
-                     ┌───────────▼───────────┐
-                     │       Supabase         │
-                     │  Auth · Postgres ·     │
-                     │  Storage · Edge Fns    │
-                     └────────────────────────┘
+O código é promovido por um fluxo controlado no GitHub:
+
+`Issue → branch → CI → Pull Request → merge em main → deploy → health check`
+
+O provedor de produção fica fora da arquitetura do código e não deve permitir promoção sem a rastreabilidade da PR. **Vercel está fora de escopo e proibida neste projeto.**
+
+```text
+Issue
+  ↓
+branch de trabalho
+  ↓
+CI
+  ↓
+Pull Request
+  ↓
+main
+  ↓
+deploy
+  ↓
+health check
+
+Next.js (App Router)
+        │
+        ▼
+     Supabase
+Auth · Postgres · Storage · Edge Functions
 ```
 
 ## Frontend
@@ -205,11 +212,16 @@ de acesso pronto, mas ainda nenhuma página de conteúdo.
 
 ## Ambientes
 
-| Ambiente | Projeto Supabase | Deploy Vercel |
+| Ambiente | Supabase | Deploy |
 |---|---|---|
-| Development | projeto Supabase de dev | `npm run dev` local |
-| Preview/Staging | projeto Supabase de dev ou staging | Preview deployment (por PR/branch) |
-| Production | projeto Supabase de produção | Deploy de `main` |
+| Development | projeto de desenvolvimento | `npm run dev` local |
+| Preview/Staging | projeto de dev ou staging | ambiente de validação associado à branch/PR |
+| Production | projeto de produção | promoção de `main` após PR |
 
-Cada ambiente tem seu próprio conjunto de variáveis de ambiente, configurado
-na Vercel — nunca compartilhado nem commitado no repositório.
+Cada ambiente tem seu próprio conjunto de variáveis. Secrets nunca são commitados.
+
+## Governança GitHub
+
+Toda correção, melhoria ou nova função exige Issue + branch + PR. Toda PR deve referenciar os Issues relacionados. Deploy de produção só ocorre como consequência da promoção para `main`.
+
+Consulte [`docs/github-governance.md`](./github-governance.md).
