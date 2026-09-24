@@ -104,7 +104,12 @@ docs/
 6. Aplique todas as migrations no seu projeto Supabase, em ordem numérica
    (`supabase/migrations/001_create_profiles.sql` até a mais recente), pelo
    SQL Editor do dashboard ou via `supabase db push` se estiver usando o
-   Supabase CLI.
+   Supabase CLI. **Atenção:** isso vale apenas para um projeto Supabase
+   **novo e vazio**, e a reprodutibilidade de um banco novo a partir destes
+   arquivos **não foi comprovada** — leia `supabase/migrations/README.md`
+   (divergências conhecidas, migration 004 substituída, ordem). **Nunca** rode
+   `supabase db push` nem `migration repair` contra o banco de produção
+   existente: o histórico dele usa timestamps, não os números dos arquivos.
 
 7. No primeiro acesso, você será redirecionado para `/onboarding` para criar
    sua empresa antes de chegar ao dashboard.
