@@ -1,67 +1,126 @@
--- RECUPERAÇÃO HISTÓRICA — 026_phase2_purchase_order_hardening
--- Reconstruído do estado aplicado no Supabase.
+-- =============================================================================
+-- Migration 026 — reconstruída a partir do SQL REALMENTE aplicado no Supabase.
+--
+-- Fonte da verdade: supabase_migrations.schema_migrations
+--   version 20260922001218, name "026_phase2_purchase_order_hardening".
+-- O corpo abaixo (a partir da linha "-- FASE 2 refinamentos — ...") é o texto
+-- aplicado no banco live, sem alterações. NÃO reaplicar no banco existente.
+-- Os triggers de validação de compras têm o nome criado na 024
+-- (*_validate_links); esta migration não cria triggers.
+-- Ver supabase/migrations/README.md (mapa arquivo ↔ histórico live).
+-- =============================================================================
 
-create or replace function public.validate_purchase_company_links()
-returns trigger
+-- FASE 2 refinamentos — identificador de pedido e cancelamento seguro.
+
+create unique index if not exists purchase_orders_company_order_number_unique
+on public.purchase_orders(company_id,order_number)
+where order_number is not null;
+
+create or replace function public.create_purchase_order(
+  p_supplier_id uuid,
+  p_items jsonb,
+  p_expected_at timestamptz default null,
+  p_due_date date default null,
+  p_notes text default null
+)
+returns public.purchase_orders
 language plpgsql
-set search_path='public'
+security definer
+set search_path=public
 as $$
 declare
-  v_supplier_company uuid;
-  v_product_company uuid;
-  v_order_company uuid;
+  v_user_id uuid:=auth.uid();
+  v_company_id uuid;
+  v_role public.company_role;
+  v_supplier public.suppliers;
+  v_order public.purchase_orders;
+  v_item jsonb;
+  v_product public.products;
+  v_qty numeric(12,3);
+  v_unit_cost numeric(12,2);
+  v_subtotal numeric(12,2):=0;
+  v_count integer:=0;
 begin
-  if tg_table_name='purchase_orders' then
-    select company_id into v_supplier_company
-    from public.suppliers where id=new.supplier_id;
+  if v_user_id is null then raise exception 'Usuário não autenticado.'; end if;
 
-    if v_supplier_company is distinct from new.company_id then
-      raise exception 'Fornecedor não pertence à empresa atual.';
-    end if;
+  select cm.company_id,cm.role into v_company_id,v_role
+  from public.company_members cm where cm.user_id=v_user_id;
 
-  elsif tg_table_name='purchase_order_items' then
-    select company_id into v_product_company
-    from public.products where id=new.product_id;
+  if v_company_id is null then raise exception 'Nenhuma empresa encontrada para o usuário atual.'; end if;
+  if v_role not in ('owner','admin') then raise exception 'Apenas owner/admin podem criar pedidos de compra.'; end if;
 
-    select company_id into v_order_company
-    from public.purchase_orders where id=new.purchase_order_id;
+  select * into v_supplier
+  from public.suppliers
+  where id=p_supplier_id and company_id=v_company_id
+  for share;
 
-    if v_product_company is distinct from new.company_id
-       or v_order_company is distinct from new.company_id then
-      raise exception 'Produto ou pedido de compra não pertence à empresa atual.';
-    end if;
-
-  elsif tg_table_name='supplier_products' then
-    select company_id into v_supplier_company
-    from public.suppliers where id=new.supplier_id;
-
-    select company_id into v_product_company
-    from public.products where id=new.product_id;
-
-    if v_supplier_company is distinct from new.company_id
-       or v_product_company is distinct from new.company_id then
-      raise exception 'Fornecedor ou produto não pertence à empresa atual.';
-    end if;
+  if v_supplier is null or v_supplier.status<>'active' then
+    raise exception 'Fornecedor não encontrado ou inativo.';
   end if;
 
-  return new;
+  if jsonb_typeof(p_items)<>'array' or jsonb_array_length(p_items)=0 then
+    raise exception 'Adicione pelo menos um produto ao pedido.';
+  end if;
+
+  insert into public.purchase_orders(
+    company_id,supplier_id,status,order_number,ordered_at,expected_at,due_date,notes,created_by
+  )
+  values(
+    v_company_id,p_supplier_id,'ordered',
+    'PC-'||to_char(current_date,'YYYYMMDD')||'-'||upper(substr(gen_random_uuid()::text,1,6)),
+    now(),p_expected_at,p_due_date,nullif(trim(p_notes),''),v_user_id
+  )
+  returning * into v_order;
+
+  for v_item in select * from jsonb_array_elements(p_items)
+  loop
+    v_count:=v_count+1;
+    if not(v_item ? 'product_id') or not(v_item ? 'quantity') or not(v_item ? 'unit_cost') then
+      raise exception 'Item de compra incompleto.';
+    end if;
+
+    v_qty:=(v_item->>'quantity')::numeric;
+    v_unit_cost:=(v_item->>'unit_cost')::numeric;
+
+    if v_qty<=0 or v_unit_cost<0 then raise exception 'Quantidade e custo do item precisam ser válidos.'; end if;
+
+    select * into v_product
+    from public.products
+    where id=(v_item->>'product_id')::uuid and company_id=v_company_id and status='active'
+    for share;
+
+    if v_product is null then raise exception 'Produto inválido ou inativo no pedido.'; end if;
+
+    insert into public.purchase_order_items(
+      company_id,purchase_order_id,product_id,description,quantity,unit_cost,total_amount
+    )
+    values(
+      v_company_id,v_order.id,v_product.id,v_product.name,
+      v_qty,v_unit_cost,round(v_qty*v_unit_cost,2)
+    );
+
+    v_subtotal:=v_subtotal+round(v_qty*v_unit_cost,2);
+
+    insert into public.supplier_products(company_id,supplier_id,product_id,unit_cost)
+    values(v_company_id,p_supplier_id,v_product.id,v_unit_cost)
+    on conflict(supplier_id,product_id) do update set
+      unit_cost=excluded.unit_cost,updated_at=now();
+  end loop;
+
+  if v_count=0 then raise exception 'O pedido precisa ter itens.'; end if;
+
+  update public.purchase_orders set subtotal=round(v_subtotal,2),total_amount=round(v_subtotal,2)
+  where id=v_order.id returning * into v_order;
+
+  insert into public.audit_logs(company_id,actor_user_id,entity_type,entity_id,action,metadata)
+  values(
+    v_company_id,v_user_id,'purchase_order',v_order.id,'purchase_order.created',
+    jsonb_build_object('supplier_id',p_supplier_id,'total_amount',v_subtotal,'item_count',v_count)
+  );
+
+  return v_order;
 end;
 $$;
-
-drop trigger if exists purchase_orders_validate_company_links on public.purchase_orders;
-create trigger purchase_orders_validate_company_links
-before insert or update on public.purchase_orders
-for each row execute function public.validate_purchase_company_links();
-
-drop trigger if exists purchase_order_items_validate_company_links on public.purchase_order_items;
-create trigger purchase_order_items_validate_company_links
-before insert or update on public.purchase_order_items
-for each row execute function public.validate_purchase_company_links();
-
-drop trigger if exists supplier_products_validate_company_links on public.supplier_products;
-create trigger supplier_products_validate_company_links
-before insert or update on public.supplier_products
-for each row execute function public.validate_purchase_company_links();
 
 create or replace function public.cancel_purchase_order(
   p_purchase_order_id uuid,
@@ -70,7 +129,7 @@ create or replace function public.cancel_purchase_order(
 returns public.purchase_orders
 language plpgsql
 security definer
-set search_path='public'
+set search_path=public
 as $$
 declare
   v_user_id uuid:=auth.uid();
@@ -95,10 +154,7 @@ begin
     raise exception 'Pedidos já recebidos parcial ou totalmente não podem ser cancelados. Cancele o recebimento correspondente primeiro.';
   end if;
 
-  update public.purchase_orders
-  set status='cancelled'
-  where id=v_order.id
-  returning * into v_order;
+  update public.purchase_orders set status='cancelled' where id=v_order.id returning * into v_order;
 
   insert into public.audit_logs(company_id,actor_user_id,entity_type,entity_id,action,metadata)
   values(
@@ -110,156 +166,6 @@ begin
 end;
 $$;
 
-create or replace function public.cancel_purchase_receipt(
-  p_purchase_receipt_id uuid,
-  p_reason text default null
-)
-returns public.purchase_receipts
-language plpgsql
-security definer
-set search_path='public'
-as $$
-declare
-  v_user_id uuid:=auth.uid();
-  v_company_id uuid;
-  v_role public.company_role;
-  v_receipt public.purchase_receipts;
-  v_item record;
-  v_product public.products;
-  v_order public.purchase_orders;
-  v_payable_status public.accounts_payable_status;
-begin
-  if v_user_id is null then raise exception 'Usuário não autenticado.'; end if;
-
-  select cm.company_id,cm.role into v_company_id,v_role
-  from public.company_members cm where cm.user_id=v_user_id;
-
-  if v_company_id is null then raise exception 'Nenhuma empresa encontrada para o usuário atual.'; end if;
-  if v_role not in ('owner','admin') then raise exception 'Apenas owner/admin podem cancelar recebimentos.'; end if;
-
-  select * into v_receipt
-  from public.purchase_receipts
-  where id=p_purchase_receipt_id and company_id=v_company_id
-  for update;
-
-  if v_receipt is null then raise exception 'Recebimento não encontrado.'; end if;
-  if v_receipt.status<>'posted' then raise exception 'Este recebimento já está cancelado.'; end if;
-
-  select status into v_payable_status
-  from public.accounts_payable
-  where purchase_receipt_id=v_receipt.id
-  for update;
-
-  if v_payable_status='paid' then
-    raise exception 'Não é possível cancelar um recebimento cuja conta a pagar já foi quitada.';
-  end if;
-
-  for v_item in
-    select pri.*,poi.purchase_order_id
-    from public.purchase_receipt_items pri
-    join public.purchase_order_items poi on poi.id=pri.purchase_order_item_id
-    where pri.purchase_receipt_id=v_receipt.id
-    order by pri.product_id,pri.id
-    for update
-  loop
-    select * into v_product
-    from public.products
-    where id=v_item.product_id and company_id=v_company_id
-    for update;
-
-    if v_product is null then raise exception 'Produto do recebimento não encontrado.'; end if;
-    if v_product.stock_quantity<v_item.quantity then
-      raise exception 'Estoque atual insuficiente para estornar "%".',v_product.name;
-    end if;
-
-    update public.products
-    set stock_quantity=v_product.stock_quantity-v_item.quantity
-    where id=v_product.id;
-
-    insert into public.stock_movements(
-      company_id,product_id,direction,quantity,stock_before,stock_after,
-      reason,source,reference_id,created_by
-    )
-    values(
-      v_company_id,v_product.id,'out',v_item.quantity,
-      v_product.stock_quantity,v_product.stock_quantity-v_item.quantity,
-      coalesce(nullif(trim(p_reason),''),'Cancelamento de recebimento'),
-      'purchase_cancellation',v_item.id,v_user_id
-    );
-
-    update public.purchase_order_items
-    set received_quantity=received_quantity-v_item.quantity
-    where id=v_item.purchase_order_item_id;
-
-    if not exists(
-      select 1
-      from public.purchase_receipt_items pri2
-      join public.purchase_receipts pr2 on pr2.id=pri2.purchase_receipt_id
-      where pri2.product_id=v_item.product_id
-        and pr2.status='posted'
-        and pr2.id<>v_receipt.id
-    ) then
-      update public.products
-      set cost_price=v_item.previous_cost_price
-      where id=v_product.id;
-    else
-      update public.products p
-      set cost_price=(
-        select pri2.unit_cost
-        from public.purchase_receipt_items pri2
-        join public.purchase_receipts pr2 on pr2.id=pri2.purchase_receipt_id
-        where pri2.product_id=v_item.product_id
-          and pr2.status='posted'
-          and pr2.id<>v_receipt.id
-        order by pri2.created_at desc
-        limit 1
-      )
-      where p.id=v_product.id;
-    end if;
-  end loop;
-
-  update public.purchase_receipts
-  set status='cancelled'
-  where id=v_receipt.id;
-
-  update public.accounts_payable
-  set status='cancelled'
-  where purchase_receipt_id=v_receipt.id
-    and status='open';
-
-  select * into v_order
-  from public.purchase_orders
-  where id=v_receipt.purchase_order_id
-  for update;
-
-  if v_order is not null then
-    update public.purchase_orders
-    set status=case
-      when exists(
-        select 1 from public.purchase_order_items poi
-        where poi.purchase_order_id=v_order.id
-          and poi.received_quantity>0
-      ) then 'partially_received'
-      else 'ordered'
-    end,
-    received_at=null
-    where id=v_order.id;
-  end if;
-
-  insert into public.audit_logs(company_id,actor_user_id,entity_type,entity_id,action,metadata)
-  values(
-    v_company_id,v_user_id,'purchase_receipt',v_receipt.id,'purchase.receipt_cancelled',
-    jsonb_build_object('reason',p_reason,'purchase_order_id',v_receipt.purchase_order_id)
-  );
-
-  return v_receipt;
-end;
-$$;
-
-revoke all on function public.cancel_purchase_order(uuid,text) from public,anon,authenticated;
+revoke all on function public.cancel_purchase_order(uuid,text) from public;
+revoke execute on function public.cancel_purchase_order(uuid,text) from anon;
 grant execute on function public.cancel_purchase_order(uuid,text) to authenticated;
-
-revoke all on function public.cancel_purchase_receipt(uuid,text) from public,anon,authenticated;
-grant execute on function public.cancel_purchase_receipt(uuid,text) to authenticated;
-
-revoke all on function public.validate_purchase_company_links() from public,anon,authenticated;

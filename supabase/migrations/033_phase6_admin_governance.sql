@@ -1,4 +1,16 @@
--- Fase 6: Administração, Configurações e Governança
+-- =============================================================================
+-- Migration 033 — reconstruída a partir do SQL REALMENTE aplicado no Supabase.
+--
+-- Fonte da verdade: supabase_migrations.schema_migrations
+--   version 20260923110737, name "033_phase6_admin_governance".
+-- O corpo abaixo é o texto aplicado no banco live, sem alterações.
+-- NÃO reaplicar no banco existente (já aplicado; idempotente na maior parte,
+-- mas o histórico live é a referência).
+-- Observação histórica: cria public.ensure_company_settings(), removida logo
+-- depois pela 035_phase6_remove_settings_definer (o banco final NÃO a possui).
+-- Ver supabase/migrations/README.md (mapa arquivo ↔ histórico live).
+-- =============================================================================
+
 create table if not exists public.company_settings (
   company_id uuid primary key references public.companies(id) on delete cascade,
   timezone text not null default 'America/Sao_Paulo',
@@ -28,35 +40,41 @@ create table if not exists public.user_preferences (
 alter table public.company_settings enable row level security;
 alter table public.user_preferences enable row level security;
 
+drop policy if exists company_settings_select_member on public.company_settings;
 create policy company_settings_select_member
 on public.company_settings
 for select to authenticated
 using (
   exists (
-    select 1 from public.company_members cm
+    select 1
+    from public.company_members cm
     where cm.company_id = company_settings.company_id
       and cm.user_id = (select auth.uid())
   )
 );
 
+drop policy if exists company_settings_insert_admin on public.company_settings;
 create policy company_settings_insert_admin
 on public.company_settings
 for insert to authenticated
 with check (
   exists (
-    select 1 from public.company_members cm
+    select 1
+    from public.company_members cm
     where cm.company_id = company_settings.company_id
       and cm.user_id = (select auth.uid())
       and cm.role in ('owner','admin')
   )
 );
 
+drop policy if exists company_settings_update_admin on public.company_settings;
 create policy company_settings_update_admin
 on public.company_settings
 for update to authenticated
 using (
   exists (
-    select 1 from public.company_members cm
+    select 1
+    from public.company_members cm
     where cm.company_id = company_settings.company_id
       and cm.user_id = (select auth.uid())
       and cm.role in ('owner','admin')
@@ -64,35 +82,41 @@ using (
 )
 with check (
   exists (
-    select 1 from public.company_members cm
+    select 1
+    from public.company_members cm
     where cm.company_id = company_settings.company_id
       and cm.user_id = (select auth.uid())
       and cm.role in ('owner','admin')
   )
 );
 
+drop policy if exists company_settings_delete_admin on public.company_settings;
 create policy company_settings_delete_admin
 on public.company_settings
 for delete to authenticated
 using (
   exists (
-    select 1 from public.company_members cm
+    select 1
+    from public.company_members cm
     where cm.company_id = company_settings.company_id
       and cm.user_id = (select auth.uid())
       and cm.role in ('owner','admin')
   )
 );
 
+drop policy if exists user_preferences_select_own on public.user_preferences;
 create policy user_preferences_select_own
 on public.user_preferences
 for select to authenticated
 using (user_id = (select auth.uid()));
 
+drop policy if exists user_preferences_insert_own on public.user_preferences;
 create policy user_preferences_insert_own
 on public.user_preferences
 for insert to authenticated
 with check (user_id = (select auth.uid()));
 
+drop policy if exists user_preferences_update_own on public.user_preferences;
 create policy user_preferences_update_own
 on public.user_preferences
 for update to authenticated
@@ -106,12 +130,16 @@ security definer
 set search_path = public
 as $$
   select exists (
-    select 1 from public.profiles p
+    select 1
+    from public.profiles p
     where p.user_id = (select auth.uid())
       and p.role in ('admin','super_admin')
       and p.status = 'active'
   );
 $$;
+
+revoke all on function public.is_platform_admin() from public;
+grant execute on function public.is_platform_admin() to authenticated;
 
 create or replace function public.get_platform_admin_overview()
 returns table (
@@ -129,7 +157,9 @@ security definer
 set search_path = public
 as $$
 begin
-  if not public.is_platform_admin() then raise exception 'not authorized'; end if;
+  if not public.is_platform_admin() then
+    raise exception 'not authorized';
+  end if;
 
   return query
   select
@@ -143,6 +173,9 @@ begin
     (select count(*) from public.subscriptions where status = 'expired');
 end;
 $$;
+
+revoke all on function public.get_platform_admin_overview() from public;
+grant execute on function public.get_platform_admin_overview() to authenticated;
 
 create or replace function public.list_platform_admin_companies()
 returns table (
@@ -159,7 +192,9 @@ security definer
 set search_path = public
 as $$
 begin
-  if not public.is_platform_admin() then raise exception 'not authorized'; end if;
+  if not public.is_platform_admin() then
+    raise exception 'not authorized';
+  end if;
 
   return query
   select
@@ -183,6 +218,9 @@ begin
 end;
 $$;
 
+revoke all on function public.list_platform_admin_companies() from public;
+grant execute on function public.list_platform_admin_companies() to authenticated;
+
 create or replace function public.set_platform_company_status(
   p_company_id uuid,
   p_status public.company_status
@@ -192,28 +230,46 @@ language plpgsql
 security definer
 set search_path = public
 as $$
-declare updated_company public.companies;
+declare
+  updated_company public.companies;
 begin
-  if not public.is_platform_admin() then raise exception 'not authorized'; end if;
+  if not public.is_platform_admin() then
+    raise exception 'not authorized';
+  end if;
 
   update public.companies
-  set status = p_status, updated_at = now()
+  set status = p_status,
+      updated_at = now()
   where id = p_company_id
   returning * into updated_company;
 
-  if updated_company.id is null then raise exception 'company not found'; end if;
+  if updated_company.id is null then
+    raise exception 'company not found';
+  end if;
 
   insert into public.audit_logs (
-    company_id, actor_user_id, entity_type, entity_id, action, metadata
+    company_id,
+    actor_user_id,
+    entity_type,
+    entity_id,
+    action,
+    metadata
   )
   values (
-    p_company_id, (select auth.uid()), 'company', p_company_id,
-    'platform_status_changed', jsonb_build_object('status', p_status)
+    p_company_id,
+    (select auth.uid()),
+    'company',
+    p_company_id,
+    'platform_status_changed',
+    jsonb_build_object('status', p_status)
   );
 
   return updated_company;
 end;
 $$;
+
+revoke all on function public.set_platform_company_status(uuid, public.company_status) from public;
+grant execute on function public.set_platform_company_status(uuid, public.company_status) to authenticated;
 
 create or replace function public.ensure_company_settings()
 returns public.company_settings
@@ -225,22 +281,29 @@ declare
   v_company_id uuid;
   v_settings public.company_settings;
 begin
-  select cm.company_id into v_company_id
+  select cm.company_id
+  into v_company_id
   from public.company_members cm
   where cm.user_id = (select auth.uid())
   order by cm.created_at asc
   limit 1;
 
-  if v_company_id is null then raise exception 'company not found'; end if;
+  if v_company_id is null then
+    raise exception 'company not found';
+  end if;
 
   insert into public.company_settings (company_id)
   values (v_company_id)
   on conflict (company_id) do nothing;
 
-  select * into v_settings
+  select *
+  into v_settings
   from public.company_settings
   where company_id = v_company_id;
 
   return v_settings;
 end;
 $$;
+
+revoke all on function public.ensure_company_settings() from public;
+grant execute on function public.ensure_company_settings() to authenticated;
