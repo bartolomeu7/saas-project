@@ -18,7 +18,7 @@ Fundação de um produto **SaaS** moderno, modular, seguro e preparado para prod
 - [Tailwind CSS](https://tailwindcss.com/) + [shadcn/ui](https://ui.shadcn.com/)
 - [Supabase](https://supabase.com/) (Postgres, Auth, Storage, Edge Functions)
 - [GitHub](https://github.com/) para versionamento
-- [Vercel](https://vercel.com/) para deploy
+- Hostinger (produção; conexão/deploy devem ser validados no ambiente operacional) para deploy
 
 ## Requisitos
 
@@ -26,7 +26,7 @@ Fundação de um produto **SaaS** moderno, modular, seguro e preparado para prod
 - npm 10 ou superior
 - Conta no [Supabase](https://supabase.com/) (projeto criado)
 - Conta no [GitHub](https://github.com/)
-- Conta na [Vercel](https://vercel.com/) (para deploy)
+- Acesso ao provedor de deploy configurado para produção (Vercel é proibida neste projeto)
 
 ## Estrutura do projeto
 
@@ -146,9 +146,14 @@ do seu projeto.
 - Todas as tabelas do Supabase, quando criadas, terão Row Level Security (RLS)
   habilitado desde o primeiro momento.
 
-## Deploy
+## Governança de mudanças e deploy
 
-Este projeto é preparado para deploy na Vercel a partir do repositório GitHub,
-com variáveis de ambiente configuradas separadamente para os ambientes
-**Production**, **Preview** e **Development**. Ver `docs/architecture.md` para
-mais detalhes.
+O fluxo obrigatório é **Issue → branch → CI → Pull Request → merge em `main` → deploy → health check**. Toda correção, melhoria ou nova função deve ter um GitHub Issue e uma PR que o referencie (`Closes #N`, `Fixes #N` ou `Refs #N`). Não fazer mudanças normais diretamente em `main` nem deploy de produção fora do fluxo de PR.
+
+A documentação completa está em [`docs/github-governance.md`](./docs/github-governance.md). Templates de Issues e PR ficam em `.github/ISSUE_TEMPLATE/` e `.github/PULL_REQUEST_TEMPLATE.md`.
+
+**Vercel está fora de escopo e proibida para este projeto.** O provedor de produção deve ser tratado separadamente da governança de código e validado antes de qualquer automação de deploy.
+
+## Regra permanente para agentes
+
+Qualquer agente ou modelo de IA que trabalhe neste repositório deve ler e seguir `docs/github-governance.md`. Issues + PRs são obrigatórios para correções, melhorias e novas funções. A diretriz **REUSE FIRST — NÃO REINVENTAR** permanece obrigatória.
