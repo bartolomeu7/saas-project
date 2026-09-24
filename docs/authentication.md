@@ -131,3 +131,10 @@ simples no menu do usuário (`src/components/app/user-menu.tsx`).
 - Painel administrativo completo em `src/app/admin/` (dashboard, empresas,
   usuários, planos, pagamentos, assinaturas, tickets, auditoria,
   configurações) — o guard de acesso já existe, falta só o conteúdo.
+
+
+## Governança de mudanças de autenticação
+
+Qualquer alteração em autenticação, OAuth, sessão, middleware, RLS, roles ou integração com provedores externos deve seguir [`docs/github-governance.md`](./github-governance.md): Issue → branch → CI → PR → `main` → deploy → health check.
+
+A PR deve identificar explicitamente o Issue relacionado e registrar as validações de segurança realizadas. Nunca colocar Client Secret, tokens ou outras credenciais reais no repositório.
