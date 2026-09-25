@@ -194,8 +194,8 @@ export default async function CustomerDetailPage({
           {tab === "financeiro" && (
             <EmptyState
               icon={Wallet}
-              title="Financeiro — Em breve"
-              description="O módulo Financeiro ainda não foi implementado. Quando estiver disponível, pagamentos e pendências deste cliente aparecerão aqui."
+              title="Financeiro do cliente — Em breve"
+              description="O resumo financeiro individual do cliente ainda não está disponível. Os recebimentos e pendências das vendas ficam em Financeiro › Contas a receber."
             />
           )}
 

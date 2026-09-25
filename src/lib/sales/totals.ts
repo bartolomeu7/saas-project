@@ -58,59 +58,17 @@ export const LOYALTY_DISCOUNT_EXCEEDS_SUBTOTAL_ERROR =
 export async function recalculateSaleTotals(
   supabase: SupabaseClient<Database>,
   saleId: string,
-  companyId: string
+  _companyId: string
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  const { data: items, error: itemsError } = await supabase
-    .from("sale_items")
-    .select("total_amount, quantity, unit_cost")
-    .eq("sale_id", saleId);
+  // O cálculo mora no banco (RPC recalculate_sale_totals, migration 041):
+  // subtotal/custo/total/margem não são graváveis pelo papel `authenticated`,
+  // então não há mais UPDATE direto em public.sales a partir daqui.
+  const { error } = await supabase.rpc("recalculate_sale_totals", { p_sale_id: saleId });
 
-  if (itemsError) {
-    return { ok: false, error: RECALCULATE_TOTALS_ERROR };
-  }
-
-  const rows = items ?? [];
-  const subtotal = round2(rows.reduce((sum, row) => sum + Number(row.total_amount), 0));
-  const totalCost = round2(
-    rows.reduce((sum, row) => sum + Number(row.quantity) * Number(row.unit_cost), 0)
-  );
-
-  const { data: sale, error: saleError } = await supabase
-    .from("sales")
-    .select("discount_amount, loyalty_discount_amount")
-    .eq("id", saleId)
-    .single();
-
-  if (saleError || !sale) {
-    return { ok: false, error: RECALCULATE_TOTALS_ERROR };
-  }
-
-  const loyaltyDiscountAmount = Number(sale.loyalty_discount_amount);
-
-  if (loyaltyDiscountAmount > subtotal + ROUNDING_TOLERANCE) {
-    return { ok: false, error: LOYALTY_DISCOUNT_EXCEEDS_SUBTOTAL_ERROR };
-  }
-
-  const discountAmount = Math.min(
-    Number(sale.discount_amount),
-    round2(subtotal - loyaltyDiscountAmount)
-  );
-  const totalAmount = Math.max(0, round2(subtotal - discountAmount - loyaltyDiscountAmount));
-  const estimatedMargin = round2(totalAmount - totalCost);
-
-  const { error: updateError } = await supabase
-    .from("sales")
-    .update({
-      subtotal,
-      discount_amount: discountAmount,
-      total_amount: totalAmount,
-      total_cost: totalCost,
-      estimated_margin: estimatedMargin,
-    })
-    .eq("id", saleId)
-    .eq("company_id", companyId);
-
-  if (updateError) {
+  if (error) {
+    if (error.message.includes("LOYALTY_DISCOUNT_EXCEEDS_SUBTOTAL")) {
+      return { ok: false, error: LOYALTY_DISCOUNT_EXCEEDS_SUBTOTAL_ERROR };
+    }
     return { ok: false, error: RECALCULATE_TOTALS_ERROR };
   }
 

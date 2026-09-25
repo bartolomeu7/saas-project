@@ -14,6 +14,18 @@ import type {
 
 const money = (value: unknown) => Number(value ?? 0);
 
+/**
+ * `financial_entries.source_type` de despesas que movimentam caixa mas não são
+ * despesa operacional do DRE: compra de estoque (conta a pagar e o pagamento
+ * dela, `accounts_payable_payment`, gravado por pay_accounts_payable) e
+ * estorno de pagamento de venda cancelada (`sale_payment_refund`).
+ */
+export const NON_OPERATING_EXPENSE_SOURCES: ReadonlySet<string> = new Set([
+  "accounts_payable",
+  "accounts_payable_payment",
+  "sale_payment_refund",
+]);
+
 export function resolveFinanceMonthRange(now = new Date()): { from: string; to: string } {
   return {
     from: startOfMonthSaoPaulo(0, now).toISOString(),
@@ -177,8 +189,10 @@ export const getFinanceDashboard = cache(async function getFinanceDashboard(
 
   const operatingExpenses = (expensesResult.data ?? []).reduce((sum, row) => {
     // Compra de estoque é caixa/contas a pagar, mas não é despesa de DRE:
-    // o custo entra no resultado quando o produto é vendido.
-    if (row.source_type === "accounts_payable") return sum;
+    // o custo entra no resultado quando o produto é vendido. Estorno de
+    // pagamento de venda cancelada também fica fora: a venda cancelada já
+    // não entra na receita, então o estorno não pode virar despesa.
+    if (NON_OPERATING_EXPENSE_SOURCES.has(row.source_type ?? "")) return sum;
     return sum + money(row.amount);
   }, 0);
 

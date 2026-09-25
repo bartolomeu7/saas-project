@@ -34,73 +34,6 @@ function formatBRL(value: number): string {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-/**
- * Saldo restante de uma venda = total da venda - soma dos pagamentos com
- * status 'paid' (mesmo critério do trigger recompute_sale_payment_status
- * do banco). Retorna null se a leitura falhar — o chamador nunca deve
- * tratar null como "saldo zero" ou "saldo livre".
- */
-async function getSaleRemainingBalance(
-  supabase: SupabaseClient<Database>,
-  saleId: string,
-  totalAmount: number
-): Promise<number | null> {
-  const { data: payments, error } = await supabase
-    .from("sale_payments")
-    .select("amount")
-    .eq("sale_id", saleId)
-    .eq("status", "paid");
-
-  if (error) {
-    return null;
-  }
-
-  const totalPaid = round2((payments ?? []).reduce((sum, p) => sum + Number(p.amount), 0));
-  return round2(totalAmount - totalPaid);
-}
-
-/**
- * Reconfere, depois do insert, se um pagamento específico ainda cabe
- * dentro do saldo da venda quando somado em ordem de inserção com os
- * demais pagamentos 'paid' já existentes — fecha a janela de corrida
- * entre a checagem de saldo e o insert em addSalePaymentAction (duas
- * requisições concorrentes podem ambas passar pela checagem antes de
- * qualquer uma inserir). Sem uma função de banco dedicada (fora do
- * escopo desta correção), este é o equivalente possível no nível da
- * aplicação: insert otimista + reconferência determinística +
- * compensação (delete) do pagamento que estourou o limite.
- */
-async function confirmPaymentWithinBalance(
-  supabase: SupabaseClient<Database>,
-  saleId: string,
-  paymentId: string,
-  totalAmount: number
-): Promise<boolean> {
-  const { data: payments, error } = await supabase
-    .from("sale_payments")
-    .select("id, amount, created_at")
-    .eq("sale_id", saleId)
-    .eq("status", "paid")
-    .order("created_at", { ascending: true })
-    .order("id", { ascending: true });
-
-  if (error || !payments) {
-    return false;
-  }
-
-  let running = 0;
-  for (const payment of payments) {
-    running = round2(running + Number(payment.amount));
-    if (payment.id === paymentId) {
-      return running <= totalAmount + ROUNDING_TOLERANCE;
-    }
-  }
-
-  // O próprio pagamento não apareceu na releitura — trata como falha
-  // (nunca assume "ok" sem ter confirmado).
-  return false;
-}
-
 /** Garante que a venda existe, pertence à empresa e está em rascunho. */
 async function getDraftSaleOrError(
   supabase: SupabaseClient<Database>,
@@ -654,85 +587,21 @@ export async function addSalePaymentAction(
     return { error: "Nenhuma empresa encontrada para o usuário atual." };
   }
 
+  // A RPC add_sale_payment (migration 041) valida venda/empresa, bloqueia
+  // venda cancelada, confere o saldo sob lock da linha da venda (sem corrida
+  // entre pagamentos concorrentes) e grava pagamento + auditoria juntos. O
+  // papel `authenticated` não tem INSERT direto em sale_payments.
   const supabase = createClient();
-  const { data: sale } = await supabase
-    .from("sales")
-    .select("id, status, total_amount")
-    .eq("id", saleId)
-    .eq("company_id", current.company.id)
-    .maybeSingle();
-
-  if (!sale) {
-    return { error: "Venda não encontrada." };
-  }
-  if (sale.status === "cancelled") {
-    return { error: "Não é possível registrar pagamento em uma venda cancelada." };
-  }
-
-  // Saldo restante = total da venda - soma dos pagamentos já 'paid'.
-  // Lido de novo (nunca aceito do frontend) logo antes do insert, para
-  // reduzir a janela de corrida, e reconferido depois do insert (abaixo)
-  // para os casos em que duas requisições passam por esta checagem ao
-  // mesmo tempo.
-  const remaining = await getSaleRemainingBalance(supabase, saleId, Number(sale.total_amount));
-  if (remaining === null) {
-    return { error: "Não foi possível verificar o saldo da venda. Tente novamente." };
-  }
-  if (parsed.data.amount > remaining + ROUNDING_TOLERANCE) {
-    return {
-      error: `O valor do pagamento (${formatBRL(parsed.data.amount)}) excede o saldo restante da venda (${formatBRL(remaining)}).`,
-    };
-  }
-
-  const { data: inserted, error: insertError } = await supabase
-    .from("sale_payments")
-    .insert({
-      company_id: current.company.id,
-      sale_id: saleId,
-      method: parsed.data.method,
-      amount: parsed.data.amount,
-      status: "paid",
-      paid_at: new Date().toISOString(),
-      notes: parsed.data.notes,
-    })
-    .select("id")
-    .single();
-
-  if (insertError || !inserted) {
-    return { error: "Não foi possível registrar o pagamento. Tente novamente." };
-  }
-
-  // Reconfere depois do insert: se outra requisição concorrente também
-  // passou pela checagem acima antes de qualquer uma das duas ter
-  // inserido, a soma dos pagamentos 'paid' agora pode ultrapassar o
-  // total da venda. Desempate determinístico por ordem de inserção
-  // (created_at, id): mantém os pagamentos que couberem no saldo nessa
-  // ordem e desfaz (delete) este pagamento se ele for o que estourou o
-  // limite — nunca deixa o total pago passar do total da venda.
-  const survived = await confirmPaymentWithinBalance(
-    supabase,
-    saleId,
-    inserted.id,
-    Number(sale.total_amount)
-  );
-
-  if (!survived) {
-    await supabase.from("sale_payments").delete().eq("id", inserted.id);
-    return {
-      error:
-        "Outro pagamento foi registrado ao mesmo tempo e o saldo da venda já foi atingido. Atualize a página e tente novamente.",
-    };
-  }
-
-  const user = await getCurrentUser();
-  await writeAuditLog(supabase, {
-    companyId: current.company.id,
-    actorUserId: user?.id ?? null,
-    entityType: "sale",
-    entityId: saleId,
-    action: AUDIT_ACTIONS.SALE_PAYMENT_ADDED,
-    metadata: { method: parsed.data.method, amount: parsed.data.amount },
+  const { error: paymentError } = await supabase.rpc("add_sale_payment", {
+    p_sale_id: saleId,
+    p_method: parsed.data.method,
+    p_amount: parsed.data.amount,
+    p_notes: parsed.data.notes ?? undefined,
   });
+
+  if (paymentError) {
+    return { error: paymentError.message || "Não foi possível registrar o pagamento. Tente novamente." };
+  }
 
   revalidatePath(`/app/vendas/${saleId}`);
   return { success: "Pagamento registrado." };
