@@ -76,10 +76,10 @@ texto não byte-idêntico; **CONSOLIDADA** = correções posteriores embutidas n
 | `024_phase2_purchase_receiving_payables` | `024_phase2_…` / 20260922001123 | **IDÊNTICO** (reconstruída a partir do SQL aplicado) |
 | `025_harden_phase2_receipts` | `025_harden_phase2_receipts` / 20260922001144 | **IDÊNTICO** (reconstruída) |
 | `026_phase2_purchase_order_hardening` | `026_phase2_…` / 20260922001218 | **IDÊNTICO** (reconstruída) |
-| `027_phase3_finance_foundation` | `027_phase3_…` / 20260922003546 | EQUIVALENTE **com divergência conhecida** (seção 6) |
+| `027_phase3_finance_foundation` | `027_phase3_…` / 20260922003546 | EQUIVALENTE (corpos de função = live; demais diferenças textuais na seção 6) |
 | `028_phase3_finance_hardening` | `028_phase3_…` / 20260922003818 | IDÊNTICO |
 | `029_phase3_finance_security_hardening` | `029_phase3_…` / 20260922003838 | EQUIVALENTE (o texto aplicado tem 3–4 `revoke … from public, authenticated, anon` a mais em funções internas; a ACL final é idêntica ao live) |
-| `030_phase4_agenda_team` | `030_phase4_agenda_team` / 20260922005431 | EQUIVALENTE **com divergência conhecida** (seção 6) |
+| `030_phase4_agenda_team` | `030_phase4_agenda_team` / 20260922005431 | EQUIVALENTE (corpos de função = live, exceto os 2 profissionais corrigidos pela 040; diferenças na seção 6) |
 | `031_phase4_security_hardening` | `031_…` / 20260922010256 | IDÊNTICO |
 | `032_phase4_reschedule_hardening` | `032_…` / 20260922010502 | IDÊNTICO |
 | `033_phase6_admin_governance` | `033_…` / 20260923110737 | **IDÊNTICO** (reconstruída) |
@@ -118,20 +118,30 @@ O histórico live contém migrations que **não têm arquivo próprio de propós
 Não há objeto de depuração remanescente no banco (nenhuma função com corpo
 `DEBUG`; conferido por leitura do catálogo).
 
-## 6. Divergências conhecidas (não resolvidas)
+## 6. Divergências conhecidas
 
-- **`027` (2 funções) e `030` (5 funções):** os corpos de `create_cost_center`,
-  `create_financial_category`, `list_company_team`,
-  `seed_professional_profile_from_member`, `set_appointment_status`,
-  `set_professional_availability` e `create_appointment` neste repositório **diferem
-  do SQL efetivamente aplicado** (variáveis/estrutura equivalentes em parte, mas
-  não idênticas). **O banco live é a referência.** A sincronização desses arquivos
-  com o histórico não foi feita nesta reconciliação (ver relatório).
+- **`027` e `030` — funções sincronizadas com o live:** os corpos de
+  `create_cost_center` e `create_financial_category` (`027`) e de
+  `create_appointment`, `list_company_team`, `seed_professional_profile_from_member`
+  e `set_appointment_status` (`030`) foram alinhados ao `prosrc` do banco (o banco
+  não foi alterado). Corpos idênticos ao live (comparação normalizada sem
+  comentários/espaços).
+- **Diferenças remanescentes em `027`/`030` (conhecidas e explicadas):**
+  - `027`: o texto aplicado envolve `alter type accounts_payable_status add value
+    if not exists 'partial'` num bloco `DO … exception when duplicate_object`;
+    o arquivo usa o `alter type … if not exists` direto (mesmo efeito). Há
+    também outras diferenças de texto não localizadas em detalhe (o arquivo é
+    maior que o aplicado); o estado final de objetos, funções e ACLs confere.
+  - `030`: (a) `set_professional_availability` no arquivo usa o nome correto
+    `p_professional_id`, enquanto o SQL aplicado tinha o defeito abaixo;
+    (b) um `revoke` de `list_company_team` no arquivo é `from public, anon` e no
+    aplicado é `from public` (a ACL final é a mesma).
 - **Bug corrigido pela 040:** `set_professional_availability` (só no banco) e
   `set_professional_services` (no banco **e** no arquivo `030`) usavam a variável
-  não declarada `v_professional_id`. A 040 os corrige no banco. **O arquivo `030`
-  não foi reescrito** e ainda contém `v_professional_id` em
-  `set_professional_services`; a 040, aplicada depois, prevalece.
+  não declarada `v_professional_id`. A 040 os corrige no banco. O arquivo `030`
+  **continua** com `v_professional_id` em `set_professional_services`, porque
+  registra o que foi aplicado; a 040, posterior, prevalece. A 040 foi validada
+  por execução com dados sintéticos revertidos (rollback) em 2026-09-25.
 - Textos de `comment on` em `002`, `018`, `019`, `021` divergem do aplicado
   (verificado: a primeira diferença de cada arquivo está dentro da prosa de um
   `comment on`); nenhuma diferença de schema foi encontrada nesses arquivos.
