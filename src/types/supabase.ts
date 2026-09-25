@@ -489,6 +489,56 @@ export type Database = {
           },
         ]
       }
+      company_settings: {
+        Row: {
+          company_id: string
+          created_at: string
+          currency: string
+          email_notifications_enabled: boolean
+          locale: string
+          notifications_enabled: boolean
+          operational_preferences: Json
+          timezone: string
+          updated_at: string
+          updated_by: string | null
+          week_starts_on: number
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          currency?: string
+          email_notifications_enabled?: boolean
+          locale?: string
+          notifications_enabled?: boolean
+          operational_preferences?: Json
+          timezone?: string
+          updated_at?: string
+          updated_by?: string | null
+          week_starts_on?: number
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          currency?: string
+          email_notifications_enabled?: boolean
+          locale?: string
+          notifications_enabled?: boolean
+          operational_preferences?: Json
+          timezone?: string
+          updated_at?: string
+          updated_by?: string | null
+          week_starts_on?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_settings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cost_centers: {
         Row: {
           active: boolean
@@ -2630,6 +2680,42 @@ export type Database = {
           },
         ]
       }
+      user_preferences: {
+        Row: {
+          created_at: string
+          density: string
+          email_notifications_enabled: boolean
+          locale: string
+          notifications_enabled: boolean
+          theme: string
+          timezone: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          density?: string
+          email_notifications_enabled?: boolean
+          locale?: string
+          notifications_enabled?: boolean
+          theme?: string
+          timezone?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          density?: string
+          email_notifications_enabled?: boolean
+          locale?: string
+          notifications_enabled?: boolean
+          theme?: string
+          timezone?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -2657,6 +2743,32 @@ export type Database = {
       adjust_loyalty_points: {
         Args: { p_customer_id: string; p_points: number; p_reason: string }
         Returns: number
+      }
+      adjust_product_stock: {
+        Args: { p_new_quantity: number; p_product_id: string; p_reason: string }
+        Returns: {
+          barcode: string | null
+          category_id: string | null
+          company_id: string
+          cost_price: number
+          created_at: string
+          description: string | null
+          id: string
+          minimum_stock: number
+          name: string
+          sale_price: number
+          sku: string | null
+          status: Database["public"]["Enums"]["product_status"]
+          stock_quantity: number
+          unit: Database["public"]["Enums"]["product_unit"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "products"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       cancel_purchase_order: {
         Args: { p_purchase_order_id: string; p_reason?: string }
@@ -3036,6 +3148,19 @@ export type Database = {
         Returns: undefined
       }
       expire_loyalty_points_batch: { Args: never; Returns: number }
+      get_platform_admin_overview: {
+        Args: never
+        Returns: {
+          active_companies: number
+          active_subscriptions: number
+          active_users: number
+          expired_subscriptions: number
+          inactive_companies: number
+          suspended_users: number
+          total_companies: number
+          total_users: number
+        }[]
+      }
       get_public_plans: {
         Args: never
         Returns: {
@@ -3059,6 +3184,7 @@ export type Database = {
         Args: { p_sale_id: string }
         Returns: undefined
       }
+      is_platform_admin: { Args: never; Returns: boolean }
       list_company_team: {
         Args: never
         Returns: {
@@ -3075,6 +3201,18 @@ export type Database = {
           role: Database["public"]["Enums"]["company_role"]
           specialty: string
           user_id: string
+        }[]
+      }
+      list_platform_admin_companies: {
+        Args: never
+        Returns: {
+          business_type: Database["public"]["Enums"]["business_type"]
+          company_id: string
+          members_count: number
+          name: string
+          status: Database["public"]["Enums"]["company_status"]
+          subscription_expires_at: string
+          subscription_status: Database["public"]["Enums"]["subscription_status"]
         }[]
       }
       open_cash_register: {
@@ -3138,13 +3276,6 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      postgres_fdw_disconnect: { Args: { "": string }; Returns: boolean }
-      postgres_fdw_disconnect_all: { Args: never; Returns: boolean }
-      postgres_fdw_get_connections: {
-        Args: never
-        Returns: Record<string, unknown>[]
-      }
-      postgres_fdw_handler: { Args: never; Returns: unknown }
       receive_purchase_order: {
         Args: { p_items: Json; p_notes?: string; p_purchase_order_id: string }
         Returns: {
@@ -3263,6 +3394,26 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "appointments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      set_platform_company_status: {
+        Args: {
+          p_company_id: string
+          p_status: Database["public"]["Enums"]["company_status"]
+        }
+        Returns: {
+          business_type: Database["public"]["Enums"]["business_type"]
+          created_at: string
+          id: string
+          name: string
+          status: Database["public"]["Enums"]["company_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "companies"
           isOneToOne: true
           isSetofReturn: false
         }

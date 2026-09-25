@@ -1047,6 +1047,12 @@ revoke execute on function public.expire_loyalty_points_batch() from public, ano
 -- redeem_loyalty_points/adjust_loyalty_points ficariam chamáveis por um
 -- usuário não autenticado via RPC (a função rejeitaria internamente por
 -- auth.uid() is null, mas a exposição em si é desnecessária).
+-- Reconciliação com o live (migrations 20260831004940 grants_fix e 20260831005033
+-- grants_fix_v2): o Postgres também concede EXECUTE a PUBLIC em toda função nova,
+-- então PUBLIC precisa ser revogado além de anon. Estes dois revokes de PUBLIC não
+-- constavam deste arquivo, mas estão aplicados no banco live.
+revoke execute on function public.redeem_loyalty_points(uuid, integer) from public;
+revoke execute on function public.adjust_loyalty_points(uuid, integer, text) from public;
 revoke execute on function public.redeem_loyalty_points(uuid, integer) from anon;
 revoke execute on function public.adjust_loyalty_points(uuid, integer, text) from anon;
 grant execute on function public.redeem_loyalty_points(uuid, integer) to authenticated;

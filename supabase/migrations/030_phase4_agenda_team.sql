@@ -107,16 +107,28 @@ set search_path = public
 as $$
 declare
   v_name text;
+  v_email text;
 begin
-  select coalesce(nullif(trim(full_name), ''), nullif(trim(email), ''), 'Colaborador')
+  select
+    coalesce(nullif(trim(full_name), ''), nullif(trim(email), ''), 'Colaborador')
   into v_name
   from public.profiles
   where user_id = new.user_id
   limit 1;
 
-  insert into public.professional_profiles(company_id, company_member_id, display_name)
-  values(new.company_id, new.id, coalesce(v_name, 'Colaborador'))
-  on conflict (company_member_id) do nothing;
+  select email into v_email
+  from public.profiles
+  where user_id = new.user_id
+  limit 1;
+
+  insert into public.professional_profiles(company_id, company_member_id, display_name, phone)
+  values(new.company_id, new.id, coalesce(v_name, 'Colaborador'), null)
+  on conflict (company_member_id) do update
+    set display_name = coalesce(
+      nullif(trim(public.professional_profiles.display_name), ''),
+      excluded.display_name
+    ),
+    updated_at = now();
 
   return new;
 end;
@@ -239,14 +251,29 @@ begin
   order by created_at asc
   limit 1;
 
-  if v_company_id is null then raise exception 'Nenhuma empresa encontrada.'; end if;
+  if v_company_id is null then
+    raise exception 'Nenhuma empresa encontrada.';
+  end if;
+
+  if v_role not in ('owner','admin','employee') then
+    raise exception 'Acesso negado.';
+  end if;
 
   return query
   select
-    cm.id, cm.user_id, cm.role,
-    p.full_name, p.email, p.avatar_url,
-    pp.id, pp.display_name, pp.phone, pp.specialty,
-    pp.color, pp.notes, pp.active
+    cm.id,
+    cm.user_id,
+    cm.role,
+    p.full_name,
+    p.email,
+    p.avatar_url,
+    pp.id,
+    pp.display_name,
+    pp.phone,
+    pp.specialty,
+    pp.color,
+    pp.notes,
+    pp.active
   from public.company_members cm
   left join public.profiles p on p.user_id = cm.user_id
   left join public.professional_profiles pp on pp.company_member_id = cm.id
@@ -618,6 +645,7 @@ declare
   v_duration integer;
   v_price numeric(12,2);
   v_ends_at timestamptz;
+  v_local_date date;
   v_weekday smallint;
   v_has_availability boolean;
   v_appointment public.appointments;
@@ -634,46 +662,68 @@ begin
   if v_role not in ('owner','admin','employee') then raise exception 'Acesso negado.'; end if;
   if p_service_id is null or p_starts_at is null then raise exception 'Informe serviço e início do atendimento.'; end if;
 
-  select * into v_service from public.services where id=p_service_id and company_id=v_company_id and status='active';
+  select * into v_service
+  from public.services
+  where id=p_service_id and company_id=v_company_id and status='active';
+
   if v_service is null then raise exception 'Serviço ativo não encontrado.'; end if;
 
-  if p_customer_id is not null and not exists (select 1 from public.customers where id=p_customer_id and company_id=v_company_id) then
+  if p_customer_id is not null and not exists (
+    select 1 from public.customers
+    where id=p_customer_id and company_id=v_company_id
+  ) then
     raise exception 'Cliente inválido para esta empresa.';
   end if;
 
   if p_professional_id is not null then
-    select * into v_professional from public.professional_profiles
+    select * into v_professional
+    from public.professional_profiles
     where id=p_professional_id and company_id=v_company_id and active=true;
+
     if v_professional is null then raise exception 'Profissional inválido ou inativo.'; end if;
-    if not exists (
-      select 1 from public.professional_services ps
-      where ps.professional_id=p_professional_id and ps.service_id=p_service_id
-    ) then
-      raise exception 'Este profissional não está habilitado para o serviço selecionado.';
-    end if;
+  end if;
+
+  if p_professional_id is not null and not exists (
+    select 1
+    from public.professional_services ps
+    where ps.professional_id=p_professional_id and ps.service_id=p_service_id
+  ) then
+    raise exception 'Este profissional não está habilitado para o serviço selecionado.';
   end if;
 
   v_duration := coalesce(
     p_duration_minutes,
-    (select ps.duration_override_minutes from public.professional_services ps where ps.professional_id=p_professional_id and ps.service_id=p_service_id),
+    (
+      select ps.duration_override_minutes
+      from public.professional_services ps
+      where ps.professional_id=p_professional_id and ps.service_id=p_service_id
+    ),
     v_service.duration_minutes
   );
 
-  if v_duration is null or v_duration <= 0 then raise exception 'O serviço precisa ter duração válida.'; end if;
+  if v_duration is null or v_duration <= 0 then
+    raise exception 'O serviço precisa ter duração válida.';
+  end if;
 
   v_price := round(coalesce(
     p_price,
-    (select ps.price_override from public.professional_services ps where ps.professional_id=p_professional_id and ps.service_id=p_service_id),
+    (
+      select ps.price_override
+      from public.professional_services ps
+      where ps.professional_id=p_professional_id and ps.service_id=p_service_id
+    ),
     v_service.sale_price
   ),2);
 
   v_ends_at := p_starts_at + make_interval(mins => v_duration);
 
   if p_professional_id is not null then
+    -- Serialize scheduling decisions per professional to avoid race conditions.
     perform pg_advisory_xact_lock(hashtextextended(p_professional_id::text, 0));
 
     if exists (
-      select 1 from public.appointments a
+      select 1
+      from public.appointments a
       where a.company_id=v_company_id
         and a.professional_id=p_professional_id
         and a.status in ('scheduled','confirmed')
@@ -684,7 +734,8 @@ begin
     end if;
 
     if exists (
-      select 1 from public.professional_blocks b
+      select 1
+      from public.professional_blocks b
       where b.company_id=v_company_id
         and b.professional_id=p_professional_id
         and p_starts_at < b.ends_at
@@ -693,15 +744,18 @@ begin
       raise exception 'O profissional possui um bloqueio neste horário.';
     end if;
 
+    v_local_date := (p_starts_at at time zone 'America/Sao_Paulo')::date;
     v_weekday := extract(dow from (p_starts_at at time zone 'America/Sao_Paulo'))::smallint;
 
     select exists(
-      select 1 from public.professional_availability pa
+      select 1
+      from public.professional_availability pa
       where pa.professional_id=p_professional_id and pa.weekday=v_weekday and pa.active=true
     ) into v_has_availability;
 
     if v_has_availability and not exists (
-      select 1 from public.professional_availability pa
+      select 1
+      from public.professional_availability pa
       where pa.professional_id=p_professional_id
         and pa.weekday=v_weekday
         and pa.active=true
@@ -718,7 +772,8 @@ begin
   )
   values(
     v_company_id,p_customer_id,p_service_id,p_professional_id,
-    p_starts_at,v_ends_at,v_duration,v_price,'scheduled',nullif(trim(p_notes),''),v_user_id
+    p_starts_at,v_ends_at,v_duration,v_price,'scheduled'::public.appointment_status,
+    nullif(trim(p_notes),''),v_user_id
   )
   returning * into v_appointment;
 
@@ -802,21 +857,34 @@ declare
   v_row public.appointments;
 begin
   select company_id,role into v_company_id,v_role
-  from public.company_members where user_id=auth.uid() order by created_at asc limit 1;
+  from public.company_members
+  where user_id=auth.uid()
+  order by created_at asc
+  limit 1;
 
   if v_company_id is null then raise exception 'Nenhuma empresa encontrada.'; end if;
   if v_role not in ('owner','admin','employee') then raise exception 'Acesso negado.'; end if;
 
-  select * into v_row from public.appointments
-  where id=p_appointment_id and company_id=v_company_id for update;
+  select * into v_row
+  from public.appointments
+  where id=p_appointment_id and company_id=v_company_id
+  for update;
 
   if v_row is null then raise exception 'Agendamento não encontrado.'; end if;
 
-  update public.appointments
-  set status=p_status,
-      cancellation_reason=case when p_status='cancelled' then nullif(trim(p_reason),'') else null end
-  where id=v_row.id
-  returning * into v_row;
+  if p_status='cancelled' then
+    update public.appointments
+    set status=p_status,
+        cancellation_reason=nullif(trim(p_reason),'')
+    where id=v_row.id
+    returning * into v_row;
+  else
+    update public.appointments
+    set status=p_status,
+        cancellation_reason=null
+    where id=v_row.id
+    returning * into v_row;
+  end if;
 
   return v_row;
 end;

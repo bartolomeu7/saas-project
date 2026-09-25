@@ -508,25 +508,15 @@ security definer
 set search_path=public
 as $$
 declare
-  v_company_id uuid;
-  v_role public.company_role;
-  v_row public.financial_categories;
+  v_user_id uuid:=auth.uid(); v_company_id uuid; v_role public.company_role; v_row public.financial_categories;
 begin
-  select company_id,role into v_company_id,v_role
-  from public.company_members
-  where user_id=auth.uid()
-  limit 1;
-
+  select company_id,role into v_company_id,v_role from public.company_members where user_id=v_user_id limit 1;
   if v_company_id is null then raise exception 'Nenhuma empresa encontrada para o usuário atual.'; end if;
   if v_role not in('owner','admin') then raise exception 'Apenas owner/admin podem cadastrar categorias.'; end if;
   if nullif(trim(p_name),'') is null then raise exception 'Informe o nome da categoria.'; end if;
-
-  insert into public.financial_categories(company_id,name,kind)
-  values(v_company_id,trim(p_name),p_kind)
-  on conflict(company_id,kind,name)
-  do update set active=true,updated_at=now()
+  insert into public.financial_categories(company_id,name,kind) values(v_company_id,trim(p_name),p_kind)
+  on conflict(company_id,kind,name) do update set active=true,updated_at=now()
   returning * into v_row;
-
   return v_row;
 end;
 $$;
@@ -538,25 +528,15 @@ security definer
 set search_path=public
 as $$
 declare
-  v_company_id uuid;
-  v_role public.company_role;
-  v_row public.cost_centers;
+  v_user_id uuid:=auth.uid(); v_company_id uuid; v_role public.company_role; v_row public.cost_centers;
 begin
-  select company_id,role into v_company_id,v_role
-  from public.company_members
-  where user_id=auth.uid()
-  limit 1;
-
+  select company_id,role into v_company_id,v_role from public.company_members where user_id=v_user_id limit 1;
   if v_company_id is null then raise exception 'Nenhuma empresa encontrada para o usuário atual.'; end if;
   if v_role not in('owner','admin') then raise exception 'Apenas owner/admin podem cadastrar centros de custo.'; end if;
   if nullif(trim(p_name),'') is null then raise exception 'Informe o nome do centro de custo.'; end if;
-
-  insert into public.cost_centers(company_id,name)
-  values(v_company_id,trim(p_name))
-  on conflict(company_id,name)
-  do update set active=true,updated_at=now()
+  insert into public.cost_centers(company_id,name) values(v_company_id,trim(p_name))
+  on conflict(company_id,name) do update set active=true,updated_at=now()
   returning * into v_row;
-
   return v_row;
 end;
 $$;
