@@ -263,16 +263,13 @@ export async function adjustStockAction(
     return { error: "Nenhuma empresa encontrada para o usuário atual." };
   }
 
-  const user = await getCurrentUser();
   const supabase = createClient();
 
   const result = await adjustProductStock({
     supabase,
-    companyId: current.company.id,
     productId: id,
     newQuantity: parsed.data.newQuantity,
     reason: parsed.data.reason,
-    actorUserId: user?.id ?? null,
   });
 
   if (result.error) {

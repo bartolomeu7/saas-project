@@ -25,6 +25,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   }
 
+  if (current.role !== "owner" && current.role !== "admin") {
+    return NextResponse.json(
+      { error: "Apenas o proprietário ou administradores podem contratar ou renovar o plano." },
+      { status: 403 }
+    );
+  }
+
   const body = await request.json().catch(() => null);
   const parsed = createPaymentSchema.safeParse(body);
   if (!parsed.success) {

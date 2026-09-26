@@ -2740,6 +2740,32 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      add_sale_payment: {
+        Args: {
+          p_amount: number
+          p_method: Database["public"]["Enums"]["sale_payment_method"]
+          p_notes?: string
+          p_sale_id: string
+        }
+        Returns: {
+          amount: number
+          company_id: string
+          created_at: string
+          id: string
+          method: Database["public"]["Enums"]["sale_payment_method"]
+          notes: string | null
+          paid_at: string | null
+          sale_id: string
+          status: Database["public"]["Enums"]["sale_payment_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "sale_payments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       adjust_loyalty_points: {
         Args: { p_customer_id: string; p_points: number; p_reason: string }
         Returns: number
@@ -3276,6 +3302,38 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      recalculate_sale_totals: {
+        Args: { p_sale_id: string }
+        Returns: {
+          cancelled_at: string | null
+          cancelled_by: string | null
+          cancelled_reason: string | null
+          company_id: string
+          completed_at: string | null
+          created_at: string
+          customer_id: string | null
+          discount_amount: number
+          estimated_margin: number
+          id: string
+          loyalty_discount_amount: number
+          loyalty_points_redeemed: number
+          notes: string | null
+          payment_status: Database["public"]["Enums"]["sale_payment_status"]
+          sold_at: string
+          status: Database["public"]["Enums"]["sale_status"]
+          subtotal: number
+          total_amount: number
+          total_cost: number
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "sales"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       receive_purchase_order: {
         Args: { p_items: Json; p_notes?: string; p_purchase_order_id: string }
         Returns: {
@@ -3478,6 +3536,17 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      write_audit_log: {
+        Args: {
+          p_action: string
+          p_actor_user_id?: string
+          p_company_id: string
+          p_entity_id: string
+          p_entity_type: string
+          p_metadata?: Json
+        }
+        Returns: undefined
       }
     }
     Enums: {

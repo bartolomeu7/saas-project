@@ -85,10 +85,7 @@ export function PlanCard({
             ? `Proprietário + até ${plan.additional_user_limit} usuários`
             : "1 usuário (proprietário)"}
         </li>
-        {plan.support_enabled && <li>Suporte prioritário</li>}
-        {plan.tickets_enabled && <li>Abertura de tickets</li>}
-        {plan.exclusive_groups_enabled && <li>Grupos exclusivos</li>}
-        {plan.early_access_enabled && <li>Acesso antecipado a novidades</li>}
+        {plan.support_enabled && <li>Suporte por e-mail</li>}
       </ul>
 
       {error && <p className="text-xs text-destructive">{error}</p>}

@@ -29,13 +29,19 @@ export async function writeAuditLog(
   supabase: SupabaseClient<Database>,
   params: WriteAuditLogParams
 ): Promise<void> {
-  const { error } = await supabase.from("audit_logs").insert({
-    company_id: params.companyId,
-    actor_user_id: params.actorUserId,
-    entity_type: params.entityType,
-    entity_id: params.entityId,
-    action: params.action,
-    metadata: (params.metadata ?? {}) as Json,
+  // O papel `authenticated` não tem INSERT em audit_logs (migrations 036 e
+  // 20260923115135). A RPC write_audit_log (migration 041) grava com o ator
+  // sempre igual a auth.uid() quando há sessão de usuário (e só aceita as
+  // ações permitidas a usuário). Com o cliente service_role (billing) não há
+  // auth.uid(): o ator vai em p_actor_user_id e o banco só aceita eventos de
+  // assinatura/pagamento nesse contexto.
+  const { error } = await supabase.rpc("write_audit_log", {
+    p_company_id: params.companyId,
+    p_entity_type: params.entityType,
+    p_entity_id: params.entityId,
+    p_action: params.action,
+    p_metadata: (params.metadata ?? {}) as Json,
+    p_actor_user_id: params.actorUserId ?? undefined,
   });
 
   if (error) {

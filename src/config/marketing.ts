@@ -66,8 +66,8 @@ export const FEATURES: FeatureModule[] = [
   { name: "Vendas", description: "Registre vendas com itens, pagamentos, descontos e cancelamento.", icon: ShoppingCart, available: true },
   { name: "Fidelidade", description: "Configure níveis, campanhas, multiplicadores e resgate de pontos.", icon: Gift, available: true },
   { name: "Caixa", description: "Abra e feche o caixa, lance movimentações e confira o saldo no fechamento.", icon: Banknote, available: true },
-  { name: "Estoque", description: "Controle de entrada, saída e reposição — em breve.", icon: Warehouse, available: false },
-  { name: "Financeiro", description: "Visão de entradas, saídas e resultados além do caixa do dia — em breve.", icon: LineChart, available: false },
+  { name: "Estoque", description: "Saldo por produto, alertas de estoque baixo e ajuste manual de quantidade.", icon: Warehouse, available: true },
+  { name: "Financeiro", description: "Contas a pagar e a receber, receitas e despesas e resultado do mês.", icon: LineChart, available: true },
 ];
 
 export interface TrustItem {
@@ -205,11 +205,8 @@ function paidPlanBenefits(additionalUsers: number): string[] {
   return [
     "Acesso às ferramentas da plataforma",
     `1 proprietário + até ${additionalUsers} usuários adicionais`,
-    "Suporte da Prime Ges",
-    "Acesso ao sistema de tickets",
-    "Acesso aos grupos de comunicação exclusivos",
+    "Suporte por e-mail",
     "Atualizações constantes da plataforma",
-    "Acesso antecipado a novidades e melhorias para assinantes",
   ];
 }
 
@@ -227,12 +224,7 @@ export const PRICING_PLANS: PricingPlan[] = [
       "Conhecer as principais funcionalidades",
       "Avaliar o sistema antes de assinar",
     ],
-    excludedFeatures: [
-      "Suporte da plataforma",
-      "Acesso a tickets",
-      "Grupos exclusivos de membros",
-      "Benefícios exclusivos para assinantes",
-    ],
+    excludedFeatures: ["Suporte por e-mail", "Usuários adicionais"],
     additionalUsersLimit: 0,
     hasSupport: false,
     hasTickets: false,
@@ -252,9 +244,9 @@ export const PRICING_PLANS: PricingPlan[] = [
     includedFeatures: paidPlanBenefits(2),
     additionalUsersLimit: 2,
     hasSupport: true,
-    hasTickets: true,
-    hasGroups: true,
-    hasEarlyAccess: true,
+    hasTickets: false,
+    hasGroups: false,
+    hasEarlyAccess: false,
     ctaLabel: "Assinar mensal",
     ctaHref: "/register",
     highlight: "popular",
@@ -269,9 +261,9 @@ export const PRICING_PLANS: PricingPlan[] = [
     includedFeatures: paidPlanBenefits(2),
     additionalUsersLimit: 2,
     hasSupport: true,
-    hasTickets: true,
-    hasGroups: true,
-    hasEarlyAccess: true,
+    hasTickets: false,
+    hasGroups: false,
+    hasEarlyAccess: false,
     ctaLabel: "Assinar trimestral",
     ctaHref: "/register",
   },
@@ -286,9 +278,9 @@ export const PRICING_PLANS: PricingPlan[] = [
     includedFeatures: paidPlanBenefits(2),
     additionalUsersLimit: 2,
     hasSupport: true,
-    hasTickets: true,
-    hasGroups: true,
-    hasEarlyAccess: true,
+    hasTickets: false,
+    hasGroups: false,
+    hasEarlyAccess: false,
     ctaLabel: "Assinar anual",
     ctaHref: "/register",
     highlight: "value",
@@ -322,11 +314,8 @@ export interface ComparisonRow {
 /** Colunas na mesma ordem de PRICING_PLANS (sem o plano CUSTOM). */
 export const COMPARISON_ROWS: ComparisonRow[] = [
   { label: "Acesso à plataforma", values: [true, true, true, true] },
-  { label: "Suporte", values: [false, true, true, true] },
-  { label: "Tickets", values: [false, true, true, true] },
-  { label: "Grupos exclusivos", values: [false, true, true, true] },
+  { label: "Suporte por e-mail", values: [false, true, true, true] },
   { label: "Atualizações", values: [false, true, true, true] },
-  { label: "Acesso antecipado", values: [false, true, true, true] },
   {
     label: "Usuários adicionais",
     values: ["—", "2", "2", "2"],

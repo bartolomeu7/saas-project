@@ -3,6 +3,7 @@ import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { startOfDaySaoPaulo, endOfDaySaoPaulo, startOfMonthSaoPaulo, startOfYearSaoPaulo } from "@/lib/timezone";
 import { getStockLevel } from "@/types/product";
+import { NON_OPERATING_EXPENSE_SOURCES } from "@/lib/finance/queries";
 import type { ReportPeriod, ReportRange, ReportTrendPoint, ReportTopItem, ReportPaymentMethod, ReportsWorkspace } from "@/types/report";
 
 const PERIOD_LABELS: Record<ReportPeriod, string> = {
@@ -103,7 +104,7 @@ async function getFinanceLayer(companyId: string, range: ReportRange) {
     supabase.from("accounts_payable").select("amount, paid_amount, due_date, status").eq("company_id", companyId).in("status", ["open", "partial"]),
   ]);
 
-  const operatingExpenses = (expenseResult.data ?? []).reduce((sum, row) => row.source_type === "accounts_payable" ? sum : sum + money(row.amount), 0);
+  const operatingExpenses = (expenseResult.data ?? []).reduce((sum, row) => NON_OPERATING_EXPENSE_SOURCES.has(row.source_type ?? "") ? sum : sum + money(row.amount), 0);
   const receivableSales = receivableSalesResult.data ?? [];
   let accountsReceivable = 0;
   let overdueReceivables = 0;
