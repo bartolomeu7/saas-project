@@ -19,6 +19,7 @@ import { EmptyState } from "@/components/app/empty-state";
 import { ProductPicker } from "@/components/app/product-picker";
 import { ServicePicker } from "@/components/app/service-picker";
 import { ConfirmDialog } from "@/components/app/confirm-dialog";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 
 const initialState: ActionResult = {};
 
@@ -96,33 +97,33 @@ function MultiplierRow({
 
   if (isEditing) {
     return (
-      <tr>
-        <td colSpan={5} className="bg-secondary/30 px-4 py-3">
+      <TableRow>
+        <TableCell colSpan={5} className="bg-secondary/30 px-4 py-3">
           <MultiplierEditForm
             multiplierId={multiplier.id}
             currentValue={multiplier.multiplier}
             onCancel={() => setIsEditing(false)}
             onSaved={() => setIsEditing(false)}
           />
-        </td>
-      </tr>
+        </TableCell>
+      </TableRow>
     );
   }
 
   return (
-    <tr>
-      <td className="px-4 py-3 text-muted-foreground">
+    <TableRow>
+      <TableCell className="px-4 py-3 text-muted-foreground">
         {multiplier.targetType === "product" ? "Produto" : "Serviço"}
-      </td>
-      <td className="px-4 py-3 font-medium text-foreground">{multiplier.targetName}</td>
-      <td className="px-4 py-3 text-foreground">{multiplier.multiplier}x</td>
-      <td className="px-4 py-3">
+      </TableCell>
+      <TableCell className="px-4 py-3 font-medium text-foreground">{multiplier.targetName}</TableCell>
+      <TableCell className="px-4 py-3 text-foreground">{multiplier.multiplier}x</TableCell>
+      <TableCell className="px-4 py-3">
         <span className="inline-flex items-center rounded-full bg-success/10 px-2.5 py-0.5 text-xs font-medium text-success">
           Ativo
         </span>
-      </td>
+      </TableCell>
       {canEdit && (
-        <td className="px-4 py-3">
+        <TableCell className="px-4 py-3">
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -151,9 +152,9 @@ function MultiplierRow({
             />
           </div>
           {deleteError && <p className="mt-1 text-xs text-destructive">{deleteError}</p>}
-        </td>
+        </TableCell>
       )}
-    </tr>
+    </TableRow>
   );
 }
 
@@ -322,22 +323,22 @@ export function LoyaltyMultipliersSection({
         />
       ) : (
         <div className="overflow-x-auto rounded-lg border border-border">
-          <table className="w-full min-w-[560px] text-sm">
-            <thead className="bg-secondary/50 text-left text-xs uppercase text-muted-foreground">
-              <tr>
-                <th className="px-4 py-3 font-medium">Tipo</th>
-                <th className="px-4 py-3 font-medium">Item</th>
-                <th className="px-4 py-3 font-medium">Multiplicador</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-                {canEdit && <th className="px-4 py-3 font-medium">Ações</th>}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
+          <Table className="w-full min-w-[560px] text-sm">
+            <TableHeader className="bg-secondary/50 text-left text-xs uppercase text-muted-foreground">
+              <TableRow>
+                <TableHead className="px-4 py-3 font-medium">Tipo</TableHead>
+                <TableHead className="px-4 py-3 font-medium">Item</TableHead>
+                <TableHead className="px-4 py-3 font-medium">Multiplicador</TableHead>
+                <TableHead className="px-4 py-3 font-medium">Status</TableHead>
+                {canEdit && <TableHead className="px-4 py-3 font-medium">Ações</TableHead>}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {multipliers.map((multiplier) => (
                 <MultiplierRow key={multiplier.id} multiplier={multiplier} canEdit={canEdit} />
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       )}
 

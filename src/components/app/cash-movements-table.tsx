@@ -1,6 +1,7 @@
 import { ArrowUpCircle, ArrowDownCircle, ShoppingCart, PenLine } from "lucide-react";
 import { SALE_PAYMENT_METHOD_LABELS } from "@/types/sale";
 import type { CashMovementWithName } from "@/types/cash-register";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 
 const dateTimeFormatter = new Intl.DateTimeFormat("pt-BR", {
   dateStyle: "short",
@@ -28,25 +29,25 @@ export function CashMovementsTable({ movements }: { movements: CashMovementWithN
 
   return (
     <div className="overflow-x-auto rounded-lg border border-border">
-      <table className="w-full min-w-[820px] text-sm">
-        <thead className="bg-secondary/50 text-left text-xs uppercase text-muted-foreground">
-          <tr>
-            <th className="px-4 py-3 font-medium">Data/hora</th>
-            <th className="px-4 py-3 font-medium">Tipo</th>
-            <th className="px-4 py-3 font-medium">Valor</th>
-            <th className="px-4 py-3 font-medium">Forma</th>
-            <th className="px-4 py-3 font-medium">Descrição</th>
-            <th className="px-4 py-3 font-medium">Origem</th>
-            <th className="px-4 py-3 font-medium">Responsável</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-border">
+      <Table className="w-full min-w-[820px] text-sm">
+        <TableHeader className="bg-secondary/50 text-left text-xs uppercase text-muted-foreground">
+          <TableRow>
+            <TableHead className="px-4 py-3 font-medium">Data/hora</TableHead>
+            <TableHead className="px-4 py-3 font-medium">Tipo</TableHead>
+            <TableHead className="px-4 py-3 font-medium">Valor</TableHead>
+            <TableHead className="px-4 py-3 font-medium">Forma</TableHead>
+            <TableHead className="px-4 py-3 font-medium">Descrição</TableHead>
+            <TableHead className="px-4 py-3 font-medium">Origem</TableHead>
+            <TableHead className="px-4 py-3 font-medium">Responsável</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {movements.map((movement) => (
-            <tr key={movement.id} className="hover:bg-secondary/30">
-              <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">
+            <TableRow key={movement.id} className="hover:bg-secondary/30">
+              <TableCell className="whitespace-nowrap px-4 py-3 text-muted-foreground">
                 {dateTimeFormatter.format(new Date(movement.created_at))}
-              </td>
-              <td className="px-4 py-3">
+              </TableCell>
+              <TableCell className="px-4 py-3">
                 <span
                   className={
                     "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium " +
@@ -62,11 +63,11 @@ export function CashMovementsTable({ movements }: { movements: CashMovementWithN
                   )}
                   {movement.direction === "in" ? "Entrada" : "Saída"}
                 </span>
-              </td>
-              <td className="px-4 py-3 font-medium text-foreground">{formatMoney(Number(movement.amount))}</td>
-              <td className="px-4 py-3 text-muted-foreground">{SALE_PAYMENT_METHOD_LABELS[movement.method]}</td>
-              <td className="px-4 py-3 text-muted-foreground">{movement.description}</td>
-              <td className="px-4 py-3">
+              </TableCell>
+              <TableCell className="px-4 py-3 font-medium text-foreground">{formatMoney(Number(movement.amount))}</TableCell>
+              <TableCell className="px-4 py-3 text-muted-foreground">{SALE_PAYMENT_METHOD_LABELS[movement.method]}</TableCell>
+              <TableCell className="px-4 py-3 text-muted-foreground">{movement.description}</TableCell>
+              <TableCell className="px-4 py-3">
                 <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
                   {movement.source === "sale_payment" ? (
                     <>
@@ -78,12 +79,12 @@ export function CashMovementsTable({ movements }: { movements: CashMovementWithN
                     </>
                   )}
                 </span>
-              </td>
-              <td className="px-4 py-3 text-muted-foreground">{movement.created_by_name ?? "—"}</td>
-            </tr>
+              </TableCell>
+              <TableCell className="px-4 py-3 text-muted-foreground">{movement.created_by_name ?? "—"}</TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 }

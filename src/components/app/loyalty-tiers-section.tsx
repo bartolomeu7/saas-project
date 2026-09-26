@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { SubmitButton } from "@/components/shared/auth/submit-button";
 import { FormMessage } from "@/components/shared/auth/form-message";
 import { ConfirmDialog } from "@/components/app/confirm-dialog";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 
 const initialState: ActionResult = {};
 
@@ -117,24 +118,24 @@ function TierRow({
 
   if (isEditing) {
     return (
-      <tr>
-        <td colSpan={4} className="bg-secondary/30 px-4 py-3">
+      <TableRow>
+        <TableCell colSpan={4} className="bg-secondary/30 px-4 py-3">
           <TierEditForm
             threshold={threshold}
             onCancel={() => setIsEditing(false)}
             onSaved={() => setIsEditing(false)}
           />
-        </td>
-      </tr>
+        </TableCell>
+      </TableRow>
     );
   }
 
   return (
-    <tr>
-      <td className="px-4 py-3 font-medium text-foreground">{threshold.name}</td>
-      <td className="px-4 py-3 text-muted-foreground">{threshold.minLifetimePoints}</td>
-      <td className="px-4 py-3 text-muted-foreground">{order}</td>
-      <td className="px-4 py-3">
+    <TableRow>
+      <TableCell className="px-4 py-3 font-medium text-foreground">{threshold.name}</TableCell>
+      <TableCell className="px-4 py-3 text-muted-foreground">{threshold.minLifetimePoints}</TableCell>
+      <TableCell className="px-4 py-3 text-muted-foreground">{order}</TableCell>
+      <TableCell className="px-4 py-3">
         <span
           className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
             isPersisted ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"
@@ -142,9 +143,9 @@ function TierRow({
         >
           {isPersisted ? "Ativo" : "Padrão (não salvo)"}
         </span>
-      </td>
+      </TableCell>
       {canEdit && (
-        <td className="px-4 py-3">
+        <TableCell className="px-4 py-3">
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -175,9 +176,9 @@ function TierRow({
             )}
           </div>
           {deleteError && <p className="mt-1 text-xs text-destructive">{deleteError}</p>}
-        </td>
+        </TableCell>
       )}
-    </tr>
+    </TableRow>
   );
 }
 
@@ -219,17 +220,17 @@ export function LoyaltyTiersSection({
       )}
 
       <div className="overflow-x-auto rounded-lg border border-border">
-        <table className="w-full min-w-[520px] text-sm">
-          <thead className="bg-secondary/50 text-left text-xs uppercase text-muted-foreground">
-            <tr>
-              <th className="px-4 py-3 font-medium">Nível</th>
-              <th className="px-4 py-3 font-medium">Pontos mínimos</th>
-              <th className="px-4 py-3 font-medium">Ordem</th>
-              <th className="px-4 py-3 font-medium">Status</th>
-              {canEdit && <th className="px-4 py-3 font-medium">Ações</th>}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
+        <Table className="w-full min-w-[520px] text-sm">
+          <TableHeader className="bg-secondary/50 text-left text-xs uppercase text-muted-foreground">
+            <TableRow>
+              <TableHead className="px-4 py-3 font-medium">Nível</TableHead>
+              <TableHead className="px-4 py-3 font-medium">Pontos mínimos</TableHead>
+              <TableHead className="px-4 py-3 font-medium">Ordem</TableHead>
+              <TableHead className="px-4 py-3 font-medium">Status</TableHead>
+              {canEdit && <TableHead className="px-4 py-3 font-medium">Ações</TableHead>}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {sorted.map((threshold, index) => (
               <TierRow
                 key={threshold.id ?? threshold.name}
@@ -239,8 +240,8 @@ export function LoyaltyTiersSection({
                 canDelete={canDelete}
               />
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       {canEdit &&

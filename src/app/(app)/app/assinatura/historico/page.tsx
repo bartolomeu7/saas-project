@@ -4,6 +4,7 @@ import { getCurrentCompany } from "@/lib/companies/queries";
 import { getSubscriptionPayments } from "@/lib/billing/queries";
 import { SubscriptionPaymentStatusBadge } from "@/components/app/subscription-payment-status-badge";
 import { EmptyState } from "@/components/app/empty-state";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 
 export const metadata: Metadata = {
   title: "Histórico de pagamentos",
@@ -36,30 +37,30 @@ export default async function BillingHistoryPage() {
         />
       ) : (
         <div className="overflow-hidden rounded-lg border border-border bg-card shadow-soft">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-border bg-secondary/50 text-xs uppercase text-muted-foreground">
-              <tr>
-                <th className="px-4 py-3 font-medium">Plano</th>
-                <th className="px-4 py-3 font-medium">Valor</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium">Data</th>
-                <th className="px-4 py-3 font-medium" />
-              </tr>
-            </thead>
-            <tbody>
+          <Table className="w-full text-left text-sm">
+            <TableHeader className="border-b border-border bg-secondary/50 text-xs uppercase text-muted-foreground">
+              <TableRow>
+                <TableHead className="px-4 py-3 font-medium">Plano</TableHead>
+                <TableHead className="px-4 py-3 font-medium">Valor</TableHead>
+                <TableHead className="px-4 py-3 font-medium">Status</TableHead>
+                <TableHead className="px-4 py-3 font-medium">Data</TableHead>
+                <TableHead className="px-4 py-3 font-medium" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {payments.map((payment) => (
-                <tr key={payment.id} className="border-b border-border last:border-0">
-                  <td className="px-4 py-3 font-medium text-foreground">{payment.plan_name}</td>
-                  <td className="px-4 py-3 text-foreground">
+                <TableRow key={payment.id} className="border-b border-border last:border-0">
+                  <TableCell className="px-4 py-3 font-medium text-foreground">{payment.plan_name}</TableCell>
+                  <TableCell className="px-4 py-3 text-foreground">
                     {CURRENCY_FORMATTER.format(Number(payment.amount))}
-                  </td>
-                  <td className="px-4 py-3">
+                  </TableCell>
+                  <TableCell className="px-4 py-3">
                     <SubscriptionPaymentStatusBadge status={payment.status} />
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-muted-foreground">
                     {new Date(payment.created_at).toLocaleDateString("pt-BR")}
-                  </td>
-                  <td className="px-4 py-3 text-right">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-right">
                     {payment.status === "pending" && (
                       <Link
                         href={`/app/assinatura/pagamento/${payment.id}`}
@@ -68,11 +69,11 @@ export default async function BillingHistoryPage() {
                         Ver Pix
                       </Link>
                     )}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       )}
     </div>

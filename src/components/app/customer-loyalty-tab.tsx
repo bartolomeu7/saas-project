@@ -11,6 +11,7 @@ import { EmptyState } from "@/components/app/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDate } from "@/lib/format";
 import type { LoyaltyTransactionSource, LoyaltyTransactionType } from "@/types/loyalty";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 
 const TYPE_LABELS: Record<LoyaltyTransactionType, string> = {
   ganho: "Ganho",
@@ -195,44 +196,44 @@ export async function CustomerLoyaltyTab({
           Últimas movimentações
         </h3>
         <div className="overflow-x-auto rounded-lg border border-border">
-          <table className="w-full min-w-[640px] text-sm">
-            <thead className="bg-secondary/50 text-left text-xs uppercase text-muted-foreground">
-              <tr>
-                <th className="px-4 py-3 font-medium">Data</th>
-                <th className="px-4 py-3 font-medium">Tipo</th>
-                <th className="px-4 py-3 font-medium">Pontos</th>
-                <th className="px-4 py-3 font-medium">Saldo após</th>
-                <th className="px-4 py-3 font-medium">Origem</th>
-                <th className="px-4 py-3 font-medium">Motivo</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
+          <Table className="w-full min-w-[640px] text-sm">
+            <TableHeader className="bg-secondary/50 text-left text-xs uppercase text-muted-foreground">
+              <TableRow>
+                <TableHead className="px-4 py-3 font-medium">Data</TableHead>
+                <TableHead className="px-4 py-3 font-medium">Tipo</TableHead>
+                <TableHead className="px-4 py-3 font-medium">Pontos</TableHead>
+                <TableHead className="px-4 py-3 font-medium">Saldo após</TableHead>
+                <TableHead className="px-4 py-3 font-medium">Origem</TableHead>
+                <TableHead className="px-4 py-3 font-medium">Motivo</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {transactions.map((transaction) => (
-                <tr key={transaction.id}>
-                  <td className="px-4 py-3 text-muted-foreground">
+                <TableRow key={transaction.id}>
+                  <TableCell className="px-4 py-3 text-muted-foreground">
                     {formatDate(transaction.createdAt)}
-                  </td>
-                  <td className="px-4 py-3">
+                  </TableCell>
+                  <TableCell className="px-4 py-3">
                     <TransactionTypeBadge type={transaction.type} />
-                  </td>
-                  <td
+                  </TableCell>
+                  <TableCell
                     className={`px-4 py-3 font-medium ${
                       transaction.points > 0 ? "text-success" : "text-destructive"
                     }`}
                   >
                     {transaction.points > 0 ? `+${transaction.points}` : transaction.points}
-                  </td>
-                  <td className="px-4 py-3 text-foreground">{transaction.balanceAfter}</td>
-                  <td className="px-4 py-3 text-muted-foreground">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-foreground">{transaction.balanceAfter}</TableCell>
+                  <TableCell className="px-4 py-3 text-muted-foreground">
                     {SOURCE_LABELS[transaction.source]}
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-muted-foreground">
                     {transaction.reason ?? "—"}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       </div>
     </div>

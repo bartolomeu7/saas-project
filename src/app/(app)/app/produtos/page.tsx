@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { PageHeader } from "@/components/app/page-header";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getCurrentCompany } from "@/lib/companies/queries";
@@ -71,25 +72,23 @@ export default async function ProductsPage({
 
   return (
     <div className="prime-module-page prime-module-page--produtos flex flex-col gap-6 px-4 py-6 sm:px-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{hints.productsLabel}</h1>
-          <p className="text-sm text-muted-foreground">
-            Cadastre e organize os produtos da sua empresa.
-          </p>
-        </div>
-        <div className="flex shrink-0 flex-wrap gap-2">
-          <Link
-            href="/app/produtos/categorias"
-            className={cn(buttonVariants({ variant: "outline" }))}
-          >
-            Categorias
-          </Link>
-          <Link href="/app/produtos/novo" className={cn(buttonVariants())}>
-            + Novo produto
-          </Link>
-        </div>
-      </div>
+      <PageHeader
+        title={hints.productsLabel}
+        description="Cadastre e organize os produtos da sua empresa."
+        actions={
+          <>
+            <Link
+              href="/app/produtos/categorias"
+              className={cn(buttonVariants({ variant: "outline" }))}
+            >
+              Categorias
+            </Link>
+            <Link href="/app/produtos/novo" className={cn(buttonVariants())}>
+              + Novo produto
+            </Link>
+          </>
+        }
+      />
 
       {!hasAnyProduct ? (
         <EmptyState

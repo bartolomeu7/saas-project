@@ -54,7 +54,7 @@ export function ProductFilters({ categories }: { categories: ProductCategory[] }
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
-        <div className="inline-flex rounded-md border border-border p-1">
+        <div className="inline-flex max-w-full flex-wrap rounded-md border border-border p-1">
           {STATUS_FILTERS.map((filter) => (
             <button
               key={filter.value}

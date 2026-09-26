@@ -1,3 +1,4 @@
+import { MetricCard } from "@/components/app/metric-card";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getCurrentCompany } from "@/lib/companies/queries";
@@ -11,6 +12,7 @@ import { PURCHASE_ORDER_STATUS_LABELS } from "@/types/purchase";
 import { PurchaseReceiveForm } from "@/components/app/purchase-receive-form";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 
 export const metadata: Metadata = { title: "Pedido de compra" };
 
@@ -72,59 +74,45 @@ export default async function PurchaseOrderPage({
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="prime-kpi-card rounded-xl border bg-card p-4">
-          <p className="text-xs text-muted-foreground">Total</p>
-          <p className="mt-1 text-2xl font-semibold">{money(order.total_amount)}</p>
-        </div>
-        <div className="prime-kpi-card rounded-xl border bg-card p-4">
-          <p className="text-xs text-muted-foreground">Saldo a receber</p>
-          <p className="mt-1 text-2xl font-semibold">{remaining}</p>
-        </div>
-        <div className="prime-kpi-card rounded-xl border bg-card p-4">
-          <p className="text-xs text-muted-foreground">Vencimento</p>
-          <p className="mt-1 text-lg font-semibold">{dateOnly(order.due_date)}</p>
-        </div>
-        <div className="prime-kpi-card rounded-xl border bg-card p-4">
-          <p className="text-xs text-muted-foreground">Previsão</p>
-          <p className="mt-1 text-lg font-semibold">
-            {order.expected_at ? dateOnly(order.expected_at) : "Não informado"}
-          </p>
-        </div>
+        <MetricCard label="Total" value={money(order.total_amount)} />
+        <MetricCard label="Saldo a receber" value={remaining} />
+        <MetricCard label="Vencimento" value={dateOnly(order.due_date)} />
+        <MetricCard label="Previsão" value={order.expected_at ? dateOnly(order.expected_at) : "Não informado"} />
       </div>
 
       <section className="overflow-x-auto rounded-xl border bg-card">
         <div className="border-b p-4">
           <h2 className="font-semibold">Itens do pedido</h2>
         </div>
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b text-left text-muted-foreground">
-              <th className="p-3">Produto</th>
-              <th className="p-3">Qtd.</th>
-              <th className="p-3">Recebido</th>
-              <th className="p-3">Custo</th>
-              <th className="p-3 text-right">Total</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table className="w-full text-sm">
+          <TableHeader>
+            <TableRow className="border-b text-left text-muted-foreground">
+              <TableHead className="p-3">Produto</TableHead>
+              <TableHead className="p-3">Qtd.</TableHead>
+              <TableHead className="p-3">Recebido</TableHead>
+              <TableHead className="p-3">Custo</TableHead>
+              <TableHead className="p-3 text-right">Total</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {order.purchase_order_items.map((item) => (
-              <tr key={item.id} className="border-b last:border-0 hover:bg-muted/40">
-                <td className="p-3">
+              <TableRow key={item.id} className="border-b last:border-0 hover:bg-muted/40">
+                <TableCell className="p-3">
                   <p className="font-medium">{item.description}</p>
                   <p className="text-xs text-muted-foreground">
                     Estoque atual: {item.products?.stock_quantity ?? "—"}
                   </p>
-                </td>
-                <td className="p-3">{item.quantity}</td>
-                <td className="p-3">
+                </TableCell>
+                <TableCell className="p-3">{item.quantity}</TableCell>
+                <TableCell className="p-3">
                   {item.received_quantity} / {item.quantity}
-                </td>
-                <td className="p-3">{money(item.unit_cost)}</td>
-                <td className="p-3 text-right font-medium">{money(item.total_amount)}</td>
-              </tr>
+                </TableCell>
+                <TableCell className="p-3">{money(item.unit_cost)}</TableCell>
+                <TableCell className="p-3 text-right font-medium">{money(item.total_amount)}</TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </section>
 
       {order.status !== "received" && order.status !== "cancelled" && (

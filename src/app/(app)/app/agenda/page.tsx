@@ -1,3 +1,4 @@
+import { MetricCard } from "@/components/app/metric-card";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getCurrentCompany } from "@/lib/companies/queries";
@@ -95,10 +96,10 @@ export default async function AgendaPage({
       </div>
 
       <div className="grid gap-3 sm:grid-cols-4">
-        <div className="prime-kpi-card rounded-xl border bg-card p-4"><p className="text-xs text-muted-foreground">Total</p><p className="mt-1 text-xl font-semibold">{stats.total}</p></div>
-        <div className="prime-kpi-card rounded-xl border bg-card p-4"><p className="text-xs text-muted-foreground">Agendados</p><p className="mt-1 text-xl font-semibold">{stats.scheduled}</p></div>
-        <div className="prime-kpi-card rounded-xl border bg-card p-4"><p className="text-xs text-muted-foreground">Confirmados</p><p className="mt-1 text-xl font-semibold">{stats.confirmed}</p></div>
-        <div className="prime-kpi-card rounded-xl border bg-card p-4"><p className="text-xs text-muted-foreground">Concluídos</p><p className="mt-1 text-xl font-semibold">{stats.completed}</p></div>
+        <MetricCard label="Total" value={stats.total} />
+        <MetricCard label="Agendados" value={stats.scheduled} />
+        <MetricCard label="Confirmados" value={stats.confirmed} />
+        <MetricCard label="Concluídos" value={stats.completed} />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[360px_1fr]">

@@ -16,6 +16,7 @@ import { SubmitButton } from "@/components/shared/auth/submit-button";
 import { FormMessage } from "@/components/shared/auth/form-message";
 import { EmptyState } from "@/components/app/empty-state";
 import { ConfirmDialog } from "@/components/app/confirm-dialog";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 
 const initialState: ActionResult = {};
 
@@ -179,30 +180,30 @@ function CampaignRow({ campaign, canEdit }: { campaign: LoyaltyCampaign; canEdit
 
   if (isEditing) {
     return (
-      <tr>
-        <td colSpan={7} className="bg-secondary/30 px-4 py-3">
+      <TableRow>
+        <TableCell colSpan={7} className="bg-secondary/30 px-4 py-3">
           <CampaignForm
             campaign={campaign}
             onCancel={() => setIsEditing(false)}
             onSaved={() => setIsEditing(false)}
           />
-        </td>
-      </tr>
+        </TableCell>
+      </TableRow>
     );
   }
 
   return (
-    <tr>
-      <td className="px-4 py-3 font-medium text-foreground">{campaign.name}</td>
-      <td className="px-4 py-3 text-muted-foreground">
+    <TableRow>
+      <TableCell className="px-4 py-3 font-medium text-foreground">{campaign.name}</TableCell>
+      <TableCell className="px-4 py-3 text-muted-foreground">
         {formatDate(campaign.startsAt)} – {formatDate(campaign.endsAt)}
-      </td>
-      <td className="px-4 py-3 text-foreground">
+      </TableCell>
+      <TableCell className="px-4 py-3 text-foreground">
         {campaign.multiplier === null ? "—" : `${campaign.multiplier}x`}
-      </td>
-      <td className="px-4 py-3 text-foreground">{campaign.bonusPoints ?? "—"}</td>
-      <td className="px-4 py-3 text-muted-foreground">{scopeLabel(campaign)}</td>
-      <td className="px-4 py-3">
+      </TableCell>
+      <TableCell className="px-4 py-3 text-foreground">{campaign.bonusPoints ?? "—"}</TableCell>
+      <TableCell className="px-4 py-3 text-muted-foreground">{scopeLabel(campaign)}</TableCell>
+      <TableCell className="px-4 py-3">
         <span
           className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
             isActive ? "bg-success/10 text-success" : "bg-secondary text-muted-foreground"
@@ -210,9 +211,9 @@ function CampaignRow({ campaign, canEdit }: { campaign: LoyaltyCampaign; canEdit
         >
           {isActive ? "Ativa" : "Inativa"}
         </span>
-      </td>
+      </TableCell>
       {canEdit && (
-        <td className="px-4 py-3">
+        <TableCell className="px-4 py-3">
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -240,9 +241,9 @@ function CampaignRow({ campaign, canEdit }: { campaign: LoyaltyCampaign; canEdit
             />
           </div>
           {toggleError && <p className="mt-1 text-xs text-destructive">{toggleError}</p>}
-        </td>
+        </TableCell>
       )}
-    </tr>
+    </TableRow>
   );
 }
 
@@ -272,24 +273,24 @@ export function LoyaltyCampaignsSection({
         />
       ) : (
         <div className="overflow-x-auto rounded-lg border border-border">
-          <table className="w-full min-w-[760px] text-sm">
-            <thead className="bg-secondary/50 text-left text-xs uppercase text-muted-foreground">
-              <tr>
-                <th className="px-4 py-3 font-medium">Nome</th>
-                <th className="px-4 py-3 font-medium">Período</th>
-                <th className="px-4 py-3 font-medium">Multiplicador</th>
-                <th className="px-4 py-3 font-medium">Bônus</th>
-                <th className="px-4 py-3 font-medium">Escopo</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-                {canEdit && <th className="px-4 py-3 font-medium">Ações</th>}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
+          <Table className="w-full min-w-[760px] text-sm">
+            <TableHeader className="bg-secondary/50 text-left text-xs uppercase text-muted-foreground">
+              <TableRow>
+                <TableHead className="px-4 py-3 font-medium">Nome</TableHead>
+                <TableHead className="px-4 py-3 font-medium">Período</TableHead>
+                <TableHead className="px-4 py-3 font-medium">Multiplicador</TableHead>
+                <TableHead className="px-4 py-3 font-medium">Bônus</TableHead>
+                <TableHead className="px-4 py-3 font-medium">Escopo</TableHead>
+                <TableHead className="px-4 py-3 font-medium">Status</TableHead>
+                {canEdit && <TableHead className="px-4 py-3 font-medium">Ações</TableHead>}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {campaigns.map((campaign) => (
                 <CampaignRow key={campaign.id} campaign={campaign} canEdit={canEdit} />
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       )}
 

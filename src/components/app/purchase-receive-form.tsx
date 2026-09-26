@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SubmitButton } from "@/components/shared/auth/submit-button";
 import { FormMessage } from "@/components/shared/auth/form-message";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 
 const initialState: ActionResult = {};
 
@@ -49,24 +50,24 @@ export function PurchaseReceiveForm({
       <input type="hidden" name="items" value={payload} />
 
       <div className="overflow-x-auto rounded-lg border">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b bg-muted/20 text-left">
-              <th className="p-3">Produto</th>
-              <th className="p-3">Pedido</th>
-              <th className="p-3">Recebido</th>
-              <th className="p-3">Saldo</th>
-              <th className="p-3">Receber agora</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table className="w-full text-sm">
+          <TableHeader>
+            <TableRow className="border-b bg-muted/20 text-left">
+              <TableHead className="p-3">Produto</TableHead>
+              <TableHead className="p-3">Pedido</TableHead>
+              <TableHead className="p-3">Recebido</TableHead>
+              <TableHead className="p-3">Saldo</TableHead>
+              <TableHead className="p-3">Receber agora</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {receivableItems.map((item) => (
-              <tr key={item.id} className="border-b last:border-0">
-                <td className="p-3 font-medium">{item.description}</td>
-                <td className="p-3">{item.quantity}</td>
-                <td className="p-3">{item.received_quantity}</td>
-                <td className="p-3">{item.quantity - item.received_quantity}</td>
-                <td className="p-3">
+              <TableRow key={item.id} className="border-b last:border-0">
+                <TableCell className="p-3 font-medium">{item.description}</TableCell>
+                <TableCell className="p-3">{item.quantity}</TableCell>
+                <TableCell className="p-3">{item.received_quantity}</TableCell>
+                <TableCell className="p-3">{item.quantity - item.received_quantity}</TableCell>
+                <TableCell className="p-3">
                   <Input
                     type="number"
                     step="0.001"
@@ -79,11 +80,11 @@ export function PurchaseReceiveForm({
                       }))
                     }
                   />
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       <div className="flex flex-col gap-2">

@@ -3227,3 +3227,15 @@
     }
   }
 }
+
+/* shadcn/ui (Radix + tailwindcss-animate): sem animações de entrada/saída para quem prefere menos movimento. */
+@media (prefers-reduced-motion: reduce) {
+  [data-state],
+  [data-sidebar],
+  .animate-in,
+  .animate-out {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

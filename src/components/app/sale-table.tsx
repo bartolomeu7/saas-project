@@ -5,6 +5,7 @@ import { SaleStatusBadge } from "@/components/app/sale-status-badge";
 import { SalePaymentStatusBadge } from "@/components/app/sale-payment-status-badge";
 import { CancelSaleButton } from "@/components/app/cancel-sale-button";
 import { formatDate } from "@/lib/format";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 
 function formatMoney(value: number): string {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -32,38 +33,38 @@ export function SaleTable({
 }) {
   return (
     <div className="overflow-x-auto rounded-lg border border-border">
-      <table className="w-full min-w-[900px] text-sm">
-        <thead className="bg-secondary/50 text-left text-xs uppercase text-muted-foreground">
-          <tr>
-            <th className="px-4 py-3 font-medium">Número</th>
-            <th className="px-4 py-3 font-medium">Cliente</th>
-            <th className="px-4 py-3 font-medium">Data</th>
-            <th className="px-4 py-3 font-medium">Itens</th>
-            <th className="px-4 py-3 font-medium">Total</th>
-            <th className="px-4 py-3 font-medium">Pagamento</th>
-            <th className="px-4 py-3 font-medium">Status</th>
-            <th className="px-4 py-3 font-medium">Responsável</th>
-            <th className="px-4 py-3 font-medium">Ações</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-border">
+      <Table className="w-full min-w-[900px] text-sm">
+        <TableHeader className="bg-secondary/50 text-left text-xs uppercase text-muted-foreground">
+          <TableRow>
+            <TableHead className="px-4 py-3 font-medium">Número</TableHead>
+            <TableHead className="px-4 py-3 font-medium">Cliente</TableHead>
+            <TableHead className="px-4 py-3 font-medium">Data</TableHead>
+            <TableHead className="px-4 py-3 font-medium">Itens</TableHead>
+            <TableHead className="px-4 py-3 font-medium">Total</TableHead>
+            <TableHead className="px-4 py-3 font-medium">Pagamento</TableHead>
+            <TableHead className="px-4 py-3 font-medium">Status</TableHead>
+            <TableHead className="px-4 py-3 font-medium">Responsável</TableHead>
+            <TableHead className="px-4 py-3 font-medium">Ações</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {sales.map((sale) => (
-            <tr key={sale.id} className="hover:bg-secondary/30">
-              <td className="px-4 py-3 font-medium text-foreground">{saleNumber(sale.id)}</td>
-              <td className="px-4 py-3 text-muted-foreground">
+            <TableRow key={sale.id} className="hover:bg-secondary/30">
+              <TableCell className="px-4 py-3 font-medium text-foreground">{saleNumber(sale.id)}</TableCell>
+              <TableCell className="px-4 py-3 text-muted-foreground">
                 {sale.customer_name ?? "Sem cliente"}
-              </td>
-              <td className="px-4 py-3 text-muted-foreground">{formatDate(sale.sold_at)}</td>
-              <td className="px-4 py-3 text-muted-foreground">{sale.item_count ?? 0}</td>
-              <td className="px-4 py-3 text-foreground">{formatMoney(sale.total_amount)}</td>
-              <td className="px-4 py-3">
+              </TableCell>
+              <TableCell className="px-4 py-3 text-muted-foreground">{formatDate(sale.sold_at)}</TableCell>
+              <TableCell className="px-4 py-3 text-muted-foreground">{sale.item_count ?? 0}</TableCell>
+              <TableCell className="px-4 py-3 text-foreground">{formatMoney(sale.total_amount)}</TableCell>
+              <TableCell className="px-4 py-3">
                 <SalePaymentStatusBadge status={sale.payment_status} />
-              </td>
-              <td className="px-4 py-3">
+              </TableCell>
+              <TableCell className="px-4 py-3">
                 <SaleStatusBadge status={sale.status} />
-              </td>
-              <td className="px-4 py-3 text-muted-foreground">{sale.user_name ?? "—"}</td>
-              <td className="px-4 py-3">
+              </TableCell>
+              <TableCell className="px-4 py-3 text-muted-foreground">{sale.user_name ?? "—"}</TableCell>
+              <TableCell className="px-4 py-3">
                 <div className="flex items-center gap-3">
                   <Link
                     href={`/app/vendas/${sale.id}`}
@@ -75,11 +76,11 @@ export function SaleTable({
                     <CancelSaleButton saleId={sale.id} />
                   )}
                 </div>
-              </td>
-            </tr>
+              </TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { MetricCard } from "@/components/app/metric-card";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getCurrentCompany } from "@/lib/companies/queries";
@@ -11,6 +12,7 @@ import {
 } from "@/components/app/finance-action-forms";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 
 export const metadata: Metadata = { title: "Financeiro" };
 
@@ -37,11 +39,7 @@ type SearchParams = Record<string, string | string[] | undefined>;
 
 function Kpi({ label, value, detail }: { label: string; value: string; detail?: string }) {
   return (
-    <div className="prime-kpi-card rounded-xl border bg-card p-4">
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="mt-1 text-xl font-semibold tracking-tight">{value}</p>
-      {detail ? <p className="mt-1 text-xs text-muted-foreground">{detail}</p> : null}
-    </div>
+    <MetricCard label={label} value={value} detail={detail} />
   );
 }
 
@@ -120,42 +118,42 @@ export default async function FinancePage({ searchParams }: { searchParams?: Sea
         )}
 
         <div className="overflow-x-auto rounded-xl border bg-card">
-          <table className="w-full min-w-[900px] text-sm">
-            <thead>
-              <tr className="border-b text-left text-muted-foreground">
-                <th className="p-3">Descrição</th>
-                <th className="p-3">Fornecedor</th>
-                <th className="p-3">Vencimento</th>
-                <th className="p-3 text-right">Total</th>
-                <th className="p-3 text-right">Saldo</th>
-                <th className="p-3">Pagamento</th>
-              </tr>
-            </thead>
-            <tbody>
+          <Table className="w-full min-w-[900px] text-sm">
+            <TableHeader>
+              <TableRow className="border-b text-left text-muted-foreground">
+                <TableHead className="p-3">Descrição</TableHead>
+                <TableHead className="p-3">Fornecedor</TableHead>
+                <TableHead className="p-3">Vencimento</TableHead>
+                <TableHead className="p-3 text-right">Total</TableHead>
+                <TableHead className="p-3 text-right">Saldo</TableHead>
+                <TableHead className="p-3">Pagamento</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {payables.map((payable) => {
                 const balance = Math.max(0, Number(payable.amount) - Number(payable.paid_amount));
                 return (
-                  <tr key={payable.id} className="border-b align-top last:border-0 hover:bg-muted/30">
-                    <td className="p-3">
+                  <TableRow key={payable.id} className="border-b align-top last:border-0 hover:bg-muted/30">
+                    <TableCell className="p-3">
                       <div className="font-medium">{payable.description}</div>
                       <div className="text-xs text-muted-foreground">{payable.status}</div>
-                    </td>
-                    <td className="p-3">{(payable as typeof payable & { suppliers?: { name: string } | null }).suppliers?.name ?? "—"}</td>
-                    <td className="p-3">{dateOnly(payable.due_date)}</td>
-                    <td className="p-3 text-right">{money(Number(payable.amount))}</td>
-                    <td className="p-3 text-right font-semibold">{money(balance)}</td>
-                    <td className="p-3">
+                    </TableCell>
+                    <TableCell className="p-3">{(payable as typeof payable & { suppliers?: { name: string } | null }).suppliers?.name ?? "—"}</TableCell>
+                    <TableCell className="p-3">{dateOnly(payable.due_date)}</TableCell>
+                    <TableCell className="p-3 text-right">{money(Number(payable.amount))}</TableCell>
+                    <TableCell className="p-3 text-right font-semibold">{money(balance)}</TableCell>
+                    <TableCell className="p-3">
                       {canOperate ? (
                         <AccountsPayablePaymentForm payableId={payable.id} balance={balance} />
                       ) : (
                         <span className="text-xs text-muted-foreground">Somente leitura</span>
                       )}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 );
               })}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
           {!payables.length && <div className="p-10 text-center text-sm text-muted-foreground">Nenhuma conta a pagar em aberto.</div>}
         </div>
       </PageShell>
@@ -178,38 +176,38 @@ export default async function FinancePage({ searchParams }: { searchParams?: Sea
         )}
 
         <div className="overflow-x-auto rounded-xl border bg-card">
-          <table className="w-full min-w-[850px] text-sm">
-            <thead>
-              <tr className="border-b text-left text-muted-foreground">
-                <th className="p-3">Venda</th>
-                <th className="p-3">Cliente</th>
-                <th className="p-3">Data</th>
-                <th className="p-3 text-right">Total</th>
-                <th className="p-3 text-right">Recebido</th>
-                <th className="p-3 text-right">Saldo</th>
-                <th className="p-3">Receber</th>
-              </tr>
-            </thead>
-            <tbody>
+          <Table className="w-full min-w-[850px] text-sm">
+            <TableHeader>
+              <TableRow className="border-b text-left text-muted-foreground">
+                <TableHead className="p-3">Venda</TableHead>
+                <TableHead className="p-3">Cliente</TableHead>
+                <TableHead className="p-3">Data</TableHead>
+                <TableHead className="p-3 text-right">Total</TableHead>
+                <TableHead className="p-3 text-right">Recebido</TableHead>
+                <TableHead className="p-3 text-right">Saldo</TableHead>
+                <TableHead className="p-3">Receber</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {receivables.map((row) => (
-                <tr key={row.sale_id} className="border-b align-top last:border-0 hover:bg-muted/30">
-                  <td className="p-3"><Link href={"/app/vendas/" + row.sale_id} className="font-medium hover:underline">{row.sale_id.slice(0, 8).toUpperCase()}</Link></td>
-                  <td className="p-3">{row.customer_name ?? "Consumidor"}</td>
-                  <td className="p-3">{dateOnly(row.sold_at)}</td>
-                  <td className="p-3 text-right">{money(row.total_amount)}</td>
-                  <td className="p-3 text-right">{money(row.paid_amount)}</td>
-                  <td className="p-3 text-right font-semibold">{money(row.outstanding_amount)}</td>
-                  <td className="p-3">
+                <TableRow key={row.sale_id} className="border-b align-top last:border-0 hover:bg-muted/30">
+                  <TableCell className="p-3"><Link href={"/app/vendas/" + row.sale_id} className="font-medium hover:underline">{row.sale_id.slice(0, 8).toUpperCase()}</Link></TableCell>
+                  <TableCell className="p-3">{row.customer_name ?? "Consumidor"}</TableCell>
+                  <TableCell className="p-3">{dateOnly(row.sold_at)}</TableCell>
+                  <TableCell className="p-3 text-right">{money(row.total_amount)}</TableCell>
+                  <TableCell className="p-3 text-right">{money(row.paid_amount)}</TableCell>
+                  <TableCell className="p-3 text-right font-semibold">{money(row.outstanding_amount)}</TableCell>
+                  <TableCell className="p-3">
                     {canOperate ? (
                       <SalePaymentForm saleId={row.sale_id} balance={row.outstanding_amount} />
                     ) : (
                       <span className="text-xs text-muted-foreground">Somente leitura</span>
                     )}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
           {!receivables.length && <div className="p-10 text-center text-sm text-muted-foreground">Nenhum recebível pendente.</div>}
         </div>
       </PageShell>
@@ -234,21 +232,21 @@ export default async function FinancePage({ searchParams }: { searchParams?: Sea
 
           <div className="overflow-x-auto rounded-xl border bg-card">
             <div className="border-b p-4"><h2 className="font-semibold">Últimos lançamentos</h2></div>
-            <table className="w-full text-sm">
-              <thead><tr className="border-b text-left text-muted-foreground"><th className="p-3">Data</th><th className="p-3">Descrição</th><th className="p-3">Tipo</th><th className="p-3 text-right">Valor</th></tr></thead>
-              <tbody>
+            <Table className="w-full text-sm">
+              <TableHeader><TableRow className="border-b text-left text-muted-foreground"><TableHead className="p-3">Data</TableHead><TableHead className="p-3">Descrição</TableHead><TableHead className="p-3">Tipo</TableHead><TableHead className="p-3 text-right">Valor</TableHead></TableRow></TableHeader>
+              <TableBody>
                 {entries.map((entry) => (
-                  <tr key={entry.id} className="border-b last:border-0">
-                    <td className="p-3">{dateOnly(entry.occurred_on)}</td>
-                    <td className="p-3"><div>{entry.description}</div><div className="text-xs text-muted-foreground">{entry.category_id ? "Categorizado" : "Sem categoria"}</div></td>
-                    <td className="p-3">{directionLabels[entry.direction]}</td>
-                    <td className={cn("p-3 text-right font-semibold", entry.direction === "income" ? "text-emerald-500" : "text-rose-500")}>
+                  <TableRow key={entry.id} className="border-b last:border-0">
+                    <TableCell className="p-3">{dateOnly(entry.occurred_on)}</TableCell>
+                    <TableCell className="p-3"><div>{entry.description}</div><div className="text-xs text-muted-foreground">{entry.category_id ? "Categorizado" : "Sem categoria"}</div></TableCell>
+                    <TableCell className="p-3">{directionLabels[entry.direction]}</TableCell>
+                    <TableCell className={cn("p-3 text-right font-semibold", entry.direction === "income" ? "text-emerald-500" : "text-rose-500")}>
                       {entry.direction === "expense" ? "−" : "+"}{money(Number(entry.amount))}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         </div>
       </PageShell>
@@ -337,21 +335,21 @@ export default async function FinancePage({ searchParams }: { searchParams?: Sea
           <Link href="/app/financeiro?view=lancamentos" className="text-sm font-medium text-primary hover:underline">Ver lançamentos</Link>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[680px] text-sm">
-            <thead><tr className="border-b text-left text-muted-foreground"><th className="p-3">Data</th><th className="p-3">Descrição</th><th className="p-3">Forma</th><th className="p-3 text-right">Valor</th></tr></thead>
-            <tbody>
+          <Table className="w-full min-w-[680px] text-sm">
+            <TableHeader><TableRow className="border-b text-left text-muted-foreground"><TableHead className="p-3">Data</TableHead><TableHead className="p-3">Descrição</TableHead><TableHead className="p-3">Forma</TableHead><TableHead className="p-3 text-right">Valor</TableHead></TableRow></TableHeader>
+            <TableBody>
               {entries.slice(0, 8).map((entry) => (
-                <tr key={entry.id} className="border-b last:border-0 hover:bg-muted/30">
-                  <td className="p-3">{dateOnly(entry.occurred_on)}</td>
-                  <td className="p-3">{entry.description}</td>
-                  <td className="p-3">{entry.method ? paymentLabels[entry.method] ?? entry.method : "—"}</td>
-                  <td className={cn("p-3 text-right font-semibold", entry.direction === "income" ? "text-emerald-500" : "text-rose-500")}>
+                <TableRow key={entry.id} className="border-b last:border-0 hover:bg-muted/30">
+                  <TableCell className="p-3">{dateOnly(entry.occurred_on)}</TableCell>
+                  <TableCell className="p-3">{entry.description}</TableCell>
+                  <TableCell className="p-3">{entry.method ? paymentLabels[entry.method] ?? entry.method : "—"}</TableCell>
+                  <TableCell className={cn("p-3 text-right font-semibold", entry.direction === "income" ? "text-emerald-500" : "text-rose-500")}>
                     {entry.direction === "expense" ? "−" : "+"}{money(Number(entry.amount))}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
           {!entries.length && <div className="p-10 text-center text-sm text-muted-foreground">Ainda não há movimentos financeiros. Conclua uma venda paga ou registre uma despesa.</div>}
         </div>
       </section>

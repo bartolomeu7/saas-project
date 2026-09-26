@@ -40,7 +40,7 @@ export function CancelSaleButton({ saleId }: { saleId: string }) {
       <DialogTrigger asChild>
         <button
           type="button"
-          className="text-sm font-medium text-destructive underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="whitespace-nowrap text-sm font-medium text-destructive underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           Cancelar venda
         </button>

@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 import type { ProductStatus } from "@/types/product";
 
 const LABELS: Record<ProductStatus, string> = {
@@ -7,16 +7,5 @@ const LABELS: Record<ProductStatus, string> = {
 };
 
 export function ProductStatusBadge({ status }: { status: ProductStatus }) {
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
-        status === "active"
-          ? "bg-success/10 text-success"
-          : "bg-muted text-muted-foreground"
-      )}
-    >
-      {LABELS[status]}
-    </span>
-  );
+  return <Badge variant={status === "active" ? "success" : "muted"}>{LABELS[status]}</Badge>;
 }
