@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { SubmitButton } from "@/components/shared/auth/submit-button";
 import { FormMessage } from "@/components/shared/auth/form-message";
 import { cn } from "@/lib/utils";
+import { NativeSelect } from "@/components/ui/native-select";
 
 const initialState: ActionResult = {};
 
@@ -28,7 +29,7 @@ interface ProductFormProps {
   /**
    * Nome da categoria atual do produto, mesmo que ela já tenha sido
    * desativada (e por isso não apareça em `categories`, que só lista
-   * ativas). Sem isso, o `<select>` não teria nenhuma opção
+   * ativas). Sem isso, o `<NativeSelect>` não teria nenhuma opção
    * correspondente ao `category_id` atual, o navegador cairia para a
    * primeira opção ("Sem categoria") e salvar sem tocar o campo apagaria
    * a categoria do produto silenciosamente.
@@ -83,7 +84,7 @@ export function ProductForm({
           </div>
           <div className="flex flex-col gap-2">
             <Label htmlFor="categoryId">Categoria</Label>
-            <select
+            <NativeSelect
               id="categoryId"
               name="categoryId"
               defaultValue={defaultValues?.category_id ?? ""}
@@ -100,11 +101,11 @@ export function ProductForm({
                   {category.name}
                 </option>
               ))}
-            </select>
+            </NativeSelect>
           </div>
           <div className="flex flex-col gap-2">
             <Label htmlFor="status">Status</Label>
-            <select
+            <NativeSelect
               id="status"
               name="status"
               defaultValue={defaultValues?.status ?? "active"}
@@ -112,7 +113,7 @@ export function ProductForm({
             >
               <option value="active">Ativo</option>
               <option value="inactive">Inativo</option>
-            </select>
+            </NativeSelect>
           </div>
           <div className="flex flex-col gap-2 sm:col-span-2">
             <Label htmlFor="description">Descrição</Label>
@@ -152,7 +153,7 @@ export function ProductForm({
           </div>
           <div className="flex flex-col gap-2">
             <Label htmlFor="unit">Unidade</Label>
-            <select
+            <NativeSelect
               id="unit"
               name="unit"
               defaultValue={defaultValues?.unit ?? "un"}
@@ -163,7 +164,7 @@ export function ProductForm({
                   {unit} — {PRODUCT_UNIT_LABELS[unit]}
                 </option>
               ))}
-            </select>
+            </NativeSelect>
           </div>
         </div>
       </section>

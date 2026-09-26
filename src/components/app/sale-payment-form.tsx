@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SubmitButton } from "@/components/shared/auth/submit-button";
 import { FormMessage } from "@/components/shared/auth/form-message";
+import { NativeSelect } from "@/components/ui/native-select";
 
 const initialState: ActionResult = {};
 
@@ -23,7 +24,7 @@ export function SalePaymentForm({ saleId }: { saleId: string }) {
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="method">Forma de pagamento</Label>
-          <select
+          <NativeSelect
             id="method"
             name="method"
             defaultValue="pix"
@@ -34,7 +35,7 @@ export function SalePaymentForm({ saleId }: { saleId: string }) {
                 {SALE_PAYMENT_METHOD_LABELS[method]}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="amount">Valor</Label>

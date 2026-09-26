@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { SubmitButton } from "@/components/shared/auth/submit-button";
 import { FormMessage } from "@/components/shared/auth/form-message";
+import { NativeSelect } from "@/components/ui/native-select";
 
 const initialState: ActionResult = {};
 const MAX_PREFERENCES = 10;
@@ -79,7 +80,7 @@ export function CustomerForm({
           </div>
           <div className="flex flex-col gap-2">
             <Label htmlFor="status">Status</Label>
-            <select
+            <NativeSelect
               id="status"
               name="status"
               defaultValue={defaultValues?.status ?? "active"}
@@ -87,7 +88,7 @@ export function CustomerForm({
             >
               <option value="active">Ativo</option>
               <option value="inactive">Inativo</option>
-            </select>
+            </NativeSelect>
           </div>
         </div>
       </section>

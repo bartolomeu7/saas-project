@@ -17,6 +17,7 @@ import { FormMessage } from "@/components/shared/auth/form-message";
 import { EmptyState } from "@/components/app/empty-state";
 import { ConfirmDialog } from "@/components/app/confirm-dialog";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { NativeSelect } from "@/components/ui/native-select";
 
 const initialState: ActionResult = {};
 
@@ -124,7 +125,7 @@ function CampaignForm({
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="campaign-status">Status</Label>
-          <select
+          <NativeSelect
             id="campaign-status"
             name="status"
             defaultValue={campaign?.status ?? "active"}
@@ -132,7 +133,7 @@ function CampaignForm({
           >
             <option value="active">Ativa</option>
             <option value="inactive">Inativa</option>
-          </select>
+          </NativeSelect>
         </div>
       </div>
 

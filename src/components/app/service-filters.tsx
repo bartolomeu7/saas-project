@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { ServiceCategory } from "@/types/service";
+import { NativeSelect } from "@/components/ui/native-select";
 
 const STATUS_FILTERS: { label: string; value: "all" | "active" | "inactive" }[] = [
   { label: "Todos", value: "all" },
@@ -100,7 +101,7 @@ export function ServiceFilters({ categories }: { categories: ServiceCategory[] }
           ))}
         </div>
 
-        <select
+        <NativeSelect
           value={category}
           onChange={(event) => updateParam("category", event.target.value)}
           className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -111,9 +112,9 @@ export function ServiceFilters({ categories }: { categories: ServiceCategory[] }
               {cat.name}
             </option>
           ))}
-        </select>
+        </NativeSelect>
 
-        <select
+        <NativeSelect
           value={sort}
           onChange={(event) => updateParam("sort", event.target.value)}
           className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -123,7 +124,7 @@ export function ServiceFilters({ categories }: { categories: ServiceCategory[] }
               Ordenar por {option.label.toLowerCase()}
             </option>
           ))}
-        </select>
+        </NativeSelect>
 
         {isPending && (
           <span className="text-xs text-muted-foreground">Atualizando...</span>

@@ -18,7 +18,7 @@ const badgeVariants = cva(
         /* Tons semânticos "soft" usados para status (venda, pagamento, estoque...). */
         success: "border-success/25 bg-success/10 text-success",
         warning: "border-warning/25 bg-warning/10 text-warning",
-        info: "border-primary/25 bg-primary/10 text-primary",
+        info: "border-primary/25 bg-primary/10 text-[hsl(207_100%_68%)]",
         muted: "border-border bg-secondary text-muted-foreground",
         danger: "border-destructive/25 bg-destructive/10 text-destructive",
       },

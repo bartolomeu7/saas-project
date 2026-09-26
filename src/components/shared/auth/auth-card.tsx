@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { BarChart3, Boxes, ShoppingCart, Users, Wallet } from "lucide-react";
 import { Logo } from "@/components/shared/logo";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 
 /** Capacidades reais do produto (ver módulos em /app) mostradas no painel lateral. */
 const HIGHLIGHTS = [
@@ -43,7 +43,7 @@ export function AuthCard({
           <div className="w-full max-w-sm animate-in fade-in slide-in-from-bottom-2 duration-500 motion-reduce:animate-none">
             <Card className="border-border bg-card/80 shadow-card backdrop-blur">
               <CardHeader className="space-y-1.5">
-                <CardTitle className="text-xl tracking-tight">{title}</CardTitle>
+                <h1 className="text-xl font-semibold leading-none tracking-tight">{title}</h1>
                 {description && <CardDescription>{description}</CardDescription>}
               </CardHeader>
               <CardContent>{children}</CardContent>

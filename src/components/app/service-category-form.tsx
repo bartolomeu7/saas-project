@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SubmitButton } from "@/components/shared/auth/submit-button";
 import { FormMessage } from "@/components/shared/auth/form-message";
+import { NativeSelect } from "@/components/ui/native-select";
 
 const initialState: ActionResult = {};
 
@@ -43,7 +44,7 @@ export function ServiceCategoryForm({
 
       <div className="flex flex-col gap-2 sm:w-48">
         <Label htmlFor="status">Status</Label>
-        <select
+        <NativeSelect
           id="status"
           name="status"
           defaultValue={defaultValues?.status ?? "active"}
@@ -51,7 +52,7 @@ export function ServiceCategoryForm({
         >
           <option value="active">Ativo</option>
           <option value="inactive">Inativo</option>
-        </select>
+        </NativeSelect>
       </div>
 
       <SubmitButton state={state} pendingLabel="Salvando..." className="w-full sm:w-fit">

@@ -11,6 +11,7 @@ import {
 import type { Appointment } from "@/types/appointment";
 import { FormMessage } from "@/components/shared/auth/form-message";
 import { SubmitButton } from "@/components/shared/auth/submit-button";
+import { NativeSelect } from "@/components/ui/native-select";
 
 const initialState: ActionResult = {};
 
@@ -41,7 +42,7 @@ export function AppointmentForm({
       <input type="hidden" name="price" value={price} />
       <label className="grid gap-1 text-sm">
         Serviço
-        <select
+        <NativeSelect
           name="serviceId"
           value={serviceId}
           onChange={(event) => setServiceId(event.target.value)}
@@ -50,21 +51,21 @@ export function AppointmentForm({
         >
           <option value="">Selecione...</option>
           {services.map((row) => <option key={row.id} value={row.id}>{row.name}</option>)}
-        </select>
+        </NativeSelect>
       </label>
       <label className="grid gap-1 text-sm">
         Cliente
-        <select name="customerId" className="h-10 rounded-md border bg-background px-3">
+        <NativeSelect name="customerId" className="h-10 rounded-md border bg-background px-3">
           <option value="">Sem cliente definido</option>
           {customers.map((row) => <option key={row.id} value={row.id}>{row.name}</option>)}
-        </select>
+        </NativeSelect>
       </label>
       <label className="grid gap-1 text-sm">
         Profissional
-        <select name="professionalId" className="h-10 rounded-md border bg-background px-3">
+        <NativeSelect name="professionalId" className="h-10 rounded-md border bg-background px-3">
           <option value="">Sem profissional definido</option>
           {professionals.map((row) => <option key={row.id} value={row.id}>{row.display_name}</option>)}
-        </select>
+        </NativeSelect>
       </label>
       <label className="grid gap-1 text-sm">
         Horário

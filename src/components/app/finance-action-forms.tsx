@@ -14,6 +14,7 @@ import type { CostCenter, FinancialCategory } from "@/types/finance";
 import { Button } from "@/components/ui/button";
 import { FormMessage } from "@/components/shared/auth/form-message";
 import { SubmitButton } from "@/components/shared/auth/submit-button";
+import { NativeSelect } from "@/components/ui/native-select";
 
 const initialState: ActionResult = {};
 
@@ -48,7 +49,7 @@ export function AccountsPayablePaymentForm({
         className="h-9 rounded-md border bg-background px-2 text-sm"
         aria-label="Valor do pagamento"
       />
-      <select
+      <NativeSelect
         name="method"
         defaultValue="pix"
         className="h-9 rounded-md border bg-background px-2 text-sm"
@@ -57,7 +58,7 @@ export function AccountsPayablePaymentForm({
         {Object.entries(paymentLabels).map(([key, label]) => (
           <option key={key} value={key}>{label}</option>
         ))}
-      </select>
+      </NativeSelect>
       <input
         name="paymentDate"
         type="date"
@@ -92,7 +93,7 @@ export function SalePaymentForm({
         className="h-9 rounded-md border bg-background px-2 text-sm"
         aria-label="Valor recebido"
       />
-      <select
+      <NativeSelect
         name="method"
         defaultValue="pix"
         className="h-9 rounded-md border bg-background px-2 text-sm"
@@ -101,7 +102,7 @@ export function SalePaymentForm({
         {Object.entries(paymentLabels).map(([key, label]) => (
           <option key={key} value={key}>{label}</option>
         ))}
-      </select>
+      </NativeSelect>
       <SubmitButton state={state} pendingLabel="Recebendo..." className="w-auto">
         Receber
       </SubmitButton>
@@ -128,7 +129,7 @@ export function FinancialEntryForm({
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="grid gap-1 text-sm">
           Tipo
-          <select
+          <NativeSelect
             name="direction"
             value={direction}
             onChange={(event) => setDirection(event.target.value as "income" | "expense")}
@@ -136,7 +137,7 @@ export function FinancialEntryForm({
           >
             <option value="expense">Despesa</option>
             <option value="income">Receita</option>
-          </select>
+          </NativeSelect>
         </label>
         <label className="grid gap-1 text-sm">
           Valor
@@ -172,29 +173,29 @@ export function FinancialEntryForm({
         </label>
         <label className="grid gap-1 text-sm">
           Forma
-          <select name="method" defaultValue="pix" className="h-10 rounded-md border bg-background px-3">
+          <NativeSelect name="method" defaultValue="pix" className="h-10 rounded-md border bg-background px-3">
             {Object.entries(paymentLabels).map(([key, label]) => (
               <option key={key} value={key}>{label}</option>
             ))}
-          </select>
+          </NativeSelect>
         </label>
         <label className="grid gap-1 text-sm">
           Categoria
-          <select name="categoryId" className="h-10 rounded-md border bg-background px-3">
+          <NativeSelect name="categoryId" className="h-10 rounded-md border bg-background px-3">
             {availableCategories.map((category) => (
               <option key={category.id} value={category.id}>{category.name}</option>
             ))}
-          </select>
+          </NativeSelect>
         </label>
       </div>
 
       <label className="grid gap-1 text-sm">
         Centro de custo
-        <select name="costCenterId" className="h-10 rounded-md border bg-background px-3">
+        <NativeSelect name="costCenterId" className="h-10 rounded-md border bg-background px-3">
           {costCenters.map((center) => (
             <option key={center.id} value={center.id}>{center.name}</option>
           ))}
-        </select>
+        </NativeSelect>
       </label>
 
       <label className="grid gap-1 text-sm">
@@ -220,10 +221,10 @@ export function FinancialCategoryForm() {
         className="h-10 rounded-md border bg-background px-3"
         required
       />
-      <select name="kind" defaultValue="expense" className="h-10 rounded-md border bg-background px-3">
+      <NativeSelect name="kind" defaultValue="expense" className="h-10 rounded-md border bg-background px-3">
         <option value="expense">Despesa</option>
         <option value="income">Receita</option>
-      </select>
+      </NativeSelect>
       <SubmitButton state={state} pendingLabel="Salvando..." className="w-auto">
         Adicionar
       </SubmitButton>

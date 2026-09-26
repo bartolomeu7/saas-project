@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SubmitButton } from "@/components/shared/auth/submit-button";
 import { FormMessage } from "@/components/shared/auth/form-message";
+import { NativeSelect } from "@/components/ui/native-select";
 
 type DraftItem = { productId: string; quantity: string; unitCost: string };
 const initialState: ActionResult = {};
@@ -82,7 +83,7 @@ export function PurchaseOrderForm({
       <section className="grid grid-cols-1 gap-4 rounded-xl border bg-card p-4 sm:grid-cols-2">
         <div className="flex flex-col gap-2">
           <Label htmlFor="supplierId">Fornecedor *</Label>
-          <select
+          <NativeSelect
             id="supplierId"
             name="supplierId"
             required
@@ -94,7 +95,7 @@ export function PurchaseOrderForm({
                 {supplier.name}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="expectedAt">Previsão de recebimento</Label>
@@ -145,7 +146,7 @@ export function PurchaseOrderForm({
             >
               <div className="flex flex-col gap-2">
                 <Label>Produto</Label>
-                <select
+                <NativeSelect
                   value={item.productId}
                   onChange={(event) =>
                     selectProduct(index, event.target.value)
@@ -158,7 +159,7 @@ export function PurchaseOrderForm({
                       {product.name} — estoque {product.stock_quantity}
                     </option>
                   ))}
-                </select>
+                </NativeSelect>
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Quantidade</Label>

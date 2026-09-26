@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SubmitButton } from "@/components/shared/auth/submit-button";
 import { FormMessage } from "@/components/shared/auth/form-message";
+import { NativeSelect } from "@/components/ui/native-select";
 
 const initialState: ActionResult = {};
 
@@ -279,14 +280,14 @@ export function LoyaltySettingsForm({
         </div>
         <div className="flex flex-col gap-1.5 sm:max-w-xs">
           <Label htmlFor="grantOn">Conceder pontos</Label>
-          <select
+          <NativeSelect
             id="grantOn"
             disabled
             defaultValue="completion"
             className="flex h-10 w-full rounded-md border border-input bg-secondary/50 px-3 py-2 text-sm text-muted-foreground disabled:cursor-not-allowed"
           >
             <option value="completion">Na conclusão da venda</option>
-          </select>
+          </NativeSelect>
           <FieldHint>
             Conceder somente após o pagamento total ainda não está disponível nesta versão.
           </FieldHint>

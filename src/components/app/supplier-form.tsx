@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SubmitButton } from "@/components/shared/auth/submit-button";
 import { FormMessage } from "@/components/shared/auth/form-message";
+import { NativeSelect } from "@/components/ui/native-select";
 
 const initialState: ActionResult = {};
 
@@ -34,7 +35,7 @@ export function SupplierForm({ action, defaultValues, submitLabel }: {
         <div className="flex flex-col gap-2"><Label htmlFor="city">Cidade</Label><Input id="city" name="city" defaultValue={field("city")} /></div>
         <div className="flex flex-col gap-2"><Label htmlFor="state">UF</Label><Input id="state" name="state" maxLength={2} defaultValue={field("state")} /></div>
         <div className="flex flex-col gap-2"><Label htmlFor="postal_code">CEP</Label><Input id="postal_code" name="postal_code" defaultValue={field("postal_code")} /></div>
-        <div className="flex flex-col gap-2"><Label htmlFor="status">Status</Label><select id="status" name="status" defaultValue={field("status") || "active"} className="h-10 rounded-md border border-input bg-background px-3 text-sm"><option value="active">Ativo</option><option value="inactive">Inativo</option></select></div>
+        <div className="flex flex-col gap-2"><Label htmlFor="status">Status</Label><NativeSelect id="status" name="status" defaultValue={field("status") || "active"} className="h-10 rounded-md border border-input bg-background px-3 text-sm"><option value="active">Ativo</option><option value="inactive">Inativo</option></NativeSelect></div>
         <div className="flex flex-col gap-2 sm:col-span-2"><Label htmlFor="notes">Observações</Label><textarea id="notes" name="notes" rows={3} defaultValue={field("notes")} className="rounded-md border border-input bg-background px-3 py-2 text-sm" /></div>
       </section>
       <SubmitButton state={state} pendingLabel="Salvando..." className="w-full sm:w-fit">{submitLabel}</SubmitButton>

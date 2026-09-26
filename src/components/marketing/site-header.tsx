@@ -64,20 +64,20 @@ export function SiteHeader() {
       <div className="container flex h-16 items-center justify-between gap-6">
         <Link
           href="#topo"
-          className="inline-flex items-center gap-2 font-semibold tracking-tight"
+          className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap font-semibold tracking-tight"
           aria-label="Prime Ges — início"
         >
           <Logo iconSize={24} />
         </Link>
 
-        <nav className="hidden items-center gap-1 md:flex" aria-label="Menu principal">
+        <nav className="hidden items-center gap-1 lg:flex" aria-label="Menu principal">
           {NAV_LINKS.map((item) => (
             <a
               key={item.label}
               href={item.href}
               aria-current={activeHref === item.href ? "location" : undefined}
               className={cn(
-                "rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none",
+                "whitespace-nowrap rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none",
                 activeHref === item.href && "text-foreground",
               )}
             >
@@ -86,7 +86,7 @@ export function SiteHeader() {
           ))}
         </nav>
 
-        <div className="hidden items-center gap-2 md:flex">
+        <div className="hidden items-center gap-2 lg:flex">
           <Link
             href={siteConfig.links.login}
             className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
@@ -103,7 +103,7 @@ export function SiteHeader() {
 
         <button
           type="button"
-          className="prime-menu-button md:!hidden"
+          className="prime-menu-button lg:!hidden"
           onClick={() => setMenuOpen((value) => !value)}
           aria-label={menuOpen ? "Fechar menu" : "Abrir menu"}
           aria-expanded={menuOpen}
@@ -115,7 +115,7 @@ export function SiteHeader() {
 
       <div
         id="prime-mobile-menu"
-        className={cn("prime-mobile-panel md:hidden", menuOpen && "prime-mobile-panel--open")}
+        className={cn("prime-mobile-panel lg:hidden", menuOpen && "prime-mobile-panel--open")}
         aria-hidden={!menuOpen}
       >
         <nav className="prime-mobile-menu-inner container" aria-label="Menu principal">

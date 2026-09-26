@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
 
 const STATUS_FILTERS: { label: string; value: "all" | "draft" | "completed" | "cancelled" }[] = [
   { label: "Todos", value: "all" },
@@ -73,7 +74,7 @@ export function SaleFilters() {
           ))}
         </div>
 
-        <select
+        <NativeSelect
           value={paymentStatus}
           onChange={(event) => updateParam("paymentStatus", event.target.value)}
           className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -83,9 +84,9 @@ export function SaleFilters() {
               {option.label}
             </option>
           ))}
-        </select>
+        </NativeSelect>
 
-        <select
+        <NativeSelect
           value={period}
           onChange={(event) => updateParam("period", event.target.value)}
           className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -95,7 +96,7 @@ export function SaleFilters() {
               {option.label}
             </option>
           ))}
-        </select>
+        </NativeSelect>
 
         {isPending && (
           <span className="text-xs text-muted-foreground">Atualizando...</span>

@@ -16,6 +16,7 @@ import {
 import type { TeamMember } from "@/types/team";
 import { FormMessage } from "@/components/shared/auth/form-message";
 import { SubmitButton } from "@/components/shared/auth/submit-button";
+import { NativeSelect } from "@/components/ui/native-select";
 
 const initialState: ActionResult = {};
 
@@ -50,10 +51,10 @@ export function AddMemberForm() {
         placeholder="email@exemplo.com"
         className="h-10 rounded-md border bg-background px-3"
       />
-      <select name="role" defaultValue="employee" className="h-10 rounded-md border bg-background px-3">
+      <NativeSelect name="role" defaultValue="employee" className="h-10 rounded-md border bg-background px-3">
         <option value="employee">Funcionário</option>
         <option value="admin">Administrador</option>
-      </select>
+      </NativeSelect>
       <SubmitButton state={state} pendingLabel="Adicionando..." className="w-auto">
         Adicionar
       </SubmitButton>
@@ -68,11 +69,11 @@ export function MemberRoleForm({ member }: { member: TeamMember }) {
   return (
     <form action={formAction} className="grid gap-2 sm:grid-cols-[130px_auto]">
       <input type="hidden" name="memberId" value={member.member_id} />
-      <select name="role" defaultValue={member.role} className="h-9 rounded-md border bg-background px-2 text-sm">
+      <NativeSelect name="role" defaultValue={member.role} className="h-9 rounded-md border bg-background px-2 text-sm">
         <option value="owner">Owner</option>
         <option value="admin">Administrador</option>
         <option value="employee">Funcionário</option>
-      </select>
+      </NativeSelect>
       <SubmitButton state={state} pendingLabel="Salvando..." className="w-auto">
         Salvar
       </SubmitButton>
@@ -125,9 +126,9 @@ export function ProfessionalForm({ member }: { member: TeamMember }) {
         </label>
         <label className="grid gap-1 text-sm">
           Cor na agenda
-          <select name="color" defaultValue={member.color ?? "sky"} className="h-10 rounded-md border bg-background px-3">
+          <NativeSelect name="color" defaultValue={member.color ?? "sky"} className="h-10 rounded-md border bg-background px-3">
             {colors.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-          </select>
+          </NativeSelect>
         </label>
       </div>
       <label className="grid gap-1 text-sm">

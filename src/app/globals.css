@@ -79,11 +79,11 @@
     --accent: 212 30% 16%;
     --accent-foreground: 212 39% 94%;
 
-    --destructive: 0 84% 60%; /* #EF4444 */
+    --destructive: 0 91% 71%; /* #F87171 — texto/borda; botão sólido usa red-600 (contraste AA com branco) */
     --destructive-foreground: 0 0% 100%;
 
     --border: 211 28% 20%; /* #253342 */
-    --input: 211 28% 20%;
+    --input: 210 20% 44%; /* borda de campos: ≥3:1 sobre card/background (WCAG 1.4.11) */
     --ring: 207 100% 54%;
 
     --sidebar: 212 36% 9%; /* #0F1720 */
