@@ -1,9 +1,11 @@
 "use server";
 
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { siteConfig } from "@/config/site";
 import { mapSignInError } from "@/lib/auth/sign-in-errors";
+import { resolveAppOrigin } from "@/lib/auth/app-origin";
 import {
   forgotPasswordSchema,
   loginSchema,
@@ -25,6 +27,20 @@ export interface ActionResult {
  */
 const GENERIC_AUTH_ERROR =
   "Não foi possível concluir a operação. Verifique os dados e tente novamente.";
+
+/**
+ * Origem usada nos links de e-mail/OAuth: a do ambiente atual (localhost,
+ * Preview) e, em produção, sempre o domínio canônico — ver app-origin.ts.
+ */
+function appOrigin(): string {
+  const h = headers();
+  return resolveAppOrigin({
+    vercelEnv: process.env.VERCEL_ENV,
+    host: h.get("host"),
+    forwardedHost: h.get("x-forwarded-host"),
+    canonical: siteConfig.url,
+  });
+}
 
 /**
  * O middleware guarda em `next` a rota que o usuário tentou acessar antes
@@ -70,7 +86,7 @@ export async function signUpAction(
     password,
     options: {
       data: { full_name: fullName },
-      emailRedirectTo: `${siteConfig.url}/auth/callback?next=/app`,
+      emailRedirectTo: `${appOrigin()}/auth/callback?next=/app`,
     },
   });
 
@@ -147,7 +163,7 @@ export async function resendConfirmationAction(
   const { error } = await supabase.auth.resend({
     type: "signup",
     email: parsed.data.email,
-    options: { emailRedirectTo: `${siteConfig.url}/auth/callback?next=/app` },
+    options: { emailRedirectTo: `${appOrigin()}/auth/callback?next=/app` },
   });
 
   if (error?.code === "over_email_send_rate_limit" || error?.status === 429) {
@@ -182,7 +198,7 @@ export async function signInWithGoogleAction(next: string | null): Promise<void>
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: `${siteConfig.url}/auth/callback?next=${encodeURIComponent(target)}`,
+      redirectTo: `${appOrigin()}/auth/callback?next=${encodeURIComponent(target)}`,
     },
   });
 
@@ -215,7 +231,7 @@ export async function forgotPasswordAction(
 
   const supabase = createClient();
   await supabase.auth.resetPasswordForEmail(parsed.data.email, {
-    redirectTo: `${siteConfig.url}/auth/callback?next=/reset-password`,
+    redirectTo: `${appOrigin()}/auth/callback?next=/reset-password`,
   });
 
   return {
