@@ -27,7 +27,7 @@ export function ForgotPasswordForm() {
 
       <FormMessage state={state} />
 
-      <SubmitButton pendingLabel="Enviando...">
+      <SubmitButton state={state} pendingLabel="Enviando...">
         Enviar link de recuperação
       </SubmitButton>
     </form>

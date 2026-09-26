@@ -4,6 +4,7 @@ import { Inter } from "next/font/google";
 import { siteConfig } from "@/config/site";
 import "./globals.css";
 import "./home-v2.css";
+import { Toaster } from "@/components/ui/sonner";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -20,7 +21,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR" className={`dark ${inter.variable}`} suppressHydrationWarning>
-      <body className="min-h-screen font-sans antialiased">{children}</body>
+      <body className="min-h-screen font-sans antialiased">
+        {children}
+        <Toaster />
+      </body>
     </html>
   );
 }

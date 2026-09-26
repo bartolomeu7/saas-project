@@ -1,8 +1,18 @@
 "use client";
 
-import { useState } from "react";
-import { LogOut } from "lucide-react";
+import Link from "next/link";
+import { ChevronsUpDown, CreditCard, LogOut, Users } from "lucide-react";
 import { signOutAction } from "@/lib/auth/actions";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 
 function initialsFrom(name?: string | null, email?: string | null): string {
   if (name?.trim()) {
@@ -15,6 +25,11 @@ function initialsFrom(name?: string | null, email?: string | null): string {
   return "?";
 }
 
+/**
+ * Menu do usuário no rodapé da sidebar (padrão sidebar do shadcn/ui):
+ * mostra identidade, atalhos para Equipe/Assinatura e o logout. O logout
+ * continua sendo a mesma Server Action `signOutAction`.
+ */
 export function UserMenu({
   name,
   email,
@@ -22,56 +37,82 @@ export function UserMenu({
   name?: string | null;
   email?: string | null;
 }) {
-  const [open, setOpen] = useState(false);
+  const { isMobile } = useSidebar();
   const initials = initialsFrom(name, email);
 
   return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((value) => !value)}
-        className="flex items-center gap-2 rounded-full transition-opacity hover:opacity-80"
-        aria-label="Menu do usuário"
-        aria-expanded={open}
-      >
-        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/15 text-sm font-semibold text-primary">
-          {initials}
-        </span>
-      </button>
-
-      {open && (
-        <>
-          <div
-            className="fixed inset-0 z-30"
-            onClick={() => setOpen(false)}
-            aria-hidden="true"
-          />
-          <div className="absolute right-0 top-full z-40 mt-2 w-56 rounded-lg border border-border bg-card p-1 shadow-card">
-            <div className="px-3 py-2">
-              {name && (
-                <p className="truncate text-sm font-medium text-foreground">
-                  {name}
-                </p>
-              )}
-              {email && (
-                <p className="truncate text-xs text-muted-foreground">
-                  {email}
-                </p>
-              )}
-            </div>
-            <div className="my-1 h-px bg-border" />
+    <SidebarMenu>
+      <SidebarMenuItem>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <SidebarMenuButton
+              size="lg"
+              aria-label="Menu do usuário"
+              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+            >
+              <Avatar className="h-8 w-8 rounded-lg">
+                <AvatarFallback className="rounded-lg bg-primary/15 text-xs font-semibold text-primary">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+              <div className="grid flex-1 text-left text-sm leading-tight">
+                <span className="truncate font-medium">{name ?? email ?? "Usuário"}</span>
+                {name && email && (
+                  <span className="truncate text-xs text-sidebar-foreground/60">{email}</span>
+                )}
+              </div>
+              <ChevronsUpDown className="ml-auto size-4 text-sidebar-foreground/50" />
+            </SidebarMenuButton>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
+            side={isMobile ? "bottom" : "right"}
+            align="end"
+            sideOffset={8}
+          >
+            <DropdownMenuLabel className="p-0 font-normal">
+              <div className="flex items-center gap-2 px-2 py-1.5 text-left text-sm">
+                <Avatar className="h-8 w-8 rounded-lg">
+                  <AvatarFallback className="rounded-lg bg-primary/15 text-xs font-semibold text-primary">
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="grid flex-1 leading-tight">
+                  {name && <span className="truncate font-medium">{name}</span>}
+                  {email && (
+                    <span className="truncate text-xs text-muted-foreground">{email}</span>
+                  )}
+                </div>
+              </div>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link href="/app/equipe">
+                <Users className="size-4" strokeWidth={1.75} />
+                Equipe
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/app/assinatura">
+                <CreditCard className="size-4" strokeWidth={1.75} />
+                Assinatura
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <form action={signOutAction}>
-              <button
-                type="submit"
-                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-secondary"
-              >
-                <LogOut className="h-4 w-4" strokeWidth={1.75} />
-                Sair
-              </button>
+              <DropdownMenuItem asChild>
+                <button
+                  type="submit"
+                  className="w-full cursor-pointer text-destructive focus:text-destructive"
+                >
+                  <LogOut className="size-4" strokeWidth={1.75} />
+                  Sair
+                </button>
+              </DropdownMenuItem>
             </form>
-          </div>
-        </>
-      )}
-    </div>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </SidebarMenuItem>
+    </SidebarMenu>
   );
 }

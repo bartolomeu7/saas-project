@@ -54,7 +54,7 @@ export function AddMemberForm() {
         <option value="employee">Funcionário</option>
         <option value="admin">Administrador</option>
       </select>
-      <SubmitButton pendingLabel="Adicionando..." className="w-auto">
+      <SubmitButton state={state} pendingLabel="Adicionando..." className="w-auto">
         Adicionar
       </SubmitButton>
       <div className="sm:col-span-3"><FormMessage state={state} /></div>
@@ -73,7 +73,7 @@ export function MemberRoleForm({ member }: { member: TeamMember }) {
         <option value="admin">Administrador</option>
         <option value="employee">Funcionário</option>
       </select>
-      <SubmitButton pendingLabel="Salvando..." className="w-auto">
+      <SubmitButton state={state} pendingLabel="Salvando..." className="w-auto">
         Salvar
       </SubmitButton>
       <div className="sm:col-span-2"><FormMessage state={state} /></div>
@@ -86,7 +86,7 @@ export function RemoveMemberForm({ memberId }: { memberId: string }) {
   return (
     <form action={formAction}>
       <input type="hidden" name="memberId" value={memberId} />
-      <SubmitButton pendingLabel="Removendo..." variant="outline" className="w-auto text-destructive">
+      <SubmitButton state={state} pendingLabel="Removendo..." variant="outline" className="w-auto text-destructive">
         Remover
       </SubmitButton>
       {state.error || state.success ? <div className="mt-2 max-w-xs"><FormMessage state={state} /></div> : null}
@@ -139,7 +139,7 @@ export function ProfessionalForm({ member }: { member: TeamMember }) {
         Disponível para a agenda
       </label>
       <div className="flex flex-wrap items-center gap-3">
-        <SubmitButton pendingLabel="Salvando..." className="w-fit">Salvar ficha profissional</SubmitButton>
+        <SubmitButton state={state} pendingLabel="Salvando..." className="w-fit">Salvar ficha profissional</SubmitButton>
         {state.success || state.error ? <FormMessage state={state} /> : null}
       </div>
     </form>
@@ -235,7 +235,7 @@ export function ProfessionalServicesForm({
       ))}
       {!services.length ? <p className="text-sm text-muted-foreground">Cadastre serviços ativos antes de habilitá-los para o profissional.</p> : null}
       <div className="flex flex-wrap items-center gap-3">
-        <SubmitButton pendingLabel="Salvando..." className="w-fit">Salvar serviços</SubmitButton>
+        <SubmitButton state={state} pendingLabel="Salvando..." className="w-fit">Salvar serviços</SubmitButton>
         {state.success || state.error ? <FormMessage state={state} /> : null}
       </div>
     </form>
@@ -304,7 +304,7 @@ export function ProfessionalAvailabilityForm({
         </div>
       ))}
       <div className="flex flex-wrap items-center gap-3">
-        <SubmitButton pendingLabel="Salvando..." className="w-fit">Salvar disponibilidade</SubmitButton>
+        <SubmitButton state={state} pendingLabel="Salvando..." className="w-fit">Salvar disponibilidade</SubmitButton>
         {state.success || state.error ? <FormMessage state={state} /> : null}
       </div>
     </form>
@@ -330,7 +330,7 @@ export function ProfessionalBlockForm({ professionalId }: { professionalId: stri
         <input name="reason" placeholder="Almoço, folga, compromisso..." className="h-10 rounded-md border bg-background px-3" />
       </label>
       <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
-        <SubmitButton pendingLabel="Bloqueando..." className="w-fit">Bloquear horário</SubmitButton>
+        <SubmitButton state={state} pendingLabel="Bloqueando..." className="w-fit">Bloquear horário</SubmitButton>
         {state.success || state.error ? <FormMessage state={state} /> : null}
       </div>
     </form>
@@ -342,7 +342,7 @@ export function DeleteBlockForm({ blockId }: { blockId: string }) {
   return (
     <form action={formAction}>
       <input type="hidden" name="blockId" value={blockId} />
-      <SubmitButton pendingLabel="Removendo..." variant="outline" className="w-auto">Remover</SubmitButton>
+      <SubmitButton state={state} pendingLabel="Removendo..." variant="outline" className="w-auto">Remover</SubmitButton>
       {state.error || state.success ? <div className="mt-2"><FormMessage state={state} /></div> : null}
     </form>
   );

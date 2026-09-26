@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getCurrentUser, getCurrentProfile } from "@/lib/auth/session";
 import { getCurrentCompany } from "@/lib/companies/queries";
@@ -27,11 +28,14 @@ export default async function AppLayout({
     redirect("/onboarding");
   }
 
+  const defaultOpen = cookies().get("sidebar_state")?.value !== "false";
+
   return (
     <AppShell
       company={current.company}
       userName={profile?.full_name}
       userEmail={user?.email}
+      defaultOpen={defaultOpen}
     >
       {children}
     </AppShell>

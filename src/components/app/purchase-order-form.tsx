@@ -217,7 +217,7 @@ export function PurchaseOrderForm({
         </div>
       </section>
 
-      <SubmitButton pendingLabel="Criando pedido..." className="w-full sm:w-fit">
+      <SubmitButton state={state} pendingLabel="Criando pedido..." className="w-full sm:w-fit">
         Criar pedido de compra
       </SubmitButton>
     </form>

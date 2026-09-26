@@ -107,7 +107,7 @@ export function CashMovementForm() {
         />
       </div>
 
-      <SubmitButton pendingLabel="Registrando..." className="w-full sm:w-fit">
+      <SubmitButton state={state} pendingLabel="Registrando..." className="w-full sm:w-fit">
         Registrar movimentação
       </SubmitButton>
     </form>

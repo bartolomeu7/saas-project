@@ -45,7 +45,7 @@ export function SalePaymentForm({ saleId }: { saleId: string }) {
           <Input id="notes" name="notes" maxLength={200} />
         </div>
       </div>
-      <SubmitButton pendingLabel="Registrando..." className="w-full sm:w-fit">
+      <SubmitButton state={state} pendingLabel="Registrando..." className="w-full sm:w-fit">
         Registrar pagamento
       </SubmitButton>
     </form>

@@ -60,7 +60,7 @@ export function RegisterForm() {
 
       <FormMessage state={state} />
 
-      <SubmitButton pendingLabel="Criando conta...">
+      <SubmitButton state={state} pendingLabel="Criando conta...">
         Criar conta
       </SubmitButton>
     </form>

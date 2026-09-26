@@ -81,7 +81,7 @@ export function AppointmentForm({
         Observações
         <textarea name="notes" rows={3} className="rounded-md border bg-background px-3 py-2" />
       </label>
-      <SubmitButton pendingLabel="Agendando..." className="w-fit">Criar agendamento</SubmitButton>
+      <SubmitButton state={state} pendingLabel="Agendando..." className="w-fit">Criar agendamento</SubmitButton>
       <FormMessage state={state} />
     </form>
   );
@@ -104,7 +104,7 @@ export function AppointmentStatusForm({
     <form action={formAction}>
       <input type="hidden" name="appointmentId" value={appointmentId} />
       <input type="hidden" name="status" value={status} />
-      <SubmitButton
+      <SubmitButton state={state}
         pendingLabel="..."
         variant={destructive ? "outline" : "default"}
         className={destructive ? "w-auto text-destructive" : "w-auto"}
@@ -130,7 +130,7 @@ export function RescheduleForm({
     <form action={formAction} className="grid gap-2 sm:grid-cols-[1fr_auto]">
       <input type="hidden" name="appointmentId" value={appointment.id} />
       <input name="startsAt" type="datetime-local" defaultValue={defaultValue} className="h-9 rounded-md border bg-background px-2 text-sm" />
-      <SubmitButton pendingLabel="..." size="sm" className="w-auto">Reagendar</SubmitButton>
+      <SubmitButton state={state} pendingLabel="..." size="sm" className="w-auto">Reagendar</SubmitButton>
       <div className="sm:col-span-2">{state.error || state.success ? <FormMessage state={state} /> : null}</div>
     </form>
   );

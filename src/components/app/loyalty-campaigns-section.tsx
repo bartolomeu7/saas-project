@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { SubmitButton } from "@/components/shared/auth/submit-button";
 import { FormMessage } from "@/components/shared/auth/form-message";
 import { EmptyState } from "@/components/app/empty-state";
+import { ConfirmDialog } from "@/components/app/confirm-dialog";
 
 const initialState: ActionResult = {};
 
@@ -140,7 +141,7 @@ function CampaignForm({
       </p>
 
       <div className="flex items-center gap-2">
-        <SubmitButton pendingLabel="Salvando..." size="sm" className="w-auto">
+        <SubmitButton state={state} pendingLabel="Salvando..." size="sm" className="w-auto">
           Salvar
         </SubmitButton>
         <button
@@ -163,12 +164,12 @@ function CampaignRow({ campaign, canEdit }: { campaign: LoyaltyCampaign; canEdit
   const [toggleError, setToggleError] = useState<string | null>(null);
   const isActive = campaign.status === "active";
 
+  const toggleQuestion = isActive
+    ? "Vendas concluídas a partir de agora deixam de considerar esta campanha."
+    : "A campanha volta a valer para as vendas concluídas.";
+
   function handleToggleStatus() {
     const nextStatus = isActive ? "inactive" : "active";
-    const question = isActive
-      ? `Desativar a campanha "${campaign.name}"? Vendas concluídas a partir de agora deixam de considerá-la.`
-      : `Ativar a campanha "${campaign.name}"?`;
-    if (!window.confirm(question)) return;
     setToggleError(null);
     startToggling(async () => {
       const result = await setLoyaltyCampaignStatusAction(campaign.id, nextStatus);
@@ -221,14 +222,22 @@ function CampaignRow({ campaign, canEdit }: { campaign: LoyaltyCampaign; canEdit
               <Pencil className="h-3.5 w-3.5" />
               Editar
             </button>
-            <button
-              type="button"
-              disabled={isToggling}
-              onClick={handleToggleStatus}
-              className="flex items-center gap-1 text-xs font-medium text-foreground underline-offset-4 hover:underline disabled:opacity-50"
-            >
-              {isActive ? "Desativar" : "Ativar"}
-            </button>
+            <ConfirmDialog
+              title={`${isActive ? "Desativar" : "Ativar"} a campanha "${campaign.name}"?`}
+              description={toggleQuestion}
+              confirmLabel={isActive ? "Desativar" : "Ativar"}
+              destructive={isActive}
+              onConfirm={handleToggleStatus}
+              trigger={
+                <button
+                  type="button"
+                  disabled={isToggling}
+                  className="flex items-center gap-1 text-xs font-medium text-foreground underline-offset-4 hover:underline disabled:opacity-50"
+                >
+                  {isActive ? "Desativar" : "Ativar"}
+                </button>
+              }
+            />
           </div>
           {toggleError && <p className="mt-1 text-xs text-destructive">{toggleError}</p>}
         </td>

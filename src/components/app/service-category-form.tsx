@@ -54,7 +54,7 @@ export function ServiceCategoryForm({
         </select>
       </div>
 
-      <SubmitButton pendingLabel="Salvando..." className="w-full sm:w-fit">
+      <SubmitButton state={state} pendingLabel="Salvando..." className="w-full sm:w-fit">
         {submitLabel}
       </SubmitButton>
     </form>

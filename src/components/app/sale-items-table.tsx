@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { updateSaleItemAction, removeSaleItemAction } from "@/lib/sales/actions";
 import { Input } from "@/components/ui/input";
 import type { SaleItem } from "@/types/sale";
+import { ConfirmDialog } from "@/components/app/confirm-dialog";
 
 function formatMoney(value: number): string {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -88,7 +89,6 @@ function EditableSaleItemRow({ saleId, item }: { saleId: string; item: SaleItem 
   }
 
   function handleRemove() {
-    if (!window.confirm(`Remover "${item.description}" da venda?`)) return;
     setError(null);
     startRemoving(async () => {
       const result = await removeSaleItemAction(saleId, item.id);
@@ -138,14 +138,21 @@ function EditableSaleItemRow({ saleId, item }: { saleId: string; item: SaleItem 
               Salvar
             </button>
           )}
-          <button
-            type="button"
-            disabled={isRemoving}
-            onClick={handleRemove}
-            className="text-xs font-medium text-destructive underline-offset-4 hover:underline"
-          >
-            Remover
-          </button>
+          <ConfirmDialog
+            title={`Remover "${item.description}" da venda?`}
+            confirmLabel="Remover"
+            destructive
+            onConfirm={handleRemove}
+            trigger={
+              <button
+                type="button"
+                disabled={isRemoving}
+                className="text-xs font-medium text-destructive underline-offset-4 hover:underline disabled:opacity-50"
+              >
+                Remover
+              </button>
+            }
+          />
         </div>
       </td>
     </tr>

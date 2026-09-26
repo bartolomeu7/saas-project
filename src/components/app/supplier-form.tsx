@@ -37,7 +37,7 @@ export function SupplierForm({ action, defaultValues, submitLabel }: {
         <div className="flex flex-col gap-2"><Label htmlFor="status">Status</Label><select id="status" name="status" defaultValue={field("status") || "active"} className="h-10 rounded-md border border-input bg-background px-3 text-sm"><option value="active">Ativo</option><option value="inactive">Inativo</option></select></div>
         <div className="flex flex-col gap-2 sm:col-span-2"><Label htmlFor="notes">Observações</Label><textarea id="notes" name="notes" rows={3} defaultValue={field("notes")} className="rounded-md border border-input bg-background px-3 py-2 text-sm" /></div>
       </section>
-      <SubmitButton pendingLabel="Salvando..." className="w-full sm:w-fit">{submitLabel}</SubmitButton>
+      <SubmitButton state={state} pendingLabel="Salvando..." className="w-full sm:w-fit">{submitLabel}</SubmitButton>
     </form>
   );
 }

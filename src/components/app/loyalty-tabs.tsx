@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * Todas as abas já estão funcionais. Uma aba desabilitada (enabled: false)
- * usa o mesmo padrão "Em breve" já usado em sidebar-nav.tsx para módulos
+ * usa o mesmo padrão "Em breve" já usado em app-sidebar.tsx para módulos
  * ainda não implementados, em vez de uma página placeholder.
  */
 const TABS = [

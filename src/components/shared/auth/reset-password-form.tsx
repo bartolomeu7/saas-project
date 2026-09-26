@@ -38,7 +38,7 @@ export function ResetPasswordForm() {
 
       <FormMessage state={state} />
 
-      <SubmitButton pendingLabel="Salvando...">
+      <SubmitButton state={state} pendingLabel="Salvando...">
         Redefinir senha
       </SubmitButton>
     </form>

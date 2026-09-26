@@ -18,6 +18,7 @@ import { FormMessage } from "@/components/shared/auth/form-message";
 import { EmptyState } from "@/components/app/empty-state";
 import { ProductPicker } from "@/components/app/product-picker";
 import { ServicePicker } from "@/components/app/service-picker";
+import { ConfirmDialog } from "@/components/app/confirm-dialog";
 
 const initialState: ActionResult = {};
 
@@ -57,7 +58,7 @@ function MultiplierEditForm({
             className="w-24"
           />
         </div>
-        <SubmitButton pendingLabel="Salvando..." size="sm" className="w-auto">
+        <SubmitButton state={state} pendingLabel="Salvando..." size="sm" className="w-auto">
           Salvar
         </SubmitButton>
         <button
@@ -86,13 +87,6 @@ function MultiplierRow({
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   function handleDelete() {
-    if (
-      !window.confirm(
-        `Remover o multiplicador de "${multiplier.targetName}"? A partir de agora, vendas desse item voltam a valer 1x.`
-      )
-    ) {
-      return;
-    }
     setDeleteError(null);
     startDeleting(async () => {
       const result = await deleteLoyaltyMultiplierAction(multiplier.id);
@@ -138,15 +132,23 @@ function MultiplierRow({
               <Pencil className="h-3.5 w-3.5" />
               Editar
             </button>
-            <button
-              type="button"
-              disabled={isDeleting}
-              onClick={handleDelete}
-              className="flex items-center gap-1 text-xs font-medium text-destructive underline-offset-4 hover:underline disabled:opacity-50"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-              Excluir
-            </button>
+            <ConfirmDialog
+              title={`Remover o multiplicador de "${multiplier.targetName}"?`}
+              description="A partir de agora, vendas desse item voltam a valer 1x."
+              confirmLabel="Remover"
+              destructive
+              onConfirm={handleDelete}
+              trigger={
+                <button
+                  type="button"
+                  disabled={isDeleting}
+                  className="flex items-center gap-1 text-xs font-medium text-destructive underline-offset-4 hover:underline disabled:opacity-50"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Excluir
+                </button>
+              }
+            />
           </div>
           {deleteError && <p className="mt-1 text-xs text-destructive">{deleteError}</p>}
         </td>
@@ -259,7 +261,7 @@ function NewMultiplierForm({
                 className="w-28"
               />
             </div>
-            <SubmitButton pendingLabel="Salvando..." size="sm" className="w-auto">
+            <SubmitButton state={state} pendingLabel="Salvando..." size="sm" className="w-auto">
               Salvar
             </SubmitButton>
             <button

@@ -190,7 +190,7 @@ export function ServiceForm({
         <input type="hidden" name="durationMinutes" value={totalMinutes} />
       </section>
 
-      <SubmitButton pendingLabel="Salvando..." className="w-full sm:w-fit">
+      <SubmitButton state={state} pendingLabel="Salvando..." className="w-full sm:w-fit">
         {submitLabel}
       </SubmitButton>
     </form>

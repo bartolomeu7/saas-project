@@ -1,5 +1,6 @@
 "use client";
 
+import { ConfirmActionForm } from "@/components/app/confirm-dialog";
 import { deactivateProductAction } from "@/lib/products/actions";
 
 export function DeactivateProductButton({
@@ -10,23 +11,13 @@ export function DeactivateProductButton({
   productName: string;
 }) {
   return (
-    <form
+    <ConfirmActionForm
       action={deactivateProductAction.bind(null, productId)}
-      onSubmit={(event) => {
-        const confirmed = window.confirm(
-          `Tem certeza que deseja desativar "${productName}"? O produto deixará de aparecer como ativo, mas seus dados serão preservados.`
-        );
-        if (!confirmed) {
-          event.preventDefault();
-        }
-      }}
-    >
-      <button
-        type="submit"
-        className="text-sm font-medium text-destructive underline-offset-4 hover:underline"
-      >
-        Desativar
-      </button>
-    </form>
+      label="Desativar"
+      title={`Desativar "${productName}"?`}
+      description="O produto deixará de aparecer como ativo, mas seus dados serão preservados."
+      confirmLabel="Desativar"
+      destructive
+    />
   );
 }

@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SubmitButton } from "@/components/shared/auth/submit-button";
 import { FormMessage } from "@/components/shared/auth/form-message";
+import { ConfirmDialog } from "@/components/app/confirm-dialog";
 
 const initialState: ActionResult = {};
 
@@ -69,7 +70,7 @@ function TierEditForm({
           />
         </div>
         <div className="flex items-center gap-2">
-          <SubmitButton pendingLabel="Salvando..." size="sm" className="w-auto">
+          <SubmitButton state={state} pendingLabel="Salvando..." size="sm" className="w-auto">
             Salvar
           </SubmitButton>
           <button
@@ -105,9 +106,6 @@ function TierRow({
 
   function handleDelete() {
     if (!threshold.id) return;
-    if (!window.confirm(`Excluir o nível "${threshold.name}"? Esta ação não pode ser desfeita.`)) {
-      return;
-    }
     setDeleteError(null);
     startDeleting(async () => {
       const result = await deleteLoyaltyTierThresholdAction(threshold.id!);
@@ -157,15 +155,23 @@ function TierRow({
               Editar
             </button>
             {canDelete && isPersisted && (
-              <button
-                type="button"
-                disabled={isDeleting}
-                onClick={handleDelete}
-                className="flex items-center gap-1 text-xs font-medium text-destructive underline-offset-4 hover:underline disabled:opacity-50"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-                Excluir
-              </button>
+              <ConfirmDialog
+                title={`Excluir o nível "${threshold.name}"?`}
+                description="Esta ação não pode ser desfeita."
+                confirmLabel="Excluir"
+                destructive
+                onConfirm={handleDelete}
+                trigger={
+                  <button
+                    type="button"
+                    disabled={isDeleting}
+                    className="flex items-center gap-1 text-xs font-medium text-destructive underline-offset-4 hover:underline disabled:opacity-50"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Excluir
+                  </button>
+                }
+              />
             )}
           </div>
           {deleteError && <p className="mt-1 text-xs text-destructive">{deleteError}</p>}

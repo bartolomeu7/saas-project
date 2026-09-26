@@ -1,5 +1,6 @@
 "use client";
 
+import { ConfirmActionForm } from "@/components/app/confirm-dialog";
 import { reactivateCategoryAction } from "@/lib/product-categories/actions";
 
 export function ReactivateCategoryButton({
@@ -10,21 +11,13 @@ export function ReactivateCategoryButton({
   categoryName: string;
 }) {
   return (
-    <form
+    <ConfirmActionForm
       action={reactivateCategoryAction.bind(null, categoryId)}
-      onSubmit={(event) => {
-        const confirmed = window.confirm(`Reativar a categoria "${categoryName}"?`);
-        if (!confirmed) {
-          event.preventDefault();
-        }
-      }}
-    >
-      <button
-        type="submit"
-        className="text-sm font-medium text-success underline-offset-4 hover:underline"
-      >
-        Reativar
-      </button>
-    </form>
+      label="Reativar"
+      title={`Reativar a categoria "${categoryName}"?`}
+      description="A categoria voltará a aparecer para novos cadastros."
+      confirmLabel="Reativar"
+      triggerClassName="text-success"
+    />
   );
 }

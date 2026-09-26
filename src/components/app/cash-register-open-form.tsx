@@ -34,7 +34,7 @@ export function CashRegisterOpenForm() {
           <Input id="notes" name="notes" maxLength={200} />
         </div>
       </div>
-      <SubmitButton pendingLabel="Abrindo..." className="w-full sm:w-fit">
+      <SubmitButton state={state} pendingLabel="Abrindo..." className="w-full sm:w-fit">
         Abrir caixa
       </SubmitButton>
     </form>

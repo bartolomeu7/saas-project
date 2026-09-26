@@ -311,7 +311,7 @@ export function LoyaltySettingsForm({
 
       {canEdit && (
         <div>
-          <SubmitButton pendingLabel="Salvando..." className="w-full sm:w-fit">
+          <SubmitButton state={state} pendingLabel="Salvando..." className="w-full sm:w-fit">
             Salvar configurações
           </SubmitButton>
         </div>

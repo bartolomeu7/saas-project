@@ -54,7 +54,7 @@ export function CreateCompanyForm() {
 
       <FormMessage state={state} />
 
-      <SubmitButton pendingLabel="Criando empresa...">
+      <SubmitButton state={state} pendingLabel="Criando empresa...">
         Concluir configuração
       </SubmitButton>
     </form>

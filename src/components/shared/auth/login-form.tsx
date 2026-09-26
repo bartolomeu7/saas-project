@@ -39,7 +39,7 @@ export function LoginForm({ next }: { next?: string }) {
 
       <FormMessage state={state} />
 
-      <SubmitButton pendingLabel="Entrando...">Entrar</SubmitButton>
+      <SubmitButton state={state} pendingLabel="Entrando...">Entrar</SubmitButton>
     </form>
   );
 }

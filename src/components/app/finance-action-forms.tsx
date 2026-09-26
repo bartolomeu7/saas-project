@@ -65,7 +65,7 @@ export function AccountsPayablePaymentForm({
         className="h-9 rounded-md border bg-background px-2 text-sm"
         aria-label="Data do pagamento"
       />
-      <SubmitButton pendingLabel="Baixando..." className="w-auto">
+      <SubmitButton state={state} pendingLabel="Baixando..." className="w-auto">
         Baixar
       </SubmitButton>
       <div className="sm:col-span-4"><FormMessage state={state} /></div>
@@ -102,7 +102,7 @@ export function SalePaymentForm({
           <option key={key} value={key}>{label}</option>
         ))}
       </select>
-      <SubmitButton pendingLabel="Recebendo..." className="w-auto">
+      <SubmitButton state={state} pendingLabel="Recebendo..." className="w-auto">
         Receber
       </SubmitButton>
       <div className="sm:col-span-3"><FormMessage state={state} /></div>
@@ -202,7 +202,7 @@ export function FinancialEntryForm({
         <textarea name="notes" rows={3} className="rounded-md border bg-background px-3 py-2" />
       </label>
 
-      <SubmitButton pendingLabel="Registrando..." className="w-full sm:w-fit">
+      <SubmitButton state={state} pendingLabel="Registrando..." className="w-full sm:w-fit">
         Registrar lançamento
       </SubmitButton>
     </form>
@@ -224,7 +224,7 @@ export function FinancialCategoryForm() {
         <option value="expense">Despesa</option>
         <option value="income">Receita</option>
       </select>
-      <SubmitButton pendingLabel="Salvando..." className="w-auto">
+      <SubmitButton state={state} pendingLabel="Salvando..." className="w-auto">
         Adicionar
       </SubmitButton>
       <div className="sm:col-span-3"><FormMessage state={state} /></div>
@@ -243,7 +243,7 @@ export function CostCenterForm() {
         className="h-10 min-w-0 flex-1 rounded-md border bg-background px-3"
         required
       />
-      <SubmitButton pendingLabel="Salvando..." className="w-auto">
+      <SubmitButton state={state} pendingLabel="Salvando..." className="w-auto">
         Adicionar
       </SubmitButton>
       <div className="sm:min-w-40"><FormMessage state={state} /></div>

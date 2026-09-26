@@ -96,7 +96,7 @@ export function PurchaseReceiveForm({
         />
       </div>
 
-      <SubmitButton
+      <SubmitButton state={state}
         pendingLabel="Registrando recebimento..."
         className="w-full sm:w-fit"
       >
