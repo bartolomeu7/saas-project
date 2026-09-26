@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { siteConfig } from "@/config/site";
+import { mapSignInError } from "@/lib/auth/sign-in-errors";
 import {
   forgotPasswordSchema,
   loginSchema,
@@ -13,6 +14,8 @@ import {
 export interface ActionResult {
   error?: string;
   success?: string;
+  /** Código opcional para a UI reagir (ex.: "email_not_confirmed" mostra o reenvio). */
+  code?: string;
 }
 
 /**
@@ -76,8 +79,7 @@ export async function signUpAction(
   }
 
   return {
-    success:
-      "Cadastro realizado. Verifique seu e-mail para confirmar a conta antes de entrar.",
+    success: `Cadastro realizado. Enviamos um e-mail de confirmação para ${email}. Confirme a conta antes de entrar; se o endereço estiver errado, faça o cadastro novamente.`,
   };
 }
 
@@ -105,7 +107,13 @@ export async function signInAction(
   const { data, error } = await supabase.auth.signInWithPassword(parsed.data);
 
   if (error) {
-    return { error: "E-mail ou senha inválidos." };
+    // Não mascara tudo como "senha inválida": e-mail não confirmado, limite de
+    // tentativas e indisponibilidade têm mensagens próprias (sem revelar contas).
+    const mapped = mapSignInError(error);
+    if (mapped.code === "unavailable") {
+      console.error("[auth] signInWithPassword falhou:", error.status, error.code);
+    }
+    return { error: mapped.error, code: mapped.code };
   }
 
   // Best-effort: profiles.last_login_at existe no schema desde a
@@ -119,6 +127,36 @@ export async function signInAction(
   }
 
   redirect(safeNextPath(next) ?? "/app");
+}
+
+/**
+ * Reenvio do e-mail de confirmação de cadastro. Resposta sempre genérica
+ * (não revela se o e-mail tem cadastro pendente).
+ */
+export async function resendConfirmationAction(
+  _prevState: ActionResult,
+  formData: FormData
+): Promise<ActionResult> {
+  const parsed = forgotPasswordSchema.safeParse({ email: formData.get("email") });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? GENERIC_AUTH_ERROR };
+  }
+
+  const supabase = createClient();
+  const { error } = await supabase.auth.resend({
+    type: "signup",
+    email: parsed.data.email,
+    options: { emailRedirectTo: `${siteConfig.url}/auth/callback?next=/app` },
+  });
+
+  if (error?.code === "over_email_send_rate_limit" || error?.status === 429) {
+    return { error: "Muitos e-mails enviados. Aguarde alguns minutos antes de reenviar." };
+  }
+
+  return {
+    success: "Se houver um cadastro pendente para este e-mail, enviamos a confirmação novamente.",
+  };
 }
 
 /** Logout do usuário atual. */
