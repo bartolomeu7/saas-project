@@ -1,8 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useClerk } from "@clerk/nextjs";
 import { ChevronsUpDown, CreditCard, LogOut, Users } from "lucide-react";
 import { signOutAction } from "@/lib/auth/actions";
+import { isClerkEnabled } from "@/lib/clerk/config";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -13,6 +16,53 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
+
+/**
+ * Botão "Sair" do menu do usuário. Fase 5B-APP: com Clerk habilitado, usa
+ * `useClerk().signOut()` em vez da Server Action `signOutAction` (que só
+ * encerra sessão Supabase Auth, inexistente quando o login foi via Clerk).
+ * `useClerk()` só é chamado dentro deste componente, que só é renderizado
+ * quando isClerkEnabled — o mesmo caso em que <ClerkProvider> garantidamente
+ * envolve a árvore (ver clerk-app-provider.tsx), então o hook nunca roda
+ * sem o provider.
+ */
+function SignOutMenuItem() {
+  if (isClerkEnabled) {
+    return <ClerkSignOutMenuItem />;
+  }
+
+  return (
+    <form action={signOutAction}>
+      <DropdownMenuItem asChild>
+        <button
+          type="submit"
+          className="w-full cursor-pointer text-destructive focus:text-destructive"
+        >
+          <LogOut className="size-4" strokeWidth={1.75} />
+          Sair
+        </button>
+      </DropdownMenuItem>
+    </form>
+  );
+}
+
+function ClerkSignOutMenuItem() {
+  const { signOut } = useClerk();
+  const router = useRouter();
+
+  return (
+    <DropdownMenuItem
+      className="cursor-pointer text-destructive focus:text-destructive"
+      onSelect={(event) => {
+        event.preventDefault();
+        void signOut(() => router.push("/login"));
+      }}
+    >
+      <LogOut className="size-4" strokeWidth={1.75} />
+      Sair
+    </DropdownMenuItem>
+  );
+}
 
 function initialsFrom(name?: string | null, email?: string | null): string {
   if (name?.trim()) {
@@ -99,17 +149,7 @@ export function UserMenu({
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <form action={signOutAction}>
-              <DropdownMenuItem asChild>
-                <button
-                  type="submit"
-                  className="w-full cursor-pointer text-destructive focus:text-destructive"
-                >
-                  <LogOut className="size-4" strokeWidth={1.75} />
-                  Sair
-                </button>
-              </DropdownMenuItem>
-            </form>
+            <SignOutMenuItem />
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>

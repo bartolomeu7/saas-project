@@ -2,6 +2,9 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createClerkSupabaseClient } from "@/lib/supabase/clerk-client";
+import { isClerkEnabled } from "@/lib/clerk/config";
+import { getCurrentUser } from "@/lib/auth/session";
 import { createCompanySchema } from "@/lib/validations/company";
 import type { ActionResult } from "@/lib/auth/actions";
 
@@ -25,11 +28,12 @@ export async function createCompanyAction(
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
 
-  const supabase = createClient();
+  // Fase 5B-APP: create_company_with_owner ainda resolve auth.uid()
+  // internamente (RPC não migrada — fora do escopo desta fase). Com Clerk,
+  // essa chamada falha com 22P02, esperado até a Migration F.
+  const supabase = isClerkEnabled ? createClerkSupabaseClient() : createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
   if (!user) {
     return { error: "Sessão expirada. Faça login novamente." };

@@ -1,9 +1,12 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { SignUp } from "@clerk/nextjs";
 import { Alert } from "@/components/ui/alert";
 import { AuthCard } from "@/components/shared/auth/auth-card";
 import { RegisterForm } from "@/components/shared/auth/register-form";
 import { GoogleAuthButton } from "@/components/shared/auth/google-auth-button";
+import { clerkAppearance } from "@/components/shared/auth/clerk-auth-appearance";
+import { isClerkEnabled } from "@/lib/clerk/config";
 
 export const metadata: Metadata = {
   title: "Criar conta",
@@ -14,6 +17,15 @@ export default function RegisterPage({
 }: {
   searchParams?: { error?: string };
 }) {
+  // Fase 5B-APP — ver src/app/(public)/login/page.tsx.
+  if (isClerkEnabled) {
+    return (
+      <AuthCard title="Criar conta" description="Leva menos de um minuto.">
+        <SignUp routing="virtual" signInUrl="/login" forceRedirectUrl="/app" appearance={clerkAppearance} />
+      </AuthCard>
+    );
+  }
+
   return (
     <AuthCard
       title="Criar conta"

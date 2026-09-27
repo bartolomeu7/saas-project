@@ -1,6 +1,9 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import { createClerkSupabaseClient } from "@/lib/supabase/clerk-client";
+import { isClerkEnabled } from "@/lib/clerk/config";
+import { getClerkCurrentUser } from "@/lib/auth/clerk-session";
 import type { Company, CompanyRole, CurrentCompany } from "@/types/company";
 
 /**
@@ -13,20 +16,25 @@ import type { Company, CompanyRole, CurrentCompany } from "@/types/company";
  * (company_members) e empresas às quais o usuário pertence.
  */
 export async function getCurrentCompany(): Promise<CurrentCompany | null> {
-  const supabase = createClient();
+  // Fase 5B-APP: com Clerk, o client passa a autenticar com o token Clerk
+  // (Third-Party Auth). A leitura abaixo continua sob as MESMAS 88 RLS
+  // policies de sempre (auth.uid()) — antes da Migration E, isso falha com
+  // 22P02 para sessões Clerk, e o erro já cai no mesmo `if (... || !data)
+  // return null` de antes. Esperado nesta fase; não corrigido aqui.
+  const supabase = isClerkEnabled ? createClerkSupabaseClient() : createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const userId = isClerkEnabled
+    ? (await getClerkCurrentUser())?.id
+    : (await supabase.auth.getUser()).data.user?.id;
 
-  if (!user) {
+  if (!userId) {
     return null;
   }
 
   const { data: membership, error: membershipError } = await supabase
     .from("company_members")
     .select("company_id, role")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     // Determinístico mesmo se uma duplicidade histórica existir: sempre a
     // membership mais antiga (a "empresa original" do usuário), nunca uma
     // ordem dependente do plano de execução do banco. Ver migration 017.

@@ -1,9 +1,12 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { SignIn } from "@clerk/nextjs";
 import { Alert } from "@/components/ui/alert";
 import { AuthCard } from "@/components/shared/auth/auth-card";
 import { LoginForm } from "@/components/shared/auth/login-form";
 import { GoogleAuthButton } from "@/components/shared/auth/google-auth-button";
+import { clerkAppearance } from "@/components/shared/auth/clerk-auth-appearance";
+import { isClerkEnabled } from "@/lib/clerk/config";
 
 export const metadata: Metadata = {
   title: "Entrar",
@@ -14,6 +17,22 @@ export default function LoginPage({
 }: {
   searchParams?: { error?: string; next?: string };
 }) {
+  // Fase 5B-APP: cutover funcional de auth para Clerk (local/TESTE). Sem
+  // chaves Development (Preview/produção hoje), cai no fluxo Supabase Auth
+  // de sempre — zero mudança nesses ambientes.
+  if (isClerkEnabled) {
+    return (
+      <AuthCard title="Entrar" description="Acesse sua conta para continuar.">
+        <SignIn
+          routing="virtual"
+          signUpUrl="/register"
+          forceRedirectUrl={searchParams?.next || "/app"}
+          appearance={clerkAppearance}
+        />
+      </AuthCard>
+    );
+  }
+
   return (
     <AuthCard
       title="Entrar"
