@@ -1,7 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { clerkMiddleware } from "@clerk/nextjs/server";
 import { updateSession } from "@/lib/supabase/middleware";
 import { getSubscriptionGuardStatus } from "@/lib/billing/guard";
 import { getPlatformAdminGuardStatus } from "@/lib/admin/guard";
+import { isClerkEnabled } from "@/lib/clerk/config";
 
 /**
  * Prefixos de rota que exigem usuário autenticado.
@@ -51,7 +53,7 @@ function isAdminRoute(pathname: string) {
 }
 
 /**
- * Middleware raiz da aplicação.
+ * Middleware raiz da aplicação — autorização continua 100% Supabase Auth.
  *
  * 1. Renova a sessão Supabase em cada request.
  * 2. Bloqueia acesso a rotas protegidas (/app, /admin) para quem não
@@ -64,7 +66,7 @@ function isAdminRoute(pathname: string) {
  *    a consulta só roda para requests que batem em /admin*, sem custo
  *    para o resto do app.
  */
-export async function middleware(request: NextRequest) {
+async function supabaseAuthMiddleware(request: NextRequest) {
   const { response, user, supabase } = await updateSession(request);
   const { pathname } = request.nextUrl;
 
@@ -94,6 +96,19 @@ export async function middleware(request: NextRequest) {
 
   return response;
 }
+
+/**
+ * Fase de preparação do Clerk (ver src/lib/clerk/config.ts): enquanto não
+ * houver chaves Development configuradas, o middleware é exatamente o de
+ * antes — Supabase Auth decide tudo. Quando as chaves existirem, a MESMA
+ * lógica de autorização passa a rodar dentro de clerkMiddleware, que só
+ * disponibiliza auth()/currentUser() para o resto do app (Server
+ * Components, Route Handlers) — ele ainda não decide nenhum redirect, e
+ * nenhuma rota passa a exigir sessão do Clerk nesta etapa.
+ */
+export const middleware = isClerkEnabled
+  ? clerkMiddleware((_auth, request) => supabaseAuthMiddleware(request))
+  : supabaseAuthMiddleware;
 
 export const config = {
   matcher: [
