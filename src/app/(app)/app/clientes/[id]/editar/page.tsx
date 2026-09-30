@@ -11,10 +11,11 @@ export const metadata: Metadata = {
 };
 
 export default async function EditCustomerPage({
-  params,
+  params: paramsPromise,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const params = await paramsPromise;
   const current = (await getCurrentCompany())!;
   const customer = await getCustomerById(current.company.id, params.id);
 

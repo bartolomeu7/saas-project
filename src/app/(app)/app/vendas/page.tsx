@@ -40,9 +40,9 @@ function parsePeriod(value?: string): SalePeriod {
 }
 
 export default async function SalesPage({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams?: {
+  searchParams: Promise<{
     q?: string;
     status?: string;
     paymentStatus?: string;
@@ -50,8 +50,9 @@ export default async function SalesPage({
     from?: string;
     to?: string;
     page?: string;
-  };
+  }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const current = (await getCurrentCompany())!;
   const user = await getCurrentUser();
   const companyId = current.company.id;

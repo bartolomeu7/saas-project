@@ -27,10 +27,11 @@ function parseTab(value?: string): TabKey {
 }
 
 export default async function LoyaltyPage({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams?: { tab?: string };
+  searchParams: Promise<{ tab?: string }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const current = (await getCurrentCompany())!;
   const tab = parseTab(searchParams?.tab);
 

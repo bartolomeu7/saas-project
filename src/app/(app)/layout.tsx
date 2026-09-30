@@ -28,7 +28,7 @@ export default async function AppLayout({
     redirect("/onboarding");
   }
 
-  const defaultOpen = cookies().get("sidebar_state")?.value !== "false";
+  const defaultOpen = (await cookies()).get("sidebar_state")?.value !== "false";
 
   return (
     <AppShell

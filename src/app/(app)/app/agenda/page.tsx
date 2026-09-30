@@ -61,10 +61,11 @@ function statusBadge(status: string) {
 }
 
 export default async function AgendaPage({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams?: { date?: string | string[]; professional?: string | string[] };
+  searchParams: Promise<{ date?: string | string[]; professional?: string | string[] }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const current = (await getCurrentCompany())!;
   const rawDate = searchParams?.date;
   const rawProfessional = searchParams?.professional;

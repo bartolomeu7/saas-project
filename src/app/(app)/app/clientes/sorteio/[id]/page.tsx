@@ -58,10 +58,11 @@ function formatCriteria(criteria: Record<string, unknown>): string[] {
 }
 
 export default async function RaffleDetailPage({
-  params,
+  params: paramsPromise,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const params = await paramsPromise;
   const current = (await getCurrentCompany())!;
   const result = await getRaffleById(current.company.id, params.id);
 

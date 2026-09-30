@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createClient } from "@/lib/supabase/server";
+import { createSessionClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { SalePaymentMethod } from "@/types/sale";
 import type {
@@ -57,7 +57,7 @@ async function resolveNames(userIds: string[]): Promise<Record<string, string | 
 
 /** O caixa aberto da empresa, ou null se nenhum estiver aberto. Nunca aceita company_id fora do resolvido por getCurrentCompany() no chamador. */
 export async function getCurrentOpenCashRegister(companyId: string): Promise<CashRegisterWithNames | null> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { data } = await supabase
     .from("cash_registers")
     .select("*")
@@ -73,7 +73,7 @@ export async function getCurrentOpenCashRegister(companyId: string): Promise<Cas
 
 /** O último caixa fechado da empresa (mais recente por closed_at), ou null se nunca houve nenhum. */
 export async function getLastClosedCashRegister(companyId: string): Promise<CashRegisterWithNames | null> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { data } = await supabase
     .from("cash_registers")
     .select("*")
@@ -95,7 +95,7 @@ export async function getLastClosedCashRegister(companyId: string): Promise<Cash
 
 /** Movimentações de um caixa, mais recente primeiro. */
 export async function listCashMovements(cashRegisterId: string): Promise<CashMovementWithName[]> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { data } = await supabase
     .from("cash_movements")
     .select("*")

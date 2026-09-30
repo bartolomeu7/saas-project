@@ -12,11 +12,12 @@ export const metadata: Metadata = {
   title: "Entrar",
 };
 
-export default function LoginPage({
+export default async function LoginPage({
   searchParams,
 }: {
-  searchParams?: { error?: string; next?: string };
+  searchParams: Promise<{ error?: string; next?: string }>;
 }) {
+  const resolvedSearchParams = await searchParams;
   // Fase 5B-APP: cutover funcional de auth para Clerk (local/TESTE). Sem
   // chaves Development (Preview/produção hoje), cai no fluxo Supabase Auth
   // de sempre — zero mudança nesses ambientes.
@@ -24,9 +25,9 @@ export default function LoginPage({
     return (
       <AuthCard title="Entrar" description="Acesse sua conta para continuar.">
         <SignIn
-          routing="virtual"
+          routing="hash"
           signUpUrl="/register"
-          forceRedirectUrl={searchParams?.next || "/app"}
+          forceRedirectUrl={resolvedSearchParams.next || "/app"}
           appearance={clerkAppearance}
         />
       </AuthCard>
@@ -46,14 +47,14 @@ export default function LoginPage({
         </>
       }
     >
-      {searchParams?.error === "auth_callback_failed" && (
+      {resolvedSearchParams.error === "auth_callback_failed" && (
         <div className="mb-4">
           <Alert variant="destructive">
             Link inválido ou expirado. Tente novamente.
           </Alert>
         </div>
       )}
-      {searchParams?.error === "google" && (
+      {resolvedSearchParams.error === "google" && (
         <div className="mb-4">
           <Alert variant="destructive">
             Não foi possível entrar com o Google. Tente novamente ou use
@@ -62,7 +63,7 @@ export default function LoginPage({
         </div>
       )}
 
-      <GoogleAuthButton next={searchParams?.next} />
+      <GoogleAuthButton next={resolvedSearchParams.next} />
 
       <div className="my-4 flex items-center gap-3">
         <div className="h-px flex-1 bg-border" />
@@ -70,7 +71,7 @@ export default function LoginPage({
         <div className="h-px flex-1 bg-border" />
       </div>
 
-      <LoginForm next={searchParams?.next} />
+      <LoginForm next={resolvedSearchParams.next} />
       <div className="mt-4 text-center">
         <Link
           href="/forgot-password"

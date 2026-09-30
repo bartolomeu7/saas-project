@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { createClient } from "@/lib/supabase/server";
+import { createSessionClient } from "@/lib/supabase/server";
 import type {
   LoyaltyAccount,
   LoyaltyCampaign,
@@ -13,7 +13,7 @@ import type {
 export const getLoyaltySettings = cache(async function getLoyaltySettings(
   companyId: string
 ): Promise<LoyaltySettings | null> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { data } = await supabase
     .from("loyalty_settings")
     .select(
@@ -45,7 +45,7 @@ export const getLoyaltyAccount = cache(async function getLoyaltyAccount(
   companyId: string,
   customerId: string
 ): Promise<LoyaltyAccount> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { data } = await supabase
     .from("loyalty_accounts")
     .select("balance, lifetime_points")
@@ -65,7 +65,7 @@ export const listLoyaltyTransactions = cache(async function listLoyaltyTransacti
   customerId: string,
   limit = 50
 ): Promise<LoyaltyTransaction[]> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { data } = await supabase
     .from("loyalty_transactions")
     .select("id, type, points, balance_after, source, reason, created_at")
@@ -95,7 +95,7 @@ export const listLoyaltyTransactions = cache(async function listLoyaltyTransacti
 export const getLoyaltyTierThresholds = cache(async function getLoyaltyTierThresholds(
   companyId: string
 ): Promise<LoyaltyTierThreshold[]> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { data } = await supabase
     .from("loyalty_tier_thresholds")
     .select("id, name, min_lifetime_points, sort_order")
@@ -120,7 +120,7 @@ export const getLoyaltyTierThresholds = cache(async function getLoyaltyTierThres
 export const getLoyaltyMultipliers = cache(async function getLoyaltyMultipliers(
   companyId: string
 ): Promise<LoyaltyMultiplier[]> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
 
   const { data } = await supabase
     .from("loyalty_multipliers")
@@ -175,7 +175,7 @@ export const getLoyaltyMultipliers = cache(async function getLoyaltyMultipliers(
 export const getLoyaltyCampaigns = cache(async function getLoyaltyCampaigns(
   companyId: string
 ): Promise<LoyaltyCampaign[]> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
 
   const { data } = await supabase
     .from("loyalty_campaigns")

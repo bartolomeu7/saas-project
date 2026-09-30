@@ -4,7 +4,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getCurrentCompany } from "@/lib/companies/queries";
 import { listCategories } from "@/lib/product-categories/queries";
-import { createClient } from "@/lib/supabase/server";
+import { createSessionClient } from "@/lib/supabase/server";
 import { CategoryTable } from "@/components/app/category-table";
 import { EmptyState } from "@/components/app/empty-state";
 
@@ -19,7 +19,7 @@ export default async function ProductCategoriesPage() {
   // Contagem de produtos por categoria, para avisar antes de desativar.
   // Uma única consulta agregando todas as categorias de uma vez (não
   // N+1) — leve o suficiente para o catálogo de uma pequena empresa.
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { data: productRows } = await supabase
     .from("products")
     .select("category_id")

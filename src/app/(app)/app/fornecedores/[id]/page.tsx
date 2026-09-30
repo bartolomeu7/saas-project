@@ -9,7 +9,8 @@ import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Fornecedor" };
 
-export default async function SupplierDetailPage({ params }: { params: { id: string } }) {
+export default async function SupplierDetailPage({ params: paramsPromise }: { params: Promise<{ id: string }> }) {
+  const params = await paramsPromise;
   const current = (await getCurrentCompany())!;
   const supplier = await getSupplierById(current.company.id, params.id);
   if (!supplier) return <div className="px-4 py-10 text-center">Fornecedor não encontrado.</div>;

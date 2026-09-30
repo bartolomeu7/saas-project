@@ -9,7 +9,12 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 
 export const metadata: Metadata = { title: "Fornecedores" };
 
-export default async function SuppliersPage({ searchParams }: { searchParams?: { q?: string } }) {
+export default async function SuppliersPage({
+  searchParams: searchParamsPromise,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
+  const searchParams = await searchParamsPromise;
   const current = (await getCurrentCompany())!;
   const [stats, suppliers] = await Promise.all([getSupplierStats(current.company.id), listSuppliers(current.company.id, searchParams?.q)]);
   return (

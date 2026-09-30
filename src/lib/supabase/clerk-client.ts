@@ -5,11 +5,12 @@ import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/supabase";
 
 /**
- * PREPARAÇÃO para a Fase 4/5 (Clerk como Third-Party Auth do Supabase) —
- * NÃO USADO por nenhum código de produção ainda. Nenhuma RLS/RPC foi
- * alterada para reconhecer o token do Clerk, então um client criado aqui
- * hoje só consegue ler/escrever o que RLS permite para um request sem
- * `auth.uid()` válido (na prática, nada nas tabelas de negócio).
+ * Client Supabase autenticado via Clerk (Third-Party Auth). Usado por
+ * `createSessionClient()` (src/lib/supabase/server.ts) e diretamente pelos
+ * módulos de sessão/empresa desde a Fase 5B-APP/5C — as 88 RLS policies já
+ * reconhecem o token do Clerk via `current_profile_user_id()` (Migration
+ * E), então este client acessa normalmente as mesmas tabelas que o
+ * client Supabase Auth acessaria.
  *
  * Padrão oficial do Supabase para "Third-Party Auth" (não o JWT Template
  * legado): em vez de usar cookies próprios do Supabase Auth, o client

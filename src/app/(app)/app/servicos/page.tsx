@@ -36,9 +36,9 @@ function parseNumber(value?: string): number | undefined {
 }
 
 export default async function ServicesPage({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams?: {
+  searchParams: Promise<{
     q?: string;
     status?: string;
     category?: string;
@@ -48,8 +48,9 @@ export default async function ServicesPage({
     maxPrice?: string;
     minDuration?: string;
     maxDuration?: string;
-  };
+  }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const current = (await getCurrentCompany())!;
   const companyId = current.company.id;
   const hints = getServiceSegmentHints(current.company.business_type);

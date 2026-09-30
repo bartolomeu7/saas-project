@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createClient } from "@/lib/supabase/server";
+import { createSessionClient } from "@/lib/supabase/server";
 import type { AuditLog } from "@/types/audit";
 
 /**
@@ -14,7 +14,7 @@ export async function listAuditLogsForEntity(
   entityId: string,
   limit = 50
 ): Promise<AuditLog[]> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
 
   const { data, error } = await supabase
     .from("audit_logs")

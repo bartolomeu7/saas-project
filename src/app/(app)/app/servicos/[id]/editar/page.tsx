@@ -12,10 +12,11 @@ export const metadata: Metadata = {
 };
 
 export default async function EditServicePage({
-  params,
+  params: paramsPromise,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const params = await paramsPromise;
   const current = (await getCurrentCompany())!;
   const service = await getServiceById(current.company.id, params.id);
 

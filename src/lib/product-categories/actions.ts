@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { createSessionClient } from "@/lib/supabase/server";
 import { getCurrentCompany } from "@/lib/companies/queries";
 import { getCurrentUser } from "@/lib/auth/session";
 import { productCategorySchema } from "@/lib/validations/product";
@@ -33,7 +33,7 @@ export async function createCategoryAction(
     return { error: "Nenhuma empresa encontrada para o usuário atual." };
   }
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { data, error } = await supabase
     .from("product_categories")
     .insert({
@@ -80,7 +80,7 @@ export async function updateCategoryAction(
     return { error: "Nenhuma empresa encontrada para o usuário atual." };
   }
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { error } = await supabase
     .from("product_categories")
     .update({
@@ -114,7 +114,7 @@ export async function deactivateCategoryAction(id: string): Promise<void> {
   const current = await getCurrentCompany();
   if (!current) return;
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   await supabase
     .from("product_categories")
     .update({ status: "inactive" })
@@ -139,7 +139,7 @@ export async function reactivateCategoryAction(id: string): Promise<void> {
   const current = await getCurrentCompany();
   if (!current) return;
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   await supabase
     .from("product_categories")
     .update({ status: "active" })

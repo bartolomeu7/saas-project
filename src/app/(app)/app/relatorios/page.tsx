@@ -25,7 +25,12 @@ const PERIODS: Array<{ value: ReportPeriod; label: string }> = [
   { value: "year", label: "Ano" },
 ];
 
-export default async function ReportsPage({ searchParams }: { searchParams?: { period?: string | string[] } }) {
+export default async function ReportsPage({
+  searchParams: searchParamsPromise,
+}: {
+  searchParams: Promise<{ period?: string | string[] }>;
+}) {
+  const searchParams = await searchParamsPromise;
   const current = (await getCurrentCompany())!;
   const period = periodFromSearch(searchParams?.period);
   const report = await getReportsWorkspace(current.company.id, period);

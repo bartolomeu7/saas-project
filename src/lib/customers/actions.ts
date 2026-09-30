@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { createSessionClient } from "@/lib/supabase/server";
 import { getCurrentCompany } from "@/lib/companies/queries";
 import { getCurrentUser } from "@/lib/auth/session";
 import { customerSchema } from "@/lib/validations/customer";
@@ -52,7 +52,7 @@ export async function createCustomerAction(
     return { error: "Nenhuma empresa encontrada para o usuário atual." };
   }
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { data, error } = await supabase
     .from("customers")
     .insert({
@@ -117,7 +117,7 @@ export async function updateCustomerAction(
     return { error: "Nenhuma empresa encontrada para o usuário atual." };
   }
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
 
   // Lido antes do update só para saber se birth_date/preferences
   // realmente mudaram — permite registrar eventos de auditoria
@@ -208,7 +208,7 @@ export async function deactivateCustomerAction(id: string): Promise<void> {
     return;
   }
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   await supabase
     .from("customers")
     .update({ status: "inactive" })
@@ -237,7 +237,7 @@ export async function reactivateCustomerAction(id: string): Promise<void> {
     return;
   }
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   await supabase
     .from("customers")
     .update({ status: "active" })

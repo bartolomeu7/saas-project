@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { createSessionClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/auth/actions";
 import { getCurrentCompany } from "@/lib/companies/queries";
 import type { Database } from "@/types/supabase";
@@ -66,7 +66,7 @@ export async function createFinancialEntryAction(
   const current = await getCurrentCompany();
   if (!current) return { error: "Nenhuma empresa encontrada." };
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { error } = await supabase.rpc("create_financial_entry", {
     p_direction: direction,
     p_description: description,
@@ -101,7 +101,7 @@ export async function payAccountsPayableAction(
   const current = await getCurrentCompany();
   if (!current) return { error: "Nenhuma empresa encontrada." };
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { error } = await supabase.rpc("pay_accounts_payable", {
     p_payable_id: payableId,
     p_amount: amount,
@@ -134,7 +134,7 @@ export async function receiveSalePaymentAction(
   const current = await getCurrentCompany();
   if (!current) return { error: "Nenhuma empresa encontrada." };
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { error } = await supabase.rpc("receive_sale_payment", {
     p_sale_id: saleId,
     p_amount: amount,
@@ -163,7 +163,7 @@ export async function createFinancialCategoryAction(
   const current = await getCurrentCompany();
   if (!current) return { error: "Nenhuma empresa encontrada." };
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { error } = await supabase.rpc("create_financial_category", {
     p_name: name,
     p_kind: kind,
@@ -185,7 +185,7 @@ export async function createCostCenterAction(
   const current = await getCurrentCompany();
   if (!current) return { error: "Nenhuma empresa encontrada." };
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { error } = await supabase.rpc("create_cost_center", { p_name: name });
 
   if (error) return { error: error.message || "Não foi possível salvar o centro de custo." };

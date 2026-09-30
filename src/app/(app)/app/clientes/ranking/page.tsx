@@ -48,10 +48,11 @@ function sortEntries(entries: CustomerRankingEntry[], sortBy: SortKey): Customer
 }
 
 export default async function CustomerRankingPage({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams?: { period?: string; from?: string; to?: string; sort?: string };
+  searchParams: Promise<{ period?: string; from?: string; to?: string; sort?: string }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const current = (await getCurrentCompany())!;
   const period = parsePeriod(searchParams?.period);
   const sortBy = parseSort(searchParams?.sort);

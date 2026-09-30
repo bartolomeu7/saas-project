@@ -1,12 +1,12 @@
 import "server-only";
 
-import { createClient } from "@/lib/supabase/server";
+import { createSessionClient } from "@/lib/supabase/server";
 import type { Supplier } from "@/types/supplier";
 
-const db = (client: ReturnType<typeof createClient>) => client as any;
+const db = (client: Awaited<ReturnType<typeof createSessionClient>>) => client as any;
 
 export async function listSuppliers(companyId: string, search = ""): Promise<Supplier[]> {
-  const supabase = db(createClient());
+  const supabase = db(await createSessionClient());
   let query = supabase.from("suppliers").select("*").eq("company_id", companyId).order("name");
   const term = search.trim().replace(/[,()\\"]/g, "").replace(/[%_]/g, "\\$&");
   if (term) query = query.or(`name.ilike.%${term}%,legal_name.ilike.%${term}%,document.ilike.%${term}%`);
@@ -15,13 +15,13 @@ export async function listSuppliers(companyId: string, search = ""): Promise<Sup
 }
 
 export async function getSupplierById(companyId: string, id: string): Promise<Supplier | null> {
-  const supabase = db(createClient());
+  const supabase = db(await createSessionClient());
   const { data, error } = await supabase.from("suppliers").select("*").eq("company_id", companyId).eq("id", id).maybeSingle();
   return error || !data ? null : (data as Supplier);
 }
 
 export async function getSupplierStats(companyId: string) {
-  const supabase = db(createClient());
+  const supabase = db(await createSessionClient());
   const [{ count: total }, { count: active }] = await Promise.all([
     supabase.from("suppliers").select("id", { count: "exact", head: true }).eq("company_id", companyId),
     supabase.from("suppliers").select("id", { count: "exact", head: true }).eq("company_id", companyId).eq("status", "active"),

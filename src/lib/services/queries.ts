@@ -1,7 +1,7 @@
 import "server-only";
 
 import { cache } from "react";
-import { createClient } from "@/lib/supabase/server";
+import { createSessionClient } from "@/lib/supabase/server";
 import type { Service, ServiceStatus, ServiceWithCategory } from "@/types/service";
 
 const DEFAULT_PAGE_SIZE = 20;
@@ -69,7 +69,7 @@ export async function listServices(
     pageSize = DEFAULT_PAGE_SIZE,
   } = params;
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const sortColumn = SORT_COLUMNS[sortBy];
 
   let query = supabase
@@ -131,7 +131,7 @@ export async function getServiceById(
   companyId: string,
   id: string
 ): Promise<ServiceWithCategory | null> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
 
   const { data, error } = await supabase
     .from("services")
@@ -162,7 +162,7 @@ export interface ServiceStats {
 export const getServiceStats = cache(async function getServiceStats(
   companyId: string
 ): Promise<ServiceStats> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
 
   const [totalResult, activeResult, inactiveResult] = await Promise.all([
     supabase

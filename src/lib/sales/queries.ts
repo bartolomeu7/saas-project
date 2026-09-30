@@ -1,7 +1,7 @@
 import "server-only";
 
 import { cache } from "react";
-import { createClient } from "@/lib/supabase/server";
+import { createSessionClient } from "@/lib/supabase/server";
 import {
   startOfDaySaoPaulo,
   endOfDaySaoPaulo,
@@ -35,7 +35,7 @@ function mapRow(row: SaleRow): SaleWithCustomer {
 
 /** Preenche user_name (profiles.full_name) para um lote de vendas — sales.user_id não tem FK para profiles, então é um segundo lote de busca, igual ao item_count. */
 async function attachResponsibleNames(
-  supabase: ReturnType<typeof createClient>,
+  supabase: Awaited<ReturnType<typeof createSessionClient>>,
   sales: SaleWithCustomer[]
 ): Promise<void> {
   if (sales.length === 0) return;
@@ -129,7 +129,7 @@ export async function listSales(params: ListSalesParams): Promise<ListSalesResul
     pageSize = DEFAULT_PAGE_SIZE,
   } = params;
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
 
   let query = supabase
     .from("sales")
@@ -218,7 +218,7 @@ export async function listSales(params: ListSalesParams): Promise<ListSalesResul
 
 /** Busca uma venda completa (itens + pagamentos), garantindo que pertence à empresa informada. */
 export async function getSaleById(companyId: string, id: string): Promise<SaleDetail | null> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
 
   const { data, error } = await supabase
     .from("sales")
@@ -274,7 +274,7 @@ export const getSaleStats = cache(async function getSaleStats(
   from: string | null,
   to: string | null
 ): Promise<SaleStats> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
 
   let totalQuery = supabase
     .from("sales")
@@ -327,7 +327,7 @@ export async function listSalesByCustomer(
   customerId: string,
   limit = 20
 ): Promise<SaleWithCustomer[]> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
 
   const { data, error } = await supabase
     .from("sales")
@@ -361,7 +361,7 @@ export const getCustomerSalesStats = cache(async function getCustomerSalesStats(
   companyId: string,
   customerId: string
 ): Promise<CustomerSalesStats> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
 
   const { data } = await supabase
     .from("sales")
@@ -401,7 +401,7 @@ export const getCustomerTopProducts = cache(async function getCustomerTopProduct
   customerId: string,
   limit = 5
 ): Promise<CustomerTopProduct[]> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
 
   // Duas consultas simples (venda→itens) em vez de um filtro aninhado via
   // dot-notation do PostgREST — mesmo padrão de simplicidade já usado no
@@ -458,7 +458,7 @@ export async function searchProductsForSale(
   companyId: string,
   search: string
 ): Promise<ProductPick[]> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const trimmed = search.trim();
   if (!trimmed) return [];
 
@@ -484,7 +484,7 @@ export async function searchServicesForSale(
   companyId: string,
   search: string
 ): Promise<ServicePick[]> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const trimmed = search.trim();
   if (!trimmed) return [];
 
@@ -519,7 +519,7 @@ export async function searchCustomersForSale(
   companyId: string,
   search: string
 ): Promise<CustomerPick[]> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const trimmed = search.trim();
   if (!trimmed) return [];
 

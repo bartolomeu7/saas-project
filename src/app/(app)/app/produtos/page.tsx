@@ -32,17 +32,18 @@ function parseSort(value?: string): "name" | "price" | "stock" | "created_at" {
 }
 
 export default async function ProductsPage({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams?: {
+  searchParams: Promise<{
     q?: string;
     status?: string;
     stock?: string;
     category?: string;
     sort?: string;
     page?: string;
-  };
+  }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const current = (await getCurrentCompany())!;
   const companyId = current.company.id;
   const hints = getProductSegmentHints(current.company.business_type);

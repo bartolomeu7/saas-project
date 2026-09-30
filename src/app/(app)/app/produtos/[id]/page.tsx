@@ -26,10 +26,11 @@ function formatMoney(value: number): string {
 }
 
 export default async function ProductDetailPage({
-  params,
+  params: paramsPromise,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const params = await paramsPromise;
   const current = (await getCurrentCompany())!;
 
   const product = await getProductById(current.company.id, params.id);

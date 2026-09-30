@@ -23,10 +23,11 @@ const dateOnly = (value: string | null) =>
   value ? value.slice(0, 10).split("-").reverse().join("/") : "Não informado";
 
 export default async function PurchaseOrderPage({
-  params,
+  params: paramsPromise,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const params = await paramsPromise;
   const current = (await getCurrentCompany())!;
   const [order, receipts] = await Promise.all([
     getPurchaseOrderById(current.company.id, params.id),

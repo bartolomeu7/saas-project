@@ -34,7 +34,8 @@ function saleNumber(id: string): string {
   return `#${id.slice(0, 8).toUpperCase()}`;
 }
 
-export default async function SaleDetailPage({ params }: { params: { id: string } }) {
+export default async function SaleDetailPage({ params: paramsPromise }: { params: Promise<{ id: string }> }) {
+  const params = await paramsPromise;
   const current = (await getCurrentCompany())!;
   const user = await getCurrentUser();
 

@@ -4,7 +4,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getCurrentCompany } from "@/lib/companies/queries";
 import { listCategories } from "@/lib/service-categories/queries";
-import { createClient } from "@/lib/supabase/server";
+import { createSessionClient } from "@/lib/supabase/server";
 import { ServiceCategoryTable } from "@/components/app/service-category-table";
 import { EmptyState } from "@/components/app/empty-state";
 
@@ -19,7 +19,7 @@ export default async function ServiceCategoriesPage() {
   // Contagem de serviços por categoria, para avisar antes de desativar.
   // Uma única consulta agregando todas as categorias de uma vez (não
   // N+1) — mesmo padrão de src/app/(app)/app/produtos/categorias/page.tsx.
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { data: serviceRows } = await supabase
     .from("services")
     .select("category_id")

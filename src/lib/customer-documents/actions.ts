@@ -2,7 +2,7 @@
 
 import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { createSessionClient } from "@/lib/supabase/server";
 import { getCurrentCompany } from "@/lib/companies/queries";
 import { getCurrentUser } from "@/lib/auth/session";
 import { writeAuditLog } from "@/lib/audit/log";
@@ -37,7 +37,7 @@ export async function uploadCustomerDocumentAction(
     return { error: "Nenhuma empresa encontrada para o usuário atual." };
   }
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
 
   const { data: customer } = await supabase
     .from("customers")
@@ -120,7 +120,7 @@ export async function deleteCustomerDocumentAction(
     return { error: "Nenhuma empresa encontrada para o usuário atual." };
   }
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
 
   const { data: document } = await supabase
     .from("customer_documents")
@@ -187,7 +187,7 @@ export async function getCustomerDocumentUrlAction(
     return { error: "Nenhuma empresa encontrada para o usuário atual." };
   }
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
 
   const { data: document } = await supabase
     .from("customer_documents")

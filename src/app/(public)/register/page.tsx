@@ -12,16 +12,17 @@ export const metadata: Metadata = {
   title: "Criar conta",
 };
 
-export default function RegisterPage({
+export default async function RegisterPage({
   searchParams,
 }: {
-  searchParams?: { error?: string };
+  searchParams: Promise<{ error?: string }>;
 }) {
+  const resolvedSearchParams = await searchParams;
   // Fase 5B-APP — ver src/app/(public)/login/page.tsx.
   if (isClerkEnabled) {
     return (
       <AuthCard title="Criar conta" description="Leva menos de um minuto.">
-        <SignUp routing="virtual" signInUrl="/login" forceRedirectUrl="/app" appearance={clerkAppearance} />
+        <SignUp routing="hash" signInUrl="/login" forceRedirectUrl="/app" appearance={clerkAppearance} />
       </AuthCard>
     );
   }
@@ -39,7 +40,7 @@ export default function RegisterPage({
         </>
       }
     >
-      {searchParams?.error === "google" && (
+      {resolvedSearchParams.error === "google" && (
         <div className="mb-4">
           <Alert variant="destructive">
             Não foi possível entrar com o Google. Tente novamente ou cadastre-se

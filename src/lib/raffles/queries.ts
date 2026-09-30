@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createClient } from "@/lib/supabase/server";
+import { createSessionClient } from "@/lib/supabase/server";
 import type { CustomerRaffle, CustomerRaffleEntry } from "@/types/raffle";
 
 /** Sorteios já realizados pela empresa, mais recente primeiro. */
@@ -8,7 +8,7 @@ export async function listRaffles(
   companyId: string,
   limit = 20
 ): Promise<CustomerRaffle[]> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
 
   const { data, error } = await supabase
     .from("customer_raffles")
@@ -29,7 +29,7 @@ export async function getRaffleById(
   companyId: string,
   id: string
 ): Promise<{ raffle: CustomerRaffle; entries: CustomerRaffleEntry[] } | null> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
 
   const { data: raffle, error: raffleError } = await supabase
     .from("customer_raffles")

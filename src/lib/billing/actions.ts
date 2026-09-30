@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { createSessionClient } from "@/lib/supabase/server";
 import { getCurrentCompany } from "@/lib/companies/queries";
 import { confirmPaymentFromProvider } from "@/lib/billing/confirm-payment";
 import type { SubscriptionPaymentStatus } from "@/types/billing";
@@ -19,7 +19,7 @@ async function assertOwnPayment(paymentId: string): Promise<string | null> {
   const current = await getCurrentCompany();
   if (!current) return null;
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { data } = await supabase
     .from("subscription_payments")
     .select("id")
@@ -41,7 +41,7 @@ export async function getPaymentStatusAction(paymentId: string): Promise<Payment
     return { error: "Pagamento não encontrado." };
   }
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { data, error } = await supabase
     .from("subscription_payments")
     .select("status")

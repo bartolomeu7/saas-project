@@ -32,8 +32,8 @@ const GENERIC_AUTH_ERROR =
  * Origem usada nos links de e-mail/OAuth: a do ambiente atual (localhost,
  * Preview) e, em produção, sempre o domínio canônico — ver app-origin.ts.
  */
-function appOrigin(): string {
-  const h = headers();
+async function appOrigin(): Promise<string> {
+  const h = await headers();
   return resolveAppOrigin({
     vercelEnv: process.env.VERCEL_ENV,
     host: h.get("host"),
@@ -79,14 +79,15 @@ export async function signUpAction(
   }
 
   const { fullName, email, password } = parsed.data;
-  const supabase = createClient();
+  const supabase = await createClient();
+  const origin = await appOrigin();
 
   const { error } = await supabase.auth.signUp({
     email,
     password,
     options: {
       data: { full_name: fullName },
-      emailRedirectTo: `${appOrigin()}/auth/callback?next=/app`,
+      emailRedirectTo: `${origin}/auth/callback?next=/app`,
     },
   });
 
@@ -119,7 +120,7 @@ export async function signInAction(
     return { error: parsed.error.issues[0]?.message ?? GENERIC_AUTH_ERROR };
   }
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data, error } = await supabase.auth.signInWithPassword(parsed.data);
 
   if (error) {
@@ -159,11 +160,12 @@ export async function resendConfirmationAction(
     return { error: parsed.error.issues[0]?.message ?? GENERIC_AUTH_ERROR };
   }
 
-  const supabase = createClient();
+  const supabase = await createClient();
+  const origin = await appOrigin();
   const { error } = await supabase.auth.resend({
     type: "signup",
     email: parsed.data.email,
-    options: { emailRedirectTo: `${appOrigin()}/auth/callback?next=/app` },
+    options: { emailRedirectTo: `${origin}/auth/callback?next=/app` },
   });
 
   if (error?.code === "over_email_send_rate_limit" || error?.status === 429) {
@@ -177,7 +179,7 @@ export async function resendConfirmationAction(
 
 /** Logout do usuário atual. */
 export async function signOutAction(): Promise<void> {
-  const supabase = createClient();
+  const supabase = await createClient();
   await supabase.auth.signOut();
   redirect("/login");
 }
@@ -192,13 +194,14 @@ export async function signOutAction(): Promise<void> {
  * Supabase retorna erro e o usuário é redirecionado de volta ao login.
  */
 export async function signInWithGoogleAction(next: string | null): Promise<void> {
-  const supabase = createClient();
+  const supabase = await createClient();
   const target = safeNextPath(next) ?? "/app";
+  const origin = await appOrigin();
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: `${appOrigin()}/auth/callback?next=${encodeURIComponent(target)}`,
+      redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(target)}`,
     },
   });
 
@@ -229,9 +232,10 @@ export async function forgotPasswordAction(
     return { error: parsed.error.issues[0]?.message ?? GENERIC_AUTH_ERROR };
   }
 
-  const supabase = createClient();
+  const supabase = await createClient();
+  const origin = await appOrigin();
   await supabase.auth.resetPasswordForEmail(parsed.data.email, {
-    redirectTo: `${appOrigin()}/auth/callback?next=/reset-password`,
+    redirectTo: `${origin}/auth/callback?next=/reset-password`,
   });
 
   return {
@@ -261,7 +265,7 @@ export async function resetPasswordAction(
     return { error: parsed.error.issues[0]?.message ?? GENERIC_AUTH_ERROR };
   }
 
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { data: claimsData, error: claimsError } = await supabase.auth.getClaims();
 

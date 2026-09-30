@@ -22,10 +22,11 @@ function parseStatus(value?: string): CustomerStatus | "all" {
 }
 
 export default async function CustomersPage({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams?: { q?: string; status?: string; page?: string };
+  searchParams: Promise<{ q?: string; status?: string; page?: string }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const current = (await getCurrentCompany())!;
   const companyId = current.company.id;
 

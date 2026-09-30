@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { createSessionClient } from "@/lib/supabase/server";
 import { getCurrentCompany } from "@/lib/companies/queries";
 import type { ActionResult } from "@/lib/auth/actions";
 import type { CashMovementDirection } from "@/types/cash-register";
@@ -61,7 +61,7 @@ export async function openCashRegisterAction(
     return { error: "Nenhuma empresa encontrada para o usuário atual." };
   }
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { error } = await supabase.rpc("open_cash_register", {
     p_opening_balance: openingBalance,
     // O gerador de tipos do Supabase não expressa nullability de
@@ -97,7 +97,7 @@ export async function closeCashRegisterAction(
     return { error: "Nenhuma empresa encontrada para o usuário atual." };
   }
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { error } = await supabase.rpc("close_cash_register", {
     p_cash_register_id: cashRegisterId,
     p_informed_cash_balance: informedCashBalance,
@@ -145,7 +145,7 @@ export async function createCashMovementAction(
     return { error: "Nenhuma empresa encontrada para o usuário atual." };
   }
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { error } = await supabase.rpc("create_cash_movement", {
     p_direction: direction,
     p_amount: amount,

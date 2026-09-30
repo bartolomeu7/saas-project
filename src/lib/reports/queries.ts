@@ -1,6 +1,6 @@
 import "server-only";
 import { cache } from "react";
-import { createClient } from "@/lib/supabase/server";
+import { createSessionClient } from "@/lib/supabase/server";
 import { startOfDaySaoPaulo, endOfDaySaoPaulo, startOfMonthSaoPaulo, startOfYearSaoPaulo } from "@/lib/timezone";
 import { getStockLevel } from "@/types/product";
 import { NON_OPERATING_EXPENSE_SOURCES } from "@/lib/finance/queries";
@@ -52,7 +52,7 @@ function dayLabel(value: string) {
 }
 
 async function getSalesLayer(companyId: string, range: ReportRange) {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { data: sales } = await supabase.from("sales").select("id, total_amount, total_cost, completed_at").eq("company_id", companyId).eq("status", "completed").gte("completed_at", range.from).lte("completed_at", range.to).order("completed_at", { ascending: true });
   const rows = sales ?? [];
   const saleIds = rows.map((row) => row.id);
@@ -97,7 +97,7 @@ async function getSalesLayer(companyId: string, range: ReportRange) {
 }
 
 async function getFinanceLayer(companyId: string, range: ReportRange) {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const [expenseResult, receivableSalesResult, payableResult] = await Promise.all([
     supabase.from("financial_entries").select("amount, source_type").eq("company_id", companyId).eq("direction", "expense").eq("status", "posted").gte("occurred_on", range.from.slice(0, 10)).lte("occurred_on", range.to.slice(0, 10)),
     supabase.from("sales").select("id, total_amount, sold_at").eq("company_id", companyId).eq("status", "completed").eq("payment_status", "pending"),
@@ -132,7 +132,7 @@ async function getFinanceLayer(companyId: string, range: ReportRange) {
 }
 
 async function getAppointmentsLayer(companyId: string, range: ReportRange) {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { data } = await supabase.from("appointments").select("status").eq("company_id", companyId).gte("starts_at", range.from).lte("starts_at", range.to);
   const rows = data ?? [];
   return {
@@ -146,7 +146,7 @@ async function getAppointmentsLayer(companyId: string, range: ReportRange) {
 }
 
 async function getInventoryLayer(companyId: string) {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { data } = await supabase.from("products").select("stock_quantity, minimum_stock").eq("company_id", companyId).eq("status", "active");
   const rows = data ?? [];
   return { lowStock: rows.filter((row) => getStockLevel(row) === "low").length, outOfStock: rows.filter((row) => getStockLevel(row) === "out").length };

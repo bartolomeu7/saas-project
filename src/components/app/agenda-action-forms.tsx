@@ -32,8 +32,12 @@ export function AppointmentForm({
   const [startsAt, setStartsAt] = useState(date + "T08:00");
   const service = services.find((row) => row.id === serviceId);
 
+  // Depende dos campos primitivos de propósito: `service` é um novo objeto
+  // a cada render (retorno de `.find()`), então incluí-lo re-executaria o
+  // efeito sempre, mesmo sem mudança real de id/preço.
   useEffect(() => {
     if (service) setPrice(String(service.sale_price));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [service?.id, service?.sale_price]);
 
   return (

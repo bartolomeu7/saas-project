@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getCurrentCompany } from "@/lib/companies/queries";
-import { createClient } from "@/lib/supabase/server";
+import { createSessionClient } from "@/lib/supabase/server";
 import { listRaffles } from "@/lib/raffles/queries";
 import { RaffleForm } from "@/components/app/raffle-form";
 import { RaffleHistoryList } from "@/components/app/raffle-history-list";
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 
 export default async function CustomerRafflePage() {
   const current = (await getCurrentCompany())!;
-  const supabase = createClient();
+  const supabase = await createSessionClient();
 
   const [raffles, { count: completedSalesCount }] = await Promise.all([
     listRaffles(current.company.id),

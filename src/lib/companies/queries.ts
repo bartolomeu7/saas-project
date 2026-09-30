@@ -21,7 +21,7 @@ export async function getCurrentCompany(): Promise<CurrentCompany | null> {
   // policies de sempre (auth.uid()) — antes da Migration E, isso falha com
   // 22P02 para sessões Clerk, e o erro já cai no mesmo `if (... || !data)
   // return null` de antes. Esperado nesta fase; não corrigido aqui.
-  const supabase = isClerkEnabled ? createClerkSupabaseClient() : createClient();
+  const supabase = isClerkEnabled ? createClerkSupabaseClient() : await createClient();
 
   const userId = isClerkEnabled
     ? (await getClerkCurrentUser())?.id

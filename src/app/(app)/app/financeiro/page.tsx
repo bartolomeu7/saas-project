@@ -93,7 +93,12 @@ function PageShell({
   );
 }
 
-export default async function FinancePage({ searchParams }: { searchParams?: SearchParams }) {
+export default async function FinancePage({
+  searchParams: searchParamsPromise,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
+  const searchParams = await searchParamsPromise;
   const current = (await getCurrentCompany())!;
   const workspace = await getFinanceWorkspace(current.company.id);
   const rawView = searchParams?.view;

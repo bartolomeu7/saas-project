@@ -52,12 +52,13 @@ function parseTab(value?: string): TabKey {
 }
 
 export default async function CustomerDetailPage({
-  params,
-  searchParams,
+  params: paramsPromise,
+  searchParams: searchParamsPromise,
 }: {
-  params: { id: string };
-  searchParams?: { tab?: string };
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }) {
+  const [params, searchParams] = await Promise.all([paramsPromise, searchParamsPromise]);
   const current = (await getCurrentCompany())!;
 
   // getCustomerById já filtra por company_id — se o cliente não existir OU

@@ -33,7 +33,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     return getClerkCurrentUser();
   }
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -57,7 +57,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
 export async function getCurrentProfile(): Promise<Profile | null> {
   const supabase = isClerkEnabled
     ? (await import("@/lib/supabase/clerk-client")).createClerkSupabaseClient()
-    : createClient();
+    : await createClient();
 
   const userId = isClerkEnabled
     ? (await getClerkCurrentUser())?.id

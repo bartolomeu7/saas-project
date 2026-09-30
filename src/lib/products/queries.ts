@@ -1,7 +1,7 @@
 import "server-only";
 
 import { cache } from "react";
-import { createClient } from "@/lib/supabase/server";
+import { createSessionClient } from "@/lib/supabase/server";
 import { getStockLevel } from "@/types/product";
 import type {
   Product,
@@ -79,7 +79,7 @@ export async function listProducts(
     pageSize = DEFAULT_PAGE_SIZE,
   } = params;
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const sortColumn = SORT_COLUMNS[sortBy];
 
   let query = supabase
@@ -156,7 +156,7 @@ export async function getProductById(
   companyId: string,
   id: string
 ): Promise<ProductWithCategory | null> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
 
   const { data, error } = await supabase
     .from("products")
@@ -188,7 +188,7 @@ export interface ProductStats {
 export const getProductStats = cache(async function getProductStats(
   companyId: string
 ): Promise<ProductStats> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
 
   const [totalResult, activeResult, stockRowsResult] = await Promise.all([
     supabase

@@ -31,7 +31,7 @@ export async function createCompanyAction(
   // Fase 5B-APP: create_company_with_owner ainda resolve auth.uid()
   // internamente (RPC não migrada — fora do escopo desta fase). Com Clerk,
   // essa chamada falha com 22P02, esperado até a Migration F.
-  const supabase = isClerkEnabled ? createClerkSupabaseClient() : createClient();
+  const supabase = isClerkEnabled ? createClerkSupabaseClient() : await createClient();
 
   const user = await getCurrentUser();
 

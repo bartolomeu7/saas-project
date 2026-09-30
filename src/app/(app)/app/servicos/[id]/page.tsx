@@ -24,10 +24,11 @@ function formatMoney(value: number): string {
 }
 
 export default async function ServiceDetailPage({
-  params,
+  params: paramsPromise,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const params = await paramsPromise;
   const current = (await getCurrentCompany())!;
 
   const service = await getServiceById(current.company.id, params.id);
