@@ -1,85 +1,41 @@
-import Link from "next/link";
 import type { Metadata } from "next";
 import { SignIn } from "@clerk/nextjs";
-import { Alert } from "@/components/ui/alert";
 import { AuthCard } from "@/components/shared/auth/auth-card";
-import { LoginForm } from "@/components/shared/auth/login-form";
-import { GoogleAuthButton } from "@/components/shared/auth/google-auth-button";
 import { clerkAppearance } from "@/components/shared/auth/clerk-auth-appearance";
-import { isClerkEnabled } from "@/lib/clerk/config";
 
 export const metadata: Metadata = {
   title: "Entrar",
 };
 
+/** Só aceita caminhos internos (evita open redirect via ?next=). */
+function safeNextPath(next: string | undefined): string {
+  if (
+    !next ||
+    !next.startsWith("/") ||
+    next.startsWith("//") ||
+    next.startsWith("/\\") ||
+    next.includes(":")
+  ) {
+    return "/app";
+  }
+  return next;
+}
+
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; next?: string }>;
+  searchParams: Promise<{ next?: string }>;
 }) {
   const resolvedSearchParams = await searchParams;
-  // Fase 5B-APP: cutover funcional de auth para Clerk (local/TESTE). Sem
-  // chaves Development (Preview/produção hoje), cai no fluxo Supabase Auth
-  // de sempre — zero mudança nesses ambientes.
-  if (isClerkEnabled) {
-    return (
-      <AuthCard title="Entrar" description="Acesse sua conta para continuar.">
-        <SignIn
-          routing="hash"
-          signUpUrl="/register"
-          forceRedirectUrl={resolvedSearchParams.next || "/app"}
-          appearance={clerkAppearance}
-        />
-      </AuthCard>
-    );
-  }
 
   return (
-    <AuthCard
-      title="Entrar"
-      description="Acesse sua conta para continuar."
-      footer={
-        <>
-          Ainda não tem conta?{" "}
-          <Link href="/register" className="font-medium underline underline-offset-4">
-            Criar conta
-          </Link>
-        </>
-      }
-    >
-      {resolvedSearchParams.error === "auth_callback_failed" && (
-        <div className="mb-4">
-          <Alert variant="destructive">
-            Link inválido ou expirado. Tente novamente.
-          </Alert>
-        </div>
-      )}
-      {resolvedSearchParams.error === "google" && (
-        <div className="mb-4">
-          <Alert variant="destructive">
-            Não foi possível entrar com o Google. Tente novamente ou use
-            e-mail e senha.
-          </Alert>
-        </div>
-      )}
-
-      <GoogleAuthButton next={resolvedSearchParams.next} />
-
-      <div className="my-4 flex items-center gap-3">
-        <div className="h-px flex-1 bg-border" />
-        <span className="text-xs text-muted-foreground">ou</span>
-        <div className="h-px flex-1 bg-border" />
-      </div>
-
-      <LoginForm next={resolvedSearchParams.next} />
-      <div className="mt-4 text-center">
-        <Link
-          href="/forgot-password"
-          className="text-sm text-muted-foreground underline underline-offset-4"
-        >
-          Esqueci minha senha
-        </Link>
-      </div>
+    <AuthCard title="Entrar" description="Acesse sua conta para continuar.">
+      <SignIn
+        routing="hash"
+        signUpUrl="/register"
+        forceRedirectUrl={safeNextPath(resolvedSearchParams.next)}
+        appearance={clerkAppearance}
+      />
     </AuthCard>
   );
 }

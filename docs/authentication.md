@@ -1,133 +1,61 @@
 # Autenticação — Prime Ges
 
-Este documento descreve o funcionamento do sistema de autenticação implementado
-na Etapa 2. Cobre apenas autenticação e perfil de usuário — não cobre
-pagamentos, planos ou o painel administrativo.
+## Arquitetura
 
-## Visão geral
+```
+Clerk (login, cadastro, sessão, recuperação de senha, logout)
+  → JWT de sessão do Clerk
+  → Supabase Third-Party Auth (valida o JWT via JWKS do Clerk)
+  → auth.jwt()->>'sub'  (id do usuário no Clerk)
+  → public.profiles.clerk_user_id
+  → public.profiles.user_id  (UUID interno, identidade usada em todo o banco)
+  → RLS (88 policies) e RPCs
+```
 
-- Autenticação via **Supabase Auth** (e-mail + senha).
-- Nenhuma senha ou credencial é armazenada em tabelas próprias — apenas em
-  `auth.users`, gerenciado pelo Supabase.
-- Todo fluxo de auth roda como **Server Action** (`src/lib/auth/actions.ts`),
-  nunca diretamente no client — a chave `anon` nunca é usada para operações
-  sensíveis fora do contexto server, e a chave `service_role` não é usada em
-  nenhum fluxo de auth (não é necessária).
+- **Clerk** é a única autenticação. O Supabase é só banco, RLS e RPCs; o app
+  não usa mais Supabase Auth (sem `signIn`/`signUp`/`signOut`/`getUser`).
+- O `user_id` interno é um UUID próprio de `public.profiles`, sem FK para
+  `auth.users`. Todas as colunas de autoria (`created_by`, `actor_user_id`,
+  `company_members.user_id` etc.) referenciam `profiles(user_id)`.
+- Não há Clerk Organizations: empresas e papéis continuam em
+  `companies` / `company_members` (owner, admin, employee) e a role de
+  plataforma em `profiles.role` (user, admin, super_admin).
 
-## Perfil de usuário (`public.profiles`)
+## Peças no banco
 
-Toda vez que um usuário é criado em `auth.users` (cadastro), um trigger no
-banco (`on_auth_user_created`, ver `supabase/migrations/001_create_profiles.sql`)
-cria automaticamente a linha correspondente em `public.profiles`, com:
-
-- `role = 'user'`
-- `status = 'active'`
-- `full_name` e `email` copiados dos metadados do cadastro, quando disponíveis
-
-Essa lógica existe **apenas no banco** — o frontend não precisa (e não deve)
-criar profiles manualmente.
-
-### Campos protegidos
-
-`user_id`, `role` e `status` não podem ser alterados pelo próprio usuário.
-Isso é garantido em duas camadas:
-
-1. **RLS** — a policy de update só permite que o usuário altere a própria
-   linha (`user_id = auth.uid()`), mas não restringe colunas por si só.
-2. **Trigger** `protect_profile_restricted_fields` — roda antes de qualquer
-   `UPDATE` em `profiles` e rejeita a alteração de `user_id`, `role` ou
-   `status`, a menos que a operação venha de uma sessão `service_role`
-   (reservado para rotinas administrativas futuras).
-
-Essa alteração de `role`/`status` será exposta futuramente apenas através do
-painel administrativo, usando o cliente `service_role`
-(`src/lib/supabase/admin.ts`) a partir de código server-side — nunca a partir
-do cliente `anon` do frontend.
-
-## Fluxos implementados
-
-### Cadastro (`signUpAction`)
-
-1. Usuário preenche nome, e-mail e senha em `/register`.
-2. Validação com Zod (`src/lib/validations/auth.ts`).
-3. `supabase.auth.signUp(...)`, com `emailRedirectTo` apontando para
-   `/auth/callback?next=/app`.
-4. Supabase envia e-mail de confirmação. O trigger de criação de perfil roda
-   imediatamente após o registro em `auth.users` (não depende da confirmação
-   de e-mail).
-5. Usuário confirma o e-mail → é redirecionado para `/auth/callback`, que
-   troca o código pela sessão e o leva para `/app`.
-
-### Login (`signInAction`)
-
-1. `/login` envia e-mail/senha.
-2. `supabase.auth.signInWithPassword(...)`.
-3. Em caso de sucesso, redirect para `/app`. Em caso de erro, mensagem
-   genérica ("E-mail ou senha inválidos") — não revela se o problema foi o
-   e-mail ou a senha, para dificultar enumeração de contas.
-
-### Logout (`signOutAction`)
-
-`supabase.auth.signOut()` + redirect para `/login`. Disparado por um form
-simples no menu do usuário (`src/components/app/user-menu.tsx`).
-
-### Recuperação de senha
-
-1. `/forgot-password` → `forgotPasswordAction` chama
-   `supabase.auth.resetPasswordForEmail(email, { redirectTo: ".../auth/callback?next=/reset-password" })`.
-2. A resposta ao usuário é **sempre genérica** ("se este e-mail existir,
-   você receberá um link"), independentemente de o e-mail existir na base —
-   evita enumeração de contas.
-3. Usuário clica no link do e-mail → `/auth/callback` troca o código por uma
-   sessão temporária de recuperação e redireciona para `/reset-password`.
-4. Em `/reset-password`, `resetPasswordAction` chama
-   `supabase.auth.updateUser({ password })`, usando a sessão temporária.
-   Sem essa sessão (link inválido/expirado), a ação retorna erro.
-
-## Proteção de rotas (middleware)
-
-`src/middleware.ts` roda em toda request (exceto assets estáticos) e:
-
-1. Renova a sessão via `updateSession` (`src/lib/supabase/middleware.ts`).
-2. Se a rota começa com `/app` ou `/admin` e não há usuário autenticado,
-   redireciona para `/login?next=<rota original>`.
-3. Se a rota é `/login` ou `/register` e o usuário já está autenticado,
-   redireciona para `/app`.
-
-4. Para `/admin` e `/admin/*`, além de autenticado, o middleware exige
-   `profiles.role` igual a `admin` ou `super_admin` — nunca
-   `company_members.role` (um owner de empresa cliente não é administrador
-   de plataforma só por isso). A checagem vive em `src/lib/admin/guard.ts`
-   (`getPlatformAdminGuardStatus`, `isPlatformAdminRole`), no mesmo molde
-   de `src/lib/billing/guard.ts`: uma função sem `"server-only"`/
-   `next/headers`, para poder ser chamada tanto pelo middleware (Edge
-   Runtime) quanto por uma futura página/layout do painel. Quem não
-   atende é redirecionado para `/app`. O painel em si (`src/app/admin/`)
-   ainda não tem nenhuma página — o guard já está pronto para quando
-   existir.
-
-## Onde cada coisa vive
-
-| Responsabilidade | Arquivo |
+| Objeto | Função |
 |---|---|
-| Server Actions de auth | `src/lib/auth/actions.ts` |
-| Leitura de sessão/perfil atual | `src/lib/auth/session.ts` |
-| Validação de entrada | `src/lib/validations/auth.ts` |
-| Cliente Supabase (browser) | `src/lib/supabase/client.ts` |
-| Cliente Supabase (server) | `src/lib/supabase/server.ts` |
-| Cliente Supabase (admin/service_role) | `src/lib/supabase/admin.ts` |
-| Renovação de sessão + proteção de rota | `src/middleware.ts`, `src/lib/supabase/middleware.ts` |
-| Guard de acesso à plataforma (`/admin`) | `src/lib/admin/guard.ts` |
-| Callback de confirmação/recuperação | `src/app/auth/callback/route.ts` |
-| Migration (tabela, RLS, triggers) | `supabase/migrations/001_create_profiles.sql` |
-| Tipos de domínio | `src/types/profile.ts`, `src/types/supabase.ts` |
+| `profiles.clerk_user_id` (text, único) | Liga o usuário Clerk ao profile |
+| `public.current_profile_user_id()` | `SECURITY DEFINER`, devolve o `user_id` interno do JWT atual (ou NULL). Substitui `auth.uid()` em todas as policies e RPCs |
+| `public.ensure_profile(nome, email)` | Cria/recupera o profile do usuário Clerk logado (idempotente). A identidade vem só do JWT, nunca de parâmetro |
 
-## Próximos passos (fora do escopo desta etapa)
+## Peças no app
 
-- Policies de RLS adicionais para administradores lerem/editarem perfis de
-  terceiros (hoje `admin`/`super_admin` já leem entre empresas em algumas
-  tabelas de billing/auditoria/sorteio — ver `docs/architecture.md` — mas
-  não em `profiles`).
-- Painel administrativo completo em `src/app/admin/` (dashboard, empresas,
-  usuários, planos, pagamentos, assinaturas, tickets, auditoria,
-  configurações) — o guard de acesso já existe, falta só o conteúdo.
+| Arquivo | Papel |
+|---|---|
+| `src/middleware.ts` | `clerkMiddleware`: rotas protegidas, guard de `/admin` (profiles.role) e guard de assinatura, ambos lendo o banco com o token do Clerk |
+| `src/lib/supabase/clerk-client.ts` | Client Supabase autenticado pelo token do Clerk |
+| `src/lib/supabase/server.ts` | `createSessionClient()` — usado por todos os módulos de dados |
+| `src/lib/auth/clerk-session.ts` | Resolve o UUID interno (lazy creation via `ensure_profile`) |
+| `src/lib/auth/session.ts` | `getCurrentUser()` / `getCurrentProfile()` |
+| `src/app/(public)/login`, `register` | Componentes `<SignIn/>` / `<SignUp/>` do Clerk |
+
+## Variáveis de ambiente
+
+`NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` e `CLERK_SECRET_KEY` são obrigatórias.
+Development usa `pk_test_`/`sk_test_`; Production usa `pk_live_`/`sk_live_`.
+Nunca misturar. No Supabase de cada ambiente, **Authentication → Third-Party
+Auth → Clerk** precisa apontar para o domínio da instância Clerk daquele ambiente.
+
+## Histórico de migrations
+
+`supabase/migrations/20261006000000_clerk_a_to_e_identity_bridge.sql`
+(coluna, funções, FKs, RLS), `…0001_clerk_f_rpc_cutover.sql` (38 funções
+`auth.uid()` → `current_profile_user_id()`), `…0002_clerk_h_drop_legacy_auth_trigger.sql`
+(remove o trigger legado `on_auth_user_created`).
+
+## Proteção de campos do profile
+
+`profiles.role`, `status` e `user_id` não podem ser alterados pelo próprio
+usuário (trigger `protect_profile_restricted_fields`); só o `service_role`
+(painel administrativo) altera.

@@ -4,22 +4,13 @@ import { currentUser } from "@clerk/nextjs/server";
 import { createClerkSupabaseClient } from "@/lib/supabase/clerk-client";
 
 /**
- * Fase 5B-APP — camada de sessão do lado Clerk. Só é chamada quando
- * isClerkEnabled (ver src/lib/clerk/config.ts); session.ts e
- * companies/queries.ts decidem qual caminho usar.
+ * Camada de sessão do lado Clerk.
  *
  * Resolve o UUID interno (profiles.user_id) do usuário Clerk autenticado.
- * Chama a RPC current_profile_user_id() (SECURITY DEFINER — funciona hoje,
- * mesmo com as 88 RLS policies ainda em auth.uid(), porque RPCs não passam
- * pelas policies de tabela). Se ainda não existe profile para este Clerk
- * user (primeiro acesso), cria via ensure_profile() (idempotente) e usa o
- * UUID retornado — é a "lazy creation" desenhada na Fase 4/5, sem depender
- * de webhook.
- *
- * Qualquer leitura/escrita direta em tabela (profiles, company_members,
- * companies...) feita com o client Clerk continua sujeita às RLS antigas
- * (auth.uid()) e por isso ainda falha com 22P02 até a Migration E — isso é
- * esperado nesta fase e não é tratado aqui.
+ * Chama a RPC current_profile_user_id() (SECURITY DEFINER). Se ainda não
+ * existe profile para este Clerk user (primeiro acesso), cria via
+ * ensure_profile() (idempotente) e usa o UUID retornado — "lazy creation",
+ * sem depender de webhook.
  */
 export async function getClerkInternalUserId(): Promise<string | null> {
   const clerkUser = await currentUser();

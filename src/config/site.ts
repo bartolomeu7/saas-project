@@ -18,7 +18,6 @@ export const siteConfig = {
   links: {
     login: "/login",
     register: "/register",
-    forgotPassword: "/forgot-password",
     app: "/app",
   },
 } as const;

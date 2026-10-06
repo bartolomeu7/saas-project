@@ -1,9 +1,10 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import { clerkMiddleware } from "@clerk/nextjs/server";
-import { updateSession } from "@/lib/supabase/middleware";
+import { createClient } from "@supabase/supabase-js";
+import type { Database } from "@/types/supabase";
 import { getSubscriptionGuardStatus } from "@/lib/billing/guard";
-import { getPlatformAdminGuardStatus } from "@/lib/admin/guard";
-import { isClerkEnabled } from "@/lib/clerk/config";
+import { getPlatformAdminGuardStatus, isPlatformAdminRole } from "@/lib/admin/guard";
+import type { UserRole } from "@/types/profile";
 
 /**
  * Prefixos de rota que exigem usuário autenticado.
@@ -53,36 +54,26 @@ function isAdminRoute(pathname: string) {
 }
 
 /**
- * Middleware raiz da aplicação.
+ * Middleware raiz da aplicação (Clerk é a única autenticação).
  *
- * 1. Renova a sessão Supabase em cada request.
- * 2. Bloqueia acesso a rotas protegidas (/app, /admin) para quem não
- *    está autenticado (Supabase Auth OU Clerk — ver `clerkUserId`),
+ * 1. Bloqueia /app, /admin e /onboarding para quem não tem sessão Clerk,
  *    redirecionando para /login.
- * 3. Evita que um usuário já autenticado veja /login ou /register.
- * 4. Em /admin e /admin/*, além de autenticado, exige
- *    profiles.role igual a "admin" ou "super_admin" — nunca
- *    company_members.role. Quem não atende é levado de volta a /app.
- * 5. Guard de assinatura (/app/*, exceto /app/assinatura).
+ * 2. Evita que um usuário já autenticado veja /login ou /register.
+ * 3. Em /admin e /admin/*, além de autenticado, exige profiles.role igual a
+ *    "admin" ou "super_admin" — nunca company_members.role. Qualquer falha
+ *    ao confirmar a role nega o acesso (fail closed).
+ * 4. Guard de assinatura (/app/*, exceto /app/assinatura).
  *
- * Fase 5B-APP: os guards de admin/assinatura leem `profiles`/`subscriptions`
- * sob as MESMAS 88 RLS policies de sempre (auth.uid()), usando o client
- * Supabase Auth de `updateSession`. Uma sessão Clerk não tem esse client
- * autenticado (não criamos mais sessão Supabase Auth), então essas duas
- * consultas não têm como rodar para ela ainda — por isso, com Clerk:
- *   - /admin FALHA FECHADO (nunca libera sem o check rodar de verdade —
- *     ver isAdminRoute abaixo, redireciona sempre até a Migration E/F
- *     trazer um jeito real de checar role com token Clerk);
- *   - o guard de assinatura é pulado (não bloqueia) — é enforcement de
- *     billing, não de segurança, aceitável não rodar nesta fase de
- *     transição, como a missão autorizou.
- * Nenhuma RLS/RPC foi alterada para viabilizar isso.
+ * Os guards de role/assinatura leem o banco com o token da própria sessão
+ * Clerk (Third-Party Auth do Supabase), então rodam sob as mesmas políticas
+ * RLS do restante do app: profiles_select_own devolve só o perfil do
+ * usuário atual, o que dá o UUID interno (profiles.user_id) e a role numa
+ * única consulta.
  */
-async function coreMiddleware(request: NextRequest, clerkUserId: string | null) {
-  const { response, user, supabase } = await updateSession(request);
+export const middleware = clerkMiddleware(async (auth, request) => {
+  const { userId, getToken } = await auth();
   const { pathname } = request.nextUrl;
-  const isAuthenticated = Boolean(user) || Boolean(clerkUserId);
-  const isClerkOnlySession = Boolean(clerkUserId) && !user;
+  const isAuthenticated = Boolean(userId);
 
   if (isProtectedRoute(pathname) && !isAuthenticated) {
     const redirectUrl = new URL("/login", request.url);
@@ -94,43 +85,46 @@ async function coreMiddleware(request: NextRequest, clerkUserId: string | null) 
     return NextResponse.redirect(new URL("/app", request.url));
   }
 
-  if (isAuthenticated && isAdminRoute(pathname)) {
-    // Sessão só-Clerk: sem RLS migrada ainda não há como confirmar
-    // profiles.role via este client — nega por padrão (fail closed) em vez
-    // de pular o check (o que liberaria /admin sem verificação nenhuma).
-    if (isClerkOnlySession) {
+  const needsAdminGuard = isAuthenticated && isAdminRoute(pathname);
+  const needsSubscriptionGuard = isAuthenticated && requiresActiveSubscription(pathname);
+
+  if (!needsAdminGuard && !needsSubscriptionGuard) {
+    return NextResponse.next();
+  }
+
+  const token = await getToken();
+  const supabase = createClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { accessToken: async () => token }
+  );
+
+  const { data: profile } = token
+    ? await supabase.from("profiles").select("user_id, role").maybeSingle()
+    : { data: null };
+
+  if (needsAdminGuard) {
+    const isPlatformAdmin = isPlatformAdminRole(profile?.role as UserRole | undefined);
+    if (!profile || !isPlatformAdmin) {
       return NextResponse.redirect(new URL("/app", request.url));
     }
-    const { isPlatformAdmin } = await getPlatformAdminGuardStatus(supabase, user!.id);
-    if (!isPlatformAdmin) {
+    // Reconfirma pelo guard central (mesma regra usada em todo o projeto).
+    const guard = await getPlatformAdminGuardStatus(supabase, profile.user_id);
+    if (!guard.isPlatformAdmin) {
       return NextResponse.redirect(new URL("/app", request.url));
     }
   }
 
-  if (isAuthenticated && !isClerkOnlySession && requiresActiveSubscription(pathname)) {
-    const { hasCompany, isActive } = await getSubscriptionGuardStatus(supabase, user!.id);
+  // Sem perfil ainda = primeiro acesso: o onboarding cria perfil e empresa.
+  if (needsSubscriptionGuard && profile) {
+    const { hasCompany, isActive } = await getSubscriptionGuardStatus(supabase, profile.user_id);
     if (hasCompany && !isActive) {
       return NextResponse.redirect(new URL("/app/assinatura", request.url));
     }
   }
 
-  return response;
-}
-
-/**
- * Fase 2: sem chaves Clerk Development, middleware idêntico ao original
- * (Supabase Auth decide tudo). Fase 5B-APP: com as chaves presentes,
- * clerkMiddleware dá acesso a `auth()` para reconhecer sessão Clerk também
- * como "autenticado" nos guards acima — REUSE FIRST, mesma função
- * `coreMiddleware`, só o sinal de autenticação passa a considerar as duas
- * fontes.
- */
-export const middleware = isClerkEnabled
-  ? clerkMiddleware(async (auth, request) => {
-      const { userId } = await auth();
-      return coreMiddleware(request, userId ?? null);
-    })
-  : (request: NextRequest) => coreMiddleware(request, null);
+  return NextResponse.next();
+});
 
 export const config = {
   matcher: [

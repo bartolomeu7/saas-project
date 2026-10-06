@@ -1,8 +1,6 @@
 import "server-only";
 
-import { createClient } from "@/lib/supabase/server";
-import { createClerkSupabaseClient } from "@/lib/supabase/clerk-client";
-import { isClerkEnabled } from "@/lib/clerk/config";
+import { createSessionClient } from "@/lib/supabase/server";
 import { getClerkCurrentUser } from "@/lib/auth/clerk-session";
 import type { Company, CompanyRole, CurrentCompany } from "@/types/company";
 
@@ -16,16 +14,9 @@ import type { Company, CompanyRole, CurrentCompany } from "@/types/company";
  * (company_members) e empresas às quais o usuário pertence.
  */
 export async function getCurrentCompany(): Promise<CurrentCompany | null> {
-  // Fase 5B-APP: com Clerk, o client passa a autenticar com o token Clerk
-  // (Third-Party Auth). A leitura abaixo continua sob as MESMAS 88 RLS
-  // policies de sempre (auth.uid()) — antes da Migration E, isso falha com
-  // 22P02 para sessões Clerk, e o erro já cai no mesmo `if (... || !data)
-  // return null` de antes. Esperado nesta fase; não corrigido aqui.
-  const supabase = isClerkEnabled ? createClerkSupabaseClient() : await createClient();
+  const supabase = await createSessionClient();
 
-  const userId = isClerkEnabled
-    ? (await getClerkCurrentUser())?.id
-    : (await supabase.auth.getUser()).data.user?.id;
+  const userId = (await getClerkCurrentUser())?.id;
 
   if (!userId) {
     return null;
