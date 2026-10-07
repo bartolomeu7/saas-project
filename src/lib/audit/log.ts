@@ -31,9 +31,9 @@ export async function writeAuditLog(
 ): Promise<void> {
   // O papel `authenticated` não tem INSERT em audit_logs (migrations 036 e
   // 20260923115135). A RPC write_audit_log (migration 041) grava com o ator
-  // sempre igual a auth.uid() quando há sessão de usuário (e só aceita as
+  // sempre igual a current_profile_user_id() quando há sessão de usuário (e só aceita as
   // ações permitidas a usuário). Com o cliente service_role (billing) não há
-  // auth.uid(): o ator vai em p_actor_user_id e o banco só aceita eventos de
+  // identidade de sessão: o ator vai em p_actor_user_id e o banco só aceita eventos de
   // assinatura/pagamento nesse contexto.
   const { error } = await supabase.rpc("write_audit_log", {
     p_company_id: params.companyId,

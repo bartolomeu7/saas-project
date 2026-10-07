@@ -14,7 +14,7 @@ const SALE_PAYMENT_METHODS: readonly SalePaymentMethod[] = ["cash", "pix", "debi
  * único aberto por empresa, saldo não-negativo, etc.) vivem dentro das
  * RPCs (supabase/migrations/021_cash_register_foundation.sql) — nunca
  * aceitam company_id/cash_register_id do cliente quando conseguem
- * resolver isso sozinhas a partir de auth.uid(). Estas Server Actions só
+ * resolver isso sozinhas a partir de current_profile_user_id(). Estas Server Actions só
  * validam formato de formulário e traduzem o erro do Postgres (que já
  * vem em português, lançado pela própria RPC) para o usuário.
  *

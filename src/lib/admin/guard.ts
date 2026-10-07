@@ -28,7 +28,7 @@ export function isPlatformAdminRole(role: UserRole | null | undefined): boolean 
 /**
  * Resolve profiles.role do usuário autenticado e já devolve se ele tem
  * acesso administrativo de plataforma. Protegido por RLS
- * (profiles_select_own: user_id = auth.uid()) — só é possível ler o
+ * (profiles_select_own: user_id = current_profile_user_id()) — só é possível ler o
  * próprio perfil, então esta consulta nunca vaza role de outro usuário.
  */
 export async function getPlatformAdminGuardStatus(
