@@ -1,7 +1,7 @@
 import "server-only";
 
 import { cache } from "react";
-import { createClient } from "@/lib/supabase/server";
+import { createSessionClient } from "@/lib/supabase/server";
 import { endOfDaySaoPaulo, startOfMonthSaoPaulo } from "@/lib/timezone";
 import type {
   AccountReceivable,
@@ -34,7 +34,7 @@ export function resolveFinanceMonthRange(now = new Date()): { from: string; to: 
 }
 
 export async function listFinancialCategories(companyId: string): Promise<FinancialCategory[]> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { data } = await supabase
     .from("financial_categories")
     .select("*")
@@ -47,7 +47,7 @@ export async function listFinancialCategories(companyId: string): Promise<Financ
 }
 
 export async function listCostCenters(companyId: string): Promise<CostCenter[]> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { data } = await supabase
     .from("cost_centers")
     .select("*")
@@ -62,7 +62,7 @@ export async function listAccountsPayable(
   companyId: string,
   includePaid = false
 ): Promise<AccountsPayable[]> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
 
   let query = supabase
     .from("accounts_payable")
@@ -80,7 +80,7 @@ export async function listAccountsPayable(
 }
 
 export async function listAccountsReceivable(companyId: string): Promise<AccountReceivable[]> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
 
   const { data: sales } = await supabase
     .from("sales")
@@ -132,7 +132,7 @@ export async function listRecentFinancialEntries(
   companyId: string,
   limit = 20
 ): Promise<FinancialEntry[]> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { data } = await supabase
     .from("financial_entries")
     .select("*")
@@ -148,7 +148,7 @@ export async function listRecentFinancialEntries(
 export const getFinanceDashboard = cache(async function getFinanceDashboard(
   companyId: string
 ): Promise<FinanceDashboard> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { from, to } = resolveFinanceMonthRange();
 
   const [salesResult, expensesResult, cashResult, payableResult, receivables] = await Promise.all([

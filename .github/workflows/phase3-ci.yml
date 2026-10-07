@@ -7,6 +7,13 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    # Valores FICTÍCIOS e não secretos: servem só para o build compilar e
+    # prerenderizar sem credenciais reais (o CI não precisa de nenhuma).
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_Y2ktcGxhY2Vob2xkZXIuY2xlcmsuYWNjb3VudHMuZGV2JA
+      CLERK_SECRET_KEY: sk_test_ci_placeholder_not_a_real_key
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

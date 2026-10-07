@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { createClient } from "@/lib/supabase/server";
+import { createSessionClient } from "@/lib/supabase/server";
 import type { CustomerDocument } from "@/types/customer-document";
 
 /**
@@ -12,7 +12,7 @@ export const listCustomerDocuments = cache(async function listCustomerDocuments(
   companyId: string,
   customerId: string
 ): Promise<CustomerDocument[]> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
 
   const { data, error } = await supabase
     .from("customer_documents")

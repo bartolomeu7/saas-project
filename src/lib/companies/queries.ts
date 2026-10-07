@@ -1,6 +1,7 @@
 import "server-only";
 
-import { createClient } from "@/lib/supabase/server";
+import { createSessionClient } from "@/lib/supabase/server";
+import { getClerkCurrentUser } from "@/lib/auth/clerk-session";
 import type { Company, CompanyRole, CurrentCompany } from "@/types/company";
 
 /**
@@ -13,20 +14,18 @@ import type { Company, CompanyRole, CurrentCompany } from "@/types/company";
  * (company_members) e empresas às quais o usuário pertence.
  */
 export async function getCurrentCompany(): Promise<CurrentCompany | null> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const userId = (await getClerkCurrentUser())?.id;
 
-  if (!user) {
+  if (!userId) {
     return null;
   }
 
   const { data: membership, error: membershipError } = await supabase
     .from("company_members")
     .select("company_id, role")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     // Determinístico mesmo se uma duplicidade histórica existir: sempre a
     // membership mais antiga (a "empresa original" do usuário), nunca uma
     // ordem dependente do plano de execução do banco. Ver migration 017.

@@ -1,13 +1,13 @@
 import "server-only";
 
-import { createClient } from "@/lib/supabase/server";
+import { createSessionClient } from "@/lib/supabase/server";
 import type { ServiceCategory, ServiceStatus } from "@/types/service";
 
 /** Todas as categorias ativas da empresa, para uso em <select> de formulário. */
 export async function listActiveCategories(
   companyId: string
 ): Promise<ServiceCategory[]> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
 
   const { data, error } = await supabase
     .from("service_categories")
@@ -33,7 +33,7 @@ export async function listCategories({
   companyId,
   status = "all",
 }: ListCategoriesParams): Promise<ServiceCategory[]> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
 
   let query = supabase.from("service_categories").select("*").eq("company_id", companyId);
 
@@ -54,7 +54,7 @@ export async function getCategoryById(
   companyId: string,
   id: string
 ): Promise<ServiceCategory | null> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
 
   const { data, error } = await supabase
     .from("service_categories")
@@ -75,7 +75,7 @@ export async function countServicesInCategory(
   companyId: string,
   categoryId: string
 ): Promise<number> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
 
   const { count, error } = await supabase
     .from("services")

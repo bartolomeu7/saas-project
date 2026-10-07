@@ -1,3 +1,4 @@
+import { MetricCard } from "@/components/app/metric-card";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getCurrentCompany } from "@/lib/companies/queries";
@@ -5,6 +6,7 @@ import { getPurchaseStats, listPurchaseOrders } from "@/lib/purchases/queries";
 import { PURCHASE_ORDER_STATUS_LABELS } from "@/types/purchase";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 
 export const metadata: Metadata = { title: "Compras" };
 
@@ -43,29 +45,26 @@ export default async function PurchasesPage() {
           ["Recebidos", String(stats.received)],
           ["A pagar", money(stats.openPayables)],
         ].map(([label, value]) => (
-          <div key={label} className="prime-kpi-card rounded-xl border bg-card p-4">
-            <p className="text-xs text-muted-foreground">{label}</p>
-            <p className="mt-1 text-2xl font-semibold">{value}</p>
-          </div>
+          <MetricCard key={label} label={label ?? ""} value={value} />
         ))}
       </div>
 
       <div className="overflow-x-auto rounded-xl border bg-card">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b text-left text-muted-foreground">
-              <th className="p-3">Pedido</th>
-              <th className="p-3">Fornecedor</th>
-              <th className="p-3">Status</th>
-              <th className="p-3">Previsão</th>
-              <th className="p-3">Vencimento</th>
-              <th className="p-3 text-right">Total</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table className="w-full text-sm">
+          <TableHeader>
+            <TableRow className="border-b text-left text-muted-foreground">
+              <TableHead className="p-3">Pedido</TableHead>
+              <TableHead className="p-3">Fornecedor</TableHead>
+              <TableHead className="p-3">Status</TableHead>
+              <TableHead className="p-3">Previsão</TableHead>
+              <TableHead className="p-3">Vencimento</TableHead>
+              <TableHead className="p-3 text-right">Total</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {orders.map((order) => (
-              <tr key={order.id} className="border-b last:border-0 hover:bg-muted/40">
-                <td className="p-3">
+              <TableRow key={order.id} className="border-b last:border-0 hover:bg-muted/40">
+                <TableCell className="p-3">
                   <Link
                     href={"/app/compras/" + order.id}
                     className="font-medium hover:underline"
@@ -73,22 +72,22 @@ export default async function PurchasesPage() {
                     {order.order_number ??
                       "PC-" + order.id.slice(0, 8).toUpperCase()}
                   </Link>
-                </td>
-                <td className="p-3">{order.suppliers?.name ?? "—"}</td>
-                <td className="p-3">
+                </TableCell>
+                <TableCell className="p-3">{order.suppliers?.name ?? "—"}</TableCell>
+                <TableCell className="p-3">
                   {PURCHASE_ORDER_STATUS_LABELS[order.status]}
-                </td>
-                <td className="p-3">
+                </TableCell>
+                <TableCell className="p-3">
                   {order.expected_at ? dateOnly(order.expected_at) : "—"}
-                </td>
-                <td className="p-3">{dateOnly(order.due_date)}</td>
-                <td className="p-3 text-right font-medium">
+                </TableCell>
+                <TableCell className="p-3">{dateOnly(order.due_date)}</TableCell>
+                <TableCell className="p-3 text-right font-medium">
                   {money(order.total_amount)}
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
 
         {!orders.length && (
           <div className="p-10 text-center text-sm text-muted-foreground">

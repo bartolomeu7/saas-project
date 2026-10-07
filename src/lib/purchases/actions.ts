@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { createSessionClient } from "@/lib/supabase/server";
 import { getCurrentCompany } from "@/lib/companies/queries";
 import { getCurrentUser } from "@/lib/auth/session";
 import { writeAuditLog } from "@/lib/audit/log";
@@ -39,7 +39,7 @@ export async function createPurchaseOrderAction(
   const current = await getCurrentCompany();
   if (!current) return { error: "Nenhuma empresa encontrada." };
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { data, error } = await supabase.rpc("create_purchase_order", {
     p_supplier_id: supplierId,
     p_items: items,
@@ -83,7 +83,7 @@ export async function receivePurchaseOrderAction(
   const current = await getCurrentCompany();
   if (!current) return { error: "Nenhuma empresa encontrada." };
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { error } = await supabase.rpc("receive_purchase_order", {
     p_purchase_order_id: purchaseOrderId,
     p_items: items,
@@ -113,7 +113,7 @@ export async function cancelPurchaseOrderAction(
   const current = await getCurrentCompany();
   if (!current) return;
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { error } = await supabase.rpc("cancel_purchase_order", {
     p_purchase_order_id: purchaseOrderId,
     p_reason: String(formData.get("reason") ?? "").trim() || undefined,
@@ -134,7 +134,7 @@ export async function cancelPurchaseReceiptAction(
   const current = await getCurrentCompany();
   if (!current) return;
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { error } = await supabase.rpc("cancel_purchase_receipt", {
     p_purchase_receipt_id: purchaseReceiptId,
     p_reason: String(formData.get("reason") ?? "").trim() || undefined,

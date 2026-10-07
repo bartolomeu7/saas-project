@@ -1,5 +1,6 @@
 "use client";
 
+import { ConfirmActionForm } from "@/components/app/confirm-dialog";
 import { deactivateCustomerAction } from "@/lib/customers/actions";
 
 export function DeactivateCustomerButton({
@@ -10,23 +11,13 @@ export function DeactivateCustomerButton({
   customerName: string;
 }) {
   return (
-    <form
+    <ConfirmActionForm
       action={deactivateCustomerAction.bind(null, customerId)}
-      onSubmit={(event) => {
-        const confirmed = window.confirm(
-          `Tem certeza que deseja excluir "${customerName}"? O cliente será marcado como inativo.`
-        );
-        if (!confirmed) {
-          event.preventDefault();
-        }
-      }}
-    >
-      <button
-        type="submit"
-        className="text-sm font-medium text-destructive underline-offset-4 hover:underline"
-      >
-        Excluir
-      </button>
-    </form>
+      label="Excluir"
+      title={`Excluir "${customerName}"?`}
+      description="O cliente será marcado como inativo e seus dados serão preservados."
+      confirmLabel="Excluir"
+      destructive
+    />
   );
 }

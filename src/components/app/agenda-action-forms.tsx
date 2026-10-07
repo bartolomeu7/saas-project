@@ -11,6 +11,7 @@ import {
 import type { Appointment } from "@/types/appointment";
 import { FormMessage } from "@/components/shared/auth/form-message";
 import { SubmitButton } from "@/components/shared/auth/submit-button";
+import { NativeSelect } from "@/components/ui/native-select";
 
 const initialState: ActionResult = {};
 
@@ -31,8 +32,12 @@ export function AppointmentForm({
   const [startsAt, setStartsAt] = useState(date + "T08:00");
   const service = services.find((row) => row.id === serviceId);
 
+  // Depende dos campos primitivos de propósito: `service` é um novo objeto
+  // a cada render (retorno de `.find()`), então incluí-lo re-executaria o
+  // efeito sempre, mesmo sem mudança real de id/preço.
   useEffect(() => {
     if (service) setPrice(String(service.sale_price));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [service?.id, service?.sale_price]);
 
   return (
@@ -41,7 +46,7 @@ export function AppointmentForm({
       <input type="hidden" name="price" value={price} />
       <label className="grid gap-1 text-sm">
         Serviço
-        <select
+        <NativeSelect
           name="serviceId"
           value={serviceId}
           onChange={(event) => setServiceId(event.target.value)}
@@ -50,21 +55,21 @@ export function AppointmentForm({
         >
           <option value="">Selecione...</option>
           {services.map((row) => <option key={row.id} value={row.id}>{row.name}</option>)}
-        </select>
+        </NativeSelect>
       </label>
       <label className="grid gap-1 text-sm">
         Cliente
-        <select name="customerId" className="h-10 rounded-md border bg-background px-3">
+        <NativeSelect name="customerId" className="h-10 rounded-md border bg-background px-3">
           <option value="">Sem cliente definido</option>
           {customers.map((row) => <option key={row.id} value={row.id}>{row.name}</option>)}
-        </select>
+        </NativeSelect>
       </label>
       <label className="grid gap-1 text-sm">
         Profissional
-        <select name="professionalId" className="h-10 rounded-md border bg-background px-3">
+        <NativeSelect name="professionalId" className="h-10 rounded-md border bg-background px-3">
           <option value="">Sem profissional definido</option>
           {professionals.map((row) => <option key={row.id} value={row.id}>{row.display_name}</option>)}
-        </select>
+        </NativeSelect>
       </label>
       <label className="grid gap-1 text-sm">
         Horário
@@ -81,7 +86,7 @@ export function AppointmentForm({
         Observações
         <textarea name="notes" rows={3} className="rounded-md border bg-background px-3 py-2" />
       </label>
-      <SubmitButton pendingLabel="Agendando..." className="w-fit">Criar agendamento</SubmitButton>
+      <SubmitButton state={state} pendingLabel="Agendando..." className="w-fit">Criar agendamento</SubmitButton>
       <FormMessage state={state} />
     </form>
   );
@@ -104,7 +109,7 @@ export function AppointmentStatusForm({
     <form action={formAction}>
       <input type="hidden" name="appointmentId" value={appointmentId} />
       <input type="hidden" name="status" value={status} />
-      <SubmitButton
+      <SubmitButton state={state}
         pendingLabel="..."
         variant={destructive ? "outline" : "default"}
         className={destructive ? "w-auto text-destructive" : "w-auto"}
@@ -130,7 +135,7 @@ export function RescheduleForm({
     <form action={formAction} className="grid gap-2 sm:grid-cols-[1fr_auto]">
       <input type="hidden" name="appointmentId" value={appointment.id} />
       <input name="startsAt" type="datetime-local" defaultValue={defaultValue} className="h-9 rounded-md border bg-background px-2 text-sm" />
-      <SubmitButton pendingLabel="..." size="sm" className="w-auto">Reagendar</SubmitButton>
+      <SubmitButton state={state} pendingLabel="..." size="sm" className="w-auto">Reagendar</SubmitButton>
       <div className="sm:col-span-2">{state.error || state.success ? <FormMessage state={state} /> : null}</div>
     </form>
   );

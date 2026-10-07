@@ -1,17 +1,10 @@
-import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 import { CUSTOMER_STATUS_LABELS, type CustomerStatus } from "@/types/customer";
 
 export function CustomerStatusBadge({ status }: { status: CustomerStatus }) {
   return (
-    <span
-      className={cn(
-        "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
-        status === "active"
-          ? "bg-success/10 text-success"
-          : "bg-muted text-muted-foreground"
-      )}
-    >
+    <Badge variant={status === "active" ? "success" : "muted"}>
       {CUSTOMER_STATUS_LABELS[status]}
-    </span>
+    </Badge>
   );
 }

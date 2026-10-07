@@ -49,7 +49,7 @@ export function StockAdjustForm({
           required
         />
       </div>
-      <SubmitButton pendingLabel="Ajustando..." className="w-full sm:w-fit">
+      <SubmitButton state={state} pendingLabel="Ajustando..." className="w-full sm:w-fit">
         Ajustar estoque
       </SubmitButton>
     </form>

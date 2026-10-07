@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { createSessionClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/auth/actions";
 import type { Database } from "@/types/supabase";
 
@@ -40,7 +40,7 @@ export async function createAppointmentAction(
     return { error: "Informe serviço e horário." };
   }
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { error } = await supabase.rpc("create_appointment", {
     p_customer_id: customerId,
     p_service_id: serviceId,
@@ -66,7 +66,7 @@ export async function rescheduleAppointmentAction(
 
   if (!appointmentId || !startsAt) return { error: "Agendamento ou horário inválido." };
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { error } = await supabase.rpc("reschedule_appointment", {
     p_appointment_id: appointmentId,
     p_starts_at: new Date(startsAt).toISOString(),
@@ -98,7 +98,7 @@ export async function setAppointmentStatusAction(
 
   if (!allowed.includes(status)) return { error: "Status inválido." };
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { error } = await supabase.rpc("set_appointment_status", {
     p_appointment_id: appointmentId,
     p_status: status,

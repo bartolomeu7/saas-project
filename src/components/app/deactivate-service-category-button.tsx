@@ -1,5 +1,6 @@
 "use client";
 
+import { ConfirmActionForm } from "@/components/app/confirm-dialog";
 import { deactivateCategoryAction } from "@/lib/service-categories/actions";
 
 export function DeactivateServiceCategoryButton({
@@ -12,25 +13,17 @@ export function DeactivateServiceCategoryButton({
   serviceCount: number;
 }) {
   return (
-    <form
+    <ConfirmActionForm
       action={deactivateCategoryAction.bind(null, categoryId)}
-      onSubmit={(event) => {
-        const message =
-          serviceCount > 0
-            ? `"${categoryName}" tem ${serviceCount} serviço(s) vinculado(s). Desativar a categoria não afeta os serviços, mas ela deixará de aparecer para novos cadastros. Continuar?`
-            : `Desativar a categoria "${categoryName}"?`;
-        const confirmed = window.confirm(message);
-        if (!confirmed) {
-          event.preventDefault();
-        }
-      }}
-    >
-      <button
-        type="submit"
-        className="text-sm font-medium text-destructive underline-offset-4 hover:underline"
-      >
-        Desativar
-      </button>
-    </form>
+      label="Desativar"
+      title={`Desativar a categoria "${categoryName}"?`}
+      description={
+        serviceCount > 0
+          ? `Esta categoria tem ${serviceCount} serviço vinculado(s). Desativar a categoria não afeta os serviços, mas ela deixará de aparecer para novos cadastros.`
+          : "A categoria deixará de aparecer para novos cadastros."
+      }
+      confirmLabel="Desativar"
+      destructive
+    />
   );
 }

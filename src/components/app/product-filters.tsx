@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import type { ProductCategory } from "@/types/product";
+import { NativeSelect } from "@/components/ui/native-select";
 
 const STATUS_FILTERS: { label: string; value: "all" | "active" | "inactive" }[] = [
   { label: "Todos", value: "all" },
@@ -54,7 +55,7 @@ export function ProductFilters({ categories }: { categories: ProductCategory[] }
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
-        <div className="inline-flex rounded-md border border-border p-1">
+        <div className="inline-flex max-w-full flex-wrap rounded-md border border-border p-1">
           {STATUS_FILTERS.map((filter) => (
             <button
               key={filter.value}
@@ -72,7 +73,7 @@ export function ProductFilters({ categories }: { categories: ProductCategory[] }
           ))}
         </div>
 
-        <select
+        <NativeSelect
           value={stock}
           onChange={(event) => updateParam("stock", event.target.value)}
           className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -82,9 +83,9 @@ export function ProductFilters({ categories }: { categories: ProductCategory[] }
               {option.label}
             </option>
           ))}
-        </select>
+        </NativeSelect>
 
-        <select
+        <NativeSelect
           value={category}
           onChange={(event) => updateParam("category", event.target.value)}
           className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -95,9 +96,9 @@ export function ProductFilters({ categories }: { categories: ProductCategory[] }
               {cat.name}
             </option>
           ))}
-        </select>
+        </NativeSelect>
 
-        <select
+        <NativeSelect
           value={sort}
           onChange={(event) => updateParam("sort", event.target.value)}
           className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -107,7 +108,7 @@ export function ProductFilters({ categories }: { categories: ProductCategory[] }
               Ordenar por {option.label.toLowerCase()}
             </option>
           ))}
-        </select>
+        </NativeSelect>
 
         {isPending && (
           <span className="text-xs text-muted-foreground">Atualizando...</span>

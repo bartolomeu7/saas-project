@@ -1,7 +1,8 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createSessionClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth/session";
 import { createCompanySchema } from "@/lib/validations/company";
 import type { ActionResult } from "@/lib/auth/actions";
 
@@ -10,7 +11,8 @@ import type { ActionResult } from "@/lib/auth/actions";
  * função de banco `create_company_with_owner` (security definer).
  *
  * Nenhum user_id, role ou company_id é aceito do formulário — a função
- * do banco resolve tudo a partir da sessão autenticada (auth.uid()).
+ * do banco resolve tudo a partir da sessão autenticada
+ * (public.current_profile_user_id(), derivado do JWT do Clerk).
  */
 export async function createCompanyAction(
   _prevState: ActionResult,
@@ -25,11 +27,9 @@ export async function createCompanyAction(
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
   if (!user) {
     return { error: "Sessão expirada. Faça login novamente." };

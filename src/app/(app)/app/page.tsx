@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import {
   Activity,
   AlertTriangle,
@@ -72,7 +73,13 @@ export default async function DashboardPage() {
     getCurrentProfile(),
   ]);
 
-  const company = current!.company;
+  // O layout também redireciona quem não tem empresa, mas página e layout
+  // renderizam em paralelo: sem esta guarda a página estourava antes do redirect.
+  if (!current) {
+    redirect("/onboarding");
+  }
+
+  const company = current.company;
   const monthRange = resolveSalePeriodRange("month");
   const [customerStats, productStats, serviceStats, saleStats, recentCustomers] =
     await Promise.all([

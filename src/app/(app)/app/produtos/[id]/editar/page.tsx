@@ -13,10 +13,11 @@ export const metadata: Metadata = {
 };
 
 export default async function EditProductPage({
-  params,
+  params: paramsPromise,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const params = await paramsPromise;
   const current = (await getCurrentCompany())!;
   const product = await getProductById(current.company.id, params.id);
 

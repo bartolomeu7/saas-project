@@ -21,7 +21,7 @@ export function CompleteSaleButton({ saleId }: { saleId: string }) {
   return (
     <form action={formAction} className="flex flex-col gap-2">
       <FormMessage state={state} />
-      <SubmitButton pendingLabel="Concluindo..." className="w-full sm:w-fit">
+      <SubmitButton state={state} pendingLabel="Concluindo..." className="w-full sm:w-fit">
         Concluir venda
       </SubmitButton>
     </form>

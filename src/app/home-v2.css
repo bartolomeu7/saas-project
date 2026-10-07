@@ -91,6 +91,7 @@
 .home-v2-hero__copy h1 span {
   display: block;
   margin-top: 10px;
+  padding-bottom: .14em;
   background: linear-gradient(96deg, hsl(var(--primary)), hsl(266 92% 73%) 56%, hsl(185 95% 70%));
   background-size: 180% 100%;
   -webkit-background-clip: text;

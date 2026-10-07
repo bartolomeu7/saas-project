@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { createClient } from "@/lib/supabase/server";
+import { createSessionClient } from "@/lib/supabase/server";
 import { getCurrentCompany } from "@/lib/companies/queries";
 import { recalculateSaleTotals } from "@/lib/sales/totals";
 import type { ActionResult } from "@/lib/auth/actions";
@@ -67,7 +67,7 @@ export async function redeemLoyaltyPointsAction(
     return { error: "Nenhuma empresa encontrada para o usuário atual." };
   }
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { error } = await supabase.rpc("redeem_loyalty_points", {
     p_sale_id: saleId,
     p_points: points,
@@ -105,7 +105,7 @@ export async function removeLoyaltyRedemptionFromDraftAction(
     return { error: "Nenhuma empresa encontrada para o usuário atual." };
   }
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { error } = await supabase.rpc("undo_loyalty_redemption_for_draft_sale", {
     p_sale_id: saleId,
   });
@@ -148,7 +148,7 @@ export async function adjustLoyaltyPointsAction(
     return { error: "Nenhuma empresa encontrada para o usuário atual." };
   }
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { error } = await supabase.rpc("adjust_loyalty_points", {
     p_customer_id: customerId,
     p_points: points,
@@ -248,7 +248,7 @@ export async function upsertLoyaltySettingsAction(
     pointsExpireAfterDays = days;
   }
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { error } = await supabase.from("loyalty_settings").upsert(
     {
       company_id: current.company.id,
@@ -342,7 +342,7 @@ export async function createLoyaltyTierThresholdAction(
     return { error: "Pontos mínimos deve ser um número inteiro maior ou igual a zero." };
   }
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
 
   const { data: existing } = await supabase
     .from("loyalty_tier_thresholds")
@@ -409,7 +409,7 @@ export async function updateLoyaltyTierThresholdAction(
     return { error: "Pontos mínimos deve ser um número inteiro maior ou igual a zero." };
   }
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
 
   const { data: existing } = await supabase
     .from("loyalty_tier_thresholds")
@@ -465,7 +465,7 @@ export async function deleteLoyaltyTierThresholdAction(thresholdId: string): Pro
     return { error: "Apenas owner/admin podem configurar níveis de fidelidade." };
   }
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
 
   const { count } = await supabase
     .from("loyalty_tier_thresholds")
@@ -530,7 +530,7 @@ export async function createLoyaltyMultiplierAction(
     return { error: "O multiplicador deve ser um número entre 0 e 100." };
   }
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
 
   // Confirma que o item existe e pertence à empresa atual — nunca
   // confiado só pelo que o formulário envia.
@@ -598,7 +598,7 @@ export async function updateLoyaltyMultiplierAction(
     return { error: "O multiplicador deve ser um número entre 0 e 100." };
   }
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { error: updateError } = await supabase
     .from("loyalty_multipliers")
     .update({ multiplier })
@@ -629,7 +629,7 @@ export async function deleteLoyaltyMultiplierAction(multiplierId: string): Promi
     return { error: "Apenas owner/admin podem configurar multiplicadores de fidelidade." };
   }
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { error: deleteError } = await supabase
     .from("loyalty_multipliers")
     .delete()
@@ -770,7 +770,7 @@ export async function createLoyaltyCampaignAction(
     return parsed;
   }
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { error: insertError } = await supabase.from("loyalty_campaigns").insert({
     company_id: current.company.id,
     name: parsed.name,
@@ -819,7 +819,7 @@ export async function updateLoyaltyCampaignAction(
     return parsed;
   }
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { error: updateError } = await supabase
     .from("loyalty_campaigns")
     .update({
@@ -860,7 +860,7 @@ export async function setLoyaltyCampaignStatusAction(
     return { error: "Apenas owner/admin podem configurar campanhas de fidelidade." };
   }
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { error: updateError } = await supabase
     .from("loyalty_campaigns")
     .update({ status })

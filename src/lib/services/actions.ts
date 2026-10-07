@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { createSessionClient } from "@/lib/supabase/server";
 import { getCurrentCompany } from "@/lib/companies/queries";
 import { getCurrentUser } from "@/lib/auth/session";
 import { serviceSchema } from "@/lib/validations/service";
@@ -28,7 +28,7 @@ function parseServiceForm(formData: FormData) {
  * categoria exista em algum lugar, não que seja da mesma empresa.
  */
 async function assertCategoryBelongsToCompany(
-  supabase: ReturnType<typeof createClient>,
+  supabase: Awaited<ReturnType<typeof createSessionClient>>,
   companyId: string,
   categoryId: string | null
 ): Promise<boolean> {
@@ -59,7 +59,7 @@ export async function createServiceAction(
     return { error: "Nenhuma empresa encontrada para o usuário atual." };
   }
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
 
   const categoryValid = await assertCategoryBelongsToCompany(
     supabase,
@@ -120,7 +120,7 @@ export async function updateServiceAction(
     return { error: "Nenhuma empresa encontrada para o usuário atual." };
   }
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
 
   const categoryValid = await assertCategoryBelongsToCompany(
     supabase,
@@ -170,7 +170,7 @@ export async function deactivateServiceAction(id: string): Promise<void> {
   const current = await getCurrentCompany();
   if (!current) return;
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   await supabase
     .from("services")
     .update({ status: "inactive" })
@@ -196,7 +196,7 @@ export async function reactivateServiceAction(id: string): Promise<void> {
   const current = await getCurrentCompany();
   if (!current) return;
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   await supabase
     .from("services")
     .update({ status: "active" })

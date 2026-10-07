@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { createSessionClient } from "@/lib/supabase/server";
 import { getCurrentCompany } from "@/lib/companies/queries";
 import { getCurrentUser } from "@/lib/auth/session";
 import { productSchema, stockAdjustmentSchema } from "@/lib/validations/product";
@@ -33,7 +33,7 @@ function parseProductForm(formData: FormData) {
  * categoria exista em algum lugar, não que seja da mesma empresa.
  */
 async function assertCategoryBelongsToCompany(
-  supabase: ReturnType<typeof createClient>,
+  supabase: Awaited<ReturnType<typeof createSessionClient>>,
   companyId: string,
   categoryId: string | null
 ): Promise<boolean> {
@@ -64,7 +64,7 @@ export async function createProductAction(
     return { error: "Nenhuma empresa encontrada para o usuário atual." };
   }
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
 
   const categoryValid = await assertCategoryBelongsToCompany(
     supabase,
@@ -132,7 +132,7 @@ export async function updateProductAction(
     return { error: "Nenhuma empresa encontrada para o usuário atual." };
   }
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
 
   const categoryValid = await assertCategoryBelongsToCompany(
     supabase,
@@ -196,7 +196,7 @@ export async function deactivateProductAction(id: string): Promise<void> {
   const current = await getCurrentCompany();
   if (!current) return;
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   await supabase
     .from("products")
     .update({ status: "inactive" })
@@ -222,7 +222,7 @@ export async function reactivateProductAction(id: string): Promise<void> {
   const current = await getCurrentCompany();
   if (!current) return;
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   await supabase
     .from("products")
     .update({ status: "active" })
@@ -263,7 +263,7 @@ export async function adjustStockAction(
     return { error: "Nenhuma empresa encontrada para o usuário atual." };
   }
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
 
   const result = await adjustProductStock({
     supabase,

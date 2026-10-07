@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { createSessionClient } from "@/lib/supabase/server";
 import { getCurrentCompany } from "@/lib/companies/queries";
 import { getCurrentUser } from "@/lib/auth/session";
 import { writeAuditLog } from "@/lib/audit/log";
@@ -36,7 +36,7 @@ export async function createSupplierAction(_prev: ActionResult, formData: FormDa
   if ("error" in parsed) return parsed;
   const current = await getCurrentCompany();
   if (!current) return { error: "Nenhuma empresa encontrada." };
-  const supabase = createClient() as any;
+  const supabase = (await createSessionClient()) as any;
   const { data, error } = await supabase.from("suppliers").insert({ company_id: current.company.id, ...parsed }).select("id").single();
   if (error || !data) return { error: error?.code === "23505" ? "Já existe um fornecedor com este documento." : "Não foi possível salvar o fornecedor." };
   const user = await getCurrentUser();
@@ -50,7 +50,7 @@ export async function updateSupplierAction(id: string, _prev: ActionResult, form
   if ("error" in parsed) return parsed;
   const current = await getCurrentCompany();
   if (!current) return { error: "Nenhuma empresa encontrada." };
-  const supabase = createClient() as any;
+  const supabase = (await createSessionClient()) as any;
   const { error } = await supabase.from("suppliers").update(parsed).eq("id", id).eq("company_id", current.company.id);
   if (error) return { error: error.code === "23505" ? "Já existe um fornecedor com este documento." : "Não foi possível salvar as alterações." };
   const user = await getCurrentUser();
@@ -63,7 +63,7 @@ export async function updateSupplierAction(id: string, _prev: ActionResult, form
 export async function toggleSupplierAction(id: string, status: "active" | "inactive"): Promise<void> {
   const current = await getCurrentCompany();
   if (!current) return;
-  const supabase = createClient() as any;
+  const supabase = (await createSessionClient()) as any;
   await supabase.from("suppliers").update({ status }).eq("id", id).eq("company_id", current.company.id);
   revalidatePath("/app/fornecedores");
   revalidatePath(`/app/fornecedores/${id}`);

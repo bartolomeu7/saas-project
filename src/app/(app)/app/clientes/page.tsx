@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { PageHeader } from "@/components/app/page-header";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getCurrentCompany } from "@/lib/companies/queries";
@@ -21,10 +22,11 @@ function parseStatus(value?: string): CustomerStatus | "all" {
 }
 
 export default async function CustomersPage({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams?: { q?: string; status?: string; page?: string };
+  searchParams: Promise<{ q?: string; status?: string; page?: string }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const current = (await getCurrentCompany())!;
   const companyId = current.company.id;
 
@@ -41,31 +43,29 @@ export default async function CustomersPage({
 
   return (
     <div className="prime-module-page prime-module-page--clientes flex flex-col gap-6 px-4 py-6 sm:px-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Clientes</h1>
-          <p className="text-sm text-muted-foreground">
-            Gerencie os clientes da sua empresa.
-          </p>
-        </div>
-        <div className="flex shrink-0 flex-wrap gap-2">
-          <Link
-            href="/app/clientes/ranking"
-            className={cn(buttonVariants({ variant: "outline" }))}
-          >
-            Ranking
-          </Link>
-          <Link
-            href="/app/clientes/sorteio"
-            className={cn(buttonVariants({ variant: "outline" }))}
-          >
-            Sortear cliente
-          </Link>
-          <Link href="/app/clientes/novo" className={cn(buttonVariants())}>
-            + Novo cliente
-          </Link>
-        </div>
-      </div>
+      <PageHeader
+        title="Clientes"
+        description="Gerencie os clientes da sua empresa."
+        actions={
+          <>
+            <Link
+              href="/app/clientes/ranking"
+              className={cn(buttonVariants({ variant: "outline" }))}
+            >
+              Ranking
+            </Link>
+            <Link
+              href="/app/clientes/sorteio"
+              className={cn(buttonVariants({ variant: "outline" }))}
+            >
+              Sortear cliente
+            </Link>
+            <Link href="/app/clientes/novo" className={cn(buttonVariants())}>
+              + Novo cliente
+            </Link>
+          </>
+        }
+      />
 
       {!hasAnyCustomer ? (
         <EmptyState

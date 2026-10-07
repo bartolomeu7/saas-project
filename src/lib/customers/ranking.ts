@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createClient } from "@/lib/supabase/server";
+import { createSessionClient } from "@/lib/supabase/server";
 import {
   startOfDaySaoPaulo,
   endOfDaySaoPaulo,
@@ -83,7 +83,7 @@ export async function getCustomerRanking(
   period: RankingPeriod,
   range: { from: string; to: string }
 ): Promise<CustomerRankingResult> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
 
   const { data } = await supabase
     .from("sales")

@@ -4,38 +4,39 @@ import { formatDate } from "@/lib/format";
 import { CustomerStatusBadge } from "@/components/app/customer-status-badge";
 import { DeactivateCustomerButton } from "@/components/app/deactivate-customer-button";
 import { ReactivateCustomerButton } from "@/components/app/reactivate-customer-button";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 
 export function CustomerTable({ customers }: { customers: Customer[] }) {
   return (
     <div className="overflow-x-auto rounded-lg border border-border">
-      <table className="w-full min-w-[640px] text-sm">
-        <thead className="bg-secondary/50 text-left text-xs uppercase text-muted-foreground">
-          <tr>
-            <th className="px-4 py-3 font-medium">Nome</th>
-            <th className="px-4 py-3 font-medium">Telefone</th>
-            <th className="px-4 py-3 font-medium">Email</th>
-            <th className="px-4 py-3 font-medium">Status</th>
-            <th className="px-4 py-3 font-medium">Cadastro</th>
-            <th className="px-4 py-3 font-medium">Ações</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-border">
+      <Table className="w-full min-w-[640px] text-sm">
+        <TableHeader className="bg-secondary/50 text-left text-xs uppercase text-muted-foreground">
+          <TableRow>
+            <TableHead className="px-4 py-3 font-medium">Nome</TableHead>
+            <TableHead className="px-4 py-3 font-medium">Telefone</TableHead>
+            <TableHead className="px-4 py-3 font-medium">Email</TableHead>
+            <TableHead className="px-4 py-3 font-medium">Status</TableHead>
+            <TableHead className="px-4 py-3 font-medium">Cadastro</TableHead>
+            <TableHead className="px-4 py-3 font-medium">Ações</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {customers.map((customer) => (
-            <tr key={customer.id} className="hover:bg-secondary/30">
-              <td className="px-4 py-3 font-medium">{customer.name}</td>
-              <td className="px-4 py-3 text-muted-foreground">
+            <TableRow key={customer.id} className="hover:bg-secondary/30">
+              <TableCell className="px-4 py-3 font-medium">{customer.name}</TableCell>
+              <TableCell className="px-4 py-3 text-muted-foreground">
                 {customer.phone ?? "—"}
-              </td>
-              <td className="px-4 py-3 text-muted-foreground">
+              </TableCell>
+              <TableCell className="px-4 py-3 text-muted-foreground">
                 {customer.email ?? "—"}
-              </td>
-              <td className="px-4 py-3">
+              </TableCell>
+              <TableCell className="px-4 py-3">
                 <CustomerStatusBadge status={customer.status} />
-              </td>
-              <td className="px-4 py-3 text-muted-foreground">
+              </TableCell>
+              <TableCell className="px-4 py-3 text-muted-foreground">
                 {formatDate(customer.created_at)}
-              </td>
-              <td className="px-4 py-3">
+              </TableCell>
+              <TableCell className="px-4 py-3">
                 <div className="flex items-center gap-3">
                   <Link
                     href={`/app/clientes/${customer.id}`}
@@ -61,11 +62,11 @@ export function CustomerTable({ customers }: { customers: Customer[] }) {
                     />
                   )}
                 </div>
-              </td>
-            </tr>
+              </TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 }

@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { createClient } from "@/lib/supabase/server";
+import { createSessionClient } from "@/lib/supabase/server";
 import { getCurrentCompany } from "@/lib/companies/queries";
 import { getCurrentUser } from "@/lib/auth/session";
 import {
@@ -105,7 +105,7 @@ export async function createSaleAction(_formData: FormData): Promise<void> {
     redirect("/login");
   }
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { data, error } = await supabase
     .from("sales")
     .insert({ company_id: current.company.id, user_id: user.id })
@@ -144,7 +144,7 @@ export async function updateDraftSaleAction(
     return { error: "Nenhuma empresa encontrada para o usuário atual." };
   }
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const guard = await getDraftSaleOrError(supabase, current.company.id, saleId);
   if ("error" in guard) {
     return { error: guard.error };
@@ -276,7 +276,7 @@ export async function addSaleItemAction(
     return { error: "Nenhuma empresa encontrada para o usuário atual." };
   }
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const guard = await getDraftSaleOrError(supabase, current.company.id, saleId);
   if ("error" in guard) {
     return { error: guard.error };
@@ -395,7 +395,7 @@ export async function updateSaleItemAction(
     return { error: "Nenhuma empresa encontrada para o usuário atual." };
   }
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const guard = await getDraftSaleOrError(supabase, current.company.id, saleId);
   if ("error" in guard) {
     return { error: guard.error };
@@ -500,7 +500,7 @@ export async function removeSaleItemAction(
     return { ok: false, error: "Nenhuma empresa encontrada para o usuário atual." };
   }
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const guard = await getDraftSaleOrError(supabase, current.company.id, saleId);
   if ("error" in guard) {
     revalidatePath(`/app/vendas/${saleId}`);
@@ -591,7 +591,7 @@ export async function addSalePaymentAction(
   // venda cancelada, confere o saldo sob lock da linha da venda (sem corrida
   // entre pagamentos concorrentes) e grava pagamento + auditoria juntos. O
   // papel `authenticated` não tem INSERT direto em sale_payments.
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { error: paymentError } = await supabase.rpc("add_sale_payment", {
     p_sale_id: saleId,
     p_method: parsed.data.method,
@@ -623,7 +623,7 @@ export async function completeSaleAction(
     return { error: "Nenhuma empresa encontrada para o usuário atual." };
   }
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { error } = await supabase.rpc("complete_sale", { p_sale_id: saleId });
 
   if (error) {
@@ -660,7 +660,7 @@ export async function cancelSaleAction(
     return { error: "Nenhuma empresa encontrada para o usuário atual." };
   }
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { error } = await supabase.rpc("cancel_sale", {
     p_sale_id: saleId,
     p_reason: parsed.data.reason,

@@ -18,10 +18,11 @@ import {
 export const metadata: Metadata = { title: "Configurar profissional" };
 
 export default async function ProfessionalPage({
-  params,
+  params: paramsPromise,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const params = await paramsPromise;
   const current = (await getCurrentCompany())!;
   const team = await listCompanyTeam();
   const member = team.find((row) => row.professional_id === params.id);

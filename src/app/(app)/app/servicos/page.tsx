@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { PageHeader } from "@/components/app/page-header";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getCurrentCompany } from "@/lib/companies/queries";
@@ -35,9 +36,9 @@ function parseNumber(value?: string): number | undefined {
 }
 
 export default async function ServicesPage({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams?: {
+  searchParams: Promise<{
     q?: string;
     status?: string;
     category?: string;
@@ -47,8 +48,9 @@ export default async function ServicesPage({
     maxPrice?: string;
     minDuration?: string;
     maxDuration?: string;
-  };
+  }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const current = (await getCurrentCompany())!;
   const companyId = current.company.id;
   const hints = getServiceSegmentHints(current.company.business_type);
@@ -85,25 +87,23 @@ export default async function ServicesPage({
 
   return (
     <div className="prime-module-page prime-module-page--servicos flex flex-col gap-6 px-4 py-6 sm:px-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{hints.servicesLabel}</h1>
-          <p className="text-sm text-muted-foreground">
-            Cadastre e organize os serviços da sua empresa.
-          </p>
-        </div>
-        <div className="flex shrink-0 flex-wrap gap-2">
-          <Link
-            href="/app/servicos/categorias"
-            className={cn(buttonVariants({ variant: "outline" }))}
-          >
-            Categorias
-          </Link>
-          <Link href="/app/servicos/novo" className={cn(buttonVariants())}>
-            + Novo serviço
-          </Link>
-        </div>
-      </div>
+      <PageHeader
+        title={hints.servicesLabel}
+        description="Cadastre e organize os serviços da sua empresa."
+        actions={
+          <>
+            <Link
+              href="/app/servicos/categorias"
+              className={cn(buttonVariants({ variant: "outline" }))}
+            >
+              Categorias
+            </Link>
+            <Link href="/app/servicos/novo" className={cn(buttonVariants())}>
+              + Novo serviço
+            </Link>
+          </>
+        }
+      />
 
       {!hasAnyService ? (
         <EmptyState

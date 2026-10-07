@@ -3,7 +3,7 @@
 import { randomInt } from "crypto";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { createSessionClient } from "@/lib/supabase/server";
 import { getCurrentCompany } from "@/lib/companies/queries";
 import { getCurrentUser } from "@/lib/auth/session";
 import { writeAuditLog } from "@/lib/audit/log";
@@ -85,7 +85,7 @@ export async function runRaffleAction(
     return { error: "Sessão expirada. Faça login novamente." };
   }
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
 
   let eligibleQuery = supabase
     .from("customers")

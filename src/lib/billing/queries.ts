@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createClient } from "@/lib/supabase/server";
+import { createSessionClient } from "@/lib/supabase/server";
 import type {
   CompanyEntitlements,
   Plan,
@@ -14,7 +14,7 @@ export { getActiveSubscription, getSubscriptionGuardStatus } from "@/lib/billing
 
 /** Catálogo completo (autenticado) — para a tela /app/assinatura/planos. */
 export async function getPlans(): Promise<Plan[]> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { data, error } = await supabase
     .from("plans")
     .select("*")
@@ -27,7 +27,7 @@ export async function getPlans(): Promise<Plan[]> {
 
 /** Catálogo público (landing page, anon) — via get_public_plans(), sem provider/provider_plan_id. */
 export async function getPublicPlans(): Promise<PublicPlan[]> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { data, error } = await supabase.rpc("get_public_plans");
 
   if (error) return [];
@@ -35,7 +35,7 @@ export async function getPublicPlans(): Promise<PublicPlan[]> {
 }
 
 export async function getPlanById(id: string): Promise<Plan | null> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { data, error } = await supabase.from("plans").select("*").eq("id", id).maybeSingle();
 
   if (error || !data) return null;
@@ -44,7 +44,7 @@ export async function getPlanById(id: string): Promise<Plan | null> {
 
 /** A única subscription da empresa (pode não existir ainda, embora só aconteça em estado transitório). */
 export async function getCurrentSubscription(companyId: string): Promise<Subscription | null> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { data, error } = await supabase
     .from("subscriptions")
     .select("*")
@@ -56,7 +56,7 @@ export async function getCurrentSubscription(companyId: string): Promise<Subscri
 }
 
 export async function getCompanyEntitlements(companyId: string): Promise<CompanyEntitlements | null> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { data, error } = await supabase
     .from("company_entitlements")
     .select("*")
@@ -78,7 +78,7 @@ function mapPaymentRow(row: SubscriptionPaymentRow): SubscriptionPaymentWithPlan
 
 /** Histórico de cobranças da assinatura (/app/assinatura/historico). */
 export async function getSubscriptionPayments(companyId: string): Promise<SubscriptionPaymentWithPlan[]> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { data, error } = await supabase
     .from("subscription_payments")
     .select("*, plans(name)")
@@ -94,7 +94,7 @@ export async function getSubscriptionPaymentById(
   companyId: string,
   id: string
 ): Promise<SubscriptionPaymentWithPlan | null> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { data, error } = await supabase
     .from("subscription_payments")
     .select("*, plans(name)")

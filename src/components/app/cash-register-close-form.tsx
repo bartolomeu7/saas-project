@@ -89,7 +89,7 @@ export function CashRegisterCloseForm({
         <Input id="notes" name="notes" maxLength={200} />
       </div>
 
-      <SubmitButton pendingLabel="Fechando..." className="w-full sm:w-fit">
+      <SubmitButton state={state} pendingLabel="Fechando..." className="w-full sm:w-fit">
         Fechar caixa
       </SubmitButton>
     </form>

@@ -1,7 +1,7 @@
 import "server-only";
 
 import { cache } from "react";
-import { createClient } from "@/lib/supabase/server";
+import { createSessionClient } from "@/lib/supabase/server";
 import type { Customer, CustomerStatus } from "@/types/customer";
 
 const DEFAULT_PAGE_SIZE = 20;
@@ -35,7 +35,7 @@ export async function listCustomers({
   page = 1,
   pageSize = DEFAULT_PAGE_SIZE,
 }: ListCustomersParams): Promise<ListCustomersResult> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
 
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
@@ -86,7 +86,7 @@ export async function getCustomerById(
   companyId: string,
   id: string
 ): Promise<Customer | null> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
 
   const { data, error } = await supabase
     .from("customers")
@@ -118,7 +118,7 @@ export interface CustomerStats {
 export const getCustomerStats = cache(async function getCustomerStats(
   companyId: string
 ): Promise<CustomerStats> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
 
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -152,7 +152,7 @@ export async function getRecentCustomers(
   companyId: string,
   limit = 5
 ): Promise<Customer[]> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
 
   const { data, error } = await supabase
     .from("customers")

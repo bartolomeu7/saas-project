@@ -1,14 +1,14 @@
-import { cn } from "@/lib/utils";
+import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { SUBSCRIPTION_PAYMENT_STATUS_LABELS } from "@/types/billing";
 import type { SubscriptionPaymentStatus } from "@/types/billing";
 
-const STYLES: Record<SubscriptionPaymentStatus, string> = {
-  pending: "bg-warning/10 text-warning",
-  paid: "bg-success/10 text-success",
-  expired: "bg-destructive/10 text-destructive",
-  cancelled: "bg-muted text-muted-foreground",
-  failed: "bg-destructive/10 text-destructive",
-  refunded: "bg-muted text-muted-foreground",
+const VARIANTS: Record<SubscriptionPaymentStatus, BadgeProps["variant"]> = {
+  pending: "warning",
+  paid: "success",
+  expired: "danger",
+  cancelled: "muted",
+  failed: "danger",
+  refunded: "muted",
 };
 
 export function SubscriptionPaymentStatusBadge({
@@ -17,13 +17,6 @@ export function SubscriptionPaymentStatusBadge({
   status: SubscriptionPaymentStatus;
 }) {
   return (
-    <span
-      className={cn(
-        "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
-        STYLES[status]
-      )}
-    >
-      {SUBSCRIPTION_PAYMENT_STATUS_LABELS[status]}
-    </span>
+    <Badge variant={VARIANTS[status]}>{SUBSCRIPTION_PAYMENT_STATUS_LABELS[status]}</Badge>
   );
 }

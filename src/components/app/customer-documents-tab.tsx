@@ -16,6 +16,7 @@ import { SubmitButton } from "@/components/shared/auth/submit-button";
 import { FormMessage } from "@/components/shared/auth/form-message";
 import { EmptyState } from "@/components/app/empty-state";
 import { formatDate, formatFileSize } from "@/lib/format";
+import { ConfirmDialog } from "@/components/app/confirm-dialog";
 
 const FILE_TYPE_LABELS: Record<string, string> = {
   "application/pdf": "PDF",
@@ -64,7 +65,7 @@ function UploadDocumentForm({ customerId }: { customerId: string }) {
           {selectedName && ` Selecionado: ${selectedName}`}
         </p>
       </div>
-      <SubmitButton pendingLabel="Enviando..." className="w-full sm:w-fit">
+      <SubmitButton state={state} pendingLabel="Enviando..." className="w-full sm:w-fit">
         Enviar documento
       </SubmitButton>
       <div className="sm:basis-full">
@@ -117,26 +118,28 @@ function DeleteDocumentButton({
     deleteCustomerDocumentAction.bind(null, documentId, customerId),
     initialState
   );
+  const formRef = useRef<HTMLFormElement>(null);
 
   return (
-    <form
-      action={formAction}
-      onSubmit={(event) => {
-        if (!window.confirm("Excluir este documento? Essa ação não pode ser desfeita.")) {
-          event.preventDefault();
+    <form ref={formRef} action={formAction} className="flex flex-col items-end gap-1">
+      <ConfirmDialog
+        title="Excluir este documento?"
+        description="Essa ação não pode ser desfeita."
+        confirmLabel="Excluir"
+        destructive
+        onConfirm={() => formRef.current?.requestSubmit()}
+        trigger={
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="w-auto gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            Excluir
+          </Button>
         }
-      }}
-      className="flex flex-col items-end gap-1"
-    >
-      <SubmitButton
-        pendingLabel="Excluindo..."
-        variant="ghost"
-        size="sm"
-        className="w-auto gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive"
-      >
-        <Trash2 className="h-3.5 w-3.5" />
-        Excluir
-      </SubmitButton>
+      />
       {state.error && <p className="text-xs text-destructive">{state.error}</p>}
     </form>
   );

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { PageHeader } from "@/components/app/page-header";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getCurrentCompany } from "@/lib/companies/queries";
@@ -39,9 +40,9 @@ function parsePeriod(value?: string): SalePeriod {
 }
 
 export default async function SalesPage({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams?: {
+  searchParams: Promise<{
     q?: string;
     status?: string;
     paymentStatus?: string;
@@ -49,8 +50,9 @@ export default async function SalesPage({
     from?: string;
     to?: string;
     page?: string;
-  };
+  }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const current = (await getCurrentCompany())!;
   const user = await getCurrentUser();
   const companyId = current.company.id;
@@ -80,17 +82,15 @@ export default async function SalesPage({
 
   return (
     <div className="prime-module-page prime-module-page--vendas flex flex-col gap-6 px-4 py-6 sm:px-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Vendas</h1>
-          <p className="text-sm text-muted-foreground">
-            Acompanhe e registre as vendas da sua empresa.
-          </p>
-        </div>
-        <Link href="/app/vendas/nova" className={cn(buttonVariants(), "shrink-0")}>
-          + {hints.newSaleLabel}
-        </Link>
-      </div>
+      <PageHeader
+        title="Vendas"
+        description="Acompanhe e registre as vendas da sua empresa."
+        actions={
+          <Link href="/app/vendas/nova" className={cn(buttonVariants(), "shrink-0")}>
+            + {hints.newSaleLabel}
+          </Link>
+        }
+      />
 
       {!hasAnySale && !q && status === "all" && paymentStatus === "all" ? (
         <EmptyState

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createClient } from "@/lib/supabase/server";
+import { createSessionClient } from "@/lib/supabase/server";
 import type {
   AccountPayable,
   PurchaseOrder,
@@ -32,7 +32,7 @@ export async function listPurchaseOrders(
   companyId: string,
   status?: PurchaseOrder["status"]
 ): Promise<PurchaseOrderListRow[]> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   let query = supabase
     .from("purchase_orders")
     .select("*, suppliers(name)")
@@ -50,7 +50,7 @@ export async function getPurchaseOrderById(
   companyId: string,
   id: string
 ): Promise<PurchaseOrderDetail | null> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { data, error } = await supabase
     .from("purchase_orders")
     .select(
@@ -68,7 +68,7 @@ export async function listPurchaseReceipts(
   companyId: string,
   purchaseOrderId: string
 ): Promise<PurchaseReceiptWithItems[]> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { data, error } = await supabase
     .from("purchase_receipts")
     .select("*, purchase_receipt_items(*, products(name))")
@@ -84,7 +84,7 @@ export async function listOpenPayables(
   companyId: string,
   limit = 8
 ): Promise<Array<AccountPayable & { suppliers: { name: string } | null }>> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { data, error } = await supabase
     .from("accounts_payable")
     .select("*, suppliers(name)")
@@ -100,7 +100,7 @@ export async function listOpenPayables(
 }
 
 export async function getPurchaseStats(companyId: string) {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
 
   const [ordersResult, openResult, partialResult, receivedResult, payableResult] =
     await Promise.all([

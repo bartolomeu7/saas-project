@@ -108,7 +108,7 @@ de acesso pronto, mas ainda nenhuma página de conteúdo.
 - **Isolamento multi-tenant:** garantido no banco via RLS, nunca apenas na
   aplicação. As policies de `customers` restringem toda operação (select,
   insert, update) a linhas cujo `company_id` pertença a uma empresa da qual
-  o usuário é membro (`company_members.user_id = auth.uid()`). Um usuário da
+  o usuário é membro (`company_members.user_id = public.current_profile_user_id()`). Um usuário da
   Empresa A nunca consegue ler, criar ou editar dados da Empresa B — mesmo
   que manipule a URL ou o payload da requisição.
 - **Criação de empresa:** feita exclusivamente pela função de banco
@@ -118,7 +118,7 @@ de acesso pronto, mas ainda nenhuma página de conteúdo.
   nenhuma empresa, então um INSERT direto do frontend em `company_members`
   não teria como passar pelas policies (que exigem pertencimento prévio).
   Nenhum `user_id`, `role` ou `company_id` é aceito do frontend nesse fluxo —
-  a função resolve tudo a partir de `auth.uid()`.
+  a função resolve tudo a partir de `public.current_profile_user_id()` (identidade do JWT do Clerk).
 - **Onboarding:** usuário autenticado sem nenhuma empresa é redirecionado
   para `/onboarding` (rota fora do route group `(app)`, para evitar loop de
   redirecionamento com o próprio layout que faz essa checagem). Após criar a

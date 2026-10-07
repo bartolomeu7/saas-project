@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Package, ShoppingCart } from "lucide-react";
 import { getCurrentCompany } from "@/lib/companies/queries";
-import { createClient } from "@/lib/supabase/server";
+import { createSessionClient } from "@/lib/supabase/server";
 import { EmptyState } from "@/components/app/empty-state";
 import { NewSaleButton } from "@/components/app/new-sale-button";
 
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
  */
 export default async function NewSalePage() {
   const current = (await getCurrentCompany())!;
-  const supabase = createClient();
+  const supabase = await createSessionClient();
 
   const [{ count: productCount }, { count: serviceCount }] = await Promise.all([
     supabase

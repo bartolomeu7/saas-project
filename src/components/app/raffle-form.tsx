@@ -119,7 +119,7 @@ export function RaffleForm({ hasAnySales }: { hasAnySales: boolean }) {
         />
       </div>
 
-      <SubmitButton pendingLabel="Sorteando..." className="w-full sm:w-fit">
+      <SubmitButton state={state} pendingLabel="Sorteando..." className="w-full sm:w-fit">
         Sortear cliente
       </SubmitButton>
     </form>

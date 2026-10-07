@@ -4,6 +4,7 @@ import { formatDuration } from "@/types/service";
 import { ServiceStatusBadge } from "@/components/app/service-status-badge";
 import { DeactivateServiceButton } from "@/components/app/deactivate-service-button";
 import { ReactivateServiceButton } from "@/components/app/reactivate-service-button";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 
 function formatMoney(value: number): string {
   return value.toLocaleString("pt-BR", {
@@ -15,34 +16,34 @@ function formatMoney(value: number): string {
 export function ServiceTable({ services }: { services: ServiceWithCategory[] }) {
   return (
     <div className="overflow-x-auto rounded-lg border border-border">
-      <table className="w-full min-w-[720px] text-sm">
-        <thead className="bg-secondary/50 text-left text-xs uppercase text-muted-foreground">
-          <tr>
-            <th className="px-4 py-3 font-medium">Serviço</th>
-            <th className="px-4 py-3 font-medium">Categoria</th>
-            <th className="px-4 py-3 font-medium">Preço de venda</th>
-            <th className="px-4 py-3 font-medium">Duração</th>
-            <th className="px-4 py-3 font-medium">Status</th>
-            <th className="px-4 py-3 font-medium">Ações</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-border">
+      <Table className="w-full min-w-[720px] text-sm">
+        <TableHeader className="bg-secondary/50 text-left text-xs uppercase text-muted-foreground">
+          <TableRow>
+            <TableHead className="px-4 py-3 font-medium">Serviço</TableHead>
+            <TableHead className="px-4 py-3 font-medium">Categoria</TableHead>
+            <TableHead className="px-4 py-3 font-medium">Preço de venda</TableHead>
+            <TableHead className="px-4 py-3 font-medium">Duração</TableHead>
+            <TableHead className="px-4 py-3 font-medium">Status</TableHead>
+            <TableHead className="px-4 py-3 font-medium">Ações</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {services.map((service) => (
-            <tr key={service.id} className="hover:bg-secondary/30">
-              <td className="px-4 py-3 font-medium text-foreground">{service.name}</td>
-              <td className="px-4 py-3 text-muted-foreground">
+            <TableRow key={service.id} className="hover:bg-secondary/30">
+              <TableCell className="px-4 py-3 font-medium text-foreground">{service.name}</TableCell>
+              <TableCell className="px-4 py-3 text-muted-foreground">
                 {service.category_name ?? "—"}
-              </td>
-              <td className="px-4 py-3 text-muted-foreground">
+              </TableCell>
+              <TableCell className="px-4 py-3 text-muted-foreground">
                 {formatMoney(service.sale_price)}
-              </td>
-              <td className="px-4 py-3 text-muted-foreground">
+              </TableCell>
+              <TableCell className="px-4 py-3 text-muted-foreground">
                 {formatDuration(service.duration_minutes)}
-              </td>
-              <td className="px-4 py-3">
+              </TableCell>
+              <TableCell className="px-4 py-3">
                 <ServiceStatusBadge status={service.status} />
-              </td>
-              <td className="px-4 py-3">
+              </TableCell>
+              <TableCell className="px-4 py-3">
                 <div className="flex items-center gap-3">
                   <Link
                     href={`/app/servicos/${service.id}`}
@@ -68,11 +69,11 @@ export function ServiceTable({ services }: { services: ServiceWithCategory[] }) 
                     />
                   )}
                 </div>
-              </td>
-            </tr>
+              </TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 }

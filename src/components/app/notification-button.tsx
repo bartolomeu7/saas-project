@@ -1,7 +1,12 @@
 "use client";
 
-import { useState } from "react";
 import { Bell } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 /**
  * Sem sistema de notificações real ainda — o botão é funcional (abre/
@@ -9,35 +14,25 @@ import { Bell } from "lucide-react";
  * notificações falsas.
  */
 export function NotificationButton() {
-  const [open, setOpen] = useState(false);
-
   return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((value) => !value)}
-        className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-        aria-label="Notificações"
-        aria-expanded={open}
-      >
-        <Bell className="h-[18px] w-[18px]" strokeWidth={1.75} />
-      </button>
-
-      {open && (
-        <>
-          <div
-            className="fixed inset-0 z-30"
-            onClick={() => setOpen(false)}
-            aria-hidden="true"
-          />
-          <div className="absolute right-0 top-full z-40 mt-2 w-64 rounded-lg border border-border bg-card p-4 shadow-card">
-            <p className="text-sm font-medium text-foreground">Notificações</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Nenhuma notificação por enquanto.
-            </p>
-          </div>
-        </>
-      )}
-    </div>
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground"
+          aria-label="Notificações"
+        >
+          <Bell className="!size-[18px]" strokeWidth={1.75} />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-64">
+        <p className="text-sm font-medium text-foreground">Notificações</p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Nenhuma notificação por enquanto.
+        </p>
+      </PopoverContent>
+    </Popover>
   );
 }

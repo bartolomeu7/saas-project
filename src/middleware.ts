@@ -1,7 +1,10 @@
-import { NextResponse, type NextRequest } from "next/server";
-import { updateSession } from "@/lib/supabase/middleware";
+import { NextResponse } from "next/server";
+import { clerkMiddleware } from "@clerk/nextjs/server";
+import { createClient } from "@supabase/supabase-js";
+import type { Database } from "@/types/supabase";
 import { getSubscriptionGuardStatus } from "@/lib/billing/guard";
-import { getPlatformAdminGuardStatus } from "@/lib/admin/guard";
+import { getPlatformAdminGuardStatus, isPlatformAdminRole } from "@/lib/admin/guard";
+import type { UserRole } from "@/types/profile";
 
 /**
  * Prefixos de rota que exigem usuário autenticado.
@@ -51,49 +54,77 @@ function isAdminRoute(pathname: string) {
 }
 
 /**
- * Middleware raiz da aplicação.
+ * Middleware raiz da aplicação (Clerk é a única autenticação).
  *
- * 1. Renova a sessão Supabase em cada request.
- * 2. Bloqueia acesso a rotas protegidas (/app, /admin) para quem não
- *    está autenticado, redirecionando para /login.
- * 3. Evita que um usuário já autenticado veja /login ou /register.
- * 4. Em /admin e /admin/*, além de autenticado, exige
- *    profiles.role igual a "admin" ou "super_admin" — nunca
- *    company_members.role (um owner de empresa não é administrador de
- *    plataforma só por isso). Quem não atende é levado de volta a /app;
- *    a consulta só roda para requests que batem em /admin*, sem custo
- *    para o resto do app.
+ * 1. Bloqueia /app, /admin e /onboarding para quem não tem sessão Clerk,
+ *    redirecionando para /login.
+ * 2. Evita que um usuário já autenticado veja /login ou /register.
+ * 3. Em /admin e /admin/*, além de autenticado, exige profiles.role igual a
+ *    "admin" ou "super_admin" — nunca company_members.role. Qualquer falha
+ *    ao confirmar a role nega o acesso (fail closed).
+ * 4. Guard de assinatura (/app/*, exceto /app/assinatura).
+ *
+ * Os guards de role/assinatura leem o banco com o token da própria sessão
+ * Clerk (Third-Party Auth do Supabase), então rodam sob as mesmas políticas
+ * RLS do restante do app: profiles_select_own devolve só o perfil do
+ * usuário atual, o que dá o UUID interno (profiles.user_id) e a role numa
+ * única consulta.
  */
-export async function middleware(request: NextRequest) {
-  const { response, user, supabase } = await updateSession(request);
+export const middleware = clerkMiddleware(async (auth, request) => {
+  const { userId, getToken } = await auth();
   const { pathname } = request.nextUrl;
+  const isAuthenticated = Boolean(userId);
 
-  if (isProtectedRoute(pathname) && !user) {
+  if (isProtectedRoute(pathname) && !isAuthenticated) {
     const redirectUrl = new URL("/login", request.url);
     redirectUrl.searchParams.set("next", pathname);
     return NextResponse.redirect(redirectUrl);
   }
 
-  if (isAuthRoute(pathname) && user) {
+  if (isAuthRoute(pathname) && isAuthenticated) {
     return NextResponse.redirect(new URL("/app", request.url));
   }
 
-  if (user && isAdminRoute(pathname)) {
-    const { isPlatformAdmin } = await getPlatformAdminGuardStatus(supabase, user.id);
-    if (!isPlatformAdmin) {
+  const needsAdminGuard = isAuthenticated && isAdminRoute(pathname);
+  const needsSubscriptionGuard = isAuthenticated && requiresActiveSubscription(pathname);
+
+  if (!needsAdminGuard && !needsSubscriptionGuard) {
+    return NextResponse.next();
+  }
+
+  const token = await getToken();
+  const supabase = createClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { accessToken: async () => token }
+  );
+
+  const { data: profile } = token
+    ? await supabase.from("profiles").select("user_id, role").maybeSingle()
+    : { data: null };
+
+  if (needsAdminGuard) {
+    const isPlatformAdmin = isPlatformAdminRole(profile?.role as UserRole | undefined);
+    if (!profile || !isPlatformAdmin) {
+      return NextResponse.redirect(new URL("/app", request.url));
+    }
+    // Reconfirma pelo guard central (mesma regra usada em todo o projeto).
+    const guard = await getPlatformAdminGuardStatus(supabase, profile.user_id);
+    if (!guard.isPlatformAdmin) {
       return NextResponse.redirect(new URL("/app", request.url));
     }
   }
 
-  if (user && requiresActiveSubscription(pathname)) {
-    const { hasCompany, isActive } = await getSubscriptionGuardStatus(supabase, user.id);
+  // Sem perfil ainda = primeiro acesso: o onboarding cria perfil e empresa.
+  if (needsSubscriptionGuard && profile) {
+    const { hasCompany, isActive } = await getSubscriptionGuardStatus(supabase, profile.user_id);
     if (hasCompany && !isActive) {
       return NextResponse.redirect(new URL("/app/assinatura", request.url));
     }
   }
 
-  return response;
-}
+  return NextResponse.next();
+});
 
 export const config = {
   matcher: [

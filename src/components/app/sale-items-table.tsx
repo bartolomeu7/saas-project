@@ -4,6 +4,8 @@ import { useState, useTransition } from "react";
 import { updateSaleItemAction, removeSaleItemAction } from "@/lib/sales/actions";
 import { Input } from "@/components/ui/input";
 import type { SaleItem } from "@/types/sale";
+import { ConfirmDialog } from "@/components/app/confirm-dialog";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 
 function formatMoney(value: number): string {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -28,18 +30,18 @@ export function SaleItemsTable({
 
   return (
     <div className="overflow-x-auto rounded-lg border border-border">
-      <table className="w-full min-w-[640px] text-sm">
-        <thead className="bg-secondary/50 text-left text-xs uppercase text-muted-foreground">
-          <tr>
-            <th className="px-4 py-3 font-medium">Item</th>
-            <th className="px-4 py-3 font-medium">Quantidade</th>
-            <th className="px-4 py-3 font-medium">Preço unit.</th>
-            <th className="px-4 py-3 font-medium">Desconto</th>
-            <th className="px-4 py-3 font-medium">Total</th>
-            {editable && <th className="px-4 py-3 font-medium">Ações</th>}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-border">
+      <Table className="w-full min-w-[640px] text-sm">
+        <TableHeader className="bg-secondary/50 text-left text-xs uppercase text-muted-foreground">
+          <TableRow>
+            <TableHead className="px-4 py-3 font-medium">Item</TableHead>
+            <TableHead className="px-4 py-3 font-medium">Quantidade</TableHead>
+            <TableHead className="px-4 py-3 font-medium">Preço unit.</TableHead>
+            <TableHead className="px-4 py-3 font-medium">Desconto</TableHead>
+            <TableHead className="px-4 py-3 font-medium">Total</TableHead>
+            {editable && <TableHead className="px-4 py-3 font-medium">Ações</TableHead>}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {items.map((item) =>
             editable ? (
               <EditableSaleItemRow key={item.id} saleId={saleId} item={item} />
@@ -47,21 +49,21 @@ export function SaleItemsTable({
               <ReadOnlySaleItemRow key={item.id} item={item} />
             )
           )}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 }
 
 function ReadOnlySaleItemRow({ item }: { item: SaleItem }) {
   return (
-    <tr>
-      <td className="px-4 py-3 text-foreground">{item.description}</td>
-      <td className="px-4 py-3 text-muted-foreground">{item.quantity}</td>
-      <td className="px-4 py-3 text-muted-foreground">{formatMoney(item.unit_price)}</td>
-      <td className="px-4 py-3 text-muted-foreground">{formatMoney(item.discount_amount)}</td>
-      <td className="px-4 py-3 text-foreground">{formatMoney(item.total_amount)}</td>
-    </tr>
+    <TableRow>
+      <TableCell className="px-4 py-3 text-foreground">{item.description}</TableCell>
+      <TableCell className="px-4 py-3 text-muted-foreground">{item.quantity}</TableCell>
+      <TableCell className="px-4 py-3 text-muted-foreground">{formatMoney(item.unit_price)}</TableCell>
+      <TableCell className="px-4 py-3 text-muted-foreground">{formatMoney(item.discount_amount)}</TableCell>
+      <TableCell className="px-4 py-3 text-foreground">{formatMoney(item.total_amount)}</TableCell>
+    </TableRow>
   );
 }
 
@@ -88,7 +90,6 @@ function EditableSaleItemRow({ saleId, item }: { saleId: string; item: SaleItem 
   }
 
   function handleRemove() {
-    if (!window.confirm(`Remover "${item.description}" da venda?`)) return;
     setError(null);
     startRemoving(async () => {
       const result = await removeSaleItemAction(saleId, item.id);
@@ -99,12 +100,12 @@ function EditableSaleItemRow({ saleId, item }: { saleId: string; item: SaleItem 
   }
 
   return (
-    <tr>
-      <td className="px-4 py-3 text-foreground">
+    <TableRow>
+      <TableCell className="px-4 py-3 text-foreground">
         {item.description}
         {error && <p className="text-xs text-destructive">{error}</p>}
-      </td>
-      <td className="px-4 py-3">
+      </TableCell>
+      <TableCell className="px-4 py-3">
         <Input
           type="number"
           step="0.001"
@@ -113,9 +114,9 @@ function EditableSaleItemRow({ saleId, item }: { saleId: string; item: SaleItem 
           onChange={(event) => setQuantity(event.target.value)}
           className="h-8 w-24"
         />
-      </td>
-      <td className="px-4 py-3 text-muted-foreground">{formatMoney(item.unit_price)}</td>
-      <td className="px-4 py-3">
+      </TableCell>
+      <TableCell className="px-4 py-3 text-muted-foreground">{formatMoney(item.unit_price)}</TableCell>
+      <TableCell className="px-4 py-3">
         <Input
           type="number"
           step="0.01"
@@ -124,9 +125,9 @@ function EditableSaleItemRow({ saleId, item }: { saleId: string; item: SaleItem 
           onChange={(event) => setDiscount(event.target.value)}
           className="h-8 w-24"
         />
-      </td>
-      <td className="px-4 py-3 text-foreground">{formatMoney(item.total_amount)}</td>
-      <td className="px-4 py-3">
+      </TableCell>
+      <TableCell className="px-4 py-3 text-foreground">{formatMoney(item.total_amount)}</TableCell>
+      <TableCell className="px-4 py-3">
         <div className="flex items-center gap-3">
           {dirty && (
             <button
@@ -138,16 +139,23 @@ function EditableSaleItemRow({ saleId, item }: { saleId: string; item: SaleItem 
               Salvar
             </button>
           )}
-          <button
-            type="button"
-            disabled={isRemoving}
-            onClick={handleRemove}
-            className="text-xs font-medium text-destructive underline-offset-4 hover:underline"
-          >
-            Remover
-          </button>
+          <ConfirmDialog
+            title={`Remover "${item.description}" da venda?`}
+            confirmLabel="Remover"
+            destructive
+            onConfirm={handleRemove}
+            trigger={
+              <button
+                type="button"
+                disabled={isRemoving}
+                className="text-xs font-medium text-destructive underline-offset-4 hover:underline disabled:opacity-50"
+              >
+                Remover
+              </button>
+            }
+          />
         </div>
-      </td>
-    </tr>
+      </TableCell>
+    </TableRow>
   );
 }

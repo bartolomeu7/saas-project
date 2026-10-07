@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createClient } from "@/lib/supabase/server";
+import { createSessionClient } from "@/lib/supabase/server";
 import { endOfDaySaoPaulo, startOfDaySaoPauloFromDateString } from "@/lib/timezone";
 import type { Appointment } from "@/types/appointment";
 
@@ -16,7 +16,7 @@ export async function listAppointments(
   dateValue: string,
   professionalId?: string
 ): Promise<Appointment[]> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { from, to } = dateRangeSaoPaulo(dateValue);
 
   let query = supabase
@@ -51,7 +51,7 @@ export async function listAppointments(
 }
 
 export async function listAgendaProfessionals(companyId: string) {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { data } = await supabase
     .from("professional_profiles")
     .select("id,display_name,color")
@@ -63,7 +63,7 @@ export async function listAgendaProfessionals(companyId: string) {
 }
 
 export async function listAgendaCustomers(companyId: string) {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { data } = await supabase
     .from("customers")
     .select("id,name,phone")
@@ -76,7 +76,7 @@ export async function listAgendaCustomers(companyId: string) {
 }
 
 export async function listAgendaServices(companyId: string) {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { data } = await supabase
     .from("services")
     .select("id,name,duration_minutes,sale_price")

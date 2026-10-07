@@ -1,31 +1,32 @@
 import { Trophy } from "lucide-react";
 import type { CustomerRaffleEntry } from "@/types/raffle";
 import { cn } from "@/lib/utils";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 
 export function RaffleEntriesTable({ entries }: { entries: CustomerRaffleEntry[] }) {
   return (
     <div className="overflow-hidden rounded-lg border border-border">
-      <table className="w-full text-sm">
-        <thead className="bg-secondary/50 text-left text-xs uppercase text-muted-foreground">
-          <tr>
-            <th className="px-4 py-3 font-medium">Participante</th>
-            <th className="px-4 py-3 font-medium">Contato</th>
-            <th className="px-4 py-3 font-medium">Resultado</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-border">
+      <Table className="w-full text-sm">
+        <TableHeader className="bg-secondary/50 text-left text-xs uppercase text-muted-foreground">
+          <TableRow>
+            <TableHead className="px-4 py-3 font-medium">Participante</TableHead>
+            <TableHead className="px-4 py-3 font-medium">Contato</TableHead>
+            <TableHead className="px-4 py-3 font-medium">Resultado</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {entries.map((entry) => (
-            <tr
+            <TableRow
               key={entry.id}
               className={cn(entry.is_winner && "bg-success/5")}
             >
-              <td className="px-4 py-3 font-medium text-foreground">
+              <TableCell className="px-4 py-3 font-medium text-foreground">
                 {entry.customer_name_snapshot}
-              </td>
-              <td className="px-4 py-3 text-muted-foreground">
+              </TableCell>
+              <TableCell className="px-4 py-3 text-muted-foreground">
                 {entry.customer_phone_snapshot ?? entry.customer_email_snapshot ?? "—"}
-              </td>
-              <td className="px-4 py-3">
+              </TableCell>
+              <TableCell className="px-4 py-3">
                 {entry.is_winner ? (
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-success/10 px-2.5 py-0.5 text-xs font-medium text-success">
                     <Trophy className="h-3.5 w-3.5" strokeWidth={2} />
@@ -34,11 +35,11 @@ export function RaffleEntriesTable({ entries }: { entries: CustomerRaffleEntry[]
                 ) : (
                   <span className="text-xs text-muted-foreground">Participante</span>
                 )}
-              </td>
-            </tr>
+              </TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 }

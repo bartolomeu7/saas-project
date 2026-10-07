@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SubmitButton } from "@/components/shared/auth/submit-button";
 import { FormMessage } from "@/components/shared/auth/form-message";
+import { NativeSelect } from "@/components/ui/native-select";
 
 const initialState: ActionResult = {};
 
@@ -34,7 +35,7 @@ export function CreateCompanyForm() {
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="businessType">Segmento</Label>
-        <select
+        <NativeSelect
           id="businessType"
           name="businessType"
           required
@@ -49,12 +50,12 @@ export function CreateCompanyForm() {
               {label}
             </option>
           ))}
-        </select>
+        </NativeSelect>
       </div>
 
       <FormMessage state={state} />
 
-      <SubmitButton pendingLabel="Criando empresa...">
+      <SubmitButton state={state} pendingLabel="Criando empresa...">
         Concluir configuração
       </SubmitButton>
     </form>

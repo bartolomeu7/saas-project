@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SubmitButton } from "@/components/shared/auth/submit-button";
 import { FormMessage } from "@/components/shared/auth/form-message";
+import { ConfirmDialog } from "@/components/app/confirm-dialog";
 
 const initialState: ActionResult = {};
 
@@ -50,13 +51,6 @@ function ActiveRedemption({
   const [error, setError] = useState<string | null>(null);
 
   function handleRemove() {
-    if (
-      !window.confirm(
-        "Remover o uso de pontos desta venda? Os pontos voltam para o saldo do cliente."
-      )
-    ) {
-      return;
-    }
     setError(null);
     startRemoving(async () => {
       const result = await removeLoyaltyRedemptionFromDraftAction(saleId);
@@ -72,14 +66,22 @@ function ActiveRedemption({
         <div className="rounded-md border border-success/30 bg-success/10 p-3 text-sm text-success">
           {formatPoints(pointsRedeemed)} pontos utilizados — desconto de {formatMoney(discountAmount)}
         </div>
-        <button
-          type="button"
-          disabled={isRemoving}
-          onClick={handleRemove}
-          className="w-fit text-xs font-medium text-destructive underline-offset-4 hover:underline disabled:opacity-50"
-        >
-          {isRemoving ? "Removendo..." : "Remover uso de pontos"}
-        </button>
+        <ConfirmDialog
+          title="Remover o uso de pontos desta venda?"
+          description="Os pontos voltam para o saldo do cliente."
+          confirmLabel="Remover"
+          destructive
+          onConfirm={handleRemove}
+          trigger={
+            <button
+              type="button"
+              disabled={isRemoving}
+              className="w-fit text-xs font-medium text-destructive underline-offset-4 hover:underline disabled:opacity-50"
+            >
+              {isRemoving ? "Removendo..." : "Remover uso de pontos"}
+            </button>
+          }
+        />
         {error && <p className="text-xs text-destructive">{error}</p>}
       </div>
     </Card>
@@ -197,7 +199,7 @@ function RedeemForm({
             durante o pending). A validação de entrada fica só nos
             atributos nativos do input (required/min/max/step) + na
             mensagem de erro abaixo — o servidor é quem decide de verdade. */}
-        <SubmitButton pendingLabel="Aplicando..." size="sm" className="w-fit">
+        <SubmitButton state={state} pendingLabel="Aplicando..." size="sm" className="w-fit">
           Usar pontos
         </SubmitButton>
         <FormMessage state={state} />

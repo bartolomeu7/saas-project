@@ -17,7 +17,8 @@ const CURRENCY_FORMATTER = new Intl.NumberFormat("pt-BR", {
   currency: "BRL",
 });
 
-export default async function PaymentPage({ params }: { params: { id: string } }) {
+export default async function PaymentPage({ params: paramsPromise }: { params: Promise<{ id: string }> }) {
+  const params = await paramsPromise;
   const current = (await getCurrentCompany())!;
   const payment = await getSubscriptionPaymentById(current.company.id, params.id);
 

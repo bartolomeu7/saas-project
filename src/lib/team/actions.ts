@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { createSessionClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/auth/actions";
 import type { Database } from "@/types/supabase";
 
@@ -22,7 +22,7 @@ export async function addExistingMemberAction(
   if (!email) return { error: "Informe o e-mail do colaborador." };
   if (!roles.includes(role)) return { error: "Selecione uma função válida." };
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { error } = await supabase.rpc("add_existing_company_member", {
     p_email: email,
     p_role: role,
@@ -46,7 +46,7 @@ export async function updateMemberRoleAction(
     return { error: "Função inválida." };
   }
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { error } = await supabase.rpc("update_company_member_role", {
     p_member_id: memberId,
     p_role: role,
@@ -65,7 +65,7 @@ export async function removeMemberAction(
   const memberId = textValue(formData.get("memberId"));
   if (!memberId) return { error: "Colaborador inválido." };
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { error } = await supabase.rpc("remove_company_member", {
     p_member_id: memberId,
   });
@@ -93,7 +93,7 @@ export async function saveProfessionalAction(
     return { error: "Nome e colaborador são obrigatórios." };
   }
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { error } = await supabase.rpc("upsert_professional_profile", {
     p_company_member_id: companyMemberId,
     p_display_name: displayName,
@@ -126,7 +126,7 @@ export async function saveProfessionalServicesAction(
     return { error: "Configuração de serviços inválida." };
   }
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { error } = await supabase.rpc("set_professional_services", {
     p_professional_id: professionalId,
     p_services: services as never,
@@ -154,7 +154,7 @@ export async function saveProfessionalAvailabilityAction(
     return { error: "Horários inválidos." };
   }
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { error } = await supabase.rpc("set_professional_availability", {
     p_professional_id: professionalId,
     p_schedule: schedule as never,
@@ -180,7 +180,7 @@ export async function createProfessionalBlockAction(
     return { error: "Informe profissional, início e fim do bloqueio." };
   }
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { error } = await supabase.rpc("create_professional_block", {
     p_professional_id: professionalId,
     p_starts_at: new Date(startsAt).toISOString(),
@@ -202,7 +202,7 @@ export async function deleteProfessionalBlockAction(
   const blockId = textValue(formData.get("blockId"));
   if (!blockId) return { error: "Bloqueio inválido." };
 
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { error } = await supabase.rpc("delete_professional_block", {
     p_block_id: blockId,
   });

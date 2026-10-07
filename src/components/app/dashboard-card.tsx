@@ -1,4 +1,5 @@
 import type { LucideIcon } from "lucide-react";
+import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 const INDICATOR_COLOR: Record<"success" | "warning" | "neutral", string> = {
@@ -23,7 +24,7 @@ export function DashboardCard({
   indicator?: "success" | "warning" | "neutral";
 }) {
   return (
-    <div className="rounded-lg border border-border bg-card p-4 shadow-soft transition-colors hover:border-border/80">
+    <Card className="p-4 shadow-soft transition-colors hover:border-primary/30 motion-reduce:transition-none">
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">{label}</p>
         <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary">
@@ -42,6 +43,6 @@ export function DashboardCard({
           {hint}
         </p>
       )}
-    </div>
+    </Card>
   );
 }

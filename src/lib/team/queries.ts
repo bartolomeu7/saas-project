@@ -1,7 +1,7 @@
 import "server-only";
 
 import { cache } from "react";
-import { createClient } from "@/lib/supabase/server";
+import { createSessionClient } from "@/lib/supabase/server";
 import type {
   ProfessionalAvailability,
   ProfessionalBlock,
@@ -11,7 +11,7 @@ import type {
 } from "@/types/team";
 
 export const listCompanyTeam = cache(async function listCompanyTeam(): Promise<TeamMember[]> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { data, error } = await supabase.rpc("list_company_team");
   if (error) return [];
   return (data ?? []) as TeamMember[];
@@ -26,7 +26,7 @@ export async function getProfessionalWorkspace(
   availability: ProfessionalAvailability[];
   blocks: ProfessionalBlock[];
 }> {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
 
   const [professionalResult, serviceResult, availabilityResult, blockResult] =
     await Promise.all([
@@ -81,7 +81,7 @@ export async function getProfessionalWorkspace(
 }
 
 export async function listProfessionalServices(companyId: string) {
-  const supabase = createClient();
+  const supabase = await createSessionClient();
   const { data } = await supabase
     .from("services")
     .select("id,name,duration_minutes,sale_price")
