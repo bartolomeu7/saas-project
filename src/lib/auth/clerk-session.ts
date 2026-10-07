@@ -1,7 +1,23 @@
 import "server-only";
 
-import { currentUser } from "@clerk/nextjs/server";
+import { auth, currentUser } from "@clerk/nextjs/server";
 import { createClerkSupabaseClient } from "@/lib/supabase/clerk-client";
+import { AuthBackendError, readJwtRole } from "@/lib/auth/token-claims";
+
+/**
+ * Falha do Supabase ao resolver a identidade NÃO é "sem sessão": distingue
+ * token sem role=authenticated (config do Clerk) de erro de RPC/banco e
+ * lança AuthBackendError, para a UI/rotas mostrarem a causa real.
+ */
+async function failAuthBackend(step: string, message: string): Promise<never> {
+  const role = readJwtRole(await (await auth()).getToken());
+  const code = role === "authenticated" ? "AUTH_RPC_FAILED" : "AUTH_ROLE_MISSING";
+  console.error(
+    `[clerk-session] ${step} falhou (${code}; role do token: ${role ?? "ausente"}):`,
+    message
+  );
+  throw new AuthBackendError(code, `${step}: ${message}`);
+}
 
 /**
  * Camada de sessão do lado Clerk.
@@ -32,8 +48,7 @@ export async function getClerkInternalUserId(): Promise<string | null> {
     "current_profile_user_id"
   );
   if (lookupError) {
-    console.error("[clerk-session] current_profile_user_id() falhou:", lookupError.message);
-    return null;
+    return failAuthBackend("current_profile_user_id()", lookupError.message);
   }
   if (existingId) return existingId;
 
@@ -46,8 +61,7 @@ export async function getClerkInternalUserId(): Promise<string | null> {
     p_email: email,
   });
   if (createError) {
-    console.error("[clerk-session] ensure_profile() falhou:", createError.message);
-    return null;
+    return failAuthBackend("ensure_profile()", createError.message);
   }
   return createdId;
 }

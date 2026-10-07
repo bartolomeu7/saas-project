@@ -5,6 +5,11 @@ import type { Database } from "@/types/supabase";
 import { getSubscriptionGuardStatus } from "@/lib/billing/guard";
 import { getPlatformAdminGuardStatus, isPlatformAdminRole } from "@/lib/admin/guard";
 import type { UserRole } from "@/types/profile";
+import {
+  AUTH_BACKEND_MESSAGES,
+  readJwtRole,
+  type AuthBackendErrorCode,
+} from "@/lib/auth/token-claims";
 
 /**
  * Prefixos de rota que exigem usuário autenticado.
@@ -53,6 +58,18 @@ function isAdminRoute(pathname: string) {
   return pathname === ADMIN_PREFIX || pathname.startsWith(`${ADMIN_PREFIX}/`);
 }
 
+/** Resposta 503 (fail closed) quando a autenticação no banco está indisponível/mal configurada. */
+function authBackendUnavailable(code: AuthBackendErrorCode) {
+  const message = AUTH_BACKEND_MESSAGES[code];
+  return new NextResponse(
+    `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Serviço indisponível</title></head><body style="font-family:system-ui,sans-serif;max-width:32rem;margin:4rem auto;padding:0 1rem"><h1>Serviço de autenticação indisponível</h1><p>${message}</p></body></html>`,
+    {
+      status: 503,
+      headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" },
+    }
+  );
+}
+
 /**
  * Middleware raiz da aplicação (Clerk é a única autenticação).
  *
@@ -93,15 +110,29 @@ export const middleware = clerkMiddleware(async (auth, request) => {
   }
 
   const token = await getToken();
+
+  // Sem role=authenticated no token, o PostgREST roda como `anon`: o SELECT em
+  // profiles devolve 200 vazio (RLS) e pareceria "primeiro acesso". Isso é
+  // erro de configuração do Clerk, não ausência de perfil.
+  if (token && readJwtRole(token) !== "authenticated") {
+    return authBackendUnavailable("AUTH_ROLE_MISSING");
+  }
+
   const supabase = createClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     { accessToken: async () => token }
   );
 
-  const { data: profile } = token
+  const { data: profile, error: profileError } = token
     ? await supabase.from("profiles").select("user_id, role").maybeSingle()
-    : { data: null };
+    : { data: null, error: null };
+
+  // Erro do Supabase (401/5xx...) não é "sem perfil": não segue para o onboarding.
+  if (profileError) {
+    console.error("[middleware] leitura de profiles falhou:", profileError.message);
+    return authBackendUnavailable("AUTH_RPC_FAILED");
+  }
 
   if (needsAdminGuard) {
     const isPlatformAdmin = isPlatformAdminRole(profile?.role as UserRole | undefined);

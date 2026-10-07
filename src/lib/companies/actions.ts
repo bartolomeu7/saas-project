@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { createSessionClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth/session";
+import { AUTH_BACKEND_MESSAGES, AuthBackendError } from "@/lib/auth/token-claims";
 import { createCompanySchema } from "@/lib/validations/company";
 import type { ActionResult } from "@/lib/auth/actions";
 
@@ -29,7 +30,16 @@ export async function createCompanyAction(
 
   const supabase = await createSessionClient();
 
-  const user = await getCurrentUser();
+  let user;
+  try {
+    user = await getCurrentUser();
+  } catch (error) {
+    // Falha do Supabase ao resolver a identidade não é sessão expirada.
+    if (error instanceof AuthBackendError) {
+      return { error: AUTH_BACKEND_MESSAGES[error.code], code: error.code };
+    }
+    throw error;
+  }
 
   if (!user) {
     return { error: "Sessão expirada. Faça login novamente." };
