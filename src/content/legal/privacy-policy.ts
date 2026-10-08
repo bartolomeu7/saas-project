@@ -13,7 +13,7 @@ export const privacyPolicy: LegalDocument = {
   type: "PRIVACY_POLICY",
   slug: "politica-de-privacidade",
   title: "Política de Privacidade",
-  version: "1.0.0-rc.1",
+  version: "1.0.0-rc.2",
   effectiveAt: "2026-10-08",
   summary:
     "Quais dados o Prime Ges trata, para quê, com quem compartilha, por quanto tempo e como você exerce seus direitos.",

@@ -14,11 +14,10 @@ import { safeAfterConsentPath } from "../../src/lib/legal/safe-path.ts";
 
 const DOCS = [termsOfUse, privacyPolicy];
 const SECRET = "sk_test_unit_secret";
-const VERSIONS = { terms: "1.0.0-rc.1", privacy: "1.0.0-rc.1" };
-const MIGRATION = readFileSync(
-  new URL("../../supabase/migrations/20261010000000_legal_consent.sql", import.meta.url),
-  "utf8",
-);
+const VERSIONS = { terms: "1.0.0-rc.2", privacy: "1.0.0-rc.2" };
+const MIGRATION = ["20261010000000_legal_consent.sql", "20261010000100_legal_rc2.sql"]
+  .map((name) => readFileSync(new URL("../../supabase/migrations/" + name, import.meta.url), "utf8"))
+  .join("\n");
 
 function markersOf(doc) {
   const text = doc.sections.flatMap((s) => [...s.paragraphs, ...(s.items ?? [])]).join("\n");

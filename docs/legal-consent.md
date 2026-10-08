@@ -66,6 +66,6 @@ O layout só roda em carregamento completo da página, então um usuário com a 
 ## Antes de Production
 
 - Resolver todos os marcadores `[BLOCKED — DADO EMPRESARIAL NECESSÁRIO]` e `[VALIDAÇÃO JURÍDICA NECESSÁRIA]` (`LEGAL_REQUIRE_PUBLISHABLE=1 npm run test:unit` falha enquanto existirem).
-- Publicar versão final (`1.0.0`), com novo hash e nova migration. A `1.0.0-rc.1` existe só para TEST.
+- Publicar versão final (`1.0.0`), com novo hash e nova migration. As versões `1.0.0-rc.*` existem só para TEST: a `rc.1` está aposentada e a `rc.2` (migration `20261010000100_legal_rc2.sql`, mesmo texto, só o rótulo mudou) foi publicada para exercitar o reaceite.
 - Aplicar a migration em Production **antes** do deploy do código (o guarda falha fechado se as RPCs não existirem).
 - Revisão jurídica de ambos os documentos (bases legais, papéis controlador/operador, prazos de retenção, transferência internacional, foro).

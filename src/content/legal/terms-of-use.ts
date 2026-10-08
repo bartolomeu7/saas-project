@@ -13,7 +13,7 @@ export const termsOfUse: LegalDocument = {
   type: "TERMS_OF_USE",
   slug: "termos-de-uso",
   title: "Termos de Uso",
-  version: "1.0.0-rc.1",
+  version: "1.0.0-rc.2",
   effectiveAt: "2026-10-08",
   summary:
     "Regras para usar o Prime Ges: conta, planos e pagamento, uso permitido, responsabilidades e encerramento.",
