@@ -49,8 +49,8 @@ as $function$
   select * from (values
     ('admin_max_free_days', 30, 1, 365,
      'Máximo de dias gratuitos que um ADMIN pode conceder em uma única operação (super_admin pode até 365).'),
-    ('presence_online_seconds', 120, 30, 900,
-     'Segundos desde o último sinal para um usuário contar como ONLINE.'),
+    ('presence_online_seconds', 120, 90, 900,
+     'Segundos desde o último sinal para um usuário contar como ONLINE (mínimo 90: o heartbeat do app roda a cada 60 s).'),
     ('presence_recent_minutes', 15, 5, 240,
      'Minutos desde o último sinal para um usuário contar como RECENTEMENTE ONLINE.')
   ) as t(key, default_value, min_value, max_value, description);

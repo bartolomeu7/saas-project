@@ -33,6 +33,7 @@ Missão 06 e o procedimento seguro para promovê-la a Production.
 | `20261009040000_admin_webhook_retention.sql` | Retenção (60 dias) do histórico de webhooks |
 | `20261009050000_admin_hardening.sql` | Revoga EXECUTE de `protect_last_super_admin()` |
 | `20261009060000_admin_lists_dynamic_filters.sql` | Correção de performance das listas (CTE `MATERIALIZED`) |
+| `20261009070000_admin_presence_min_online.sql` | Piso de 90 s para `presence_online_seconds` (QA 06.1) |
 
 Aplicar sempre **em ordem**. Nenhuma altera dados existentes além de adicionar colunas
 com default e tabelas novas.
@@ -86,7 +87,7 @@ authorization/api key/cookie/payload).
 | Chave | Efeito | Faixa |
 |---|---|---|
 | `admin_max_free_days` | limite de dias que um ADMIN concede por operação | 1–365 (padrão 30) |
-| `presence_online_seconds` | janela de "online agora" | 30–900 (padrão 120) |
+| `presence_online_seconds` | janela de "online agora" (piso de 90 s: o heartbeat é de 60 s) | 90–900 (padrão 120) |
 | `presence_recent_minutes` | janela de "ativo recentemente" | 5–240 (padrão 15) |
 
 ## Presença
@@ -117,7 +118,8 @@ npm run typecheck && npm run lint && npm run test:unit && npm run build
 ## Promoção para Production (quando autorizada)
 
 1. Backup/point-in-time do Production e janela de manutenção curta.
-2. Aplicar as 7 migrations **em ordem** (somente adicionam; nenhuma toca dados).
+2. Aplicar as 8 migrations **em ordem** (só adicionam/redefinem funções; a última apenas eleva
+   `presence_online_seconds` para o piso de 90 s se estiver abaixo).
 3. Rodar `get_advisors` e conferir grants (anon sem EXECUTE nas funções novas).
 4. Deploy do código. Smoke: `/admin` com sessão real do super_admin.
 5. Rodar a bateria de leitura (`tests/sql/admin_platform.sql` **não** — é só TEST; em

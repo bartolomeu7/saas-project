@@ -332,6 +332,7 @@ select pg_temp.chk('settings', 'valor persistido', $q$select value::text from pu
 select pg_temp.chk('settings', 'abaixo da faixa', $q$select public.set_platform_setting('admin_max_free_days', 0, 'x')::text$q$, 'ERR=');
 select pg_temp.chk('settings', 'acima da faixa', $q$select public.set_platform_setting('admin_max_free_days', 366, 'x')::text$q$, 'ERR=');
 select pg_temp.chk('settings', 'chave desconhecida', $q$select public.set_platform_setting('chave_inventada', 1, 'x')::text$q$, 'ERR=');
+select pg_temp.chk('settings', 'janela online abaixo do piso de 90 s recusada', $q$select public.set_platform_setting('presence_online_seconds', 89, 'x')::text$q$, 'ERR=Valor fora do intervalo');
 select pg_temp.chk('settings', 'coerência presença: recente deve exceder online', $q$select public.set_platform_setting('presence_recent_minutes', 5, 'x')::text from (select public.set_platform_setting('presence_online_seconds', 900, 'x')) s$q$, 'ERR=');
 select set_config('request.jwt.claims', '{"sub":"ap_admin","role":"authenticated"}', true);
 select pg_temp.chk('settings', 'admin respeita o NOVO limite (11 > 10)', $q$select public.admin_grant_access_days(pg_temp.co('t2'), 11, null, 'acima do novo limite')::text$q$, 'ERR=de 1 a 10 dias');

@@ -41,9 +41,10 @@ export function AdminShell({
             Pular para o conteúdo
           </a>
           <AdminHeader roleLabel={roleLabel} />
-          <main id="conteudo-principal" className="flex-1" tabIndex={-1}>
+          {/* SidebarInset já renderiza o <main> da página: o alvo do "pular para o conteúdo" é uma div (landmark main único). */}
+          <div id="conteudo-principal" className="flex-1" tabIndex={-1}>
             {children}
-          </main>
+          </div>
         </SidebarInset>
       </SidebarProvider>
     </TooltipProvider>
