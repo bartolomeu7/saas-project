@@ -19,8 +19,8 @@ export async function addExistingMemberAction(
   const email = textValue(formData.get("email"));
   const role = textValue(formData.get("role")) as CompanyRole;
 
-  if (!email) return { error: "Informe o e-mail do colaborador." };
-  if (!roles.includes(role)) return { error: "Selecione uma função válida." };
+  if (!email) return { error: "Informe o e-mail do colaborador.", field: "email" };
+  if (!roles.includes(role)) return { error: "Selecione uma função válida.", field: "role" };
 
   const supabase = await createSessionClient();
   const { error } = await supabase.rpc("add_existing_company_member", {
@@ -43,7 +43,7 @@ export async function updateMemberRoleAction(
 
   if (!memberId) return { error: "Colaborador inválido." };
   if (!(["owner", "admin", "employee"] as const).includes(role as "owner" | "admin" | "employee")) {
-    return { error: "Função inválida." };
+    return { error: "Função inválida.", field: "role" };
   }
 
   const supabase = await createSessionClient();

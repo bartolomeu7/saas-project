@@ -4,6 +4,7 @@ import { Package, ShoppingCart } from "lucide-react";
 import { getCurrentCompany } from "@/lib/companies/queries";
 import { createSessionClient } from "@/lib/supabase/server";
 import { EmptyState } from "@/components/app/empty-state";
+import { PageHeader } from "@/components/app/page-header";
 import { NewSaleButton } from "@/components/app/new-sale-button";
 
 export const metadata: Metadata = {
@@ -49,6 +50,7 @@ export default async function NewSalePage() {
             ← Voltar para Vendas
           </Link>
         </div>
+        <PageHeader title="Nova venda" />
         <EmptyState
           icon={Package}
           title="Cadastre produtos ou serviços antes de registrar uma venda."
@@ -70,6 +72,7 @@ export default async function NewSalePage() {
           ← Voltar para Vendas
         </Link>
       </div>
+      <PageHeader title="Nova venda" />
       <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border bg-card/40 p-10 text-center">
         <span className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-muted-foreground">
           <ShoppingCart className="h-5 w-5" strokeWidth={1.75} />

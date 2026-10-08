@@ -8,6 +8,7 @@ import {
   MemberRoleForm,
   RemoveMemberForm,
 } from "@/components/app/team-action-forms";
+import { TeamMemberCard } from "@/components/app/team-member-card";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 
 export const metadata: Metadata = { title: "Equipe" };
@@ -65,6 +66,16 @@ export default async function TeamPage() {
           <p className="text-sm text-muted-foreground">Acesso ao sistema e configuração profissional.</p>
         </div>
 
+        {/* Abaixo de xl: cartões (mesmas informações e ações); a partir de xl: tabela. */}
+        {team.length ? (
+          <ul className="divide-y xl:hidden">
+            {team.map((member) => (
+              <TeamMemberCard key={member.member_id} member={member} canManage={canManage} />
+            ))}
+          </ul>
+        ) : null}
+
+        <div className="hidden xl:block">
         <Table className="w-full min-w-[980px] text-sm">
           <TableHeader>
             <TableRow className="border-b text-left text-muted-foreground">
@@ -114,6 +125,7 @@ export default async function TeamPage() {
             ))}
           </TableBody>
         </Table>
+        </div>
 
         {!team.length ? (
           <div className="p-10 text-center text-sm text-muted-foreground">

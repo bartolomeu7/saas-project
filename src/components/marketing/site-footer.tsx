@@ -75,7 +75,7 @@ export function SiteFooter() {
                         {link.label}
                       </Link>
                     ) : (
-                      <span className="text-sm text-muted-foreground/50">
+                      <span className="text-sm text-muted-foreground/90">
                         {link.label}
                       </span>
                     )}

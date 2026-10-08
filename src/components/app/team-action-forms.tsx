@@ -16,6 +16,8 @@ import {
 import type { TeamMember } from "@/types/team";
 import { FormMessage } from "@/components/shared/auth/form-message";
 import { SubmitButton } from "@/components/shared/auth/submit-button";
+import { FormField, fieldError } from "@/components/shared/form-field";
+import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 
 const initialState: ActionResult = {};
@@ -43,19 +45,17 @@ export function AddMemberForm() {
   const [state, formAction] = useFormState(addExistingMemberAction, initialState);
 
   return (
-    <form action={formAction} className="grid gap-3 sm:grid-cols-[1fr_150px_auto]">
-      <input
-        name="email"
-        type="email"
-        required
-        placeholder="email@exemplo.com"
-        className="h-10 rounded-md border bg-background px-3"
-      />
-      <NativeSelect name="role" defaultValue="employee" className="h-10 rounded-md border bg-background px-3">
-        <option value="employee">Funcionário</option>
-        <option value="admin">Administrador</option>
-      </NativeSelect>
-      <SubmitButton state={state} pendingLabel="Adicionando..." className="w-auto">
+    <form action={formAction} className="grid gap-3 sm:grid-cols-[1fr_150px_auto] sm:items-start">
+      <FormField label="E-mail do colaborador" error={fieldError(state, "email")}>
+        <Input name="email" type="email" required placeholder="email@exemplo.com" />
+      </FormField>
+      <FormField label="Função" error={fieldError(state, "role")}>
+        <NativeSelect name="role" defaultValue="employee">
+          <option value="employee">Funcionário</option>
+          <option value="admin">Administrador</option>
+        </NativeSelect>
+      </FormField>
+      <SubmitButton state={state} pendingLabel="Adicionando..." className="w-auto sm:mt-6">
         Adicionar
       </SubmitButton>
       <div className="sm:col-span-3"><FormMessage state={state} /></div>
@@ -69,11 +69,17 @@ export function MemberRoleForm({ member }: { member: TeamMember }) {
   return (
     <form action={formAction} className="grid gap-2 sm:grid-cols-[130px_auto]">
       <input type="hidden" name="memberId" value={member.member_id} />
-      <NativeSelect name="role" defaultValue={member.role} className="h-9 rounded-md border bg-background px-2 text-sm">
-        <option value="owner">Owner</option>
-        <option value="admin">Administrador</option>
-        <option value="employee">Funcionário</option>
-      </NativeSelect>
+      <FormField
+        label={`Função de ${member.full_name ?? member.email ?? "colaborador"}`}
+        hideLabel
+        error={fieldError(state, "role")}
+      >
+        <NativeSelect name="role" defaultValue={member.role} className="h-9 px-2">
+          <option value="owner">Owner</option>
+          <option value="admin">Administrador</option>
+          <option value="employee">Funcionário</option>
+        </NativeSelect>
+      </FormField>
       <SubmitButton state={state} pendingLabel="Salvando..." className="w-auto">
         Salvar
       </SubmitButton>

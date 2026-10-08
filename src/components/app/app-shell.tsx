@@ -30,18 +30,20 @@ export function AppShell({
     <TooltipProvider delayDuration={200}>
       <PresenceHeartbeat />
       <SidebarProvider defaultOpen={defaultOpen}>
+        {/* Primeiro elemento focável da página (antes da sidebar). */}
+        <a
+          href="#conteudo-principal"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-primary focus:px-3 focus:py-2 focus:text-sm focus:text-primary-foreground"
+        >
+          Pular para o conteúdo
+        </a>
         <AppSidebar userName={userName} userEmail={userEmail} />
+        {/* SidebarInset já renderiza o landmark <main>; o alvo do skip link é um <div>. */}
         <SidebarInset className="min-w-0 bg-background">
-          <a
-            href="#conteudo-principal"
-            className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-primary focus:px-3 focus:py-2 focus:text-sm focus:text-primary-foreground"
-          >
-            Pular para o conteúdo
-          </a>
           <Header company={company} />
-          <main id="conteudo-principal" className="flex-1" tabIndex={-1}>
+          <div id="conteudo-principal" className="flex-1" tabIndex={-1}>
             {children}
-          </main>
+          </div>
         </SidebarInset>
       </SidebarProvider>
     </TooltipProvider>
