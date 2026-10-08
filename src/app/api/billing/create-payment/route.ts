@@ -3,6 +3,7 @@ import { createSessionClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentCompany } from "@/lib/companies/queries";
 import { getCurrentUser } from "@/lib/auth/session";
+import { ACCOUNT_BLOCKED_MESSAGE, AccountInactiveError } from "@/lib/auth/account-status";
 import { writeAuditLog } from "@/lib/audit/log";
 import { AUDIT_ACTIONS } from "@/types/audit";
 import { siteConfig } from "@/config/site";
@@ -20,7 +21,16 @@ import { buildExternalReference } from "@/types/billing";
  * createAdminClient(), nunca o client de sessão do usuário.
  */
 export async function POST(request: Request) {
-  const [current, user] = await Promise.all([getCurrentCompany(), getCurrentUser()]);
+  let current, user;
+  try {
+    [current, user] = await Promise.all([getCurrentCompany(), getCurrentUser()]);
+  } catch (error) {
+    // Conta inativa/suspensa não contrata nem renova plano.
+    if (error instanceof AccountInactiveError) {
+      return NextResponse.json({ error: ACCOUNT_BLOCKED_MESSAGE }, { status: 403 });
+    }
+    throw error;
+  }
   if (!current || !user) {
     return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   }

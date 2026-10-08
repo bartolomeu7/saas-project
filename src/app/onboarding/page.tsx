@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { ACCOUNT_BLOCKED_PATH, AccountInactiveError } from "@/lib/auth/account-status";
 import { getCurrentCompany } from "@/lib/companies/queries";
 import { CreateCompanyForm } from "@/components/app/create-company-form";
 import { siteConfig } from "@/config/site";
@@ -10,7 +11,16 @@ export const metadata: Metadata = {
 
 export default async function OnboardingPage() {
   // Se o usuário já tem empresa, não faz sentido mostrar onboarding de novo.
-  const current = await getCurrentCompany();
+  let current;
+  try {
+    current = await getCurrentCompany();
+  } catch (error) {
+    // Conta inativa/suspensa não conclui onboarding (o middleware já barra; esta é a 2ª camada).
+    if (error instanceof AccountInactiveError) {
+      redirect(ACCOUNT_BLOCKED_PATH);
+    }
+    throw error;
+  }
   if (current) {
     redirect("/app");
   }

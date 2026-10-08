@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useClerk } from "@clerk/nextjs";
-import { ChevronsUpDown, CreditCard, LogOut, Users } from "lucide-react";
+import { ChevronsUpDown, CreditCard, LogOut, Users, type LucideIcon } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -49,12 +49,26 @@ function initialsFrom(name?: string | null, email?: string | null): string {
  * Menu do usuário no rodapé da sidebar (padrão sidebar do shadcn/ui):
  * mostra identidade, atalhos para Equipe/Assinatura e o logout (Clerk).
  */
+export interface UserMenuLink {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+}
+
+/** Atalhos padrão da área da empresa (/app). O painel /admin passa os seus. */
+const DEFAULT_LINKS: UserMenuLink[] = [
+  { href: "/app/equipe", label: "Equipe", icon: Users },
+  { href: "/app/assinatura", label: "Assinatura", icon: CreditCard },
+];
+
 export function UserMenu({
   name,
   email,
+  links = DEFAULT_LINKS,
 }: {
   name?: string | null;
   email?: string | null;
+  links?: UserMenuLink[];
 }) {
   const { isMobile } = useSidebar();
   const initials = initialsFrom(name, email);
@@ -105,18 +119,14 @@ export function UserMenu({
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link href="/app/equipe">
-                <Users className="size-4" strokeWidth={1.75} />
-                Equipe
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/app/assinatura">
-                <CreditCard className="size-4" strokeWidth={1.75} />
-                Assinatura
-              </Link>
-            </DropdownMenuItem>
+            {links.map(({ href, label, icon: Icon }) => (
+              <DropdownMenuItem asChild key={href}>
+                <Link href={href}>
+                  <Icon className="size-4" strokeWidth={1.75} />
+                  {label}
+                </Link>
+              </DropdownMenuItem>
+            ))}
             <DropdownMenuSeparator />
             <SignOutMenuItem />
           </DropdownMenuContent>

@@ -59,3 +59,36 @@ Auth → Clerk** precisa apontar para o domínio da instância Clerk daquele amb
 `profiles.role`, `status` e `user_id` não podem ser alterados pelo próprio
 usuário (trigger `protect_profile_restricted_fields`); só o `service_role`
 (painel administrativo) altera.
+
+## Status da conta (`profiles.status`) é regra real de acesso
+
+O Clerk só prova **quem** é o usuário; quem decide se a conta **pode usar o Prime
+Ges** é `profiles.status` (`active` | `inactive` | `suspended`). Fluxo:
+
+```
+Clerk (sessão) → profiles.clerk_user_id → profiles.status → autorização Prime Ges
+```
+
+Regra única: **`status != active` bloqueia o produto (`/app`, `/onboarding`) e o
+painel (`/admin`), qualquer que seja o papel.** O papel nunca contorna o status
+(um admin suspenso perde também o acesso à própria empresa).
+
+| Camada | Como aplica |
+|---|---|
+| Banco (autoridade) | `current_profile_user_id()` só devolve identidade para perfil `active`; as 87 policies e 42 funções que dependem dela passam a negar tudo para conta bloqueada, inclusive chamadas diretas à API com o próprio token |
+| `ensure_profile()` | Perfil existente e não ativo → devolve `NULL` (nunca recria nem reativa); primeiro acesso continua criando perfil ativo |
+| Leitura do próprio perfil | `profiles_select_own` casa por `clerk_user_id`, para o app enxergar o próprio status mesmo bloqueado |
+| Middleware | Uma leitura de `profiles` serve aos guards de status, admin e assinatura em `/app/*`, `/onboarding` e `/admin/*`; conta bloqueada → `/acesso-indisponivel` |
+| Servidor | `getClerkInternalUserId()` lança `AccountInactiveError`; o layout do app, o onboarding, as rotas `/api/billing/create-payment` e `/app/relatorios/export` e a action de criar empresa reagem (redirect, 403 ou mensagem) |
+| Página | `/acesso-indisponivel`: mensagem única e simples, sem revelar papel, status interno ou IDs; quem volta a estar ativo é devolvido ao `/app` |
+
+### Último super_admin ativo
+
+A plataforma sempre mantém ao menos um `super_admin` ativo. A trigger
+`profiles_protect_last_super_admin` garante isso **na tabela** (vale para RPC,
+`service_role` e SQL direto) para suspender, inativar, rebaixar e remover, e
+serializa com o mesmo advisory lock das RPCs `set_platform_user_role` /
+`set_platform_user_status`, então duas transações concorrentes não zeram os
+super_admins ativos. Ninguém altera o próprio papel/status.
+
+Webhooks e cobranças (`service_role`, sem JWT) não passam por esta regra.

@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/supabase";
-import type { UserRole } from "@/types/profile";
+import type { UserRole, UserStatus } from "@/types/profile";
+import { isActivePlatformAdmin, isActiveSuperAdmin } from "@/lib/admin/permissions";
 
 /**
  * Guard de acesso à área administrativa da PLATAFORMA (/admin), separado
@@ -11,36 +12,46 @@ import type { UserRole } from "@/types/profile";
  *
  * Sem "server-only" e sem cookies()/next/headers — mesmo motivo de
  * src/lib/billing/guard.ts: precisa ser importável com segurança tanto
- * pelo middleware (Edge Runtime) quanto por Server Components/layouts
- * futuros da área administrativa, recebendo o client Supabase já pronto
- * como parâmetro em vez de criar o seu próprio.
+ * pelo middleware (Edge Runtime) quanto por Server Components/layouts da
+ * área administrativa, recebendo o client Supabase já pronto como
+ * parâmetro em vez de criar o seu próprio.
+ *
+ * A regra de "quem é administrador" vive em permissions.ts
+ * (isActivePlatformAdmin / isActiveSuperAdmin) e é a MESMA aplicada no banco
+ * por is_platform_admin() / is_super_admin(): role admin|super_admin E status
+ * active. Middleware, layout, páginas, RPCs e RLS não podem divergir.
  */
 
-/**
- * Único lugar que define o que conta como "administrador de plataforma".
- * Reutilizada pelo middleware hoje e por qualquer layout/página de
- * /admin no futuro — nunca reimplementar esta checagem em outro lugar.
- */
-export function isPlatformAdminRole(role: UserRole | null | undefined): boolean {
-  return role === "admin" || role === "super_admin";
+export interface PlatformAdminGuardStatus {
+  isPlatformAdmin: boolean;
+  isSuperAdmin: boolean;
+  role: UserRole | null;
+  status: UserStatus | null;
 }
 
 /**
- * Resolve profiles.role do usuário autenticado e já devolve se ele tem
- * acesso administrativo de plataforma. Protegido por RLS
- * (profiles_select_own: user_id = current_profile_user_id()) — só é possível ler o
- * próprio perfil, então esta consulta nunca vaza role de outro usuário.
+ * Resolve profiles.role/status do usuário autenticado e devolve se ele tem
+ * acesso administrativo de plataforma (e se é super_admin). Protegido por RLS
+ * (profiles_select_own: user_id = current_profile_user_id()) — só é possível
+ * ler o próprio perfil, então esta consulta nunca vaza dados de outro usuário.
  */
 export async function getPlatformAdminGuardStatus(
   supabase: SupabaseClient<Database>,
   userId: string
-): Promise<{ isPlatformAdmin: boolean; role: UserRole | null }> {
+): Promise<PlatformAdminGuardStatus> {
   const { data } = await supabase
     .from("profiles")
-    .select("role")
+    .select("role, status")
     .eq("user_id", userId)
     .maybeSingle();
 
   const role = (data?.role as UserRole | undefined) ?? null;
-  return { isPlatformAdmin: isPlatformAdminRole(role), role };
+  const status = (data?.status as UserStatus | undefined) ?? null;
+
+  return {
+    isPlatformAdmin: isActivePlatformAdmin(role, status),
+    isSuperAdmin: isActiveSuperAdmin(role, status),
+    role,
+    status,
+  };
 }

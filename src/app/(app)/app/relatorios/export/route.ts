@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentCompany } from "@/lib/companies/queries";
+import { ACCOUNT_BLOCKED_MESSAGE, AccountInactiveError } from "@/lib/auth/account-status";
 import { getReportsWorkspace } from "@/lib/reports/queries";
 
 function csvEscape(value: string | number) {
@@ -7,7 +8,15 @@ function csvEscape(value: string | number) {
 }
 
 export async function GET(request: Request) {
-  const current = await getCurrentCompany();
+  let current;
+  try {
+    current = await getCurrentCompany();
+  } catch (error) {
+    if (error instanceof AccountInactiveError) {
+      return NextResponse.json({ error: ACCOUNT_BLOCKED_MESSAGE }, { status: 403 });
+    }
+    throw error;
+  }
   if (!current) return NextResponse.json({ error: "Empresa não encontrada." }, { status: 403 });
 
   const url = new URL(request.url);

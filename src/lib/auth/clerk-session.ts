@@ -2,6 +2,7 @@ import "server-only";
 
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { createClerkSupabaseClient } from "@/lib/supabase/clerk-client";
+import { AccountInactiveError } from "@/lib/auth/account-status";
 import { AuthBackendError, readJwtRole } from "@/lib/auth/token-claims";
 
 /**
@@ -63,6 +64,13 @@ export async function getClerkInternalUserId(): Promise<string | null> {
   if (createError) {
     return failAuthBackend("ensure_profile()", createError.message);
   }
+
+  // ensure_profile() só devolve NULL quando o perfil JÁ existe e não está ativo
+  // (suspended/inactive): é conta bloqueada, não "sem sessão" nem erro de infra.
+  if (!createdId) {
+    throw new AccountInactiveError();
+  }
+
   return createdId;
 }
 

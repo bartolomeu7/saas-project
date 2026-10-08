@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { createSessionClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth/session";
 import { AUTH_BACKEND_MESSAGES, AuthBackendError } from "@/lib/auth/token-claims";
+import { ACCOUNT_BLOCKED_MESSAGE, AccountInactiveError } from "@/lib/auth/account-status";
 import { createCompanySchema } from "@/lib/validations/company";
 import type { ActionResult } from "@/lib/auth/actions";
 
@@ -34,6 +35,10 @@ export async function createCompanyAction(
   try {
     user = await getCurrentUser();
   } catch (error) {
+    // Conta inativa/suspensa não conclui o onboarding nem cria empresa.
+    if (error instanceof AccountInactiveError) {
+      return { error: ACCOUNT_BLOCKED_MESSAGE, code: "ACCOUNT_BLOCKED" };
+    }
     // Falha do Supabase ao resolver a identidade não é sessão expirada.
     if (error instanceof AuthBackendError) {
       return { error: AUTH_BACKEND_MESSAGES[error.code], code: error.code };
