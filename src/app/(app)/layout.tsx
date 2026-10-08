@@ -5,6 +5,7 @@ import { ACCOUNT_BLOCKED_PATH, AccountInactiveError } from "@/lib/auth/account-s
 import { getCurrentUser, getCurrentProfile } from "@/lib/auth/session";
 import { getCurrentCompany } from "@/lib/companies/queries";
 import { AppShell } from "@/components/app/app-shell";
+import { requireLegalConsent } from "@/lib/legal/consent";
 
 /**
  * Layout da área autenticada.
@@ -33,6 +34,9 @@ export default async function AppLayout({
     }
     throw error;
   }
+
+  // Consentimento legal vigente (Termos + Política) antes de qualquer outra regra: sem ele, /aceite-termos.
+  await requireLegalConsent();
 
   if (!current) {
     redirect("/onboarding");

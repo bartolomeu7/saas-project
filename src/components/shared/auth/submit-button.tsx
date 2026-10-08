@@ -28,6 +28,7 @@ export function SubmitButton({
   pendingLabel = "Enviando...",
   successLabel = "Salvo",
   state,
+  disabled,
   ...props
 }: SubmitButtonProps) {
   const { pending } = useFormStatus();
@@ -45,9 +46,9 @@ export function SubmitButton({
   return (
     <Button
       type="submit"
-      disabled={pending}
       className="w-full"
       {...props}
+      disabled={pending || disabled}
       aria-live="polite"
     >
       {pending ? (

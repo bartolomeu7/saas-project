@@ -4,12 +4,25 @@ import type { CSSProperties, ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
+type RevealState = "idle" | "pending" | "visible";
+
+/**
+ * Entrada suave de uma seção ao rolar a página (único padrão de "reveal" da Home).
+ *
+ * Regras que evitam os problemas comuns desse efeito:
+ *  - O HTML do servidor chega VISÍVEL (sem classe de ocultação): sem JavaScript, para buscadores e
+ *    leitores de tela o conteúdo está sempre lá.
+ *  - Só depois da hidratação, e só para o que está ABAIXO da dobra, o bloco vira "pending"
+ *    (invisível e deslocado) e entra quando aparece na tela. Quem já está à vista não anima.
+ *  - Só opacidade e transform mudam (sem layout shift).
+ *  - Com prefers-reduced-motion o bloco nunca é escondido nem animado.
+ */
 export function Reveal({
   children,
   className,
   delay = 0,
-  distance = 22,
-  duration = 620,
+  distance = 18,
+  duration = 600,
 }: {
   children: ReactNode;
   className?: string;
@@ -18,30 +31,24 @@ export function Reveal({
   duration?: number;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
+  const [state, setState] = useState<RevealState>("idle");
 
   useEffect(() => {
     const node = ref.current;
     if (!node) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (node.getBoundingClientRect().top < window.innerHeight * 0.9) return;
 
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setVisible(true);
-      return;
-    }
-
+    setState("pending");
     const observer = new IntersectionObserver(
       (entries) => {
-        const entry = entries[0];
-        if (!entry) return;
-
-        if (entry.isIntersecting) {
-          setVisible(true);
+        if (entries[0]?.isIntersecting) {
+          setState("visible");
           observer.disconnect();
         }
       },
       { threshold: 0.12, rootMargin: "0px 0px -40px 0px" },
     );
-
     observer.observe(node);
     return () => observer.disconnect();
   }, []);
@@ -49,7 +56,12 @@ export function Reveal({
   return (
     <div
       ref={ref}
-      className={cn("prime-reveal", visible && "prime-reveal--visible", className)}
+      className={cn(
+        "prime-reveal",
+        state === "pending" && "prime-reveal--pending",
+        state === "visible" && "prime-reveal--visible",
+        className,
+      )}
       style={
         {
           "--reveal-delay": delay + "ms",
@@ -63,6 +75,7 @@ export function Reveal({
   );
 }
 
+/** Barra fina de progresso de leitura no topo (estilo em home-v2.css; some com reduced motion). */
 export function ScrollProgress() {
   const [value, setValue] = useState(0);
 

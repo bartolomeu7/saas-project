@@ -14,7 +14,7 @@ export function PricingCard({ plan }: { plan: PricingPlan }) {
 
   const badgeStyles =
     plan.highlight === "popular"
-      ? "bg-primary/15 text-primary"
+      ? "bg-primary/15 text-[hsl(207_100%_72%)]"
       : plan.highlight === "value"
         ? "bg-success/15 text-success"
         : "bg-secondary text-muted-foreground";

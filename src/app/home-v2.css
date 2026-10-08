@@ -1618,3 +1618,181 @@
     transition: none !important;
   }
 }
+
+/* =========================================================
+   Prime Ges — Motion system da Home (único padrão)
+   Entrada do hero, reveal por seção, hover de cards e CTA.
+   Só opacity/transform (sem layout shift), sem loops decorativos
+   e tudo neutralizado com prefers-reduced-motion.
+   ========================================================= */
+:root {
+  --prime-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.prime-reveal--pending {
+  opacity: 0;
+  transform: translate3d(0, var(--reveal-distance, 18px), 0);
+  will-change: opacity, transform;
+}
+
+.prime-reveal--visible {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity var(--reveal-duration, 600ms) var(--prime-ease) var(--reveal-delay, 0ms),
+    transform var(--reveal-duration, 600ms) var(--prime-ease) var(--reveal-delay, 0ms);
+}
+
+@keyframes prime-enter {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.prime-enter {
+  animation: prime-enter 700ms var(--prime-ease) both;
+  animation-delay: var(--enter-delay, 0ms);
+}
+
+.prime-scroll-progress {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 60;
+  height: 2px;
+  transform-origin: 0 50%;
+  background: hsl(var(--primary));
+  pointer-events: none;
+}
+
+.prime-card {
+  transition:
+    transform 220ms var(--prime-ease),
+    border-color 220ms ease,
+    box-shadow 220ms ease;
+}
+
+.prime-cta {
+  transition:
+    transform 160ms var(--prime-ease),
+    box-shadow 160ms ease;
+}
+
+@media (hover: hover) {
+  .prime-card:hover {
+    transform: translateY(-3px);
+    border-color: hsl(var(--primary) / 0.45);
+    box-shadow: 0 18px 40px -22px hsl(var(--primary) / 0.35);
+  }
+
+  .prime-cta:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 28px -12px hsl(var(--primary) / 0.7);
+  }
+}
+
+.prime-cta:active {
+  transform: translateY(0);
+}
+
+/* Sem loops infinitos decorativos: orbs, gradiente do título, halo, flutuação e brilhos ficam estáticos. */
+.home-v2-hero__orb,
+.home-v2-hero__copy h1 span,
+.home-v2-hero-mockup__halo,
+.home-v2-hero-mockup__card,
+.home-v2-hero-mockup__card::after,
+.home-v2-hero-badge,
+.home-v2-segment-card__media::after {
+  animation: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .prime-reveal--pending {
+    opacity: 1;
+    transform: none;
+  }
+
+  .prime-reveal--visible,
+  .prime-card,
+  .prime-cta {
+    transition: none;
+  }
+
+  .prime-enter {
+    animation: none;
+  }
+
+  .prime-card:hover,
+  .prime-cta:hover {
+    transform: none;
+  }
+
+  .prime-scroll-progress {
+    display: none;
+  }
+}
+
+/* Hero sem o wrapper do Reveal (a entrada do hero agora é .prime-enter, só CSS). */
+.home-v2-hero__copy > p {
+  max-width: 600px;
+  margin-top: 22px;
+  color: hsl(var(--muted-foreground));
+  font-size: clamp(1rem, 1.45vw, 1.12rem);
+  line-height: 1.78;
+}
+
+.home-v2-hero__trust {
+  list-style: none;
+  padding: 0;
+  font-size: 13px;
+}
+
+.home-v2-hero__trust li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+@media (max-width: 1180px) {
+  .home-v2-hero__copy > p {
+    margin-inline: auto;
+  }
+}
+
+/* Escala do título do hero: legível, em poucas linhas, e os CTAs continuam na primeira tela. */
+.home-v2-hero__copy h1 {
+  font-size: clamp(2.4rem, 4.4vw, 4rem);
+  line-height: 1.04;
+  letter-spacing: -0.035em;
+  font-weight: 700;
+  text-wrap: balance;
+}
+
+.home-v2-hero__copy h1 span {
+  margin-top: 6px;
+}
+
+@media (max-width: 820px) {
+  .home-v2-hero__copy h1 {
+    font-size: clamp(2.1rem, 8.2vw, 3rem);
+  }
+}
+
+/* Avisos de "demonstrativo/ilustrativo" precisam ser legíveis (>= 12 px, contraste AA); o miniaturizado do mockup é decorativo. */
+.home-v2-dashboard__footer,
+.home-v2-dashboard__footer span,
+.home-v2-showcase__hint,
+.home-v2-showcase__hint span,
+.home-v2-hero-chart-label {
+  font-size: 12px;
+  color: hsl(var(--muted-foreground));
+}
+
+.home-v2-chart-foot span {
+  font-size: 10px;
+  color: hsl(var(--muted-foreground));
+}

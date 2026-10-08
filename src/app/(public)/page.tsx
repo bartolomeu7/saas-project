@@ -1,27 +1,34 @@
+import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, Check, Sparkles } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
 import { siteConfig } from "@/config/site";
 import { SiteHeader } from "@/components/marketing/site-header";
 import { SiteFooter } from "@/components/marketing/site-footer";
 import { PricingCard } from "@/components/marketing/pricing-card";
+import { SectionHeading } from "@/components/marketing/section-heading";
 import { Reveal, ScrollProgress } from "@/components/marketing/motion";
 import {
-  SEGMENTS,
-  FEATURES,
-  PRICING_PLANS,
-  HOW_IT_WORKS_STEPS,
+  BENTO_CELLS,
+  CREDIBILITY_ITEMS,
   CUSTOM_PLAN,
+  DIFFERENTIALS,
+  FEATURES,
+  HOW_IT_WORKS_STEPS,
+  PRICING_PLANS,
+  PROBLEMS,
+  SEGMENTS,
+  buildFaq,
 } from "@/config/marketing";
-import {
-  HomeHeroMockup,
-  HomeProductShowcase,
-} from "@/components/marketing/home-product-showcase";
+import { HomeHeroMockup, HomeProductShowcase } from "@/components/marketing/home-product-showcase";
 
 const SEO_DESCRIPTION =
-  "Gerencie clientes, produtos, serviços, vendas, fidelidade e caixa em um só lugar com o Prime Ges.";
+  "Gerencie clientes, produtos, serviços, vendas, fidelidade, caixa, estoque e financeiro em um só lugar com o Prime Ges.";
 
 export const metadata: Metadata = {
   title: "Prime Ges — Gestão simples, moderna e organizada",
@@ -37,10 +44,7 @@ export const metadata: Metadata = {
   },
 };
 
-const AVAILABLE_FEATURES = FEATURES.filter((feature) => feature.available);
-const UPCOMING_FEATURES = FEATURES.filter((feature) => !feature.available);
-
-const SEGMENT_DETAILS: Record<string, string[]> = {
+const SEGMENT_MODULES: Record<string, string[]> = {
   Padarias: ["Produtos", "Vendas", "Clientes", "Caixa"],
   Mercadinhos: ["Produtos", "Vendas", "Clientes", "Caixa"],
   Restaurantes: ["Clientes", "Vendas", "Produtos", "Caixa"],
@@ -49,29 +53,26 @@ const SEGMENT_DETAILS: Record<string, string[]> = {
   "Estética automotiva": ["Clientes", "Serviços", "Fidelidade", "Caixa"],
 };
 
-const SEGMENT_IMAGES: Record<string, string> = {
-  Padarias:
-    "https://images.unsplash.com/photo-1567995512752-015cd3edb4e8?auto=format&fit=crop&fm=jpg&q=82&w=1000",
-  Mercadinhos:
-    "https://images.unsplash.com/photo-1751151950056-cfaf797f4653?auto=format&fit=crop&fm=jpg&q=82&w=1000",
-  Restaurantes:
-    "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&fm=jpg&q=82&w=1000",
-  Lanchonetes:
-    "https://images.unsplash.com/photo-1783499218612-b2cb8767a68e?auto=format&fit=crop&fm=jpg&q=82&w=1000",
-  "Lava-rápidos":
-    "https://images.unsplash.com/photo-1779723045199-66fc523a842d?auto=format&fit=crop&fm=jpg&q=82&w=1000",
-  "Estética automotiva":
-    "https://images.unsplash.com/photo-1779723045199-66fc523a842d?auto=format&fit=crop&fm=jpg&q=82&w=1000",
-};
+const FEATURE_NAMES = new Set(FEATURES.filter((feature) => feature.available).map((feature) => feature.name));
+const SECTION = "py-16 sm:py-24";
+const iconTile = "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary";
+
+function enter(delayMs: number): CSSProperties {
+  return { "--enter-delay": delayMs + "ms" } as CSSProperties;
+}
 
 export default function HomePage() {
+  const trial = PRICING_PLANS.find((plan) => plan.id === "FREE_TRIAL");
+  const faq = buildFaq(PRICING_PLANS);
+
   return (
     <>
       <ScrollProgress />
       <SiteHeader />
 
-      <main>
-        <section id="topo" className="home-v2-hero">
+      <main id="conteudo" tabIndex={-1} className="outline-none">
+        {/* HERO — o que é, para quem, que problema resolve e qual a ação */}
+        <section id="topo" className="home-v2-hero" aria-labelledby="hero-title">
           <div className="home-v2-hero__grid" aria-hidden="true" />
           <div className="home-v2-hero__orb home-v2-hero__orb--one" aria-hidden="true" />
           <div className="home-v2-hero__orb home-v2-hero__orb--two" aria-hidden="true" />
@@ -79,283 +80,342 @@ export default function HomePage() {
           <div className="container relative z-10">
             <div className="home-v2-hero__layout">
               <div className="home-v2-hero__copy">
-                <Reveal>
-                  <span className="home-v2-kicker">
-                    <i />
-                    Gestão para pequenos negócios
-                    <Sparkles size={13} />
-                  </span>
-                </Reveal>
+                <span className="home-v2-kicker prime-enter" style={enter(0)}>
+                  <i />
+                  Gestão para pequenos negócios
+                  <Sparkles size={13} aria-hidden="true" />
+                </span>
 
-                <Reveal delay={60}>
-                  <h1>
-                    A gestão do seu negócio.
-                    <span>Simples, organizada e em um só lugar.</span>
-                  </h1>
-                </Reveal>
+                <h1 id="hero-title" className="prime-enter" style={enter(70)}>
+                  Seu negócio organizado,
+                  <span>da venda ao caixa, em um só sistema.</span>
+                </h1>
 
-                <Reveal delay={120}>
-                  <p>
-                    Clientes, produtos, serviços, vendas, fidelidade e caixa em uma única
-                    plataforma, feita para a rotina de quem precisa administrar sem complicação.
-                  </p>
-                </Reveal>
+                <p className="prime-enter" style={enter(140)}>
+                  O Prime Ges reúne clientes, produtos, serviços, vendas, fidelidade, caixa, estoque e financeiro
+                  em uma plataforma online feita para a rotina de pequenos negócios.
+                </p>
 
-                <Reveal delay={180}>
-                  <div className="home-v2-hero__actions">
-                    <Link
-                      href={siteConfig.links.register}
-                      className={cn(buttonVariants({ size: "lg" }), "home-v2-primary-btn")}
-                    >
-                      Começar agora
-                      <ArrowRight size={17} />
-                    </Link>
-                    <a
-                      href="#produto"
-                      className={cn(
-                        buttonVariants({ variant: "outline", size: "lg" }),
-                        "home-v2-secondary-btn",
-                      )}
-                    >
-                      Ver o sistema
-                    </a>
-                  </div>
-                </Reveal>
+                <div className="home-v2-hero__actions prime-enter" style={enter(210)}>
+                  <Link
+                    href={siteConfig.links.register}
+                    className={cn(buttonVariants({ size: "lg" }), "home-v2-primary-btn prime-cta")}
+                  >
+                    Criar conta
+                    <ArrowRight size={17} aria-hidden="true" />
+                  </Link>
+                  <a
+                    href="#produto"
+                    className={cn(buttonVariants({ variant: "outline", size: "lg" }), "home-v2-secondary-btn")}
+                  >
+                    Ver como funciona
+                  </a>
+                </div>
 
-                <Reveal delay={230}>
-                  <div className="home-v2-hero__trust">
-                    <span><Check size={13} /> Na nuvem</span>
-                    <span><Check size={13} /> Fácil de usar</span>
-                    <span><Check size={13} /> Acesso rápido</span>
-                  </div>
-                </Reveal>
+                <ul className="home-v2-hero__trust prime-enter" style={enter(280)}>
+                  {trial && (
+                    <li>
+                      <Check size={13} aria-hidden="true" /> Teste grátis de {trial.periodLabel}
+                    </li>
+                  )}
+                  <li>
+                    <Check size={13} aria-hidden="true" /> Pagamento por Pix
+                  </li>
+                  <li>
+                    <Check size={13} aria-hidden="true" /> Sem instalar nada
+                  </li>
+                </ul>
               </div>
 
-              <Reveal delay={120} distance={28} duration={760}>
+              <div className="prime-enter" style={enter(180)}>
                 <HomeHeroMockup />
-              </Reveal>
+              </div>
             </div>
           </div>
         </section>
 
-        <section id="produto" className="home-v2-product-section">
+        {/* CREDIBILIDADE REAL — só fatos verificáveis do produto */}
+        <section aria-labelledby="credibilidade-title" className="border-y border-border bg-card/30 py-10">
+          <div className="container">
+            <h2 id="credibilidade-title" className="sr-only">
+              Como o Prime Ges funciona por baixo
+            </h2>
+            <Reveal>
+              <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-5">
+                {CREDIBILITY_ITEMS.map((item) => (
+                  <li key={item.title} className="flex gap-3">
+                    <span className={iconTile}>
+                      <item.icon size={18} aria-hidden="true" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-foreground">{item.title}</p>
+                      <p className="mt-0.5 text-sm text-muted-foreground">{item.detail}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </Reveal>
+          </div>
+        </section>
+
+        {/* PROBLEMA */}
+        <section id="problema" className={SECTION} aria-labelledby="problema-title">
           <div className="container">
             <Reveal>
-              <div className="home-v2-section-heading home-v2-section-heading--center">
-                <span className="home-section-eyebrow">Conheça o Prime Ges</span>
-                <h2>Tudo o que sua operação precisa, em uma experiência simples.</h2>
-                <p>
-                  Explore os principais módulos e veja como o Prime Ges organiza diferentes
-                  partes da rotina em uma única experiência.
-                </p>
-              </div>
+              <SectionHeading
+                eyebrow="O problema"
+                title={<span id="problema-title">Administrar sem um lugar único toma tempo e esconde o que importa.</span>}
+                description="Quando cada informação mora num lugar, o dia a dia vira busca, retrabalho e decisão no escuro."
+              />
             </Reveal>
+            <div className="mt-10 grid gap-4 md:grid-cols-3">
+              {PROBLEMS.map((problem, index) => (
+                <Reveal key={problem.title} delay={index * 60}>
+                  <Card className="h-full p-6">
+                    <span className={iconTile}>
+                      <problem.icon size={18} aria-hidden="true" />
+                    </span>
+                    <h3 className="mt-4 text-base font-semibold text-foreground">{problem.title}</h3>
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">{problem.description}</p>
+                  </Card>
+                </Reveal>
+              ))}
+            </div>
+          </div>
+        </section>
 
-            <Reveal delay={80}>
+        {/* SOLUÇÃO — bento com os módulos reais */}
+        <section id="recursos" className={cn(SECTION, "border-y border-border bg-card/30")} aria-labelledby="solucao-title">
+          <div className="container">
+            <Reveal>
+              <SectionHeading
+                eyebrow="A solução"
+                title={<span id="solucao-title">Tudo o que você usa todo dia, no mesmo lugar.</span>}
+                description="Oito módulos já disponíveis, organizados pela rotina do negócio."
+              />
+            </Reveal>
+            <div className="mt-10 grid gap-4 lg:grid-cols-6">
+              {BENTO_CELLS.map((cell, index) => (
+                <Reveal key={cell.id} delay={index * 60} className={cell.size === "lg" ? "lg:col-span-4" : "lg:col-span-2"}>
+                  <Card className="prime-card h-full p-6">
+                    <span className={iconTile}>
+                      <cell.icon size={18} aria-hidden="true" />
+                    </span>
+                    <h3 className="mt-4 text-lg font-semibold text-foreground">{cell.title}</h3>
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">{cell.description}</p>
+                    <ul className="mt-4 flex flex-wrap gap-2" aria-label={"Módulos de " + cell.title}>
+                      {cell.modules
+                        .filter((name) => FEATURE_NAMES.has(name))
+                        .map((name) => (
+                          <li key={name}>
+                            <Badge variant="muted">{name}</Badge>
+                          </li>
+                        ))}
+                    </ul>
+                  </Card>
+                </Reveal>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* FUNCIONALIDADES — prévia ilustrativa (dados demonstrativos, identificados como tal) */}
+        <section id="produto" className={SECTION} aria-labelledby="produto-title">
+          <div className="container">
+            <Reveal>
+              <SectionHeading
+                eyebrow="Veja por dentro"
+                title={<span id="produto-title">Uma interface simples para cada parte da rotina.</span>}
+                description="Prévia ilustrativa dos módulos. Os dados exibidos nas telas abaixo são demonstrativos."
+              />
+            </Reveal>
+            <Reveal delay={80} className="mt-10">
               <HomeProductShowcase />
             </Reveal>
           </div>
         </section>
 
-        <section id="recursos" className="home-v2-modules-section">
+        {/* PARA QUEM É */}
+        <section id="segmentos" className={cn(SECTION, "border-y border-border bg-card/30")} aria-labelledby="segmentos-title">
           <div className="container">
             <Reveal>
-              <div className="home-v2-section-heading">
-                <span className="home-section-eyebrow">Módulos</span>
-                <h2>O que já está disponível no Prime Ges.</h2>
-                <p>
-                  O catálogo abaixo reflete os recursos que a plataforma apresenta hoje.
-                  O que ainda está em desenvolvimento aparece separado.
-                </p>
-              </div>
+              <SectionHeading
+                eyebrow="Para quem é"
+                title={<span id="segmentos-title">O sistema acompanha o jeito que o seu negócio funciona.</span>}
+                description="Diferentes operações usam a mesma base e escolhem os módulos que fazem sentido para a rotina."
+              />
             </Reveal>
-
-            <div className="home-v2-module-grid">
-              {AVAILABLE_FEATURES.map((feature, index) => (
-                <Reveal key={feature.name} delay={index * 45}>
-                  <article className="home-v2-module-card">
-                    <div className="home-v2-module-card__top">
-                      <span className="home-v2-module-card__icon">
-                        <feature.icon size={18} />
-                      </span>
-                      <span className="home-v2-available"><i /> Disponível</span>
-                    </div>
-                    <h3>{feature.name}</h3>
-                    <p>{feature.description}</p>
-                  </article>
-                </Reveal>
-              ))}
-            </div>
-
-            {UPCOMING_FEATURES.length > 0 && (
-              <Reveal delay={120}>
-                <div className="home-v2-upcoming">
-                  <div>
-                    <span className="home-section-eyebrow">Em desenvolvimento</span>
-                    <h3>Próximas expansões</h3>
-                    <p>
-                      Alguns módulos já aparecem no planejamento do produto, mas ainda não
-                      fazem parte do uso atual.
-                    </p>
-                  </div>
-                  <div className="home-v2-upcoming__items">
-                    {UPCOMING_FEATURES.map((feature) => (
-                      <span key={feature.name}>
-                        <feature.icon size={14} />
-                        {feature.name}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </Reveal>
-            )}
-          </div>
-        </section>
-
-        <section id="segmentos" className="home-v2-segments-section">
-          <div className="container">
-            <Reveal>
-              <div className="home-v2-section-heading home-v2-section-heading--compact">
-                <span className="home-section-eyebrow">Para quem é</span>
-                <h2>O sistema acompanha o jeito que o seu negócio funciona.</h2>
-                <p>
-                  Diferentes operações podem usar a mesma base, escolhendo os módulos que fazem
-                  sentido para sua rotina.
-                </p>
-              </div>
-            </Reveal>
-
-            <div className="home-v2-segment-grid">
-              {SEGMENTS.map((segment, index) => {
-                const Icon = segment.icon;
-                const modules = SEGMENT_DETAILS[segment.name] ?? [];
-
-                return (
-                  <Reveal key={segment.name} delay={index * 45}>
-                    <article className="home-v2-segment-card">
-                      <div
-                        className="home-v2-segment-card__media"
-                        style={{
-                          backgroundImage:
-                            "url(" + (SEGMENT_IMAGES[segment.name] ?? "") + ")",
-                        }}
-                        role="img"
-                        aria-label={"Imagem ilustrativa para " + segment.name}
-                      >
-                        <span><Icon size={17} /></span>
+            <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {SEGMENTS.map((segment, index) => (
+                <li key={segment.name}>
+                  <Reveal delay={index * 45} className="h-full">
+                    <Card className="prime-card h-full p-6">
+                      <div className="flex items-center gap-3">
+                        <span className={iconTile}>
+                          <segment.icon size={18} aria-hidden="true" />
+                        </span>
+                        <h3 className="text-base font-semibold text-foreground">{segment.name}</h3>
                       </div>
-                      <div className="home-v2-segment-card__body">
-                        <strong>{segment.name}</strong>
-                        <p>{segment.description}</p>
-                        <div className="home-v2-tag-row">
-                          {modules.map((module) => (
-                            <span key={module}>{module}</span>
-                          ))}
-                        </div>
-                      </div>
-                    </article>
+                      <p className="mt-3 text-sm leading-6 text-muted-foreground">{segment.description}</p>
+                      <ul className="mt-4 flex flex-wrap gap-2" aria-label={"Módulos para " + segment.name}>
+                        {(SEGMENT_MODULES[segment.name] ?? []).map((module) => (
+                          <li key={module}>
+                            <Badge variant="muted">{module}</Badge>
+                          </li>
+                        ))}
+                      </ul>
+                    </Card>
                   </Reveal>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-
-        <section className="home-v2-flow-section">
-          <div className="container">
-            <Reveal>
-              <div className="home-v2-section-heading home-v2-section-heading--center">
-                <span className="home-section-eyebrow">Como funciona</span>
-                <h2>Da conta criada à rotina organizada em três passos.</h2>
-                <p>
-                  Sem fluxo complicado. Você entra, configura o essencial e começa a administrar.
-                </p>
-              </div>
-            </Reveal>
-
-            <div className="home-v2-flow-grid">
-              {HOW_IT_WORKS_STEPS.map((step, index) => (
-                <Reveal key={step.number} delay={index * 70}>
-                  <article className="home-v2-flow-card">
-                    <span>{step.number}</span>
-                    <h3>
-                      {index === 0 && "Crie sua conta"}
-                      {index === 1 && "Configure sua operação"}
-                      {index === 2 && "Comece a administrar"}
-                    </h3>
-                    <p>
-                      {index === 0 && "Cadastre sua empresa e entre no seu ambiente."}
-                      {index === 1 && "Adicione clientes, produtos e serviços para começar."}
-                      {index === 2 && "Registre vendas, acompanhe o caixa e organize a rotina."}
-                    </p>
-                  </article>
-                </Reveal>
+                </li>
               ))}
-            </div>
+            </ul>
           </div>
         </section>
 
-        <section id="precos" className="home-v2-pricing-section">
+        {/* COMO FUNCIONA */}
+        <section id="como-funciona" className={SECTION} aria-labelledby="como-title">
           <div className="container">
             <Reveal>
-              <div className="home-v2-section-heading home-v2-section-heading--center">
-                <span className="home-section-eyebrow">Planos</span>
-                <h2>Escolha o período que faz sentido para o seu negócio.</h2>
-                <p>Comece com o teste e avance para o plano que acompanha sua operação.</p>
-              </div>
+              <SectionHeading
+                eyebrow="Como funciona"
+                title={<span id="como-title">Da conta criada à rotina organizada em três passos.</span>}
+                description="Sem fluxo complicado: você entra, configura o essencial e começa a administrar."
+              />
+            </Reveal>
+            <ol className="mt-10 grid gap-4 md:grid-cols-3">
+              {HOW_IT_WORKS_STEPS.map((step, index) => (
+                <li key={step.number}>
+                  <Reveal delay={index * 70} className="h-full">
+                    <Card className="h-full p-6">
+                      <span className="text-sm font-semibold text-primary" aria-hidden="true">
+                        {step.number}
+                      </span>
+                      <h3 className="mt-2 text-lg font-semibold text-foreground">
+                        <span className="sr-only">Passo {index + 1}: </span>
+                        {step.title}
+                      </h3>
+                      <p className="mt-2 text-sm leading-6 text-muted-foreground">{step.description}</p>
+                    </Card>
+                  </Reveal>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
+
+        {/* DIFERENCIAIS REAIS */}
+        <section id="diferenciais" className={cn(SECTION, "border-y border-border bg-card/30")} aria-labelledby="dif-title">
+          <div className="container">
+            <Reveal>
+              <SectionHeading
+                eyebrow="Diferenciais"
+                title={<span id="dif-title">O que torna o Prime Ges diferente na prática.</span>}
+              />
+            </Reveal>
+            <ul className="mt-10 grid gap-4 sm:grid-cols-2">
+              {DIFFERENTIALS.map((item, index) => (
+                <li key={item.title}>
+                  <Reveal delay={index * 60} className="h-full">
+                    <Card className="prime-card flex h-full gap-4 p-6">
+                      <span className={iconTile}>
+                        <item.icon size={18} aria-hidden="true" />
+                      </span>
+                      <div className="min-w-0">
+                        <h3 className="text-base font-semibold text-foreground">{item.title}</h3>
+                        <p className="mt-1.5 text-sm leading-6 text-muted-foreground">{item.description}</p>
+                      </div>
+                    </Card>
+                  </Reveal>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+
+        {/* PLANOS — mesma fonte única (PRICING_PLANS) e o mesmo PricingCard */}
+        <section id="precos" className={SECTION} aria-labelledby="precos-title">
+          <div className="container">
+            <Reveal>
+              <SectionHeading
+                eyebrow="Planos"
+                title={<span id="precos-title">Escolha o período que faz sentido para o seu negócio.</span>}
+                description="Comece com o teste e avance para o plano que acompanha a sua operação."
+              />
             </Reveal>
 
-            <div className="home-v2-pricing-grid">
+            <div className="mt-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {PRICING_PLANS.map((plan, index) => (
-                <Reveal key={plan.id} delay={index * 55}>
+                <Reveal key={plan.id} delay={index * 55} className="h-full [&>div]:h-full">
                   <PricingCard plan={plan} />
                 </Reveal>
               ))}
             </div>
 
-            <Reveal delay={120}>
-              <div className="home-v2-custom-plan">
+            <Reveal delay={120} className="mt-6">
+              <Card className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <span className="home-section-eyebrow">{CUSTOM_PLAN.tagline}</span>
-                  <h3>{CUSTOM_PLAN.title}</h3>
-                  <p>{CUSTOM_PLAN.description}</p>
+                  <Badge variant="muted">{CUSTOM_PLAN.tagline}</Badge>
+                  <h3 className="mt-3 text-lg font-semibold text-foreground">{CUSTOM_PLAN.title}</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">{CUSTOM_PLAN.description}</p>
                 </div>
-                <span className="home-v2-custom-note">
-                  Canal comercial será ativado nesta etapa.
-                </span>
-              </div>
+                <p className="text-sm text-muted-foreground sm:max-w-[16rem]">
+                  O canal comercial para este plano ainda não está disponível.
+                </p>
+              </Card>
             </Reveal>
           </div>
         </section>
 
-        <section className="home-v2-final">
+        {/* FAQ */}
+        <section id="faq" className={cn(SECTION, "border-t border-border bg-card/30")} aria-labelledby="faq-title">
+          <div className="container">
+            <Reveal>
+              <SectionHeading
+                eyebrow="Perguntas frequentes"
+                title={<span id="faq-title">O que você precisa saber antes de começar.</span>}
+              />
+            </Reveal>
+            <Reveal delay={80} className="mx-auto mt-10 max-w-3xl">
+              <Accordion type="single" collapsible className="w-full">
+                {faq.map((item, index) => (
+                  <AccordionItem key={item.question} value={"faq-" + index}>
+                    <AccordionTrigger className="text-left text-base">{item.question}</AccordionTrigger>
+                    <AccordionContent className="text-sm leading-6 text-muted-foreground">
+                      {item.answer}
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+            </Reveal>
+          </div>
+        </section>
+
+        {/* CTA FINAL */}
+        <section className="home-v2-final" aria-labelledby="cta-title">
           <div className="home-v2-final__glow home-v2-final__glow--one" aria-hidden="true" />
           <div className="home-v2-final__glow home-v2-final__glow--two" aria-hidden="true" />
           <div className="container relative">
             <Reveal>
               <div className="home-v2-final__inner">
                 <span className="home-v2-final__badge">
-                  <Sparkles size={13} /> Prime Ges
+                  <Sparkles size={13} aria-hidden="true" /> Prime Ges
                 </span>
-                <h2>Organize a operação. Simplifique o dia a dia.</h2>
+                <h2 id="cta-title">Comece a organizar o seu negócio hoje.</h2>
                 <p>
-                  Veja o Prime Ges em ação e comece com os recursos que a sua empresa realmente
-                  precisa agora.
+                  Crie a conta, aceite os documentos e use o teste grátis
+                  {trial ? " de " + trial.periodLabel : ""} para conhecer a plataforma.
                 </p>
                 <div className="home-v2-final__actions">
                   <Link
                     href={siteConfig.links.register}
-                    className={cn(buttonVariants({ size: "lg" }), "home-v2-primary-btn")}
+                    className={cn(buttonVariants({ size: "lg" }), "home-v2-primary-btn prime-cta")}
                   >
-                    Começar agora
-                    <ArrowRight size={17} />
+                    Criar conta
+                    <ArrowRight size={17} aria-hidden="true" />
                   </Link>
                   <Link
                     href={siteConfig.links.login}
-                    className={cn(
-                      buttonVariants({ variant: "outline", size: "lg" }),
-                      "home-v2-secondary-btn",
-                    )}
+                    className={cn(buttonVariants({ variant: "outline", size: "lg" }), "home-v2-secondary-btn")}
                   >
                     Entrar
                   </Link>
