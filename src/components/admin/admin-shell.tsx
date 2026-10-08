@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { AdminHeader } from "@/components/admin/admin-header";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { PresenceHeartbeat } from "@/components/presence-heartbeat";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { UserRole } from "@/types/profile";
 
@@ -29,6 +30,7 @@ export function AdminShell({
 }) {
   return (
     <TooltipProvider delayDuration={200}>
+      <PresenceHeartbeat />
       <SidebarProvider defaultOpen={defaultOpen}>
         <AdminSidebar userName={userName} userEmail={userEmail} role={role} />
         <SidebarInset className="min-w-0 bg-background">

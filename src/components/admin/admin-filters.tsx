@@ -14,6 +14,12 @@ export interface AdminFilterSelect {
   options: { value: string; label: string }[];
 }
 
+export interface AdminFilterDate {
+  name: string;
+  label: string;
+  value: string | undefined;
+}
+
 /**
  * Barra de busca + filtros das listas do admin. É um <form method="get"> puro:
  * o estado vive na URL (compartilhável, funciona sem JS e preserva paginação
@@ -24,13 +30,19 @@ export function AdminFilters({
   search,
   searchPlaceholder,
   selects,
+  dates = [],
+  hideSearch = false,
 }: {
   basePath: string;
   search: string | undefined;
   searchPlaceholder: string;
   selects: AdminFilterSelect[];
+  dates?: AdminFilterDate[];
+  /** Esconde o campo de busca (listas que só filtram por seletores/datas). */
+  hideSearch?: boolean;
 }) {
-  const hasFilters = Boolean(search) || selects.some((select) => Boolean(select.value));
+  const hasFilters =
+    Boolean(search) || selects.some((select) => Boolean(select.value)) || dates.some((date) => Boolean(date.value));
 
   return (
     <form
@@ -39,25 +51,27 @@ export function AdminFilters({
       role="search"
       className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end"
     >
-      <div className="relative sm:w-72">
-        <label htmlFor="admin-q" className="sr-only">
-          Buscar
-        </label>
-        <Search
-          className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-          strokeWidth={1.75}
-          aria-hidden="true"
-        />
-        <Input
-          id="admin-q"
-          name="q"
-          defaultValue={search}
-          placeholder={searchPlaceholder}
-          autoComplete="off"
-          maxLength={80}
-          className="pl-9"
-        />
-      </div>
+      {!hideSearch && (
+        <div className="relative sm:w-72">
+          <label htmlFor="admin-q" className="sr-only">
+            Buscar
+          </label>
+          <Search
+            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+            strokeWidth={1.75}
+            aria-hidden="true"
+          />
+          <Input
+            id="admin-q"
+            name="q"
+            defaultValue={search}
+            placeholder={searchPlaceholder}
+            autoComplete="off"
+            maxLength={80}
+            className="pl-9"
+          />
+        </div>
+      )}
 
       {selects.map((select) => (
         <div key={select.name} className="flex flex-col gap-1">
@@ -77,6 +91,15 @@ export function AdminFilters({
               </option>
             ))}
           </NativeSelect>
+        </div>
+      ))}
+
+      {dates.map((date) => (
+        <div key={date.name} className="flex flex-col gap-1">
+          <label htmlFor={`admin-${date.name}`} className="text-xs text-muted-foreground">
+            {date.label}
+          </label>
+          <Input id={`admin-${date.name}`} name={date.name} type="date" defaultValue={date.value} className="w-40" />
         </div>
       ))}
 

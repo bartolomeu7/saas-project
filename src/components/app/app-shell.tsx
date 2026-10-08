@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { AppSidebar } from "@/components/app/app-sidebar";
 import { Header } from "@/components/app/header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { PresenceHeartbeat } from "@/components/presence-heartbeat";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { Company } from "@/types/company";
 
@@ -27,6 +28,7 @@ export function AppShell({
 }) {
   return (
     <TooltipProvider delayDuration={200}>
+      <PresenceHeartbeat />
       <SidebarProvider defaultOpen={defaultOpen}>
         <AppSidebar userName={userName} userEmail={userEmail} />
         <SidebarInset className="min-w-0 bg-background">

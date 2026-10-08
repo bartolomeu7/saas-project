@@ -4,19 +4,19 @@ import {
   CreditCard,
   LayoutDashboard,
   Layers,
+  Plug,
   ReceiptText,
   ScrollText,
   Settings,
   ShieldCheck,
   Users,
+  Wrench,
 } from "lucide-react";
 
 export interface AdminNavItem {
   label: string;
   href: string;
   icon: LucideIcon;
-  /** Página ainda sem conteúdo: navega normalmente, mas mostra o selo "Em breve". */
-  soon?: boolean;
   /**
    * Só super_admin vê o item. Apenas UX: a rota é barrada no middleware, na
    * página (requireSuperAdmin) e no banco (is_super_admin()).
@@ -32,7 +32,7 @@ export interface AdminNavGroup {
 /**
  * Menu do painel da PLATAFORMA. Mesma estrutura de grupos do menu da empresa
  * (src/components/app/nav-items.ts), porém global: nada aqui depende de
- * company_id. Itens com `soon` apontam para páginas controladas "em construção".
+ * company_id. Todo item do menu aponta para uma página funcional.
  */
 export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
   {
@@ -49,16 +49,18 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
   {
     label: "Financeiro",
     items: [
-      { label: "Assinaturas", href: "/admin/subscriptions", icon: CreditCard, soon: true },
-      { label: "Pagamentos", href: "/admin/payments", icon: ReceiptText, soon: true },
+      { label: "Assinaturas", href: "/admin/subscriptions", icon: CreditCard },
+      { label: "Pagamentos", href: "/admin/payments", icon: ReceiptText },
     ],
   },
   {
     label: "Sistema",
     items: [
+      { label: "Auditoria", href: "/admin/audit", icon: ScrollText },
+      { label: "Ferramentas", href: "/admin/tools", icon: Wrench },
+      { label: "Integrações", href: "/admin/integrations", icon: Plug },
       { label: "Administradores", href: "/admin/administrators", icon: ShieldCheck, superAdminOnly: true },
-      { label: "Auditoria", href: "/admin/audit", icon: ScrollText, soon: true },
-      { label: "Configurações", href: "/admin/settings", icon: Settings, soon: true, superAdminOnly: true },
+      { label: "Configurações", href: "/admin/settings", icon: Settings, superAdminOnly: true },
     ],
   },
 ];

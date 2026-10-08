@@ -1451,6 +1451,7 @@ export type Database = {
           price: number | null
           provider: string | null
           provider_plan_id: string | null
+          sort_order: number
           status: Database["public"]["Enums"]["plan_status"]
           support_enabled: boolean
           tickets_enabled: boolean
@@ -1475,6 +1476,7 @@ export type Database = {
           price?: number | null
           provider?: string | null
           provider_plan_id?: string | null
+          sort_order?: number
           status?: Database["public"]["Enums"]["plan_status"]
           support_enabled?: boolean
           tickets_enabled?: boolean
@@ -1499,6 +1501,7 @@ export type Database = {
           price?: number | null
           provider?: string | null
           provider_plan_id?: string | null
+          sort_order?: number
           status?: Database["public"]["Enums"]["plan_status"]
           support_enabled?: boolean
           tickets_enabled?: boolean
@@ -1506,6 +1509,35 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      platform_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_settings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       product_categories: {
         Row: {
@@ -2535,6 +2567,8 @@ export type Database = {
           end_to_end_id: string | null
           external_reference: string | null
           id: string
+          method: string | null
+          notes: string | null
           paid_at: string | null
           payer_document: string | null
           payer_name: string | null
@@ -2544,6 +2578,7 @@ export type Database = {
           plan_id: string
           provider: string
           provider_transaction_id: string | null
+          recorded_by: string | null
           status: Database["public"]["Enums"]["subscription_payment_status"]
           subscription_id: string | null
           tax_amount: number | null
@@ -2559,6 +2594,8 @@ export type Database = {
           end_to_end_id?: string | null
           external_reference?: string | null
           id?: string
+          method?: string | null
+          notes?: string | null
           paid_at?: string | null
           payer_document?: string | null
           payer_name?: string | null
@@ -2568,6 +2605,7 @@ export type Database = {
           plan_id: string
           provider?: string
           provider_transaction_id?: string | null
+          recorded_by?: string | null
           status?: Database["public"]["Enums"]["subscription_payment_status"]
           subscription_id?: string | null
           tax_amount?: number | null
@@ -2583,6 +2621,8 @@ export type Database = {
           end_to_end_id?: string | null
           external_reference?: string | null
           id?: string
+          method?: string | null
+          notes?: string | null
           paid_at?: string | null
           payer_document?: string | null
           payer_name?: string | null
@@ -2592,6 +2632,7 @@ export type Database = {
           plan_id?: string
           provider?: string
           provider_transaction_id?: string | null
+          recorded_by?: string | null
           status?: Database["public"]["Enums"]["subscription_payment_status"]
           subscription_id?: string | null
           tax_amount?: number | null
@@ -2611,6 +2652,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "plans"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_payments_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "subscription_payments_subscription_id_fkey"
@@ -2870,6 +2918,67 @@ export type Database = {
           },
         ]
       }
+      user_presence: {
+        Row: {
+          last_seen_at: string
+          user_id: string
+        }
+        Insert: {
+          last_seen_at?: string
+          user_id: string
+        }
+        Update: {
+          last_seen_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_presence_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      webhook_deliveries: {
+        Row: {
+          detail: string | null
+          external_id: string | null
+          id: string
+          outcome: string
+          payment_id: string | null
+          provider: string
+          received_at: string
+        }
+        Insert: {
+          detail?: string | null
+          external_id?: string | null
+          id?: string
+          outcome: string
+          payment_id?: string | null
+          provider: string
+          received_at?: string
+        }
+        Update: {
+          detail?: string | null
+          external_id?: string | null
+          id?: string
+          outcome?: string
+          payment_id?: string | null
+          provider?: string
+          received_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_deliveries_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -2949,6 +3058,89 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      admin_adjust_access_expiry: {
+        Args: { p_company_id: string; p_expires_at: string; p_reason?: string }
+        Returns: Json
+      }
+      admin_assign_plan: {
+        Args: {
+          p_company_id: string
+          p_days?: number
+          p_plan_id: string
+          p_reason?: string
+        }
+        Returns: Json
+      }
+      admin_audit_payment_reverify: {
+        Args: { p_outcome: string; p_payment_id: string }
+        Returns: undefined
+      }
+      admin_cancel_subscription: {
+        Args: { p_company_id: string; p_reason?: string }
+        Returns: undefined
+      }
+      admin_find_user_by_email: {
+        Args: { p_email: string }
+        Returns: {
+          clerk_linked: boolean
+          email: string
+          full_name: string
+          role: Database["public"]["Enums"]["user_role"]
+          status: Database["public"]["Enums"]["user_status"]
+          user_id: string
+        }[]
+      }
+      admin_grant_access_days: {
+        Args: {
+          p_company_id: string
+          p_days: number
+          p_plan_id?: string
+          p_reason?: string
+        }
+        Returns: Json
+      }
+      admin_mark_expired_subscriptions: { Args: never; Returns: number }
+      admin_reactivate_subscription: {
+        Args: { p_company_id: string; p_days?: number; p_reason?: string }
+        Returns: Json
+      }
+      admin_record_manual_payment: {
+        Args: {
+          p_amount: number
+          p_apply_access?: boolean
+          p_company_id: string
+          p_method: string
+          p_notes?: string
+          p_paid_at?: string
+          p_plan_id: string
+          p_reference?: string
+        }
+        Returns: Json
+      }
+      admin_release_30_days: {
+        Args: { p_company_id: string; p_plan_id?: string; p_reason?: string }
+        Returns: Json
+      }
+      admin_sync_company_entitlements: {
+        Args: { p_company_id: string }
+        Returns: undefined
+      }
+      admin_update_company: {
+        Args: {
+          p_business_type: Database["public"]["Enums"]["business_type"]
+          p_company_id: string
+          p_name: string
+        }
+        Returns: undefined
+      }
+      admin_update_user_profile: {
+        Args: { p_full_name: string; p_user_id: string }
+        Returns: undefined
+      }
+      admin_void_manual_payment: {
+        Args: { p_payment_id: string; p_reason?: string }
+        Returns: undefined
       }
       cancel_purchase_order: {
         Args: { p_purchase_order_id: string; p_reason?: string }
@@ -3266,6 +3458,24 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      create_platform_plan: {
+        Args: {
+          p_access_duration_days?: number
+          p_additional_user_limit?: number
+          p_billing_interval?: Database["public"]["Enums"]["billing_interval"]
+          p_code: string
+          p_description?: string
+          p_early_access_enabled?: boolean
+          p_exclusive_groups_enabled?: boolean
+          p_name: string
+          p_price?: number
+          p_sort_order?: number
+          p_support_enabled?: boolean
+          p_tickets_enabled?: boolean
+          p_trial?: boolean
+        }
+        Returns: string
+      }
       create_professional_block: {
         Args: {
           p_ends_at: string
@@ -3352,6 +3562,29 @@ export type Database = {
           total_users: number
         }[]
       }
+      get_platform_company_detail: {
+        Args: { p_company_id: string }
+        Returns: Json
+      }
+      get_platform_dashboard: { Args: never; Returns: Json }
+      get_platform_payment_detail: {
+        Args: { p_payment_id: string }
+        Returns: Json
+      }
+      get_platform_settings: {
+        Args: never
+        Returns: {
+          default_value: number
+          description: string
+          key: string
+          max_value: number
+          min_value: number
+          updated_at: string
+          updated_by_email: string
+          value: number
+        }[]
+      }
+      get_platform_user_detail: { Args: { p_user_id: string }; Returns: Json }
       get_public_plans: {
         Args: never
         Returns: {
@@ -3399,8 +3632,11 @@ export type Database = {
         Args: {
           p_limit?: number
           p_offset?: number
+          p_plan_code?: string
           p_search?: string
+          p_sort?: string
           p_status?: Database["public"]["Enums"]["company_status"]
+          p_subscription?: string
         }
         Returns: {
           access_active: boolean
@@ -3411,6 +3647,7 @@ export type Database = {
           name: string
           owner_email: string
           owner_name: string
+          paid_total: number
           plan_code: string
           plan_name: string
           status: Database["public"]["Enums"]["company_status"]
@@ -3423,9 +3660,13 @@ export type Database = {
         Args: {
           p_limit?: number
           p_offset?: number
+          p_plan_code?: string
+          p_presence?: string
           p_role?: Database["public"]["Enums"]["user_role"]
           p_search?: string
+          p_sort?: string
           p_status?: Database["public"]["Enums"]["user_status"]
+          p_subscription?: string
         }
         Returns: {
           access_active: boolean
@@ -3436,9 +3677,10 @@ export type Database = {
           created_at: string
           email: string
           full_name: string
-          last_login_at: string
+          last_seen_at: string
           plan_code: string
           plan_name: string
+          presence: string
           role: Database["public"]["Enums"]["user_role"]
           status: Database["public"]["Enums"]["user_status"]
           subscription_expires_at: string
@@ -3458,6 +3700,163 @@ export type Database = {
           role: Database["public"]["Enums"]["user_role"]
           status: Database["public"]["Enums"]["user_status"]
           user_id: string
+        }[]
+      }
+      list_platform_audit: {
+        Args: {
+          p_actor_user_id?: string
+          p_category?: string
+          p_company_id?: string
+          p_from?: string
+          p_limit?: number
+          p_offset?: number
+          p_search?: string
+          p_to?: string
+        }
+        Returns: {
+          action: string
+          actor_email: string
+          actor_user_id: string
+          category: string
+          company_id: string
+          company_name: string
+          created_at: string
+          entity_id: string
+          entity_type: string
+          id: string
+          metadata: Json
+          target_email: string
+          target_user_id: string
+          total_count: number
+        }[]
+      }
+      list_platform_payment_events: {
+        Args: {
+          p_limit?: number
+          p_offset?: number
+          p_processed?: boolean
+          p_provider?: string
+        }
+        Returns: {
+          company_name: string
+          created_at: string
+          event_id: string
+          event_row_id: string
+          event_type: string
+          payment_id: string
+          processed: boolean
+          processed_at: string
+          provider: string
+          total_count: number
+        }[]
+      }
+      list_platform_payments: {
+        Args: {
+          p_from?: string
+          p_limit?: number
+          p_method?: string
+          p_offset?: number
+          p_plan_code?: string
+          p_provider?: string
+          p_search?: string
+          p_sort?: string
+          p_status?: Database["public"]["Enums"]["subscription_payment_status"]
+          p_to?: string
+        }
+        Returns: {
+          amount: number
+          company_id: string
+          company_name: string
+          created_at: string
+          currency: string
+          external_reference: string
+          method: string
+          paid_at: string
+          payment_id: string
+          plan_code: string
+          plan_name: string
+          provider: string
+          recorded_by_email: string
+          status: Database["public"]["Enums"]["subscription_payment_status"]
+          total_count: number
+        }[]
+      }
+      list_platform_plans: {
+        Args: never
+        Returns: {
+          access_duration_days: number
+          active_subscriptions_count: number
+          additional_user_limit: number
+          billing_interval: Database["public"]["Enums"]["billing_interval"]
+          code: string
+          created_at: string
+          currency: string
+          description: string
+          early_access_enabled: boolean
+          exclusive_groups_enabled: boolean
+          is_protected: boolean
+          name: string
+          payments_count: number
+          plan_id: string
+          price: number
+          sort_order: number
+          status: Database["public"]["Enums"]["plan_status"]
+          subscriptions_count: number
+          support_enabled: boolean
+          tickets_enabled: boolean
+          trial: boolean
+        }[]
+      }
+      list_platform_subscriptions: {
+        Args: {
+          p_expiring_days?: number
+          p_limit?: number
+          p_offset?: number
+          p_plan_code?: string
+          p_provider?: string
+          p_search?: string
+          p_sort?: string
+          p_state?: string
+        }
+        Returns: {
+          company_id: string
+          company_name: string
+          company_status: Database["public"]["Enums"]["company_status"]
+          days_left: number
+          expires_at: string
+          last_paid_at: string
+          paid_total: number
+          plan_code: string
+          plan_name: string
+          provider: string
+          starts_at: string
+          state: string
+          status: Database["public"]["Enums"]["subscription_status"]
+          subscription_id: string
+          total_count: number
+          updated_at: string
+        }[]
+      }
+      list_platform_webhook_deliveries: {
+        Args: {
+          p_from?: string
+          p_limit?: number
+          p_offset?: number
+          p_outcome?: string
+          p_provider?: string
+          p_to?: string
+        }
+        Returns: {
+          company_id: string
+          company_name: string
+          delivery_id: string
+          detail: string
+          external_id: string
+          outcome: string
+          payment_id: string
+          provider: string
+          received_at: string
+          total_count: number
         }[]
       }
       open_cash_register: {
@@ -3520,6 +3919,106 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      platform_apply_access: {
+        Args: {
+          p_company_id: string
+          p_expires_at: string
+          p_plan_id: string
+          p_provider?: string
+          p_starts_at?: string
+          p_status: Database["public"]["Enums"]["subscription_status"]
+        }
+        Returns: {
+          cancelled_at: string | null
+          company_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          plan_id: string
+          provider: string | null
+          provider_customer_id: string | null
+          provider_subscription_id: string | null
+          starts_at: string
+          status: Database["public"]["Enums"]["subscription_status"]
+          trial_claimed_by: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "subscriptions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      platform_assert_company: {
+        Args: { p_company_id: string }
+        Returns: undefined
+      }
+      platform_assert_not_repeated: {
+        Args: { p_action: string; p_company_id: string }
+        Returns: undefined
+      }
+      platform_audit_category: { Args: { p_action: string }; Returns: string }
+      platform_clean_reason: { Args: { p_reason: string }; Returns: string }
+      platform_diagnostics: {
+        Args: never
+        Returns: {
+          affected: number
+          check_key: string
+          hint: string
+          label: string
+          severity: string
+        }[]
+      }
+      platform_extend_access_core: {
+        Args: { p_company_id: string; p_days: number; p_plan_id: string }
+        Returns: Record<string, unknown>
+      }
+      platform_global_search: {
+        Args: { p_query: string }
+        Returns: {
+          extra: string
+          id: string
+          kind: string
+          subtitle: string
+          title: string
+        }[]
+      }
+      platform_integrations_status: { Args: never; Returns: Json }
+      platform_payments_summary: {
+        Args: { p_from?: string; p_to?: string }
+        Returns: Json
+      }
+      platform_presence_status: {
+        Args: { p_last_seen: string }
+        Returns: string
+      }
+      platform_safe_metadata: { Args: { p_meta: Json }; Returns: Json }
+      platform_setting_definitions: {
+        Args: never
+        Returns: {
+          default_value: number
+          description: string
+          key: string
+          max_value: number
+          min_value: number
+        }[]
+      }
+      platform_setting_int: {
+        Args: { p_default: number; p_key: string }
+        Returns: number
+      }
+      platform_validate_plan_fields: {
+        Args: {
+          p_code: string
+          p_days: number
+          p_name: string
+          p_price: number
+          p_sort: number
+          p_users: number
+        }
+        Returns: undefined
       }
       recalculate_sale_totals: {
         Args: { p_sale_id: string }
@@ -3695,6 +4194,17 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      set_platform_plan_status: {
+        Args: {
+          p_plan_id: string
+          p_status: Database["public"]["Enums"]["plan_status"]
+        }
+        Returns: undefined
+      }
+      set_platform_setting: {
+        Args: { p_key: string; p_reason?: string; p_value: number }
+        Returns: undefined
+      }
       set_platform_user_role: {
         Args: {
           p_role: Database["public"]["Enums"]["user_role"]
@@ -3717,6 +4227,7 @@ export type Database = {
         Args: { p_professional_id: string; p_services: Json }
         Returns: undefined
       }
+      touch_presence: { Args: never; Returns: undefined }
       undo_loyalty_redemption_for_draft_sale: {
         Args: { p_sale_id: string }
         Returns: undefined
@@ -3739,6 +4250,24 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      update_platform_plan: {
+        Args: {
+          p_access_duration_days: number
+          p_additional_user_limit: number
+          p_billing_interval: Database["public"]["Enums"]["billing_interval"]
+          p_description: string
+          p_early_access_enabled: boolean
+          p_exclusive_groups_enabled: boolean
+          p_name: string
+          p_plan_id: string
+          p_price: number
+          p_sort_order: number
+          p_support_enabled: boolean
+          p_tickets_enabled: boolean
+          p_trial: boolean
+        }
+        Returns: undefined
       }
       upsert_professional_profile: {
         Args: {
