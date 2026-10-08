@@ -91,6 +91,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "accounts_payable_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
             foreignKeyName: "accounts_payable_purchase_order_id_fkey"
             columns: ["purchase_order_id"]
             isOneToOne: false
@@ -177,6 +184,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "appointments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
             foreignKeyName: "appointments_customer_id_fkey"
             columns: ["customer_id"]
             isOneToOne: false
@@ -210,40 +224,57 @@ export type Database = {
         Row: {
           action: string
           actor_user_id: string | null
-          company_id: string
+          company_id: string | null
           created_at: string
           entity_id: string
           entity_type: string
           id: string
           metadata: Json
+          target_user_id: string | null
         }
         Insert: {
           action: string
           actor_user_id?: string | null
-          company_id: string
+          company_id?: string | null
           created_at?: string
           entity_id: string
           entity_type: string
           id?: string
           metadata?: Json
+          target_user_id?: string | null
         }
         Update: {
           action?: string
           actor_user_id?: string | null
-          company_id?: string
+          company_id?: string | null
           created_at?: string
           entity_id?: string
           entity_type?: string
           id?: string
           metadata?: Json
+          target_user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "audit_logs_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "audit_logs_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_logs_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -301,6 +332,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_movements_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "cash_movements_sale_payment_id_fkey"
@@ -362,11 +400,25 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "cash_registers_closed_by_fkey"
+            columns: ["closed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
             foreignKeyName: "cash_registers_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_registers_opened_by_fkey"
+            columns: ["opened_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -487,6 +539,13 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "company_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
         ]
       }
       company_settings: {
@@ -536,6 +595,13 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_settings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -622,6 +688,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "customers"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_documents_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -721,6 +794,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_raffles_executed_by_fkey"
+            columns: ["executed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -944,6 +1024,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "cost_centers"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_entries_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "financial_entries_customer_id_fkey"
@@ -1292,6 +1379,13 @@ export type Database = {
             referencedRelation: "customers"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "loyalty_transactions_performed_by_fkey"
+            columns: ["performed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
         ]
       }
       payment_events: {
@@ -1601,6 +1695,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "professional_blocks_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
             foreignKeyName: "professional_blocks_professional_id_fkey"
             columns: ["professional_id"]
             isOneToOne: false
@@ -1711,6 +1812,7 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          clerk_user_id: string | null
           created_at: string
           email: string | null
           full_name: string | null
@@ -1723,6 +1825,7 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          clerk_user_id?: string | null
           created_at?: string
           email?: string | null
           full_name?: string | null
@@ -1735,6 +1838,7 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          clerk_user_id?: string | null
           created_at?: string
           email?: string | null
           full_name?: string | null
@@ -1872,6 +1976,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "purchase_orders_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
             foreignKeyName: "purchase_orders_supplier_id_fkey"
             columns: ["supplier_id"]
             isOneToOne: false
@@ -1999,6 +2110,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "purchase_orders"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_receipts_received_by_fkey"
+            columns: ["received_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "purchase_receipts_supplier_id_fkey"
@@ -2215,6 +2333,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "sales_cancelled_by_fkey"
+            columns: ["cancelled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
             foreignKeyName: "sales_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
@@ -2227,6 +2352,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "customers"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -2375,6 +2507,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "stock_movements_product_id_fkey"
@@ -2542,6 +2681,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "plans"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscriptions_trial_claimed_by_fkey"
+            columns: ["trial_claimed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -2714,7 +2860,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
     }
     Views: {
@@ -3169,19 +3323,30 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      current_profile_user_id: { Args: never; Returns: string }
       delete_professional_block: {
         Args: { p_block_id: string }
         Returns: undefined
+      }
+      ensure_profile: {
+        Args: { p_email: string; p_full_name: string }
+        Returns: string
       }
       expire_loyalty_points_batch: { Args: never; Returns: number }
       get_platform_admin_overview: {
         Args: never
         Returns: {
           active_companies: number
-          active_subscriptions: number
+          active_plans: number
           active_users: number
-          expired_subscriptions: number
+          companies_without_subscription: number
           inactive_companies: number
+          inactive_users: number
+          platform_admins: number
+          subscriptions_active: number
+          subscriptions_cancelled: number
+          subscriptions_expired: number
+          subscriptions_trialing: number
           suspended_users: number
           total_companies: number
           total_users: number
@@ -3211,6 +3376,7 @@ export type Database = {
         Returns: undefined
       }
       is_platform_admin: { Args: never; Returns: boolean }
+      is_super_admin: { Args: never; Returns: boolean }
       list_company_team: {
         Args: never
         Returns: {
@@ -3230,15 +3396,68 @@ export type Database = {
         }[]
       }
       list_platform_admin_companies: {
-        Args: never
+        Args: {
+          p_limit?: number
+          p_offset?: number
+          p_search?: string
+          p_status?: Database["public"]["Enums"]["company_status"]
+        }
         Returns: {
+          access_active: boolean
           business_type: Database["public"]["Enums"]["business_type"]
           company_id: string
+          created_at: string
           members_count: number
           name: string
+          owner_email: string
+          owner_name: string
+          plan_code: string
+          plan_name: string
           status: Database["public"]["Enums"]["company_status"]
           subscription_expires_at: string
           subscription_status: Database["public"]["Enums"]["subscription_status"]
+          total_count: number
+        }[]
+      }
+      list_platform_admin_users: {
+        Args: {
+          p_limit?: number
+          p_offset?: number
+          p_role?: Database["public"]["Enums"]["user_role"]
+          p_search?: string
+          p_status?: Database["public"]["Enums"]["user_status"]
+        }
+        Returns: {
+          access_active: boolean
+          clerk_linked: boolean
+          company_id: string
+          company_name: string
+          company_role: Database["public"]["Enums"]["company_role"]
+          created_at: string
+          email: string
+          full_name: string
+          last_login_at: string
+          plan_code: string
+          plan_name: string
+          role: Database["public"]["Enums"]["user_role"]
+          status: Database["public"]["Enums"]["user_status"]
+          subscription_expires_at: string
+          subscription_status: Database["public"]["Enums"]["subscription_status"]
+          total_count: number
+          user_id: string
+        }[]
+      }
+      list_platform_administrators: {
+        Args: never
+        Returns: {
+          clerk_linked: boolean
+          created_at: string
+          email: string
+          full_name: string
+          last_login_at: string
+          role: Database["public"]["Enums"]["user_role"]
+          status: Database["public"]["Enums"]["user_status"]
+          user_id: string
         }[]
       }
       open_cash_register: {
@@ -3476,6 +3695,20 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      set_platform_user_role: {
+        Args: {
+          p_role: Database["public"]["Enums"]["user_role"]
+          p_target_user_id: string
+        }
+        Returns: undefined
+      }
+      set_platform_user_status: {
+        Args: {
+          p_status: Database["public"]["Enums"]["user_status"]
+          p_target_user_id: string
+        }
+        Returns: undefined
+      }
       set_professional_availability: {
         Args: { p_professional_id: string; p_schedule: Json }
         Returns: undefined
@@ -3545,6 +3778,17 @@ export type Database = {
           p_entity_id: string
           p_entity_type: string
           p_metadata?: Json
+        }
+        Returns: undefined
+      }
+      write_platform_audit_log: {
+        Args: {
+          p_action: string
+          p_company_id?: string
+          p_entity_id: string
+          p_entity_type: string
+          p_metadata?: Json
+          p_target_user_id?: string
         }
         Returns: undefined
       }

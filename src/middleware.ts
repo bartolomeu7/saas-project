@@ -3,8 +3,9 @@ import { clerkMiddleware } from "@clerk/nextjs/server";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/supabase";
 import { getSubscriptionGuardStatus } from "@/lib/billing/guard";
-import { getPlatformAdminGuardStatus, isPlatformAdminRole } from "@/lib/admin/guard";
-import type { UserRole } from "@/types/profile";
+import { isActivePlatformAdmin, isActiveSuperAdmin } from "@/lib/admin/permissions";
+import { ACCOUNT_BLOCKED_PATH } from "@/lib/auth/account-status";
+import type { UserRole, UserStatus } from "@/types/profile";
 import {
   AUTH_BACKEND_MESSAGES,
   readJwtRole,
@@ -18,10 +19,17 @@ const PROTECTED_PREFIXES = ["/app", "/admin", "/onboarding"];
 
 /**
  * Prefixo da área administrativa da plataforma — exige, além de
- * autenticação, profiles.role igual a "admin" ou "super_admin"
- * (nunca company_members.role; ver src/lib/admin/guard.ts).
+ * autenticação, profiles.role "admin" ou "super_admin" COM status "active"
+ * (nunca company_members.role; ver src/lib/admin/guard.ts e permissions.ts).
  */
 const ADMIN_PREFIX = "/admin";
+
+/**
+ * Seções do /admin exclusivas de super_admin (administradores e configurações
+ * críticas). Admin comum é redirecionado para o dashboard do painel. É só a
+ * primeira camada: as páginas e as RPCs repetem a checagem no servidor/banco.
+ */
+const SUPER_ADMIN_ONLY_PREFIXES = ["/admin/administrators", "/admin/settings"];
 
 /**
  * Rotas de autenticação: se o usuário já está logado, não faz sentido
@@ -58,6 +66,20 @@ function isAdminRoute(pathname: string) {
   return pathname === ADMIN_PREFIX || pathname.startsWith(`${ADMIN_PREFIX}/`);
 }
 
+function isAppRoute(pathname: string) {
+  return pathname === "/app" || pathname.startsWith("/app/");
+}
+
+function isOnboardingRoute(pathname: string) {
+  return pathname === "/onboarding" || pathname.startsWith("/onboarding/");
+}
+
+function isSuperAdminOnlyRoute(pathname: string) {
+  return SUPER_ADMIN_ONLY_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+  );
+}
+
 /** Resposta 503 (fail closed) quando a autenticação no banco está indisponível/mal configurada. */
 function authBackendUnavailable(code: AuthBackendErrorCode) {
   const message = AUTH_BACKEND_MESSAGES[code];
@@ -80,6 +102,9 @@ function authBackendUnavailable(code: AuthBackendErrorCode) {
  *    "admin" ou "super_admin" — nunca company_members.role. Qualquer falha
  *    ao confirmar a role nega o acesso (fail closed).
  * 4. Guard de assinatura (/app/*, exceto /app/assinatura).
+ * 5. profiles.status: conta inactive/suspended não acessa /app, /onboarding nem
+ *    /admin — é redirecionada para ACCOUNT_BLOCKED_PATH (a mesma regra vale no
+ *    banco: current_profile_user_id() só reconhece perfil ativo).
  *
  * Os guards de role/assinatura leem o banco com o token da própria sessão
  * Clerk (Third-Party Auth do Supabase), então rodam sob as mesmas políticas
@@ -105,7 +130,13 @@ export const middleware = clerkMiddleware(async (auth, request) => {
   const needsAdminGuard = isAuthenticated && isAdminRoute(pathname);
   const needsSubscriptionGuard = isAuthenticated && requiresActiveSubscription(pathname);
 
-  if (!needsAdminGuard && !needsSubscriptionGuard) {
+  // profiles.status vale para TODO o produto autenticado: /app (inclusive
+  // /app/assinatura), /onboarding e /admin. Uma única leitura do perfil serve
+  // aos três guards (status, admin e assinatura).
+  const needsStatusGuard =
+    isAuthenticated && (isAppRoute(pathname) || isOnboardingRoute(pathname) || isAdminRoute(pathname));
+
+  if (!needsStatusGuard) {
     return NextResponse.next();
   }
 
@@ -125,7 +156,7 @@ export const middleware = clerkMiddleware(async (auth, request) => {
   );
 
   const { data: profile, error: profileError } = token
-    ? await supabase.from("profiles").select("user_id, role").maybeSingle()
+    ? await supabase.from("profiles").select("user_id, role, status").maybeSingle()
     : { data: null, error: null };
 
   // Erro do Supabase (401/5xx...) não é "sem perfil": não segue para o onboarding.
@@ -134,15 +165,26 @@ export const middleware = clerkMiddleware(async (auth, request) => {
     return authBackendUnavailable("AUTH_RPC_FAILED");
   }
 
+  // Conta inativa ou suspensa: sem produto e sem painel, qualquer que seja o papel.
+  // Perfil inexistente = primeiro acesso (segue para o onboarding, que o cria).
+  // O Clerk só prova a identidade; quem libera o acesso é profiles.status.
+  if (profile && profile.status !== "active") {
+    return NextResponse.redirect(new URL(ACCOUNT_BLOCKED_PATH, request.url));
+  }
+
   if (needsAdminGuard) {
-    const isPlatformAdmin = isPlatformAdminRole(profile?.role as UserRole | undefined);
-    if (!profile || !isPlatformAdmin) {
+    const role = profile?.role as UserRole | undefined;
+    const status = profile?.status as UserStatus | undefined;
+
+    // Mesma regra do banco (is_platform_admin()): role admin|super_admin E status
+    // active. Admin/super_admin suspenso ou inativo não entra — fail closed.
+    if (!profile || !isActivePlatformAdmin(role, status)) {
       return NextResponse.redirect(new URL("/app", request.url));
     }
-    // Reconfirma pelo guard central (mesma regra usada em todo o projeto).
-    const guard = await getPlatformAdminGuardStatus(supabase, profile.user_id);
-    if (!guard.isPlatformAdmin) {
-      return NextResponse.redirect(new URL("/app", request.url));
+
+    // Seções exclusivas de super_admin: admin comum volta para o dashboard do painel.
+    if (isSuperAdminOnlyRoute(pathname) && !isActiveSuperAdmin(role, status)) {
+      return NextResponse.redirect(new URL("/admin", request.url));
     }
   }
 

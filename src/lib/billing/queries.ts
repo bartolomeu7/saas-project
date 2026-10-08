@@ -12,14 +12,19 @@ import type {
 
 export { getActiveSubscription, getSubscriptionGuardStatus } from "@/lib/billing/guard";
 
-/** Catálogo completo (autenticado) — para a tela /app/assinatura/planos. */
-export async function getPlans(): Promise<Plan[]> {
+/**
+ * Catálogo completo (autenticado) — para a tela /app/assinatura/planos.
+ * Por padrão só os planos ativos; o painel /admin passa `includeInactive`.
+ */
+export async function getPlans(options: { includeInactive?: boolean } = {}): Promise<Plan[]> {
   const supabase = await createSessionClient();
-  const { data, error } = await supabase
-    .from("plans")
-    .select("*")
-    .eq("status", "active")
-    .order("price", { ascending: true, nullsFirst: false });
+  let query = supabase.from("plans").select("*");
+
+  if (!options.includeInactive) {
+    query = query.eq("status", "active");
+  }
+
+  const { data, error } = await query.order("price", { ascending: true, nullsFirst: false });
 
   if (error) return [];
   return (data ?? []) as Plan[];
