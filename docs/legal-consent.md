@@ -52,8 +52,23 @@ Limitação conhecida: sem ligar a opção nativa do Clerk ("Require express con
 
 ## Reaceite (usuários existentes e novas versões)
 
-`(app)/layout.tsx` e `/onboarding` chamam `requireLegalConsent()`. Sem consentimento vigente para os dois documentos, redireciona para `/aceite-termos`, que fica fora do layout `/app` (sem loop) e não bloqueia páginas públicas. Falha do banco = erro (fail closed), nunca acesso liberado.
-O layout só roda em carregamento completo da página, então um usuário com a sessão aberta é cobrado no próximo carregamento. O painel `/admin` não passa por esta guarda (fora do escopo desta missão).
+### Barreira central (Missão 07)
+
+A guarda agora é **central**, no `src/middleware.ts`, e decidida por uma função pura (`src/lib/legal/gate.ts`, testada em `tests/unit/consent-gate.test.mjs`). Para usuário autenticado com perfil ativo, em `/app`, `/onboarding`, `/admin` e `/api/billing`, o middleware chama `get_my_legal_consent_status()`:
+
+| Situação | Resultado |
+|---|---|
+| consentimento vigente completo | segue |
+| pendente + página (GET/HEAD) | redireciona para `/aceite-termos?next=…` (destino sanitizado por `safeAfterConsentPath`) |
+| pendente + Server Action, API ou método não-GET | `403` JSON `{ "code": "LEGAL_CONSENT_REQUIRED" }` — a ação **não executa** |
+| erro do banco ao consultar | `503` (fail closed), nunca libera |
+| sem perfil (primeiro acesso) / perfil suspenso | não consulta (o fluxo normal já trata) |
+
+Fora da barreira de propósito: páginas públicas e legais, `/aceite-termos`, `/login`, `/register`, `/api/webhooks` (chamada do provedor, sem sessão) e `/api/presence` (heartbeat de 60 s que só grava o horário; gatear dobraria as leituras do banco). O `requireLegalConsent()` dos layouts continua como segunda camada.
+
+**Limite conhecido:** quem chama o PostgREST do Supabase diretamente com o próprio JWT não passa pelo Next. O isolamento entre empresas e a RLS continuam valendo (provado em `tests/sql/tenant_isolation.sql`); o consentimento é evidência jurídica, não fronteira de segurança dos dados.
+
+Antes da Missão 07 a guarda só rodava em carregamento completo de página (layout), então Server Actions de um usuário com a sessão aberta e o `/admin` não eram cobrados.
 
 ## Publicar uma nova versão de um documento
 
@@ -68,4 +83,6 @@ O layout só roda em carregamento completo da página, então um usuário com a 
 - Resolver todos os marcadores `[BLOCKED — DADO EMPRESARIAL NECESSÁRIO]` e `[VALIDAÇÃO JURÍDICA NECESSÁRIA]` (`LEGAL_REQUIRE_PUBLISHABLE=1 npm run test:unit` falha enquanto existirem).
 - Publicar versão final (`1.0.0`), com novo hash e nova migration. As versões `1.0.0-rc.*` existem só para TEST: a `rc.1` está aposentada e a `rc.2` (migration `20261010000100_legal_rc2.sql`, mesmo texto, só o rótulo mudou) foi publicada para exercitar o reaceite.
 - Aplicar a migration em Production **antes** do deploy do código (o guarda falha fechado se as RPCs não existirem).
+- Ordem de rollout completa do pacote da Missão 07 (cada passo exige autorização própria): (1) `20261011000000_billing_hardening.sql` e `20261011000100_privilege_minimization.sql` em Production — a primeira **remove** a assinatura antiga de `confirm_subscription_payment` e o código novo exige `claim_subscription_payment`; (2) só então deploy do código; (3) smoke e T10 manual. Subir o código antes das migrations quebra a criação de cobrança; aplicar as migrations sem o código novo quebra a confirmação de pagamento (assinatura antiga).
+- Checklist de dados e perguntas jurídicas: `docs/legal/final-publication-checklist.md`.
 - Revisão jurídica de ambos os documentos (bases legais, papéis controlador/operador, prazos de retenção, transferência internacional, foro).
