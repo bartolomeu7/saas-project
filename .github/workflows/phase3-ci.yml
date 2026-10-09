@@ -5,7 +5,8 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [main]
+    # `fix/**` roda o CI a cada push de branch de correção, sem exigir PR aberto (útil para validar antes de revisar).
+    branches: [main, "fix/**"]
   # Execução manual (gh workflow run "Phase 3 CI" --ref <branch>). O GitHub só oferece o disparo manual depois que
   # este arquivo existe na branch padrão; antes disso, o CI desta branch roda ao abrir um PR para a main.
   workflow_dispatch:

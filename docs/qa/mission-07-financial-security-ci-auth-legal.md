@@ -2,6 +2,8 @@
 
 Data: 2026-10-09 · Branch: `fix/mission-07-hardening` (base `4a946fa`) · Ambiente de correção e teste: **TEST** (`zlmxbqlpjstmllrvafmy`). Production (`fpbcruinppjbwtinzrdg`) só inspecionada, sem escrita.
 
+> **Atualização (Missão 07.1):** compatibilidade, rollback, contrato EvoPay e Preview foram tratados em `docs/qa/mission-07-1-release-readiness.md`. As linhas R13, R15 e R16 abaixo foram reavaliadas lá (R15: build do Preview PASS, runtime NOT VERIFIED; R13 e R17 seguem BLOCKED).
+
 ## Veredito
 
 **CORREÇÕES VALIDADAS COM RESSALVAS**
@@ -80,7 +82,7 @@ Resíduos: TEST sem dados de QA (todas as baterias terminam em `RAISE EXCEPTION`
 
 ## H. Commits na branch
 
-`68697fb` billing · `9d55b26` privilégios · `767ee06` consentimento · `750e681` CI + layout dinâmico · (a seguir) testes SQL de identidade e documentação.
+`68697fb` billing · `9d55b26` privilégios · `767ee06` consentimento · `750e681` CI + layout dinâmico · `b60a908` teste SQL de identidade · `1d7e9a3` documentação. Missão 07.1: ver o relatório complementar.
 
 ## I. Riscos residuais
 

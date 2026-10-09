@@ -24,6 +24,8 @@ Hashes publicados (SHA-256 do conteúdo), conferidos contra o repositório:
 
 Total no texto: 10 marcadores de dado e 16 de revisão jurídica (6 + 8 nos Termos; 4 + 8 na Política, contagem do script `legal-markers`).
 
+Quem fornece cada dado: itens 1–4, 6–8 e 10 → sócio/administrador da empresa (documentos societários); item 5 → o canal que a empresa realmente monitora; item 9 → decisão do jurídico. Reinventário de 2026-10-09 (Missão 07.1): o repositório não contém nenhum desses dados além do candidato do item 5.
+
 ## 2. Perguntas para a revisão jurídica
 
 **Papéis e bases legais**
