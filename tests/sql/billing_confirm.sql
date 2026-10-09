@@ -168,7 +168,7 @@ select set_config('request.jwt.claims', '{"role":"service_role"}', true);
 update public.profiles set clerk_user_id = 'bill_super' where user_id = '2068cbe0-ade1-41f6-8301-ddbe2cfcb1fb';
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"bill_super","role":"authenticated"}', true);
-select pg_temp.chk('diag', 'platform_diagnostics tem 13 verificações', $q$select count(*)::text from public.platform_diagnostics()$q$, 'OK=13');
+select pg_temp.chk('diag', 'platform_diagnostics tem 14 verificações', $q$select count(*)::text from public.platform_diagnostics()$q$, 'OK=14');
 select pg_temp.chk('diag', 'estorno com acesso ativo aparece como alerta', $q$select (affected >= 1)::text from public.platform_diagnostics() where check_key = 'refunded_with_access'$q$, 'OK=true');
 select pg_temp.chk('diag', 'evento rejeitado não processado só alerta depois de 1 hora (hoje: 0)', $q$select affected::text from public.platform_diagnostics() where check_key = 'payment_events_unprocessed'$q$, 'OK=0');
 reset role;
