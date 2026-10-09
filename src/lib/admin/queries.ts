@@ -449,6 +449,7 @@ export async function getAccessActionContext() {
         name: plan.name,
         accessDurationDays: plan.access_duration_days,
         price: plan.price,
+        lifetime: plan.lifetime,
       })),
   };
 }

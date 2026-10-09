@@ -2,15 +2,14 @@
 
 import { toast } from "sonner";
 import { AdminActionDialog } from "@/components/admin/admin-action-dialog";
+import { LicenseGrantDialog } from "@/components/admin/license-grant-dialog";
 import { ConfirmActionForm } from "@/components/app/confirm-dialog";
 import {
   adjustAccessExpiryAction,
   assignPlanAction,
   cancelSubscriptionAction,
-  grantAccessDaysAction,
   reactivateSubscriptionAction,
   recordManualPaymentAction,
-  release30DaysAction,
   syncEntitlementsAction,
 } from "@/lib/admin/actions";
 import { PAYMENT_METHOD_LABELS } from "@/types/admin";
@@ -23,6 +22,7 @@ export interface AccessPlanOption {
   name: string;
   accessDurationDays: number | null;
   price: number | null;
+  lifetime: boolean;
 }
 
 function notify(result: ActionResult) {
@@ -44,10 +44,13 @@ const REASON_FIELD = {
 } as const;
 
 /**
- * Operações de acesso/cobrança de UMA empresa (usadas na página da empresa e na
- * do usuário). O que aparece depende do papel e do estado atual da assinatura
- * (UX); cada operação chama uma RPC SECURITY DEFINER que revalida ator, limites,
- * estado e auditoria no banco — um pedido forjado é recusado do mesmo jeito.
+ * Operações de acesso/cobrança de UMA empresa (usadas na página da empresa e na do usuário). O que aparece depende
+ * do papel e do estado atual da assinatura (UX); cada operação chama uma RPC SECURITY DEFINER que revalida ator,
+ * limites, estado e auditoria no banco — um pedido forjado é recusado do mesmo jeito.
+ *
+ *  - "Conceder acesso": libera acesso SEM pagamento (30 dias | período do plano | personalizado | vitalício).
+ *  - "Registrar pagamento": documenta dinheiro RECEBIDO fora do EvoPay; opcionalmente também libera o acesso.
+ *  - "Trocar/Atribuir plano": muda o plano; com período ativo preserva o vencimento.
  */
 export function CompanyAccessActions({
   companyId,
@@ -56,6 +59,7 @@ export function CompanyAccessActions({
   hasSubscription,
   subscriptionStatus,
   accessActive,
+  isLifetime = false,
   isSuperAdmin,
   maxFreeDays,
 }: {
@@ -65,55 +69,37 @@ export function CompanyAccessActions({
   hasSubscription: boolean;
   subscriptionStatus: SubscriptionStatus | null;
   accessActive: boolean;
+  isLifetime?: boolean;
   isSuperAdmin: boolean;
   maxFreeDays: number;
 }) {
-  const planOptions = plans.map((plan) => ({ value: plan.id, label: plan.name }));
+  // O plano vitalício só é concedido por "Conceder acesso" (super admin); nunca por troca de plano nem por pagamento.
+  const timedPlans = plans.filter((plan) => !plan.lifetime);
+  const planOptions = timedPlans.map((plan) => ({ value: plan.id, label: plan.name }));
   // Só planos pagos (preço > 0 e duração fixa) fazem sentido para registrar um pagamento.
-  const paidPlans = plans.filter((plan) => plan.accessDurationDays !== null && (plan.price ?? 0) > 0);
-  const maxDays = isSuperAdmin ? 365 : maxFreeDays;
-  const planField = {
-    type: "select",
-    name: "planId",
-    label: "Plano",
-    required: !hasSubscription,
-    options: planOptions,
-    defaultValue: currentPlanId ?? "",
-    emptyLabel: hasSubscription ? "Manter o plano atual" : undefined,
-    hint: hasSubscription ? undefined : "A empresa ainda não tem assinatura: escolha o plano.",
-  } as const;
+  const paidPlans = timedPlans.filter((plan) => plan.accessDurationDays !== null && (plan.price ?? 0) > 0);
   const canReactivate = hasSubscription && !accessActive;
   const canCancel = isSuperAdmin && hasSubscription && subscriptionStatus !== "cancelled";
+  const canChangePlan = !isLifetime || isSuperAdmin;
 
   return (
     <div className="flex flex-wrap gap-2">
-      <AdminActionDialog
-        triggerLabel="Conceder dias"
-        title="Conceder dias de acesso"
-        description={`Soma dias ao vencimento atual (ou a partir de hoje, se estiver vencido). Limite desta operação: ${maxDays} dias.`}
-        submitLabel="Conceder"
-        action={(formData) => grantAccessDaysAction(companyId, formData)}
-        fields={[
-          { type: "number", name: "days", label: "Dias", required: true, min: 1, max: maxDays, step: 1, defaultValue: Math.min(7, maxDays) },
-          planField,
-          REASON_FIELD,
-        ]}
+      <LicenseGrantDialog
+        companyId={companyId}
+        plans={plans}
+        currentPlanId={currentPlanId}
+        hasSubscription={hasSubscription}
+        alreadyLifetime={isLifetime}
+        isSuperAdmin={isSuperAdmin}
+        maxFreeDays={maxFreeDays}
       />
 
       <AdminActionDialog
-        triggerLabel="Liberar 30 dias"
-        title="Liberar 30 dias de acesso"
-        description="Atalho: soma 30 dias ao vencimento atual (ou a partir de hoje, se estiver vencido), sem registrar pagamento."
-        submitLabel="Liberar 30 dias"
-        action={(formData) => release30DaysAction(companyId, formData)}
-        fields={[planField, REASON_FIELD]}
-      />
-
-      <AdminActionDialog
-        triggerLabel="Pagamento manual"
-        title="Registrar pagamento manual"
-        description="Registra um pagamento recebido fora do EvoPay (Pix direto, transferência, dinheiro...). Por padrão também estende o acesso pela duração do plano."
+        triggerLabel="Registrar pagamento"
+        title="Registrar pagamento recebido"
+        description="Documenta um pagamento recebido fora do EvoPay (Pix direto, transferência, dinheiro...). Informe apenas dinheiro realmente recebido: nada é cobrado nem simulado aqui."
         submitLabel="Registrar pagamento"
+        idempotent
         action={(formData) => recordManualPaymentAction(companyId, formData)}
         fields={[
           {
@@ -148,48 +134,62 @@ export function CompanyAccessActions({
           {
             type: "checkbox",
             name: "applyAccess",
-            label: "Estender o acesso pela duração do plano",
-            defaultChecked: true,
+            label: "Liberar acesso agora (soma a duração do plano ao vencimento atual)",
+            defaultChecked: !isLifetime,
+            hint: isLifetime
+              ? "A empresa tem acesso vitalício: o pagamento só é documentado, o acesso não muda."
+              : "Marcado: altera a assinatura e exige valor maior que zero. Desmarcado: apenas documenta o pagamento, sem mexer no acesso.",
           },
         ]}
       />
 
-      <AdminActionDialog
-        triggerLabel={hasSubscription ? "Trocar plano" : "Atribuir plano"}
-        title={hasSubscription ? "Trocar o plano" : "Atribuir plano"}
-        description="Troca o plano sem registrar pagamento. Com acesso ativo, o vencimento é mantido; senão informe os dias."
-        submitLabel="Atribuir"
-        action={(formData) => assignPlanAction(companyId, formData)}
-        fields={[
-          { type: "select", name: "planId", label: "Novo plano", required: true, options: planOptions, defaultValue: "" },
-          {
-            type: "number",
-            name: "days",
-            label: "Dias de acesso (opcional)",
-            min: 1,
-            max: 3660,
-            step: 1,
-            hint: "Vazio = mantém o vencimento (acesso ativo) ou usa a duração do plano.",
-          },
-          REASON_FIELD,
-        ]}
-      />
-
-      {canReactivate && (
+      {canChangePlan && (
         <AdminActionDialog
-          triggerLabel="Reativar assinatura"
-          title="Reativar assinatura"
-          description="Se o período pago ainda não terminou, apenas reativa; senão libera os dias informados (ou a duração do plano)."
-          submitLabel="Reativar"
-          action={(formData) => reactivateSubscriptionAction(companyId, formData)}
+          triggerLabel={hasSubscription ? "Trocar plano" : "Atribuir plano"}
+          title={hasSubscription ? "Trocar o plano" : "Atribuir plano"}
+          description={
+            isLifetime
+              ? "Substitui o acesso vitalício por um plano com prazo: informe os dias. Exclusivo de super administrador."
+              : `Troca o plano sem registrar pagamento. Com acesso ativo, o vencimento é mantido; senão informe os dias (administradores: até ${maxFreeDays} dias sem pagamento).`
+          }
+          submitLabel="Atribuir"
+          action={(formData) => assignPlanAction(companyId, formData)}
           fields={[
-            { type: "number", name: "days", label: "Dias de acesso (opcional)", min: 1, max: 3660, step: 1 },
+            { type: "select", name: "planId", label: "Novo plano", required: true, options: planOptions, defaultValue: "" },
+            {
+              type: "number",
+              name: "days",
+              label: isLifetime ? "Dias de acesso" : "Dias de acesso (opcional)",
+              required: isLifetime,
+              min: 1,
+              max: 3660,
+              step: 1,
+              hint: "Vazio = mantém o vencimento (acesso ativo) ou usa a duração do plano.",
+            },
             REASON_FIELD,
           ]}
         />
       )}
 
-      {isSuperAdmin && hasSubscription && (
+      {canReactivate && (
+        <AdminActionDialog
+          triggerLabel="Reativar assinatura"
+          title="Reativar assinatura"
+          description={
+            isLifetime
+              ? "Devolve o acesso vitalício que foi cancelado."
+              : "Se o período pago ainda não terminou, apenas reativa; senão libera os dias informados (ou a duração do plano, dentro do seu limite)."
+          }
+          submitLabel="Reativar"
+          action={(formData) => reactivateSubscriptionAction(companyId, formData)}
+          fields={[
+            ...(isLifetime ? [] : [{ type: "number" as const, name: "days", label: "Dias de acesso (opcional)", min: 1, max: 3660, step: 1 }]),
+            REASON_FIELD,
+          ]}
+        />
+      )}
+
+      {isSuperAdmin && hasSubscription && !isLifetime && (
         <AdminActionDialog
           triggerLabel="Ajustar vencimento"
           title="Ajustar vencimento"

@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getPixCharge, EvoPayError } from "@/lib/evopay/client";
 import { mapEvoPayStatus } from "@/lib/billing/mappers";
 import { rejectionMessage, toCents } from "@/lib/billing/amount";
+import { minimizeProviderPayload } from "@/lib/billing/payload";
 import { AUDIT_ACTIONS } from "@/types/audit";
 import type { Json } from "@/types/supabase";
 import type { SubscriptionPaymentStatus } from "@/types/billing";
@@ -110,7 +111,8 @@ export async function confirmPaymentFromProvider(
     p_end_to_end_id: (transaction.endToEndId ?? null) as unknown as string,
     p_event_id: eventId,
     p_event_type: "pix.status_check",
-    p_event_payload: transaction as unknown as Json,
+    // Só o necessário para auditar (sem nome/documento do pagador nem QR Code): ver src/lib/billing/payload.ts.
+    p_event_payload: minimizeProviderPayload(transaction) as unknown as Json,
     // Valor informado pelo provedor, em reais com 2 casas; ausente/ilegível => undefined (o banco rejeita um "paid").
     p_provider_amount: providerCents === null ? undefined : providerCents / 100,
   });

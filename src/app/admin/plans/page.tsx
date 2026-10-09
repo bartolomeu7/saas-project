@@ -14,12 +14,14 @@ import { PlanStatusControl } from "./plan-status-control";
 export const metadata = { title: "Planos" };
 
 function formatPrice(plan: PlatformPlanRow): string {
+  if (plan.lifetime) return "Não vendido";
   if (plan.price === null) return "Sob consulta";
   if (plan.price === 0) return "Grátis";
   return formatCurrency(plan.price);
 }
 
 function formatDuration(plan: PlatformPlanRow): string {
+  if (plan.lifetime) return "Sem vencimento (vitalício)";
   if (plan.access_duration_days === null) return "Sob consulta";
   const days = plan.access_duration_days;
   return `${days} ${days === 1 ? "dia" : "dias"} de acesso`;
@@ -33,7 +35,7 @@ const FEATURES: { key: keyof PlatformPlanRow; label: string }[] = [
 ];
 
 function planFields(plan?: PlatformPlanRow): DialogField[] {
-  return [
+  const fields: DialogField[] = [
     ...(plan
       ? []
       : ([
@@ -124,6 +126,10 @@ function planFields(plan?: PlatformPlanRow): DialogField[] {
       defaultChecked: plan?.early_access_enabled ?? false,
     },
   ];
+  // O plano vitalício não tem preço, duração nem teste (o banco recusa): só nome, recursos e ordem são editáveis.
+  return plan?.lifetime
+    ? fields.filter((field) => !(["price", "accessDurationDays", "billingInterval", "trial"] as string[]).includes(field.name))
+    : fields;
 }
 
 /**
@@ -186,6 +192,7 @@ export default async function AdminPlansPage() {
                       <span className="flex items-center gap-2 font-medium text-foreground">
                         {plan.name}
                         {plan.trial && <Badge variant="info">Teste</Badge>}
+                        {plan.lifetime && <Badge variant="secondary">Vitalício</Badge>}
                       </span>
                       <span className="font-mono text-xs text-muted-foreground">
                         {plan.code} · ordem {plan.sort_order}

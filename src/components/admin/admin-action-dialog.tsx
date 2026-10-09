@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
+import { useRequestKey } from "@/components/admin/use-request-key";
 import type { ActionResult } from "@/lib/auth/actions";
 
 export type DialogField =
@@ -77,6 +78,7 @@ export function AdminActionDialog({
   description,
   submitLabel,
   destructive = false,
+  idempotent = false,
   fields,
   action,
   children,
@@ -89,6 +91,8 @@ export function AdminActionDialog({
   description?: ReactNode;
   submitLabel: string;
   destructive?: boolean;
+  /** Envia `requestKey` (uuid estável até concluir com sucesso): retry/duplo clique não repete a operação no banco. */
+  idempotent?: boolean;
   fields: DialogField[];
   action: (formData: FormData) => Promise<ActionResult>;
   children?: ReactNode;
@@ -97,10 +101,12 @@ export function AdminActionDialog({
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const { key: requestKey, renew: renewRequestKey } = useRequestKey();
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
+    if (idempotent) formData.set("requestKey", requestKey);
     setError(null);
 
     startTransition(async () => {
@@ -111,6 +117,7 @@ export function AdminActionDialog({
           return;
         }
         toast.success(result.success ?? "Operação concluída.");
+        if (idempotent) renewRequestKey();
         setOpen(false);
         router.refresh();
       } catch {

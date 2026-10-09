@@ -130,8 +130,9 @@ export interface PlatformSubscriptionRow {
   status: SubscriptionStatus;
   state: Exclude<SubscriptionFilterState, "none">;
   starts_at: string;
-  expires_at: string;
-  days_left: number;
+  expires_at: string | null;
+  lifetime: boolean;
+  days_left: number | null;
   provider: string | null;
   paid_total: number;
   last_paid_at: string | null;
@@ -255,12 +256,13 @@ export interface SubscriptionSummary {
   id: string;
   status: SubscriptionStatus;
   starts_at: string;
-  expires_at: string;
+  expires_at: string | null;
+  lifetime: boolean;
   cancelled_at: string | null;
   provider: string | null;
   updated_at: string;
   access_active: boolean;
-  days_left: number;
+  days_left: number | null;
   plan: {
     id: string;
     code: string;
@@ -269,6 +271,7 @@ export interface SubscriptionSummary {
     currency: string;
     access_duration_days: number | null;
     trial: boolean;
+    lifetime: boolean;
   };
 }
 
@@ -397,6 +400,7 @@ export interface PlatformPlanRow {
   active_subscriptions_count: number;
   payments_count: number;
   is_protected: boolean;
+  lifetime: boolean;
 }
 
 export interface PlatformDashboard {
@@ -410,6 +414,8 @@ export interface PlatformDashboard {
     expired: number;
     cancelled: number;
     pending: number;
+    /** Assinaturas vitalícias ativas (já contadas em `active`; nunca entram no MRR). */
+    lifetime: number;
     expiring_7d: number;
     expiring_30d: number;
     companies_without_subscription: number;
@@ -423,6 +429,8 @@ export interface PlatformDashboard {
     pending_total: number;
     pending_count: number;
     manual_30d: number;
+    evopay_30d: number;
+    refunded_total: number;
   };
   mrr_estimate: number;
   payments_by_day: { day: string; total: number; count: number }[];

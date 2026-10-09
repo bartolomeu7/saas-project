@@ -457,6 +457,7 @@ export type Database = {
           early_access_enabled: boolean
           exclusive_groups_enabled: boolean
           id: string
+          lifetime: boolean
           max_additional_users: number
           plan_id: string | null
           status: Database["public"]["Enums"]["subscription_status"]
@@ -471,6 +472,7 @@ export type Database = {
           early_access_enabled?: boolean
           exclusive_groups_enabled?: boolean
           id?: string
+          lifetime?: boolean
           max_additional_users?: number
           plan_id?: string | null
           status: Database["public"]["Enums"]["subscription_status"]
@@ -485,6 +487,7 @@ export type Database = {
           early_access_enabled?: boolean
           exclusive_groups_enabled?: boolean
           id?: string
+          lifetime?: boolean
           max_additional_users?: number
           plan_id?: string | null
           status?: Database["public"]["Enums"]["subscription_status"]
@@ -1447,6 +1450,7 @@ export type Database = {
           early_access_enabled: boolean
           exclusive_groups_enabled: boolean
           id: string
+          lifetime: boolean
           name: string
           price: number | null
           provider: string | null
@@ -1472,6 +1476,7 @@ export type Database = {
           early_access_enabled?: boolean
           exclusive_groups_enabled?: boolean
           id?: string
+          lifetime?: boolean
           name: string
           price?: number | null
           provider?: string | null
@@ -1497,6 +1502,7 @@ export type Database = {
           early_access_enabled?: boolean
           exclusive_groups_enabled?: boolean
           id?: string
+          lifetime?: boolean
           name?: string
           price?: number | null
           provider?: string | null
@@ -2674,8 +2680,9 @@ export type Database = {
           cancelled_at: string | null
           company_id: string
           created_at: string
-          expires_at: string
+          expires_at: string | null
           id: string
+          lifetime: boolean
           plan_id: string
           provider: string | null
           provider_customer_id: string | null
@@ -2689,8 +2696,9 @@ export type Database = {
           cancelled_at?: string | null
           company_id: string
           created_at?: string
-          expires_at: string
+          expires_at?: string | null
           id?: string
+          lifetime?: boolean
           plan_id: string
           provider?: string | null
           provider_customer_id?: string | null
@@ -2704,8 +2712,9 @@ export type Database = {
           cancelled_at?: string | null
           company_id?: string
           created_at?: string
-          expires_at?: string
+          expires_at?: string | null
           id?: string
+          lifetime?: boolean
           plan_id?: string
           provider?: string | null
           provider_customer_id?: string | null
@@ -3100,7 +3109,69 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_add_company_member: {
+        Args: {
+          p_company_id: string
+          p_email: string
+          p_reason: string
+          p_request_key: string
+          p_role: Database["public"]["Enums"]["company_role"]
+        }
+        Returns: Json
+      }
+      admin_audit_reconciliation: {
+        Args: {
+          p_checked: number
+          p_confirmed: number
+          p_errors: number
+          p_still_pending: number
+        }
+        Returns: undefined
+      }
+      admin_grant_license: {
+        Args: {
+          p_company_id: string
+          p_days: number | null
+          p_kind: string
+          p_plan_id: string | null
+          p_reason: string
+          p_request_key: string
+        }
+        Returns: Json
+      }
+      admin_remove_company_member: {
+        Args: { p_company_id: string; p_reason: string; p_user_id: string }
+        Returns: undefined
+      }
+      admin_set_company_member_role: {
+        Args: {
+          p_company_id: string
+          p_reason: string
+          p_role: Database["public"]["Enums"]["company_role"]
+          p_user_id: string
+        }
+        Returns: undefined
+      }
+      admin_transfer_company_ownership: {
+        Args: {
+          p_company_id: string
+          p_new_owner_user_id: string
+          p_reason: string
+          p_request_key: string
+        }
+        Returns: Json
+      }
       admin_mark_expired_subscriptions: { Args: never; Returns: number }
+      platform_reconcile_candidates: {
+        Args: { p_limit?: number; p_min_age_minutes?: number }
+        Returns: {
+          age_minutes: number
+          company_id: string
+          company_name: string
+          created_at: string
+          payment_id: string
+        }[]
+      }
       admin_reactivate_subscription: {
         Args: { p_company_id: string; p_days?: number; p_reason?: string }
         Returns: Json
@@ -3115,6 +3186,7 @@ export type Database = {
           p_paid_at?: string
           p_plan_id: string
           p_reference?: string
+          p_request_key?: string
         }
         Returns: Json
       }
@@ -3812,6 +3884,7 @@ export type Database = {
           early_access_enabled: boolean
           exclusive_groups_enabled: boolean
           is_protected: boolean
+          lifetime: boolean
           name: string
           payments_count: number
           plan_id: string
@@ -3842,6 +3915,7 @@ export type Database = {
           days_left: number
           expires_at: string
           last_paid_at: string
+          lifetime: boolean
           paid_total: number
           plan_code: string
           plan_name: string

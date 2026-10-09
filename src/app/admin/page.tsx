@@ -65,7 +65,7 @@ export default async function AdminDashboardPage() {
           label="Assinaturas com acesso"
           value={subscriptions.active + subscriptions.trialing}
           icon={CreditCard}
-          detail={`${subscriptions.active} pagas · ${subscriptions.trialing} em teste grátis`}
+          detail={`${subscriptions.active} pagas/concedidas (${subscriptions.lifetime} vitalícia(s)) · ${subscriptions.trialing} em teste grátis`}
         />
       </section>
 
@@ -80,13 +80,13 @@ export default async function AdminDashboardPage() {
           label="Receita total"
           value={formatCurrency(revenue.paid_total)}
           icon={TrendingUp}
-          detail={`Manual nos 30 dias: ${formatCurrency(revenue.manual_30d)}`}
+          detail={`30 dias: EvoPay ${formatCurrency(revenue.evopay_30d)} · manual ${formatCurrency(revenue.manual_30d)} · estornado (total) ${formatCurrency(revenue.refunded_total)}`}
         />
         <MetricCard
           label="Recorrente estimada (mensal)"
           value={formatCurrency(dashboard.mrr_estimate)}
           icon={Activity}
-          detail="Estimativa: assinaturas pagas ativas, preço ÷ duração × 30"
+          detail="Estimativa: assinaturas pagas ativas com prazo, preço ÷ duração × 30 (vitalícias e testes não entram)"
         />
         <MetricCard
           label="Pagamentos pendentes"

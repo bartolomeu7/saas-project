@@ -3,8 +3,9 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { AdminActionDialog } from "@/components/admin/admin-action-dialog";
 import { CompanyStatusBadge, PresenceBadge, UserRoleBadge, UserStatusBadge } from "@/components/admin/admin-badges";
-import { AuditCard, DetailRow, PaymentsCard, SubscriptionCard } from "@/components/admin/admin-detail-parts";
+import { AccessHistoryCard, AuditCard, DetailRow, PaymentsCard, SubscriptionCard } from "@/components/admin/admin-detail-parts";
 import { CompanyAccessActions } from "@/components/admin/company-access-actions";
+import { AddCompanyMemberButton, MemberRowActions, TransferOwnershipButton } from "@/components/admin/company-team-actions";
 import { PageHeader } from "@/components/app/page-header";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -129,6 +130,7 @@ export default async function AdminCompanyDetailPage({ params }: { params: Promi
             hasSubscription={Boolean(subscription)}
             subscriptionStatus={subscription?.status ?? null}
             accessActive={subscription?.access_active ?? false}
+            isLifetime={subscription?.lifetime ?? false}
             isSuperAdmin={isSuper}
             maxFreeDays={maxFreeDays}
           />
@@ -136,9 +138,22 @@ export default async function AdminCompanyDetailPage({ params }: { params: Promi
       />
 
       <Card className="overflow-hidden">
-        <CardHeader>
-          <CardTitle className="text-base">Equipe</CardTitle>
-          <CardDescription>Membros da empresa e seus papéis.</CardDescription>
+        <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
+          <div className="space-y-1.5">
+            <CardTitle className="text-base">Equipe</CardTitle>
+            <CardDescription>Membros da empresa e seus papéis. Cada pessoa pertence a uma única empresa.</CardDescription>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <AddCompanyMemberButton companyId={company.id} />
+            {isSuper && (
+              <TransferOwnershipButton
+                companyId={company.id}
+                candidates={members
+                  .filter((member) => member.company_role !== "owner" && member.user_status === "active")
+                  .map((member) => ({ userId: member.user_id, label: `${member.full_name ?? "Sem nome"} (${member.email ?? "sem e-mail"})` }))}
+              />
+            )}
+          </div>
         </CardHeader>
         <Table>
           <TableHeader>
@@ -149,6 +164,7 @@ export default async function AdminCompanyDetailPage({ params }: { params: Promi
               <TableHead>Status</TableHead>
               <TableHead>Presença</TableHead>
               <TableHead>Entrou em</TableHead>
+              <TableHead>Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -171,6 +187,14 @@ export default async function AdminCompanyDetailPage({ params }: { params: Promi
                   <PresenceBadge presence={member.presence} />
                 </TableCell>
                 <TableCell className="whitespace-nowrap text-muted-foreground">{formatDate(member.joined_at)}</TableCell>
+                <TableCell>
+                  <MemberRowActions
+                    companyId={company.id}
+                    userId={member.user_id}
+                    displayName={member.full_name ?? member.email ?? "colaborador"}
+                    companyRole={member.company_role}
+                  />
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -178,6 +202,7 @@ export default async function AdminCompanyDetailPage({ params }: { params: Promi
       </Card>
 
       <PaymentsCard payments={detail.payments} />
+      <AccessHistoryCard entries={detail.audit} />
       <AuditCard entries={detail.audit} title="Histórico administrativo da empresa" />
     </div>
   );

@@ -6,6 +6,7 @@ import { BreakdownBars } from "@/components/admin/admin-charts";
 import { EmptyState } from "@/components/app/empty-state";
 import { MetricCard } from "@/components/app/metric-card";
 import { PageHeader } from "@/components/app/page-header";
+import { ReconcileButton } from "./reconcile-button";
 import { Pagination } from "@/components/app/pagination";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -84,6 +85,7 @@ export default async function AdminPaymentsPage({
         eyebrow="Financeiro"
         title="Pagamentos"
         description="Pagamentos de assinatura recebidos pela EvoPay e registrados manualmente."
+        actions={<ReconcileButton />}
       />
 
       <section aria-label="Resumo do período" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">

@@ -5,8 +5,8 @@ import type { SubscriptionStatus } from "@/types/billing";
 
 /**
  * Plano + situação do acesso numa célula de tabela. `accessActive` vem do
- * banco (status trialing|active E expires_at no futuro — mesma regra do guard
- * do app); "Expirado" aparece quando o status guardado ainda diz ativo mas a
+ * banco (status trialing|active E (vitalício OU expires_at no futuro) — mesma regra
+ * do guard do app; vitalício = acesso ativo e sem vencimento); "Expirado" aparece quando o status guardado ainda diz ativo mas a
  * data já passou, porque nenhuma rotina grava `expired` sozinha.
  */
 export function AdminSubscriptionCell({
@@ -25,12 +25,14 @@ export function AdminSubscriptionCell({
   }
 
   const lapsed = !accessActive && (status === "trialing" || status === "active");
+  const lifetime = accessActive && !expiresAt;
 
   return (
     <div className="flex flex-col gap-1">
       <span className="font-medium text-foreground">{planName ?? "—"}</span>
       <div className="flex flex-wrap items-center gap-1.5">
         {lapsed ? <Badge variant="danger">Acesso expirado</Badge> : <SubscriptionStatusBadge status={status} />}
+        {lifetime && <Badge variant="secondary">Vitalício</Badge>}
         {expiresAt && (
           <span className="text-xs text-muted-foreground">
             {accessActive ? "até" : "venceu em"} {formatDate(expiresAt)}
