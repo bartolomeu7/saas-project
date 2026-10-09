@@ -4,6 +4,7 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { createClerkSupabaseClient } from "@/lib/supabase/clerk-client";
 import { getLegalDocumentHash, getLegalDocument } from "@/lib/legal/documents";
+import { evaluateLegalIntegrity } from "@/lib/legal/integrity";
 
 /**
  * Acesso ao consentimento legal (somente servidor). Toda decisão é do banco: as RPCs
@@ -73,13 +74,11 @@ export async function getPublishedLegalVersions(): Promise<PublishedLegalVersion
   const privacy = data.find((row) => row.document_type === "PRIVACY_POLICY");
   if (!terms || !privacy) return null;
 
-  const codeTerms = getLegalDocument("TERMS_OF_USE").version;
-  const codePrivacy = getLegalDocument("PRIVACY_POLICY").version;
   const integrity =
-    terms.version === codeTerms &&
-    privacy.version === codePrivacy &&
-    terms.content_hash === getLegalDocumentHash("TERMS_OF_USE") &&
-    privacy.content_hash === getLegalDocumentHash("PRIVACY_POLICY")
+    evaluateLegalIntegrity(data, {
+      terms: { version: getLegalDocument("TERMS_OF_USE").version, hash: getLegalDocumentHash("TERMS_OF_USE") },
+      privacy: { version: getLegalDocument("PRIVACY_POLICY").version, hash: getLegalDocumentHash("PRIVACY_POLICY") },
+    }) === "OK"
       ? "OK"
       : "MISMATCH";
 
