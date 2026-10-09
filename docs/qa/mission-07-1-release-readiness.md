@@ -6,7 +6,7 @@ Data: 2026-10-09 · Branch: `fix/mission-07-hardening` (publicada em `origin`, *
 
 **CORREÇÕES VALIDADAS COM RESSALVAS**
 
-O que ficou provado nesta etapa: compatibilidade entre código antigo e banco novo, rollback exato, contrato EvoPay conforme a documentação oficial, build do Preview na Vercel e regressão do banco. O que **não** pôde ser provado e continua marcado: concorrência real (sem a service-role key de TEST), EvoPay real (sem sandbox), login/Admin/T10 reais (sem sessão e sem conector Clerk), runtime do Preview (sem variáveis de TEST e protegido por SSO da Vercel), e todos os dados jurídicos. Nada disso foi dado como aprovado.
+O que ficou provado nesta etapa: compatibilidade entre código antigo e banco novo, rollback exato, contrato EvoPay conforme a documentação oficial, CI em Node 22 no GitHub Actions, build do Preview na Vercel e regressão do banco. O que **não** pôde ser provado e continua marcado: concorrência real (sem a service-role key de TEST), EvoPay real (sem sandbox), login/Admin/T10 reais (sem sessão e sem conector Clerk), runtime do Preview (sem variáveis de TEST e protegido por SSO da Vercel), e todos os dados jurídicos. Nada disso foi dado como aprovado.
 
 ## 1. Migrations: revisão e compatibilidade
 
@@ -71,7 +71,7 @@ Testes: `tests/unit/evopay-contract.test.mjs` (7 casos: exemplo oficial, status,
 | ID | Item | Resultado |
 |---|---|---|
 | C1 | Workflow usa Node 22 e executa lint, typecheck, test:unit e build | **Confirmado no arquivo** (`.nvmrc` = 22; passos na ordem). Localmente (Node 24): lint 0 erros, typecheck limpo, 71 testes unitários (70 pass, 1 skip), build OK, build sem credenciais OK. |
-| C2 | Execução no GitHub Actions | ver seção "Execução do CI" abaixo |
+| C2 | Execução no GitHub Actions | **PASS**: run `37903492468` (push em `fix/mission-07-hardening`, commit `6fff524`), runner Ubuntu com **Node v22.23.3** (via `.nvmrc`): `npm ci`, lint, typecheck, `test:unit` (71 testes, 70 pass, 1 skip), build — todos `success`. Avisos: o build lista aviso de API Node no Edge Runtime (middleware, preexistente) e o GitHub avisa que as actions v4 rodam forçadas em Node 24 (não afeta o Node do projeto). |
 | C3 | Preview na Vercel compila (antes falhava sem env) | **PASS**: deployment `Preview` da branch concluído com sucesso (status do commit: "Deployment has completed"). |
 | C4 | Banco de destino do Preview | **Não validado.** A variável compartilhada `NEXT_PUBLIC_SUPABASE_URL` tem alvo preview+production (valor de Production). Como o Preview desta branch **não tem** chave anon, Clerk nem service role, ele não consegue falar com banco nenhum: nenhum teste autenticado foi (nem deve ser) executado nele. |
 | C5 | Runtime do Preview | O deployment está atrás da autenticação da Vercel (SSO, 302 para `vercel.com/sso-api`); **não exercitado**. |
@@ -98,6 +98,7 @@ Inventário refeito no repositório (e-mails, CNPJ, razão social, DPO): nada no
 | M5 | local | 71 testes unitários | PASS (1 skip preexistente) | `npm run test:unit` |
 | M6 | local | lint / typecheck / build / build sem credenciais | PASS | 0 erros (11 avisos preexistentes) |
 | M7 | Vercel | build do Preview da branch | PASS | status do commit |
+| M7b | GitHub Actions | CI em Node 22.23.3 (lint, typecheck, unit, build) | PASS | run 37903492468 |
 | M8 | Vercel | runtime / banco do Preview | NOT VERIFIED | SSO; env incompleto |
 | M9 | TEST | concorrência real | BLOCKED | chave de TEST ausente |
 | M10 | — | EvoPay real | NOT VERIFIED | sem sandbox |
@@ -118,7 +119,7 @@ Inventário refeito no repositório (e-mails, CNPJ, razão social, DPO): nada no
 ## 9. Para fechar o que falta (ordem sugerida, tudo com autorização do dono)
 
 1. Colocar a service-role key de **TEST** em `.env.local` e rodar `npm run test:integration:billing`.
-2. Abrir o PR para a `main` (ou usar `workflow_dispatch` depois do merge) e conferir o CI em Node 22.
+2. (CI em Node 22 já provado no push da branch.) Abrir o PR para a `main` quando o dono decidir revisar; nada foi mergeado.
 3. Criar as variáveis de Preview do `docs/ci-and-environments.md` com credenciais de TEST/Clerk Development, separar `NEXT_PUBLIC_SUPABASE_URL`, e só então executar `docs/qa/manual-auth-t10-checklist.md`.
 4. Autorizar a aplicação das duas migrations em Production, depois o deploy do código; smoke e T10 manual; uma cobrança de valor mínimo para fechar o contrato EvoPay.
 5. Fornecer os dados da empresa e passar os documentos pela revisão jurídica.

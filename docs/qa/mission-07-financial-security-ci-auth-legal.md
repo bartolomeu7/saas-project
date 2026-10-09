@@ -2,7 +2,7 @@
 
 Data: 2026-10-09 · Branch: `fix/mission-07-hardening` (base `4a946fa`) · Ambiente de correção e teste: **TEST** (`zlmxbqlpjstmllrvafmy`). Production (`fpbcruinppjbwtinzrdg`) só inspecionada, sem escrita.
 
-> **Atualização (Missão 07.1):** compatibilidade, rollback, contrato EvoPay e Preview foram tratados em `docs/qa/mission-07-1-release-readiness.md`. As linhas R13, R15 e R16 abaixo foram reavaliadas lá (R15: build do Preview PASS, runtime NOT VERIFIED; R13 e R17 seguem BLOCKED).
+> **Atualização (Missão 07.1):** compatibilidade, rollback, contrato EvoPay e Preview foram tratados em `docs/qa/mission-07-1-release-readiness.md`. As linhas R13, R15 e R16 abaixo foram reavaliadas lá (R16: CI em Node 22 PASS, run 37903492468; R15: build do Preview PASS, runtime NOT VERIFIED; R13 e R17 seguem BLOCKED).
 
 ## Veredito
 

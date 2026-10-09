@@ -7,7 +7,7 @@ Dispara em pull request para `main` e push em `main`. Passos: `actions/setup-nod
 Observações:
 
 - `package.json` não recebeu `engines`, de propósito: isso poderia mudar o runtime da Vercel.
-- `test:unit` é `node --no-warnings --experimental-strip-types --test "tests/unit/*.test.mjs"` (Node 22 suporta a flag; local foi validado em Node 24). **A execução no GitHub Actions com Node 22 não foi verificada** (sem push/CI nesta sessão).
+- `test:unit` é `node --no-warnings --experimental-strip-types --test "tests/unit/*.test.mjs"` (Node 22 suporta a flag; local foi validado em Node 24). **Verificado na Missão 07.1:** run `37903492468` no GitHub Actions, Node v22.23.3, todos os passos `success` (71 testes, 70 pass, 1 skip).
 - Testes de integração (`npm run test:integration:billing`) e as baterias `tests/sql/*.sql` rodam **manualmente contra TEST**, não no CI.
 - Lint tem 11 *warnings* herdados (`react-hooks/set-state-in-effect` etc.) e 0 erros.
 
