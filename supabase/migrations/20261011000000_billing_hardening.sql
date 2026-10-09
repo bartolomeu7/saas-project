@@ -14,8 +14,14 @@
 --      * usa platform_apply_access() (único escritor de assinatura + entitlements, já testado).
 -- 3. platform_diagnostics: + estornos com acesso ainda ativo + eventos de pagamento não processados.
 --
--- ROLLBACK (documentado em docs/billing-hardening.md): drop das duas funções novas, recriar a confirm_subscription_payment
--- de 6 argumentos (migration 019) e `drop index subscription_payments_one_open_evopay_charge_idx`.
+-- COMPATIBILIDADE DE VERSÕES (provada em TEST, ver docs/qa/mission-07-1-release-readiness.md):
+--   * código ANTIGO + banco NOVO: a confirmação de 6 argumentos continua funcionando (o valor vem do payload) e
+--     continua recusando valor divergente/ausente; a criação de cobrança antiga (INSERT direto) passa a falhar de
+--     forma segura se já houver cobrança aberta da mesma empresa+plano (índice único) — nunca duplica.
+--   * código NOVO + banco ANTIGO: create-payment falha (claim inexistente) e a confirmação falha (assinatura nova
+--     inexistente): fecha sem cobrar. Por isso a ORDEM SEGURA é: migrations em Production -> deploy do código.
+--
+-- ROLLBACK: supabase/rollback/20261011000000_billing_hardening.down.sql (testado em TEST, em transação).
 -- =============================================================================
 
 -- ------------------------------------------------------------------ 0. saneamento
@@ -154,7 +160,16 @@ declare
   v_base timestamptz;
   v_new_expires timestamptz;
   v_sub_id uuid;
+  v_amount numeric := p_provider_amount;
 begin
+  -- COMPATIBILIDADE com o código publicado antes desta migration, que chama a função com 6 argumentos nomeados
+  -- (sem p_provider_amount) mas já envia no payload a resposta do GET /pix?id= do provedor. O PostgREST resolve a
+  -- chamada antiga para esta função (o 7º argumento tem default). O valor só é lido do payload quando for um
+  -- JSON number (nunca texto), e continua sujeito às mesmas regras abaixo: ausente/divergente => rejeita.
+  if v_amount is null and jsonb_typeof(p_event_payload -> 'amount') = 'number' then
+    v_amount := (p_event_payload ->> 'amount')::numeric;
+  end if;
+
   select * into v_payment from public.subscription_payments where id = p_payment_id for update;
 
   if not found then
@@ -217,11 +232,11 @@ begin
       return query select false, v_payment.status, false, false, 'NO_PROVIDER_CHARGE'::text;
       return;
     end if;
-    if p_provider_amount is null then
+    if v_amount is null then
       return query select false, v_payment.status, false, false, 'AMOUNT_MISSING'::text;
       return;
     end if;
-    if round(p_provider_amount, 2) <> round(v_payment.amount, 2) then
+    if round(v_amount, 2) <> round(v_payment.amount, 2) then
       return query select false, v_payment.status, false, false, 'AMOUNT_MISMATCH'::text;
       return;
     end if;
