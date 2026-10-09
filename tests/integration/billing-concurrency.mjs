@@ -125,6 +125,85 @@ try {
     check("S5 12 confirmações com valor errado/ausente: todas rejeitadas", calls.every((c) => c.json?.[0]?.ok === false && ["AMOUNT_MISMATCH", "AMOUNT_MISSING"].includes(c.json?.[0]?.rejection)), "");
     check("S5 nenhuma assinatura criada e pagamento segue pending", sub.length === 0 && pay?.status === "pending", `subs=${sub.length} status=${pay?.status}`);
   }
+
+  // ---------------------------------------------------------------- S6: intenções DISTINTAS simultâneas continuam permitidas
+  {
+    const companyA = await newCompany("S6a");
+    const companyB = await newCompany("S6b");
+    const [a1, a2, b1] = await Promise.all([claim(companyA, monthly), claim(companyA, yearly), claim(companyB, monthly)]);
+    const rowsOk = [a1, a2, b1].every((c) => c.json?.[0]?.created === true);
+    const ids = new Set([a1, a2, b1].map((c) => c.json?.[0]?.payment_id));
+    const pendA = (await api("GET", `subscription_payments?company_id=eq.${companyA}&status=eq.pending&select=id,plan_id`)).json ?? [];
+    created.payments.push(...ids);
+    check("S6 mesma empresa + planos diferentes + outra empresa: todas criaram", rowsOk && ids.size === 3, `ids=${ids.size}`);
+    check("S6 a empresa A tem 2 pendentes (um por plano)", pendA.length === 2, `pendentes=${pendA.length}`);
+  }
+
+  // ---------------------------------------------------------------- S7: reserva abandonada (timeout) + tentativas simultâneas
+  {
+    const company = await newCompany("S7");
+    const first = (await claim(company)).json[0];
+    created.payments.push(first.payment_id);
+    // reserva sem cobrança no provedor, "criada há 10 minutos" (abandonada)
+    await api("PATCH", `subscription_payments?id=eq.${first.payment_id}`, { created_at: new Date(Date.now() - 10 * 60 * 1000).toISOString() });
+    const calls = await Promise.all(Array.from({ length: 10 }, () => claim(company)));
+    const rows = calls.map((c) => c.json?.[0]).filter(Boolean);
+    const createdRows = rows.filter((r) => r.created);
+    const open = (await api("GET", `subscription_payments?company_id=eq.${company}&status=eq.pending&select=id`)).json ?? [];
+    const old = (await api("GET", `subscription_payments?id=eq.${first.payment_id}&select=status`)).json?.[0];
+    created.payments.push(...open.map((p) => p.id));
+    check("S7 reserva abandonada vira 'failed'", old?.status === "failed", `status=${old?.status}`);
+    check("S7 10 tentativas simultâneas: exatamente 1 nova reserva", createdRows.length === 1, `created=${createdRows.length}`);
+    check("S7 só 1 cobrança aberta no banco", open.length === 1, `pending=${open.length}`);
+    check("S7 as demais devolvem a mesma reserva (sem cobrança ainda)", rows.filter((r) => !r.created).every((r) => r.payment_id === createdRows[0]?.payment_id && r.has_charge === false), "");
+  }
+
+  // ---------------------------------------------------------------- S8: cobrança já criada no provedor é reaproveitada por todos
+  {
+    const company = await newCompany("S8");
+    const first = (await claim(company)).json[0];
+    created.payments.push(first.payment_id);
+    await api("PATCH", `subscription_payments?id=eq.${first.payment_id}`, { provider_transaction_id: `tx_conc_${Date.now()}_d` });
+    const calls = await Promise.all(Array.from({ length: 10 }, () => claim(company)));
+    const rows = calls.map((c) => c.json?.[0]).filter(Boolean);
+    check("S8 10 tentativas com cobrança aberta: nenhuma cria outra", rows.length === 10 && rows.every((r) => r.created === false && r.has_charge === true && r.payment_id === first.payment_id), "");
+  }
+
+  // ---------------------------------------------------------------- S9: claim e confirmação disputando a mesma empresa
+  {
+    const company = await newCompany("S9");
+    const first = (await claim(company)).json[0];
+    created.payments.push(first.payment_id);
+    await api("PATCH", `subscription_payments?id=eq.${first.payment_id}`, { provider_transaction_id: `tx_conc_${Date.now()}_e` });
+    const mixed = await Promise.all([
+      ...Array.from({ length: 5 }, () => claim(company)),
+      ...Array.from({ length: 5 }, (_, i) => confirm(first.payment_id, `conc:S9:${i}`)),
+    ]);
+    const sub = (await api("GET", `subscriptions?company_id=eq.${company}&select=expires_at`)).json ?? [];
+    const pays = (await api("GET", `subscription_payments?company_id=eq.${company}&select=id,status`)).json ?? [];
+    created.payments.push(...pays.map((p) => p.id));
+    const paid = pays.filter((p) => p.status === "paid").length;
+    check("S9 nenhuma chamada falhou (sem deadlock/erro 5xx)", mixed.every((c) => c.status < 500), mixed.map((c) => c.status).join(","));
+    check("S9 exatamente 1 pagamento pago e 1 assinatura", paid === 1 && sub.length === 1, `paid=${paid} subs=${sub.length}`);
+    check("S9 acesso concedido UMA vez (~31 dias)", sub[0] && days(sub[0].expires_at) > 30.5 && days(sub[0].expires_at) < 31.5, `dias=${sub[0] ? days(sub[0].expires_at).toFixed(2) : "-"}`);
+  }
+
+  // ---------------------------------------------------------------- S10: estorno concorrente com reentregas de "paid"
+  {
+    const company = await newCompany("S10");
+    const p = (await claim(company)).json[0].payment_id;
+    created.payments.push(p);
+    await api("PATCH", `subscription_payments?id=eq.${p}`, { provider_transaction_id: `tx_conc_${Date.now()}_f` });
+    await confirm(p, "conc:S10:paid");
+    const calls = await Promise.all([
+      ...Array.from({ length: 5 }, (_, i) => confirm(p, `conc:S10:refund:${i}`, Number(monthly.price), "refunded")),
+      ...Array.from({ length: 5 }, (_, i) => confirm(p, `conc:S10:again:${i}`)),
+    ]);
+    const pay = (await api("GET", `subscription_payments?id=eq.${p}&select=status`)).json?.[0];
+    const sub = (await api("GET", `subscriptions?company_id=eq.${company}&select=expires_at`)).json?.[0];
+    check("S10 nenhuma chamada deu erro de servidor", calls.every((c) => c.status < 500), calls.map((c) => c.status).join(","));
+    check("S10 termina 'refunded' (terminal) sem conceder acesso em dobro", pay?.status === "refunded" && sub && days(sub.expires_at) < 31.5, `status=${pay?.status} dias=${sub ? days(sub.expires_at).toFixed(2) : "-"}`);
+  }
 } finally {
   // limpeza: só o que este teste criou (filtra pelos ids)
   for (const c of created.companies) {

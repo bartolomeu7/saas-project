@@ -6,6 +6,9 @@ on:
     branches: [main]
   push:
     branches: [main]
+  # Execução manual (gh workflow run "Phase 3 CI" --ref <branch>). O GitHub só oferece o disparo manual depois que
+  # este arquivo existe na branch padrão; antes disso, o CI desta branch roda ao abrir um PR para a main.
+  workflow_dispatch:
 
 jobs:
   verify:
