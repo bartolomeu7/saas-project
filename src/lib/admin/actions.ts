@@ -500,7 +500,7 @@ export async function reverifyPaymentAction(paymentId: string): Promise<ActionRe
 
   let result: Awaited<ReturnType<typeof confirmPaymentFromProvider>>;
   try {
-    result = await confirmPaymentFromProvider(parsed.data);
+    result = await confirmPaymentFromProvider(parsed.data, { recheckPaid: true });
   } catch (error) {
     // Ex.: service role/EvoPay não configurados neste ambiente. Nunca expõe o erro cru.
     console.error("[admin] reverificação falhou:", error instanceof Error ? error.message : "erro desconhecido");

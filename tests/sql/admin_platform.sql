@@ -223,7 +223,7 @@ select pg_temp.chk('tools', 'busca curta recusada', $q$select count(*)::text fro
 select pg_temp.chk('tools', 'busca longa recusada', $q$select count(*)::text from public.platform_global_search(repeat('a', 101))$q$, 'ERR=Digite de 2 a 100');
 select pg_temp.chk('tools', 'busca com curinga é literal', $q$select count(*)::text from public.platform_global_search('%%')$q$, 'OK=0');
 select pg_temp.chk('tools', 'busca com aspas/SQL é inofensiva', $q$select count(*)::text from public.platform_global_search($s$'; drop table profiles; --$s$)$q$, 'OK=0');
-select pg_temp.chk('tools', 'diagnósticos', $q$select count(*)::text from public.platform_diagnostics()$q$, 'OK=11');
+select pg_temp.chk('tools', 'diagnósticos', $q$select count(*)::text from public.platform_diagnostics()$q$, 'OK=13');
 select pg_temp.chk('tools', 'sincroniza entitlements', $q$select public.admin_sync_company_entitlements(pg_temp.co('t10'))::text$q$, 'OK');
 select pg_temp.chk('tools', 'sincronizar sem assinatura', $q$select public.admin_sync_company_entitlements(pg_temp.co('t15'))::text$q$, 'ERR=não possui assinatura');
 select pg_temp.chk('tools', 'marca vencidas como expiradas (idempotente)', $q$select public.admin_mark_expired_subscriptions()::text$q$, 'OK');

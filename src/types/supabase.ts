@@ -3222,6 +3222,21 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      claim_subscription_payment: {
+        Args: {
+          p_amount: number
+          p_company_id: string
+          p_currency?: string
+          p_plan_id: string
+          p_stale_seconds?: number
+        }
+        Returns: {
+          created: boolean
+          has_charge: boolean
+          payment_id: string
+          payment_status: Database["public"]["Enums"]["subscription_payment_status"]
+        }[]
+      }
       close_cash_register: {
         Args: {
           p_cash_register_id: string
@@ -3290,6 +3305,7 @@ export type Database = {
           p_event_payload: Json
           p_event_type: string
           p_payment_id: string
+          p_provider_amount?: number
           p_provider_status: Database["public"]["Enums"]["subscription_payment_status"]
         }
         Returns: {
@@ -3297,6 +3313,7 @@ export type Database = {
           new_status: Database["public"]["Enums"]["subscription_payment_status"]
           not_found: boolean
           ok: boolean
+          rejection: string
         }[]
       }
       create_appointment: {
