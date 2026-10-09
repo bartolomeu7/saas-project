@@ -7,6 +7,11 @@ import { getCurrentCompany } from "@/lib/companies/queries";
 import { AppShell } from "@/components/app/app-shell";
 import { requireLegalConsent } from "@/lib/legal/consent";
 
+// Toda a área autenticada depende da sessão: nunca é pré-renderizada no build. Sem isto o Next tentava gerar
+// /app/* estaticamente e, num ambiente sem credenciais (Preview), o construtor do cliente Supabase lançava
+// "supabaseKey is required" no build. Em runtime, credencial ausente continua falhando alto (não é mascarada).
+export const dynamic = "force-dynamic";
+
 /**
  * Layout da área autenticada.
  *

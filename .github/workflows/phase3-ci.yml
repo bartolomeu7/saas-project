@@ -1,14 +1,17 @@
 name: Phase 3 CI
 
+# Nome do workflow e do job (`verify`) preservados; agora também roda na main e executa lint e testes unitários.
 on:
   pull_request:
+    branches: [main]
+  push:
     branches: [main]
 
 jobs:
   verify:
     runs-on: ubuntu-latest
-    # Valores FICTÍCIOS e não secretos: servem só para o build compilar e
-    # prerenderizar sem credenciais reais (o CI não precisa de nenhuma).
+    # Valores FICTÍCIOS e não secretos. O build não exige credenciais (as rotas autenticadas são dinâmicas),
+    # mas o Clerk valida o formato da chave publicável ao subir; nada aqui fala com serviço real.
     env:
       NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
@@ -18,8 +21,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # .nvmrc = 22 (LTS): suporta `--experimental-strip-types`, usado pelos testes unitários.
+          node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+      - run: npm run lint
       - run: npm run typecheck
+      - run: npm run test:unit
       - run: npm run build
