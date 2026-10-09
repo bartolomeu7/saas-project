@@ -25,14 +25,21 @@ import {
   Gauge,
   Gift,
   Banknote,
+  Building2,
+  KeyRound,
+  Globe,
+  QrCode,
+  FileText,
+  CalendarCheck,
+  ShieldCheck,
 } from "lucide-react";
 
 export const NAV_LINKS = [
-  { label: "Início", href: "#topo" },
-  { label: "Produto", href: "#produto" },
   { label: "Recursos", href: "#recursos" },
+  { label: "Produto", href: "#produto" },
   { label: "Para quem é", href: "#segmentos" },
   { label: "Preços", href: "#precos" },
+  { label: "Perguntas", href: "#faq" },
 ] as const;
 
 export interface Segment {
@@ -83,12 +90,26 @@ export const TRUST_ITEMS: TrustItem[] = [
 
 export interface Problem {
   title: string;
+  description: string;
+  icon: LucideIcon;
 }
 
 export const PROBLEMS: Problem[] = [
-  { title: "Informações espalhadas" },
-  { title: "Dificuldade para acompanhar o negócio" },
-  { title: "Falta de visão dos resultados" },
+  {
+    title: "Informações espalhadas",
+    description: "Clientes numa planilha, vendas num caderno, caixa na cabeça. Cada consulta vira uma busca.",
+    icon: FolderKanban,
+  },
+  {
+    title: "Dificuldade para acompanhar o negócio",
+    description: "Sem registro único, fica difícil saber o que foi vendido, o que está em estoque e quem deve.",
+    icon: Warehouse,
+  },
+  {
+    title: "Falta de visão dos resultados",
+    description: "Sem números organizados, as decisões do dia a dia dependem de palpite em vez de dados.",
+    icon: LineChart,
+  },
 ];
 
 export const SOLUTION_ITEMS = ["Clientes", "Produtos", "Serviços", "Vendas", "Fidelidade", "Caixa"];
@@ -120,12 +141,21 @@ export const DEMO_SCREENS: DemoScreen[] = [
 export interface Step {
   number: string;
   title: string;
+  description: string;
 }
 
 export const HOW_IT_WORKS_STEPS: Step[] = [
-  { number: "01", title: "Crie sua conta" },
-  { number: "02", title: "Configure sua empresa" },
-  { number: "03", title: "Comece a administrar" },
+  { number: "01", title: "Crie sua conta", description: "Aceite os termos, cadastre-se e entre no seu ambiente." },
+  {
+    number: "02",
+    title: "Configure sua empresa",
+    description: "Informe os dados da empresa e cadastre clientes, produtos e serviços.",
+  },
+  {
+    number: "03",
+    title: "Comece a administrar",
+    description: "Registre vendas, acompanhe o caixa e organize a rotina em um só lugar.",
+  },
 ];
 
 export interface Benefit {
@@ -322,3 +352,153 @@ export const COMPARISON_ROWS: ComparisonRow[] = [
     note: "Quantidade de usuários adicionais além do proprietário.",
   },
 ];
+
+/**
+ * Credibilidade REAL: só fatos verificáveis no produto (nada de números, clientes, logos ou
+ * depoimentos inventados). Cada item corresponde a algo que existe no código/arquitetura hoje.
+ */
+export interface CredibilityItem {
+  title: string;
+  detail: string;
+  icon: LucideIcon;
+}
+
+export const CREDIBILITY_ITEMS: CredibilityItem[] = [
+  { title: "Um ambiente por empresa", detail: "Os dados de cada empresa ficam separados das demais.", icon: Building2 },
+  { title: "Login por provedor especializado", detail: "A autenticação é do Clerk; a Prime Ges não guarda a sua senha.", icon: KeyRound },
+  { title: "100% online", detail: "Use no navegador, sem instalar nada.", icon: Globe },
+  { title: "Pagamento por Pix", detail: "Gere o Pix na plataforma e acompanhe a liberação do acesso.", icon: QrCode },
+  { title: "Termos e privacidade públicos", detail: "Documentos versionados, com vigência e registro do seu aceite.", icon: FileText },
+];
+
+/** Solução em "bento": agrupa os módulos reais de FEATURES (todos disponíveis hoje). */
+export interface BentoCell {
+  id: string;
+  title: string;
+  description: string;
+  icon: LucideIcon;
+  /** Nomes de FEATURES exibidos como etiquetas. */
+  modules: string[];
+  size: "lg" | "md";
+}
+
+export const BENTO_CELLS: BentoCell[] = [
+  {
+    id: "vendas-caixa",
+    title: "Vendas e caixa",
+    description:
+      "Registre vendas com itens, pagamentos e descontos, abra e feche o caixa e confira o saldo no fechamento.",
+    icon: ShoppingCart,
+    modules: ["Vendas", "Caixa"],
+    size: "lg",
+  },
+  {
+    id: "clientes",
+    title: "Clientes e fidelidade",
+    description: "Cadastre clientes com documentos, acompanhe o histórico e configure níveis, campanhas e resgate de pontos.",
+    icon: Users,
+    modules: ["Clientes", "Fidelidade"],
+    size: "md",
+  },
+  {
+    id: "catalogo",
+    title: "Produtos, serviços e estoque",
+    description: "Organize catálogo, categorias e preços e acompanhe o saldo, com alertas de estoque baixo.",
+    icon: Package,
+    modules: ["Produtos", "Serviços", "Estoque"],
+    size: "md",
+  },
+  {
+    id: "financeiro",
+    title: "Financeiro",
+    description: "Contas a pagar e a receber, receitas e despesas e o resultado do mês, sem planilha paralela.",
+    icon: LineChart,
+    modules: ["Financeiro"],
+    size: "lg",
+  },
+];
+
+/** Diferenciais REAIS (cada um descreve comportamento existente do produto). */
+export const DIFFERENTIALS: Benefit[] = [
+  {
+    title: "Sem renovação automática",
+    description: "Você paga por período e renova quando quiser. Não há cobrança recorrente automática.",
+    icon: CalendarCheck,
+  },
+  {
+    title: "Pensado para pequenos negócios",
+    description: "Vendas, caixa, clientes e estoque do dia a dia, sem a complexidade de um sistema corporativo.",
+    icon: Gauge,
+  },
+  {
+    title: "Cada empresa no seu ambiente",
+    description: "Dados separados por empresa e acesso das pessoas por função: proprietário, administrador ou funcionário.",
+    icon: ShieldCheck,
+  },
+  {
+    title: "Pix sem sair da plataforma",
+    description: "Gere o Pix, pague e veja o acesso liberado depois da confirmação do pagamento.",
+    icon: QrCode,
+  },
+];
+
+export interface FaqItem {
+  question: string;
+  answer: string;
+}
+
+/**
+ * Perguntas frequentes baseadas no funcionamento real. Números (teste, usuários) vêm dos planos
+ * (PRICING_PLANS), a fonte única; nenhuma política comercial é inventada aqui.
+ */
+export function buildFaq(plans: PricingPlan[]): FaqItem[] {
+  const trial = plans.find((plan) => plan.id === "FREE_TRIAL");
+  const paid = plans.find((plan) => plan.id === "MONTHLY");
+  const extraUsers = paid?.additionalUsersLimit ?? 0;
+  return [
+    {
+      question: "O que é o Prime Ges?",
+      answer:
+        "É uma plataforma online de gestão para pequenos negócios. Reúne clientes, produtos, serviços, vendas, fidelidade, caixa, estoque e financeiro em um único lugar.",
+    },
+    {
+      question: "Preciso instalar algum programa?",
+      answer: "Não. O Prime Ges funciona no navegador, no computador ou no celular.",
+    },
+    {
+      question: "Como funciona o teste grátis?",
+      answer: trial
+        ? "Ao criar a conta você tem " + trial.periodLabel + " de acesso gratuito para conhecer a plataforma. O teste não inclui suporte por e-mail nem usuários adicionais."
+        : "Ao criar a conta você pode conhecer a plataforma antes de assinar.",
+    },
+    {
+      question: "Como é feito o pagamento?",
+      answer:
+        "Os planos pagos são pagos por Pix, gerado dentro da plataforma. O acesso do período é liberado depois da confirmação do pagamento.",
+    },
+    {
+      question: "O que acontece quando o período do plano termina?",
+      answer:
+        "O acesso às funcionalidades é bloqueado até você contratar um novo período. Não há cobrança automática: a renovação depende de um novo pagamento.",
+    },
+    {
+      question: "Posso ter outras pessoas usando a minha empresa?",
+      answer:
+        "Sim. Os planos pagos incluem 1 proprietário e até " + extraUsers + " usuários adicionais. Cada pessoa tem uma função (administrador ou funcionário).",
+    },
+    {
+      question: "Os dados da minha empresa ficam separados dos de outras?",
+      answer:
+        "Sim. Cada empresa tem o seu ambiente, e as regras de acesso aos dados são aplicadas no banco de dados, não só na tela.",
+    },
+    {
+      question: "Há suporte?",
+      answer: "Os planos pagos incluem suporte por e-mail. O teste grátis não inclui suporte.",
+    },
+    {
+      question: "Onde leio os Termos de Uso e a Política de Privacidade?",
+      answer:
+        "Nas páginas Termos de Uso e Política de Privacidade, acessíveis pelo rodapé e pela tela de cadastro. Elas têm versão e data de vigência, e o seu aceite é registrado.",
+    },
+  ];
+}

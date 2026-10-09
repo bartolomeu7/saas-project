@@ -97,7 +97,7 @@ export function AdminSidebar({
                       <SidebarMenuButton
                         asChild
                         isActive={isActive}
-                        tooltip={item.soon ? `${item.label} — em breve` : item.label}
+                        tooltip={item.label}
                         className="text-sidebar-foreground/70 data-[active=true]:bg-primary/15 data-[active=true]:text-[hsl(207_100%_68%)]"
                       >
                         <Link
@@ -107,14 +107,6 @@ export function AdminSidebar({
                         >
                           <Icon strokeWidth={1.75} />
                           <span>{item.label}</span>
-                          {item.soon && (
-                            <Badge
-                              variant="muted"
-                              className="ml-auto px-1.5 py-0 text-[10px] font-medium group-data-[collapsible=icon]:hidden"
-                            >
-                              Em breve
-                            </Badge>
-                          )}
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>

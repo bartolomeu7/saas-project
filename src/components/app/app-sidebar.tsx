@@ -63,10 +63,11 @@ export function AppSidebar({
       </SidebarHeader>
 
       <SidebarContent className="gap-0 py-2">
+        <nav aria-label="Navegação principal" className="flex flex-col">
         {NAV_GROUPS.map((group, index) => (
           <SidebarGroup key={group.label ?? `group-${index}`} className="py-1.5">
             {group.label && (
-              <SidebarGroupLabel className="h-7 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/45">
+              <SidebarGroupLabel className="h-7 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/55">
                 {group.label}
               </SidebarGroupLabel>
             )}
@@ -85,7 +86,7 @@ export function AppSidebar({
                           disabled
                           aria-disabled="true"
                           tooltip={`${item.label} — em breve`}
-                          className="text-sidebar-foreground/40"
+                          className="text-sidebar-foreground/55"
                         >
                           <Icon strokeWidth={1.75} />
                           <span>{item.label}</span>
@@ -124,6 +125,7 @@ export function AppSidebar({
             </SidebarGroupContent>
           </SidebarGroup>
         ))}
+        </nav>
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border p-2">

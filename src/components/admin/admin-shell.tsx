@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { AdminHeader } from "@/components/admin/admin-header";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { PresenceHeartbeat } from "@/components/presence-heartbeat";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { UserRole } from "@/types/profile";
 
@@ -29,6 +30,7 @@ export function AdminShell({
 }) {
   return (
     <TooltipProvider delayDuration={200}>
+      <PresenceHeartbeat />
       <SidebarProvider defaultOpen={defaultOpen}>
         <AdminSidebar userName={userName} userEmail={userEmail} role={role} />
         <SidebarInset className="min-w-0 bg-background">
@@ -39,9 +41,10 @@ export function AdminShell({
             Pular para o conteúdo
           </a>
           <AdminHeader roleLabel={roleLabel} />
-          <main id="conteudo-principal" className="flex-1" tabIndex={-1}>
+          {/* SidebarInset já renderiza o <main> da página: o alvo do "pular para o conteúdo" é uma div (landmark main único). */}
+          <div id="conteudo-principal" className="flex-1" tabIndex={-1}>
             {children}
-          </main>
+          </div>
         </SidebarInset>
       </SidebarProvider>
     </TooltipProvider>

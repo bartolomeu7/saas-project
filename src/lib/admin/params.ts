@@ -26,3 +26,29 @@ export function parseEnum<T extends string>(
   const text = first(value);
   return allowed.find((option) => option === text);
 }
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function parseUuid(value: string | string[] | undefined): string | undefined {
+  const text = first(value);
+  return text && UUID_PATTERN.test(text) ? text : undefined;
+}
+
+/** `YYYY-MM-DD` válido (ou undefined). Mantido como texto para reaparecer no <input type="date">. */
+export function parseDateParam(value: string | string[] | undefined): string | undefined {
+  const text = first(value);
+  if (!text || !/^\d{4}-\d{2}-\d{2}$/.test(text)) return undefined;
+  return Number.isNaN(new Date(`${text}T00:00:00-03:00`).getTime()) ? undefined : text;
+}
+
+/** Início do dia (horário de Brasília) em ISO, para filtros `>=`. */
+export function startOfDayIso(date: string): string {
+  return new Date(`${date}T00:00:00-03:00`).toISOString();
+}
+
+/** Início do dia SEGUINTE (Brasília) em ISO, para filtros `<` que incluem o dia inteiro. */
+export function endOfDayExclusiveIso(date: string): string {
+  const next = new Date(`${date}T00:00:00-03:00`);
+  next.setUTCDate(next.getUTCDate() + 1);
+  return next.toISOString();
+}

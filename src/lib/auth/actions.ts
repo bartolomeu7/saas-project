@@ -9,4 +9,9 @@ export interface ActionResult {
   success?: string;
   /** Código opcional para a UI reagir a um caso específico. */
   code?: string;
+  /**
+   * Opcional: `name` do campo a que o `error` se refere. A UI mostra a mensagem
+   * junto do campo (aria-invalid/aria-describedby) em vez de um alerta geral.
+   */
+  field?: string;
 }

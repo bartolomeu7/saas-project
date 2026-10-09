@@ -4,7 +4,7 @@ import { siteConfig } from "@/config/site";
 
 interface FooterLink {
   label: string;
-  href?: string;
+  href: string;
 }
 
 interface FooterColumn {
@@ -13,35 +13,34 @@ interface FooterColumn {
 }
 
 /**
- * Links sem `href` (Contato, Termos, Privacidade) apontariam para páginas
- * que ainda não existem — aparecem como texto simples em vez de um link
- * quebrado, para não prometer uma página que não existe.
+ * Todos os links do rodapé têm destino real. Canal de contato e dados da empresa (razão social,
+ * CNPJ, endereço) só entram aqui quando forem confirmados: hoje estão pendentes e aparecem como
+ * [BLOCKED — DADO EMPRESARIAL NECESSÁRIO] nos documentos legais, não como texto inventado.
  */
 const COLUMNS: FooterColumn[] = [
   {
-    title: "Soluções",
+    title: "Produto",
     links: [
-      { label: "Produto", href: "#produto" },
-      { label: "Recursos", href: "#recursos" },
-      { label: "Preços", href: "#precos" },
-      { label: "Para quem é", href: "#segmentos" },
+      { label: "Recursos", href: "/#recursos" },
+      { label: "Produto", href: "/#produto" },
+      { label: "Para quem é", href: "/#segmentos" },
+      { label: "Preços", href: "/#precos" },
+      { label: "Perguntas frequentes", href: "/#faq" },
     ],
   },
   {
-    title: "Empresa",
+    title: "Conta",
     links: [
-      { label: "Início", href: "#topo" },
       { label: "Entrar", href: siteConfig.links.login },
       { label: "Criar conta", href: siteConfig.links.register },
     ],
   },
   {
-    title: "Suporte",
-    links: [{ label: "Contato" }],
-  },
-  {
     title: "Legal",
-    links: [{ label: "Termos" }, { label: "Privacidade" }],
+    links: [
+      { label: "Termos de Uso", href: "/termos-de-uso" },
+      { label: "Política de Privacidade", href: "/politica-de-privacidade" },
+    ],
   },
 ];
 
@@ -49,7 +48,7 @@ export function SiteFooter() {
   return (
     <footer className="border-t border-border">
       <div className="container flex flex-col gap-10 py-12">
-        <div className="grid grid-cols-2 gap-8 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-8 sm:grid-cols-4">
           <div className="col-span-2 flex flex-col gap-3 sm:col-span-1">
             <span className="inline-flex items-center gap-2 font-semibold tracking-tight text-foreground">
               <Logo iconSize={22} />
@@ -60,29 +59,21 @@ export function SiteFooter() {
           </div>
 
           {COLUMNS.map((column) => (
-            <div key={column.title} className="flex flex-col gap-3">
-              <p className="text-sm font-semibold text-foreground">
-                {column.title}
-              </p>
+            <nav key={column.title} aria-label={column.title} className="flex flex-col gap-3">
+              <p className="text-sm font-semibold text-foreground">{column.title}</p>
               <ul className="flex flex-col gap-2">
                 {column.links.map((link) => (
                   <li key={link.label}>
-                    {link.href ? (
-                      <Link
-                        href={link.href}
-                        className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-                      >
-                        {link.label}
-                      </Link>
-                    ) : (
-                      <span className="text-sm text-muted-foreground/50">
-                        {link.label}
-                      </span>
-                    )}
+                    <Link
+                      href={link.href}
+                      className="inline-block rounded text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      {link.label}
+                    </Link>
                   </li>
                 ))}
               </ul>
-            </div>
+            </nav>
           ))}
         </div>
 

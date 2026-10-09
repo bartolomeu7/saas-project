@@ -1,22 +1,41 @@
 /**
- * Tema mínimo dos componentes hospedados do Clerk (<SignIn/>/<SignUp/>)
- * para não destoarem do visual escuro do Prime Ges enquanto usamos a UI
- * pronta do Clerk (Fase 5B-APP — cutover funcional; substituir por
- * formulário próprio com hooks do Clerk é uma decisão de UI separada,
- * ainda em aberto, ver missão original "SHADCN/UI + Clerk").
+ * Tema dos componentes hospedados do Clerk (<SignIn/>/<SignUp/>) alinhado ao
+ * visual escuro do Prime Ges (tokens de globals.css, em hex porque o Clerk não
+ * interpreta a sintaxe `hsl(h s% l%)` com espaços). Usa os nomes atuais das
+ * variáveis (`colorForeground`, `colorInput`, ...): os antigos `colorText`,
+ * `colorInputBackground` etc. são deprecados e deixavam o texto escuro sobre
+ * o card escuro.
+ *
+ * O título/subtítulo do Clerk (`header`) fica oculto porque o AuthCard já
+ * mostra o <h1> e a descrição da tela — evita dois <h1> e texto repetido.
+ * O card do Clerk é "achatado" (sem borda/sombra/largura fixa) para viver
+ * dentro do Card do AuthCard sem estourar o container no mobile.
+ *
+ * Substituir a UI pronta do Clerk por formulário próprio segue como decisão
+ * de UI separada, ainda em aberto.
  */
 export const clerkAppearance = {
   variables: {
-    colorPrimary: "hsl(207 100% 54%)",
-    colorBackground: "hsl(211 31% 13%)",
-    colorInputBackground: "hsl(212 30% 16%)",
-    colorInputText: "hsl(212 39% 94%)",
-    colorText: "hsl(212 39% 94%)",
-    colorTextSecondary: "hsl(213 15% 59%)",
+    colorPrimary: "#168BFF", // --primary
+    colorPrimaryForeground: "#FFFFFF",
+    colorBackground: "#17212C", // --card
+    colorForeground: "#E8EEF5", // --foreground
+    colorMutedForeground: "#8795A6", // --muted-foreground
+    colorMuted: "#1B2633", // --secondary
+    colorInput: "#1B2633",
+    colorInputForeground: "#E8EEF5",
+    colorBorder: "#253342", // --border
+    colorNeutral: "#E8EEF5",
+    colorDanger: "#F87171", // --destructive
+    colorSuccess: "#22C55E", // --success
+    colorWarning: "#F59E0B", // --warning
+    colorRing: "#168BFF",
     borderRadius: "0.6rem",
   },
   elements: {
-    card: "shadow-none",
     rootBox: "w-full",
+    cardBox: "w-full max-w-full border-0 bg-transparent shadow-none",
+    card: "w-full max-w-full border-0 bg-transparent p-0 shadow-none",
+    header: "hidden",
   },
 } as const;

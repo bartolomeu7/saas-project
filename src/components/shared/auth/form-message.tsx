@@ -20,7 +20,8 @@ export function FormMessage({ state }: { state: ActionResult }) {
     }
   }, [state]);
 
-  if (state.error) {
+  // Erro de campo: a mensagem aparece junto do campo (FormField), sem repetir o alerta.
+  if (state.error && !state.field) {
     return <Alert variant="destructive">{state.error}</Alert>;
   }
 

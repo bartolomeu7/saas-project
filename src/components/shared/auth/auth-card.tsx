@@ -30,8 +30,8 @@ export function AuthCard({
   footer?: ReactNode;
 }) {
   return (
-    <div className="grid min-h-screen lg:grid-cols-2">
-      <main className="flex flex-col px-6 py-8 sm:px-10">
+    <div className="grid min-h-screen grid-cols-1 lg:grid-cols-2">
+      <main className="flex min-w-0 flex-col px-6 py-8 sm:px-10">
         <Link
           href="/"
           className="inline-flex w-fit items-center gap-2 rounded-md text-lg font-semibold tracking-tight outline-none focus-visible:ring-2 focus-visible:ring-ring"

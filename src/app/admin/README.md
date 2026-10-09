@@ -2,7 +2,8 @@
 
 Painel administrativo da PLATAFORMA (equipe interna do Prime Ges — não
 confundir com "owner" de uma empresa cliente), isolado da área pública e da
-área do cliente.
+área do cliente. Guia completo (RPCs, permissões, auditoria, testes,
+procedimento de promoção): [`docs/admin-platform.md`](../../../docs/admin-platform.md).
 
 Importante: esta pasta usa o segmento real `/admin` (não um route group entre
 parênteses) porque o guard de acesso em `src/middleware.ts`
@@ -29,30 +30,37 @@ Regras espelhadas em `src/lib/admin/permissions.ts`.
 
 | Operação | USER | ADMIN | SUPER_ADMIN |
 |---|:-:|:-:|:-:|
-| Acessar `/admin`, ver usuários, empresas, planos | ❌ | ✅ | ✅ |
-| Suspender/reativar usuário comum | ❌ | ✅ | ✅ |
-| Suspender/reativar admin ou super_admin | ❌ | ❌ | ✅ |
-| Alterar papel (promover/rebaixar) | ❌ | ❌ | ✅ |
-| Alterar status de empresa | ❌ | ❌ | ✅ |
+| Acessar `/admin`; ver painel, usuários, empresas, assinaturas, pagamentos, planos | ❌ | ✅ | ✅ |
+| Suspender/reativar usuário comum; editar nome de usuário comum | ❌ | ✅ | ✅ |
+| Conceder dias (até o limite configurável), liberar 30 dias | ❌ | ✅ | ✅ (até 365) |
+| Registrar pagamento manual, trocar plano, reativar assinatura | ❌ | ✅ | ✅ |
+| Editar nome/tipo da empresa, sincronizar entitlements, ferramentas | ❌ | ✅ | ✅ |
+| Reverificar pagamento na EvoPay | ❌ | ✅ | ✅ |
+| Suspender/reativar admin ou super_admin; alterar papéis | ❌ | ❌ | ✅ |
+| Cancelar assinatura, ajustar vencimento, anular pagamento manual | ❌ | ❌ | ✅ |
+| Criar/editar/ativar/desativar planos; ativar/inativar empresas | ❌ | ❌ | ✅ |
 | `/admin/administrators`, `/admin/settings` | ❌ | ❌ | ✅ |
-| Auditoria | ❌ | só as próprias | tudo |
+| Auditoria | ❌ | só as próprias ações | tudo |
 
 Ninguém altera o próprio papel/status, e a plataforma sempre mantém ao menos um
-super_admin ativo. `admin` e `super_admin` suspensos/inativos perdem o acesso em
-todas as camadas (middleware, layout, RPCs, RLS).
+super_admin ativo (inclusive sob concorrência). `admin` e `super_admin`
+suspensos/inativos perdem o acesso em todas as camadas (middleware, layout, RPCs, RLS).
 
-## Estado
+## Rotas
 
-| Rota | Estado |
+| Rota | O que faz |
 |---|---|
-| `/admin` | Dashboard com métricas de fonte confiável (`get_platform_admin_overview`) |
-| `/admin/users` | Lista paginada com busca e filtros (`list_platform_admin_users`) |
-| `/admin/companies` | Lista paginada com busca e filtros (`list_platform_admin_companies`) |
-| `/admin/plans` | Catálogo de planos, somente leitura (`getPlans({ includeInactive })`) |
-| `/admin/administrators` | Lista de administradores — **super_admin only** (`list_platform_administrators`) |
-| `/admin/subscriptions`, `/payments`, `/audit`, `/settings` | Placeholders "em breve" (`/settings` é super_admin only) |
+| `/admin` | Dashboard: usuários, presença, empresas, assinaturas, receita (EvoPay + manual), séries de 30 dias, atenção, webhooks, atividade |
+| `/admin/users`, `/admin/users/[id]` | Lista (busca, plano, assinatura, presença, ordenação) e detalhe com ações |
+| `/admin/companies`, `/admin/companies/[id]` | Lista e detalhe: edição, status, uso agregado, equipe, acesso/cobrança |
+| `/admin/subscriptions` | Assinaturas com estado calculado (mesma regra do guard do produto) |
+| `/admin/payments`, `/admin/payments/[id]` | Pagamentos EvoPay + manuais, resumo, reverificar, anular manual |
+| `/admin/plans` | Catálogo e CRUD (nunca exclui; só desativa) |
+| `/admin/audit` | Central de auditoria por categoria |
+| `/admin/tools` | Busca global, diagnósticos, ações rápidas seguras, checagem do ambiente |
+| `/admin/integrations` | EvoPay (webhook), Clerk e Supabase |
+| `/admin/administrators` | Super admin: promover por e-mail (perfil existente), papéis, status |
+| `/admin/settings` | Super admin: parâmetros reais da plataforma |
 
-Já com escrita auditada: suspender/reativar usuário e alterar papel (`/admin/users`).
-Pendente: conceder dias, trocar plano, pagamento manual, CRUD de planos, ações em
-empresas, auditoria visível, usuários online. Toda ação nova deve gravar auditoria
-via `write_platform_audit_log()` dentro de uma RPC `SECURITY DEFINER`.
+Toda ação nova deve gravar auditoria via `write_platform_audit_log()` dentro de
+uma RPC `SECURITY DEFINER` e ter teste em `tests/sql/admin_platform.sql`.

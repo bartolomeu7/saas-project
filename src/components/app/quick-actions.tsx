@@ -48,7 +48,7 @@ function QuickActionButton({ action }: { action: QuickAction }) {
     "flex flex-1 min-w-[150px] items-center gap-2 rounded-lg border px-3.5 py-2.5 text-sm font-medium transition-colors",
     action.enabled
       ? "border-border bg-card text-foreground hover:border-primary/40 hover:bg-secondary"
-      : "cursor-not-allowed border-border/60 bg-card/40 text-muted-foreground/60"
+      : "cursor-not-allowed border-border/60 bg-card/40 text-muted-foreground/90"
   );
 
   if (!action.enabled) {

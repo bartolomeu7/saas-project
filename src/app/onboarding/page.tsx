@@ -4,12 +4,16 @@ import { ACCOUNT_BLOCKED_PATH, AccountInactiveError } from "@/lib/auth/account-s
 import { getCurrentCompany } from "@/lib/companies/queries";
 import { CreateCompanyForm } from "@/components/app/create-company-form";
 import { siteConfig } from "@/config/site";
+import { requireLegalConsent } from "@/lib/legal/consent";
 
 export const metadata: Metadata = {
   title: "Configurar empresa",
 };
 
 export default async function OnboardingPage() {
+  // Sem consentimento legal vigente, o onboarding também exige o aceite antes.
+  await requireLegalConsent();
+
   // Se o usuário já tem empresa, não faz sentido mostrar onboarding de novo.
   let current;
   try {

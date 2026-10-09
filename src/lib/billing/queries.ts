@@ -24,7 +24,9 @@ export async function getPlans(options: { includeInactive?: boolean } = {}): Pro
     query = query.eq("status", "active");
   }
 
-  const { data, error } = await query.order("price", { ascending: true, nullsFirst: false });
+  const { data, error } = await query
+    .order("sort_order", { ascending: true })
+    .order("price", { ascending: true, nullsFirst: false });
 
   if (error) return [];
   return (data ?? []) as Plan[];

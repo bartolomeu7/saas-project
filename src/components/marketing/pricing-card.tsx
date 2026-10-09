@@ -14,7 +14,7 @@ export function PricingCard({ plan }: { plan: PricingPlan }) {
 
   const badgeStyles =
     plan.highlight === "popular"
-      ? "bg-primary/15 text-primary"
+      ? "bg-primary/15 text-[hsl(207_100%_72%)]"
       : plan.highlight === "value"
         ? "bg-success/15 text-success"
         : "bg-secondary text-muted-foreground";
@@ -51,7 +51,7 @@ export function PricingCard({ plan }: { plan: PricingPlan }) {
         {plan.excludedFeatures?.map((feature) => (
           <li
             key={feature}
-            className="flex items-start gap-2.5 text-sm text-muted-foreground/60"
+            className="flex items-start gap-2.5 text-sm text-muted-foreground/90"
           >
             <X className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground/40" strokeWidth={2.25} />
             {feature}

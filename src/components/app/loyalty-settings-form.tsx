@@ -7,6 +7,7 @@ import type { ActionResult } from "@/lib/auth/actions";
 import type { LoyaltySettings } from "@/types/loyalty";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { FormField, fieldError } from "@/components/shared/form-field";
 import { SubmitButton } from "@/components/shared/auth/submit-button";
 import { FormMessage } from "@/components/shared/auth/form-message";
 import { NativeSelect } from "@/components/ui/native-select";
@@ -115,8 +116,11 @@ export function LoyaltySettingsForm({
           <FieldHint>Como e quando os clientes ganham pontos.</FieldHint>
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="pointsPerCurrencyUnit">Pontuação por unidade monetária</Label>
+          <FormField
+            label="Pontuação por unidade monetária"
+            hint="Quantos pontos o cliente recebe para cada R$1 gasto."
+            error={fieldError(state, "pointsPerCurrencyUnit")}
+          >
             <Input
               id="pointsPerCurrencyUnit"
               name="pointsPerCurrencyUnit"
@@ -128,11 +132,13 @@ export function LoyaltySettingsForm({
               onChange={(event) => setPointsPerCurrencyUnit(event.target.value)}
               disabled={!canEdit}
             />
-            <FieldHint>Quantos pontos o cliente recebe para cada R$1 gasto.</FieldHint>
-          </div>
+          </FormField>
 
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="minPurchaseAmountForPoints">Valor mínimo da compra</Label>
+          <FormField
+            label="Valor mínimo da compra"
+            hint="Vendas abaixo deste valor não geram pontos. Use 0 para não ter mínimo."
+            error={fieldError(state, "minPurchaseAmountForPoints")}
+          >
             <Input
               id="minPurchaseAmountForPoints"
               name="minPurchaseAmountForPoints"
@@ -144,11 +150,13 @@ export function LoyaltySettingsForm({
               onChange={(event) => setMinPurchaseAmountForPoints(event.target.value)}
               disabled={!canEdit}
             />
-            <FieldHint>Vendas abaixo deste valor não geram pontos. Use 0 para não ter mínimo.</FieldHint>
-          </div>
+          </FormField>
 
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="firstPurchaseBonusPoints">Bônus de primeira compra</Label>
+          <FormField
+            label="Bônus de primeira compra"
+            hint="Pontos extras na primeira compra concluída do cliente. Use 0 para não dar bônus."
+            error={fieldError(state, "firstPurchaseBonusPoints")}
+          >
             <Input
               id="firstPurchaseBonusPoints"
               name="firstPurchaseBonusPoints"
@@ -159,11 +167,13 @@ export function LoyaltySettingsForm({
               defaultValue={initial.firstPurchaseBonusPoints}
               disabled={!canEdit}
             />
-            <FieldHint>Pontos extras na primeira compra concluída do cliente. Use 0 para não dar bônus.</FieldHint>
-          </div>
+          </FormField>
 
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="birthdayBonusPoints">Bônus de aniversário</Label>
+          <FormField
+            label="Bônus de aniversário"
+            hint="Pontos extras numa compra feita no dia do aniversário do cliente (uma vez por ano)."
+            error={fieldError(state, "birthdayBonusPoints")}
+          >
             <Input
               id="birthdayBonusPoints"
               name="birthdayBonusPoints"
@@ -174,8 +184,7 @@ export function LoyaltySettingsForm({
               defaultValue={initial.birthdayBonusPoints}
               disabled={!canEdit}
             />
-            <FieldHint>Pontos extras numa compra feita no dia do aniversário do cliente (uma vez por ano).</FieldHint>
-          </div>
+          </FormField>
         </div>
       </fieldset>
 
@@ -185,8 +194,11 @@ export function LoyaltySettingsForm({
           <FieldHint>Como os pontos viram desconto numa venda.</FieldHint>
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="redemptionValuePerPoint">Valor de cada ponto</Label>
+          <FormField
+            label="Valor de cada ponto"
+            hint="Quanto em reais 1 ponto vale quando o cliente resgata."
+            error={fieldError(state, "redemptionValuePerPoint")}
+          >
             <Input
               id="redemptionValuePerPoint"
               name="redemptionValuePerPoint"
@@ -198,11 +210,13 @@ export function LoyaltySettingsForm({
               onChange={(event) => setRedemptionValuePerPoint(event.target.value)}
               disabled={!canEdit}
             />
-            <FieldHint>Quanto em reais 1 ponto vale quando o cliente resgata.</FieldHint>
-          </div>
+          </FormField>
 
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="minPointsToRedeem">Mínimo de pontos para resgatar</Label>
+          <FormField
+            label="Mínimo de pontos para resgatar"
+            hint="Quantidade mínima de pontos exigida para um resgate. Use 0 para não ter mínimo."
+            error={fieldError(state, "minPointsToRedeem")}
+          >
             <Input
               id="minPointsToRedeem"
               name="minPointsToRedeem"
@@ -213,11 +227,13 @@ export function LoyaltySettingsForm({
               defaultValue={initial.minPointsToRedeem}
               disabled={!canEdit}
             />
-            <FieldHint>Quantidade mínima de pontos exigida para um resgate. Use 0 para não ter mínimo.</FieldHint>
-          </div>
+          </FormField>
 
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="maxRedeemPercentPerSale">Percentual máximo por venda</Label>
+          <FormField
+            label="Percentual máximo por venda"
+            hint="Limita o desconto por pontos a até X% do valor da venda. Deixe em branco para não ter limite."
+            error={fieldError(state, "maxRedeemPercentPerSale")}
+          >
             <Input
               id="maxRedeemPercentPerSale"
               name="maxRedeemPercentPerSale"
@@ -229,10 +245,7 @@ export function LoyaltySettingsForm({
               defaultValue={initial.maxRedeemPercentPerSale ?? ""}
               disabled={!canEdit}
             />
-            <FieldHint>
-              Limita o desconto por pontos a até X% do valor da venda. Deixe em branco para não ter limite.
-            </FieldHint>
-          </div>
+          </FormField>
         </div>
       </fieldset>
 
@@ -256,8 +269,12 @@ export function LoyaltySettingsForm({
           </Label>
         </div>
         {pointsExpire && (
-          <div className="flex flex-col gap-1.5 sm:max-w-xs">
-            <Label htmlFor="pointsExpireAfterDays">Dias até expirar</Label>
+          <FormField
+            label="Dias até expirar"
+            hint="Cada lote de pontos ganhos expira este número de dias após a concessão."
+            error={fieldError(state, "pointsExpireAfterDays")}
+            className="sm:max-w-xs"
+          >
             <Input
               id="pointsExpireAfterDays"
               name="pointsExpireAfterDays"
@@ -268,8 +285,7 @@ export function LoyaltySettingsForm({
               defaultValue={initial.pointsExpireAfterDays ?? 365}
               disabled={!canEdit}
             />
-            <FieldHint>Cada lote de pontos ganhos expira este número de dias após a concessão.</FieldHint>
-          </div>
+          </FormField>
         )}
       </fieldset>
 
@@ -278,8 +294,7 @@ export function LoyaltySettingsForm({
           <h2 className="text-sm font-semibold text-foreground">5. Concessão</h2>
           <FieldHint>Em qual momento da venda os pontos são concedidos.</FieldHint>
         </div>
-        <div className="flex flex-col gap-1.5 sm:max-w-xs">
-          <Label htmlFor="grantOn">Conceder pontos</Label>
+        <FormField label="Conceder pontos" hint="Conceder somente após o pagamento total ainda não está disponível nesta versão." className="sm:max-w-xs">
           <NativeSelect
             id="grantOn"
             disabled
@@ -288,10 +303,7 @@ export function LoyaltySettingsForm({
           >
             <option value="completion">Na conclusão da venda</option>
           </NativeSelect>
-          <FieldHint>
-            Conceder somente após o pagamento total ainda não está disponível nesta versão.
-          </FieldHint>
-        </div>
+        </FormField>
       </fieldset>
 
       <div className="rounded-lg border border-dashed border-border bg-card/40 p-4">
