@@ -71,6 +71,10 @@ select pg_temp.try('atacante: INSERT direto de cliente na empresa alheia', $q$in
 select pg_temp.try('atacante: adjust_loyalty_points em cliente alheio', $q$select public.adjust_loyalty_points((select cust_id from tgt), 100, 'hack')::text$q$);
 select pg_temp.try('atacante: write_audit_log direto (forjar auditoria)', $q$select public.write_audit_log((select co from tgt), 'sale', (select sale_id from tgt), 'forged', '{}'::jsonb, null)::text$q$);
 
+select pg_temp.try('NOVO atacante: admin_add_company_member na empresa alheia', $q$select public.admin_add_company_member((select co from tgt), 'x@y.z', 'employee', 'hack hack', gen_random_uuid())::text$q$);
+select pg_temp.try('NOVO atacante: admin_grant_license', $q$select public.admin_grant_license((select co from tgt), 'thirty_days', null, null, 'hack hack', gen_random_uuid())::text$q$);
+select pg_temp.try('NOVO atacante: ler chaves de operação', $q$select count(*)::text from public.platform_operation_keys$q$);
+
 select set_config('request.jwt.claims', '{"sub":"iso_employee","role":"authenticated"}', true);
 select pg_temp.try('funcionário: update_company_member_role do owner (escalada)', $q$select public.update_company_member_role((select owner_member from tgt), 'employee')::text$q$);
 select pg_temp.try('funcionário: remove_company_member do owner', $q$select public.remove_company_member((select owner_member from tgt))::text$q$);
@@ -79,6 +83,8 @@ select pg_temp.try('funcionário: add_existing_company_member', $q$select public
 select pg_temp.try('funcionário: UPDATE direto em companies', $q$with u as (update public.companies set name = 'hack' where id = (select co from tgt) returning 1) select count(*)::text from u$q$);
 select pg_temp.try('funcionário: UPDATE direto em company_members (virar owner)', $q$with u as (update public.company_members set role = 'owner' where user_id = '4fddea09-455a-45f8-abab-b72c06e43bd4' returning 1) select count(*)::text from u$q$);
 select pg_temp.try('funcionário: UPDATE direto em subscriptions', $q$with u as (update public.subscriptions set expires_at = now() + interval '9999 days' where company_id = (select co from tgt) returning 1) select count(*)::text from u$q$);
+
+select pg_temp.try('funcionário: UPDATE direto em subscriptions para vitalício', $q$with u as (update public.subscriptions set lifetime = true, expires_at = null where company_id = (select co from tgt) returning 1) select count(*)::text from u$q$);
 
 reset role;
 do $result$
