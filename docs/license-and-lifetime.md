@@ -58,6 +58,8 @@ Duas chamadas simultâneas com a mesma chave serializam no `INSERT ... ON CONFLI
 
 Modelo atual: **uma empresa por usuário**; papéis `owner/admin/employee`; limite de adicionais vem do entitlement do plano. O admin da plataforma adiciona um perfil **existente e ativo** (por e-mail), altera `admin ⇄ employee` e remove não-owners; **transferir a propriedade é exclusivo de super_admin** e atômico (um único owner ao final; o antigo vira `admin`). Nenhuma dessas operações cria identidade: quem não tem conta precisa se cadastrar pelo Clerk.
 
+**Sem autoprivilégio (corrigido na revisão final da Missão 08):** o vínculo de membro dá acesso por RLS aos dados do tenant, então (a) ninguém se adiciona a uma empresa — nem `super_admin`; (b) só `super_admin` adiciona outro administrador da plataforma a uma empresa (decisão deliberada e auditada); (c) ninguém altera o próprio papel dentro de uma empresa por esta tela. Antes da correção, um `admin` comum podia se adicionar a qualquer empresa-cliente com vaga no plano e passar a ler seus dados (provado em TEST: 0 → 1 cliente visível).
+
 ## Reconciliação de pagamentos
 
 O webhook da EvoPay não é assinado e tem **uma única tentativa**. “Reconciliar pendentes” (em `/admin/payments`) reconsulta `GET /pix?id=` das cobranças Pix pendentes há mais de 10 minutos (até 15 por vez, 8 s de orçamento) pelo mesmo caminho do “Já paguei”, e registra o resultado agregado na auditoria. Não há agendamento automático (exigiria um segredo de cron na Vercel).

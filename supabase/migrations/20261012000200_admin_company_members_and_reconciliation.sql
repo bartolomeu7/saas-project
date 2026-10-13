@@ -9,6 +9,8 @@
 --   admin_transfer_company_ownership    SUPER_ADMIN      transfere a propriedade a um membro ativo, atomicamente (um único owner ao final)
 -- Todas: SECURITY DEFINER, autoridade no banco, motivo obrigatório, auditoria (platform.company.*), lock por empresa;
 -- adicionar/transferir aceitam chave de idempotência (platform_begin_operation).
+-- Autoprivilégio: ninguém se adiciona a uma empresa nem muda o próprio papel nela; só super_admin adiciona outro
+-- administrador da plataforma (o vínculo dá acesso por RLS aos dados do tenant). Provado em TEST (company_members_reconcile.sql).
 --
 -- Reconciliação: platform_reconcile_candidates() lista cobranças EvoPay pendentes (com cobrança já criada no provedor) para o
 -- servidor reconsultar o provedor (GET /pix?id=) uma a uma; admin_audit_reconciliation() registra o resultado agregado.
@@ -68,6 +70,14 @@ begin
   if v_user.status <> 'active' then
     raise exception 'O usuário precisa estar ativo para ser adicionado.';
   end if;
+  -- Ninguém concede a si mesmo acesso aos dados de uma empresa-cliente, e um administrador comum não coloca outro
+  -- administrador da plataforma dentro de uma empresa (o vínculo dá acesso por RLS aos dados do tenant): só super_admin.
+  if v_user.user_id = public.current_profile_user_id() then
+    raise exception 'Você não pode adicionar a si mesmo a uma empresa.';
+  end if;
+  if v_user.role in ('admin', 'super_admin') and not public.is_super_admin() then
+    raise exception 'Somente um super administrador pode adicionar um administrador da plataforma a uma empresa.';
+  end if;
 
   -- mesma chave de lock de create_company_with_owner: evita corrida entre "criar empresa" e "ser adicionado"
   perform pg_advisory_xact_lock(hashtext(v_user.user_id::text));
@@ -122,6 +132,9 @@ begin
   perform public.platform_assert_company(p_company_id);
   if p_role is null or p_role not in ('admin', 'employee') then
     raise exception 'Papel inválido. Para trocar o proprietário use a transferência de propriedade.';
+  end if;
+  if p_user_id is not distinct from public.current_profile_user_id() then
+    raise exception 'Você não pode alterar o seu próprio papel na empresa.';
   end if;
 
   perform pg_advisory_xact_lock(hashtext('company_members:' || p_company_id::text));

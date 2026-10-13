@@ -20,9 +20,11 @@ insert into public.profiles (user_id, clerk_user_id, full_name, email, role, sta
   ('cccccccc-0000-0000-0000-000000000003', 'cm_m1', 'CM Membro 1', 'cm-m1@example.invalid', 'user', 'active'),
   ('cccccccc-0000-0000-0000-000000000004', 'cm_m2', 'CM Membro 2', 'cm-m2@example.invalid', 'user', 'active'),
   ('cccccccc-0000-0000-0000-000000000005', 'cm_m3', 'CM Membro 3', 'cm-m3@example.invalid', 'user', 'active'),
-  ('cccccccc-0000-0000-0000-000000000006', 'cm_susp', 'CM Suspenso', 'cm-susp@example.invalid', 'user', 'active');
+  ('cccccccc-0000-0000-0000-000000000006', 'cm_susp', 'CM Suspenso', 'cm-susp@example.invalid', 'user', 'active'),
+  ('cccccccc-0000-0000-0000-000000000007', 'cm_adm2', 'CM Admin 2', 'cm-adm2@example.invalid', 'user', 'active');
 select set_config('app.platform_profile_write', 'on', true);
 update public.profiles set status = 'suspended' where user_id = 'cccccccc-0000-0000-0000-000000000006';
+update public.profiles set role = 'admin' where user_id = 'cccccccc-0000-0000-0000-000000000007';
 select set_config('app.platform_profile_write', 'off', true);
 
 create temp table cos (k text primary key, id uuid);
@@ -75,6 +77,11 @@ select pg_temp.chk('add', 'empresa inativa não recebe colaborador', $q$select p
 select pg_temp.chk('add', 'motivo obrigatório', $q$select public.admin_add_company_member(pg_temp.co('b'), 'cm-m3@example.invalid', 'employee', ' ', '10000000-0000-0000-0000-000000000010')::text$q$, 'ERR=Informe o motivo');
 select pg_temp.chk('add', 'chave obrigatória', $q$select public.admin_add_company_member(pg_temp.co('b'), 'cm-m3@example.invalid', 'employee', 'sem chave', null)::text$q$, 'ERR=Chave de operação obrigatória');
 select pg_temp.chk('add', 'isolamento: a empresa B continua só com o dono', $q$select pg_temp.team('b')$q$, 'OK=2:owner');
+-- autoprivilégio: o vínculo de membro dá acesso por RLS aos dados do tenant
+select pg_temp.chk('self', 'admin NÃO se adiciona a uma empresa-cliente (nem com vaga e e-mail próprio)', $q$select public.admin_add_company_member(pg_temp.co('b'), (select email from public.profiles where clerk_user_id = 'cm_admin'), 'admin', 'autoadicao', '10000000-0000-0000-0000-000000000012')::text$q$, 'ERR=a si mesmo');
+select pg_temp.chk('self', 'admin comum NÃO adiciona outro administrador da plataforma', $q$select public.admin_add_company_member(pg_temp.co('b'), 'cm-adm2@example.invalid', 'employee', 'admin para admin', '10000000-0000-0000-0000-000000000013')::text$q$, 'ERR=Somente um super administrador');
+select pg_temp.chk('self', 'a recusa não deixou rastro: empresa B segue só com o dono', $q$select pg_temp.team('b')$q$, 'OK=2:owner');
+select pg_temp.chk('self', 'admin NÃO altera o próprio papel na empresa (checagem antes da busca do vínculo)', $q$select public.admin_set_company_member_role(pg_temp.co('a'), '5280eb70-5ca1-47f2-b154-9a47dbe0b021', 'admin', 'autopromocao')::text$q$, 'ERR=seu próprio papel');
 select pg_temp.chk('role', 'admin muda M2 de admin para employee', $q$select coalesce(public.admin_set_company_member_role(pg_temp.co('a'), 'cccccccc-0000-0000-0000-000000000004', 'employee', 'rebaixar')::text, '') || pg_temp.team('a')$q$, 'OK=1:owner,3:employee,4:employee');
 select pg_temp.chk('role', 'mesmo papel é recusado', $q$select public.admin_set_company_member_role(pg_temp.co('a'), 'cccccccc-0000-0000-0000-000000000004', 'employee', 'repetido')::text$q$, 'ERR=já tem este papel');
 select pg_temp.chk('role', 'não promove a owner por aqui', $q$select public.admin_set_company_member_role(pg_temp.co('a'), 'cccccccc-0000-0000-0000-000000000004', 'owner', 'tentativa')::text$q$, 'ERR=transferência de propriedade');
@@ -100,6 +107,8 @@ update public.profiles set status = 'suspended' where user_id = 'cccccccc-0000-0
 select set_config('app.platform_profile_write', 'off', true);
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"cm_super","role":"authenticated"}', true);
+select pg_temp.chk('self', 'super_admin PODE adicionar um administrador da plataforma (decisão deliberada, auditada)', $q$select (public.admin_add_company_member(pg_temp.co('b'), 'cm-adm2@example.invalid', 'employee', 'suporte dedicado', '10000000-0000-0000-0000-000000000014'))->>'role'$q$, 'OK=employee');
+select pg_temp.chk('self', 'super_admin NÃO se adiciona a si mesmo', $q$select public.admin_add_company_member(pg_temp.co('b'), (select email from public.profiles where clerk_user_id = 'cm_super'), 'admin', 'autoadicao super', '10000000-0000-0000-0000-000000000015')::text$q$, 'ERR=a si mesmo');
 select pg_temp.chk('owner', 'super NÃO transfere para membro com conta suspensa', $q$select public.admin_transfer_company_ownership(pg_temp.co('a'), 'cccccccc-0000-0000-0000-000000000005', 'suspenso', gen_random_uuid())::text$q$, 'ERR=conta ativa');
 
 -- ================================================= negado
