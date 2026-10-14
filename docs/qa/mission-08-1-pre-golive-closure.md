@@ -185,3 +185,76 @@ Invariantes: **Lifetime** só interno (fora de `get_public_plans`, de `getPlans`
 - **Estado final do TEST:** rascunho removido; 5 migrations aplicadas; `admin_add_company_member` (5 args, com a correção de autoprivilégio) presente; plano LIFETIME presente; `platform_operation_keys` vazia.
 - **Concorrência real:** `BLOCKED` (service-role do TEST segue ausente). **Preview autenticado:** `BLOCKED` (SSO; variável de URL compartilhada Preview+Production; sem overrides para a branch). Nenhuma regressão adicional repetida (nenhuma alteração de banco persistiu; última regressão: licenças 96/96, membros 50/50, isolamento 0 vazamentos).
 - **Recomendação:** inalterada — YELLOW; Go-Live depende do dono (service-role do TEST, overrides de Preview, sessão Clerk Development).
+
+---
+
+## 16. Missão 08.1.1 — fechamento final das pendências (2026-10-14)
+
+**Veredito: YELLOW (inalterado).** Nenhuma regressão e nenhum defeito novo; as duas provas que faltam para GREEN (concorrência real e Preview autenticado) continuam `BLOCKED` por dependência do dono. Nada foi mergeado, migrado, implantado ou escrito em Production.
+
+### 16.1 Git, PR e CI — `VERIFIED`
+| Item | Estado |
+|---|---|
+| Branch / HEAD | `feat/mission-08-admin-control-center` @ `a631e66d9e2aa1c67a91c4afe8846fa70abf909f` (= remoto) |
+| Árvore de trabalho | limpa; apenas `b.txt` não rastreado (preservado) |
+| PR #33 | `OPEN`, `MERGEABLE`, `CLEAN`, `headRefOid` = `a631e66…` |
+| CI por SHA | `a631e66…`: run `38488592238` `success`. SHAs anteriores (`546b2e6…`, `fb6a0f0…`, `ed077c5…`) também `success` |
+| Observação | CI verde **não** é a prova que falta para GREEN; ele não exercita concorrência nem Preview autenticado |
+
+### 16.2 Estado do TEST — `VERIFIED`
+Projeto `zlmxbqlpjstmllrvafmy`. 34 migrations no histórico, incluindo as cinco da missão (`billing_hardening` em 3 partes + compat, `privilege_minimization`, `lifetime_access_and_license_ops`, `plans_lifetime_awareness`, `admin_company_members_and_reconciliation`) e `admin_members_no_self_privilege`. As três guardas de autoprivilégio estão presentes em `admin_add_company_member` (autoadição; admin→admin) e `admin_set_company_member_role` (papel próprio). Sem tabelas de rascunho. Depois das baterias: 0 empresas `[*TEST]`, 0 perfis fictícios, 0 `clerk_user_id` de teste, `platform_operation_keys` vazia, 34 migrations (tudo revertido).
+
+### 16.3 Regressão reexecutada no TEST (14/10) — `VERIFIED`
+Cada bateria rodou o conteúdo do arquivo do repositório numa única chamada atômica, terminando em `RAISE EXCEPTION 'RESULT: …'` (nada persiste).
+
+| Bateria | Arquivo | Referência | Resultado real |
+|---|---|---|---|
+| Billing | `tests/sql/billing_confirm.sql` | 69/69 | **69/69**, 0 falhas |
+| Admin/RBAC | `tests/sql/admin_platform.sql` | 299/299 | **299/299**, 0 falhas |
+| Licenças/Lifetime | `tests/sql/license_ops.sql` | 96/96 | **96/96**, 0 falhas |
+| Membros/propriedade/reconciliação | `tests/sql/company_members_reconcile.sql` | 50/50 | **50/50**, 0 falhas |
+| Isolamento entre empresas | `tests/sql/tenant_isolation.sql` | 39 tabelas, 0 vazamentos | **39 tabelas, `VAZAMENTOS => nenhum`**; todas as RPCs/DML alheios negados |
+
+Total reexecutado: 514 verificações + isolamento, sem falha. Não reexecutadas nesta missão (sem mudança relevante): `legal_consent` (73), `auth_identity` (21), `billing_compat_old_code`, testes unitários/lint/tsc/build (cobertos pelo CI do `a631e66`). A única diferença entre os arquivos do repositório e o que foi enviado ao banco é a troca do `select … ; rollback;` final da bateria Admin por um `RAISE EXCEPTION` (só para o executor devolver o resultado); os asserts são idênticos.
+
+### 16.4 Prova de rollback — `VERIFIED` (não repetida)
+Já concluída na seção 15 (S1 == Production e S2 == S0 nos 9 digests; dados e histórico inalterados; script sha256 `1fcaa393c848a3babe851775bff4bc506437262cfeca3164609016a79166268a`). Não houve mudança de migration ou de rollback desde então (`git diff` de `supabase/` entre `ed077c5` e `a631e66` é vazio), portanto não foi repetida.
+
+### 16.5 Concorrência real — `BLOCKED`
+- `.env.local`: `SUPABASE_SERVICE_ROLE_KEY` continua vazia. `.env.prod-backup.local` é de **Production** e **não** foi usado.
+- Não foi pedido ao dono que cole a chave no chat. Nenhuma credencial de Production usada.
+- O MCP serializa as chamadas (provado por timestamps), portanto **não** é prova de concorrência; testes sequenciais também não foram apresentados como tal.
+- **Configuração segura (ação do dono):** (1) no painel do projeto **TEST** (`zlmxbqlpjstmllrvafmy`), copiar a chave `service_role`; (2) colá-la **você mesmo** em `.env.local` (arquivo ignorado pelo git), linha `SUPABASE_SERVICE_ROLE_KEY=…`, junto de `NEXT_PUBLIC_SUPABASE_URL` apontando para o TEST; (3) confirmar que a URL contém `zlmxbqlpjstmllrvafmy`; (4) avisar aqui — então rodo `npm run test:integration:billing` (S1–S10: idempotência do claim, estado final, sem duplicidade). Para concorrência das RPCs admin (licença/membros), é preciso uma conexão direta ao TEST (string de conexão do pooler) ou duas sessões Clerk Development.
+- Risco residual (`INFERRED`): locks por empresa/intenção, PK da chave de operação e índice único parcial tornam a corrida improvável, mas sem prova concorrente.
+
+### 16.6 Preview — `BLOCKED`
+- Deployment Vercel `7053248074` do `a631e66`: sucesso; `GET /` → `302` e `GET /admin` → `302` para `vercel.com/sso-api` (proteção SSO ativa — **não** contornada).
+- Variáveis (somente metadados, nada decriptado): `NEXT_PUBLIC_SUPABASE_URL` (id `wZHaDc617BGYFQO1`) segue com alvos **preview + production** e sem override para esta branch; não há anon key / chaves Clerk de Development específicas para o Preview desta branch. **Portanto não está provado (nem presumido) que o Preview escreveria no TEST** — por isso nenhum teste de escrita foi feito.
+- Pré-requisitos exatos que faltam (ação do dono): (1) criar overrides **por branch** (`feat/mission-08-admin-control-center`) para `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY` do **TEST**; (2) `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` e `CLERK_SECRET_KEY` de **Clerk Development**; (3) remover `preview` do alvo de `wZHaDc617BGYFQO1` (hoje compartilhada com Production); (4) disponibilizar um acesso autenticado oficial (acesso Vercel/bypass de proteção emitido pelo dono, e uma sessão Clerk Development criada por ele). Depois disso: provar TEST + Clerk Development + nenhuma variável compartilhada apontando para Production, e só então testar `/admin` com escrita.
+- Não foram criadas contas Clerk, sessões, senhas nem bypass.
+
+### 16.7 Classificação final
+| Item | Classe |
+|---|---|
+| Git/PR/CI do `a631e66` | `VERIFIED` |
+| 5 migrations + guardas presentes no TEST | `VERIFIED` |
+| Billing 69, Admin 299, Licenças 96, Membros 50, Isolamento 39/0 | `VERIFIED` |
+| Rollback/replay (S1==Production, S2==S0) | `VERIFIED` (seção 15) |
+| Production inalterada (71 migrations, sem escrita) | `VERIFIED` na seção 13; sem nova consulta nesta missão |
+| Concorrência financeira real | `BLOCKED` |
+| Concorrência das RPCs admin | `NOT VERIFIED` |
+| Preview autenticado / `/admin` em navegador / T10 / login | `BLOCKED` / `NOT VERIFIED` |
+| Isolamento de variáveis do Preview | `INFERRED` (não isolado) |
+| EvoPay real (sem sandbox) | `NOT VERIFIED` (falha fechado) |
+| Convite via Clerk | não implementado |
+| Documentos legais `1.0.0-rc.2` (dados da empresa, revisão jurídica) | pendente; não comercializar |
+
+### 16.8 Pendências que dependem do dono
+1. Service-role do **TEST** em `.env.local` (e, se possível, string de conexão do TEST) → concorrência real.
+2. Overrides de Preview por branch (TEST + Clerk Development) e remoção de `preview` da URL compartilhada → Preview autenticado.
+3. Sessão Clerk Development / acesso Vercel autorizado → teste de `/admin`, login e T10.
+4. Dados empresariais e revisão jurídica dos documentos.
+5. Primeira cobrança Pix de valor mínimo autorizada (EvoPay).
+
+### 16.9 Recomendação final
+**YELLOW.** Não há bloqueio técnico conhecido de banco/segurança, a regressão está íntegra e o procedimento de publicação está ensaiado. Para GREEN faltam apenas as provas dos itens 1–3. Um Go-Live sem elas é decisão de risco do dono (uma regressão de UI/middleware ou de concorrência só apareceria em Production). **Nenhuma ação em Production foi tomada; aguardando a decisão do dono.**
