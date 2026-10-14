@@ -53,6 +53,13 @@ export class EvoPayError extends Error {
   }
 }
 
+/**
+ * Tempo máximo de cada chamada à EvoPay. A doc não informa SLA; sem limite, um provedor pendurado prenderia a função
+ * serverless (e a "reserva" do pagamento). O limite é curto o bastante para caber no tempo de uma rota e longo o bastante
+ * para uma resposta normal. Estourou => EvoPayError(status 0): quem chama trata como "provedor indisponível".
+ */
+export const EVOPAY_TIMEOUT_MS = 10_000;
+
 function getBaseUrl(): string {
   const url = process.env.EVOPAY_API_BASE_URL;
   if (!url) {
@@ -81,6 +88,7 @@ async function evoPayFetch<T>(path: string, init: RequestInit): Promise<T> {
   try {
     response = await fetch(`${getBaseUrl()}${path}`, {
       ...init,
+      signal: init.signal ?? AbortSignal.timeout(EVOPAY_TIMEOUT_MS),
       headers: {
         "API-Key": getApiKey(),
         "Content-Type": "application/json",
@@ -88,6 +96,9 @@ async function evoPayFetch<T>(path: string, init: RequestInit): Promise<T> {
       },
     });
   } catch (error) {
+    if (error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError")) {
+      throw new EvoPayError("Tempo esgotado ao contatar a EvoPay.", 0);
+    }
     throw new EvoPayError(
       error instanceof Error ? `Falha de rede ao contatar a EvoPay: ${error.message}` : "Falha de rede ao contatar a EvoPay.",
       0
@@ -105,7 +116,12 @@ async function evoPayFetch<T>(path: string, init: RequestInit): Promise<T> {
     throw new EvoPayError(message, response.status);
   }
 
-  return (await response.json()) as T;
+  try {
+    return (await response.json()) as T;
+  } catch {
+    // 2xx com corpo ilegível não é uma resposta confiável: nunca vira "pago" nem "criado".
+    throw new EvoPayError("Resposta inválida da EvoPay.", response.status);
+  }
 }
 
 /** POST /pix — cria uma cobrança Pix. */

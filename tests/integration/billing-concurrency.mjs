@@ -119,7 +119,7 @@ try {
     const p = (await claim(company)).json[0].payment_id;
     created.payments.push(p);
     await api("PATCH", `subscription_payments?id=eq.${p}`, { provider_transaction_id: `tx_conc_${Date.now()}_c` });
-    const calls = await Promise.all([...Array.from({ length: 6 }, (_, i) => confirm(p, `conc:S5:bad:${i}`, 1.0)), ...Array.from({ length: 6 }, (_, i) => confirm(p, `conc:S5:miss:${i}`, undefined))]);
+    const calls = await Promise.all([...Array.from({ length: 6 }, (_, i) => confirm(p, `conc:S5:bad:${i}`, 1.0)), ...Array.from({ length: 6 }, (_, i) => confirm(p, `conc:S5:miss:${i}`, null))]);
     const sub = (await api("GET", `subscriptions?company_id=eq.${company}&select=id`)).json ?? [];
     const pay = (await api("GET", `subscription_payments?id=eq.${p}&select=status`)).json?.[0];
     check("S5 12 confirmações com valor errado/ausente: todas rejeitadas", calls.every((c) => c.json?.[0]?.ok === false && ["AMOUNT_MISMATCH", "AMOUNT_MISSING"].includes(c.json?.[0]?.rejection)), "");
