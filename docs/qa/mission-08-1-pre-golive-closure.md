@@ -172,3 +172,16 @@ Invariantes: **Lifetime** só interno (fora de `get_public_plans`, de `getPlans`
 - `tests/sql/catalog-fingerprint.sql` — consulta de impressão digital do catálogo (somente leitura).
 - `tests/sql/build-full-rollback-proof.mjs` — gerador da prova completa de rollback + replay a partir dos arquivos reais.
 - `docs/qa/mission-08-1-pre-golive-closure.md` — este relatório (os relatórios anteriores em `docs/qa/` foram preservados).
+
+---
+
+## 15. Continuação (2026-10-13, ~21:30 −03:00): reexecução da prova S0/S1/S2 em uma única transação — `VERIFIED`
+
+- **Estado confirmado antes de executar:** HEAD `ed077c5f1925a6db11abaa0297b5f54fcea97e71` = remoto; árvore limpa (só `b.txt`); PR #33 `OPEN`/`MERGEABLE`; destino **TEST** `zlmxbqlpjstmllrvafmy`; baseline S0 igual ao do relatório (9 digests); 34 migrations no TEST.
+- **Script:** `tests/sql/build-full-rollback-proof.mjs` → 165.313 bytes, 3.086 linhas, `sha256 1fcaa393c848a3babe851775bff4bc506437262cfeca3164609016a79166268a`. Inspeção: único controle de transação é `begin;`; nenhum `commit`/`rollback`/`savepoint`/extensão/`dblink`/`notify`/`copy`/`pg_sleep`; termina em `RAISE EXCEPTION`. Fora de funções, só 3 instruções tocam dados (`delete` do plano LIFETIME no `down`, `update` de duplicatas no `up`, `insert` do plano LIFETIME no `up`).
+- **Semântica do executor (provada):** cada chamada é um backend distinto (pid 727835 → 727836); um `begin;` sem fim não persiste nem continua na chamada seguinte; DDL, `ALTER DEFAULT PRIVILEGES`, criação de função e `DELETE` são revertidos pelo erro final da mesma chamada. Logo a transação **não** atravessa chamadas: os 10 scripts foram gravados (chamadas separadas, já confirmadas) numa tabela de rascunho e a prova rodou **inteira numa única chamada**, com guarda que abortaria se qualquer MD5 divergisse dos arquivos (10/10 iguais).
+- **Resultado (catálogo):** **S1 == Production** e **S2 == S0** nos 9 digests (acl 877/317, column 568/577, constraint 312/317, fn_body 120/131, fn_cfg 120/131, index 234/237, policy 88, rel 52/53, trigger 70).
+- **Dados e histórico:** D2 == D0 em subscriptions (6), company_entitlements (6), subscription_payments (3), payment_events (0), companies (6), company_members (9), profiles (14), audit_logs (307), user_consents (2), webhook_deliveries (0), plans (9, colunas estáveis) e histórico de migrations (34).
+- **Estado final do TEST:** rascunho removido; 5 migrations aplicadas; `admin_add_company_member` (5 args, com a correção de autoprivilégio) presente; plano LIFETIME presente; `platform_operation_keys` vazia.
+- **Concorrência real:** `BLOCKED` (service-role do TEST segue ausente). **Preview autenticado:** `BLOCKED` (SSO; variável de URL compartilhada Preview+Production; sem overrides para a branch). Nenhuma regressão adicional repetida (nenhuma alteração de banco persistiu; última regressão: licenças 96/96, membros 50/50, isolamento 0 vazamentos).
+- **Recomendação:** inalterada — YELLOW; Go-Live depende do dono (service-role do TEST, overrides de Preview, sessão Clerk Development).
