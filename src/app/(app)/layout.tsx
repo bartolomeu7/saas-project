@@ -6,6 +6,7 @@ import { getCurrentUser, getCurrentProfile } from "@/lib/auth/session";
 import { getCurrentCompany } from "@/lib/companies/queries";
 import { AppShell } from "@/components/app/app-shell";
 import { requireLegalConsent } from "@/lib/legal/consent";
+import { evaluateSessionGate, SESSION_LIMIT_PATH } from "@/lib/auth/session-gate";
 
 // Toda a área autenticada depende da sessão: nunca é pré-renderizada no build. Sem isto o Next tentava gerar
 // /app/* estaticamente e, num ambiente sem credenciais (Preview), o construtor do cliente Supabase lançava
@@ -38,6 +39,11 @@ export default async function AppLayout({
       redirect(ACCOUNT_BLOCKED_PATH);
     }
     throw error;
+  }
+
+  // Limite de sessões simultâneas da conta: sessão nova acima do limite vai para /acesso-sessoes (as já aceitas seguem).
+  if (user && (await evaluateSessionGate(user.id)) === "blocked") {
+    redirect(SESSION_LIMIT_PATH);
   }
 
   // Consentimento legal vigente (Termos + Política) antes de qualquer outra regra: sem ele, /aceite-termos.

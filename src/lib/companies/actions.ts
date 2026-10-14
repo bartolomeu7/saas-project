@@ -7,6 +7,7 @@ import { AUTH_BACKEND_MESSAGES, AuthBackendError } from "@/lib/auth/token-claims
 import { ACCOUNT_BLOCKED_MESSAGE, AccountInactiveError } from "@/lib/auth/account-status";
 import { createCompanySchema } from "@/lib/validations/company";
 import type { ActionResult } from "@/lib/auth/actions";
+import { authorizeTrialSignup } from "@/lib/security/trial-signup";
 
 /**
  * Cria a empresa do usuário autenticado e o torna owner, através da
@@ -49,6 +50,11 @@ export async function createCompanyAction(
   if (!user) {
     return { error: "Sessão expirada. Faça login novamente." };
   }
+
+  // Antifraude do teste grátis (no servidor, antes de conceder): registra de forma atômica se esta conexão ainda pode
+  // receber o teste. Negado/indisponível NÃO impede a criação da empresa — só a concessão do teste (o usuário pode
+  // assinar um plano ou falar com o suporte). O banco só concede o teste com esta autorização.
+  await authorizeTrialSignup(user.id);
 
   const { error } = await supabase.rpc("create_company_with_owner", {
     p_name: parsed.data.name,

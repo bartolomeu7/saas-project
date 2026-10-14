@@ -17,6 +17,31 @@ export const listCompanyTeam = cache(async function listCompanyTeam(): Promise<T
   return (data ?? []) as TeamMember[];
 });
 
+export interface SeatUsage {
+  additionalUsed: number;
+  additionalMax: number;
+  totalUsed: number;
+  totalAllowed: number;
+  overLimit: boolean;
+  atLimit: boolean;
+}
+
+/** Uso de vagas da empresa do usuário (get_company_seat_usage): proprietário + adicionais, com aviso de excesso. */
+export const getSeatUsage = cache(async function getSeatUsage(): Promise<SeatUsage | null> {
+  const supabase = await createSessionClient();
+  const { data, error } = await supabase.rpc("get_company_seat_usage");
+  if (error || !data || typeof data !== "object" || Array.isArray(data)) return null;
+  const d = data as Record<string, number | boolean>;
+  return {
+    additionalUsed: Number(d.additional_used ?? 0),
+    additionalMax: Number(d.additional_max ?? 0),
+    totalUsed: Number(d.total_used ?? 1),
+    totalAllowed: Number(d.total_allowed ?? 1),
+    overLimit: d.over_limit === true,
+    atLimit: d.at_limit === true,
+  };
+});
+
 export async function getProfessionalWorkspace(
   companyId: string,
   professionalId: string

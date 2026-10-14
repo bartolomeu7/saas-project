@@ -401,6 +401,41 @@ export interface PlatformPlanRow {
   payments_count: number;
   is_protected: boolean;
   lifetime: boolean;
+  updated_at: string;
+  kind: "standard" | "trial" | "custom" | "lifetime";
+  public_visible: boolean;
+  tagline: string | null;
+  highlight: "popular" | "value" | null;
+  cta_label: string | null;
+  contact_url: string | null;
+  benefits_title: string | null;
+  compare_price: number | null;
+  promo_enabled: boolean;
+  promo_starts_at: string | null;
+  promo_ends_at: string | null;
+  show_compare_price: boolean;
+  show_discount_percent: boolean;
+  promo_state: "none" | "scheduled" | "active" | "expired";
+  discount_percent: number | null;
+  /** Benefícios não arquivados (inclui os ocultos), na ordem de exibição. */
+  benefits: PlatformPlanBenefit[];
+}
+
+export interface PlatformPlanBenefit {
+  id: string;
+  text: string;
+  highlighted: boolean;
+  visible: boolean;
+  included: boolean;
+}
+
+export interface PlatformPlanHistoryRow {
+  id: string;
+  action: string;
+  created_at: string;
+  /** Só o super_admin vê o e-mail do ator. */
+  actor_email: string | null;
+  metadata: Record<string, unknown>;
 }
 
 export interface PlatformDashboard {

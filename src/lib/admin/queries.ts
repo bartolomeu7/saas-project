@@ -19,6 +19,7 @@ import type {
   PlatformPaymentDetail,
   PlatformPaymentRow,
   PlatformPlanRow,
+  PlatformPlanHistoryRow,
   PlatformSettingRow,
   PlatformSubscriptionRow,
   PlatformUserDetail,
@@ -317,7 +318,15 @@ export async function listPlatformPlans(): Promise<PlatformPlanRow[]> {
   const { data, error } = await supabase.rpc("list_platform_plans");
 
   if (error) fail("list_platform_plans", error.message, "Não foi possível carregar os planos.");
-  return (data ?? []) as PlatformPlanRow[];
+  return (data ?? []) as unknown as PlatformPlanRow[];
+}
+
+export async function getPlatformPlanHistory(planId: string): Promise<PlatformPlanHistoryRow[]> {
+  const supabase = await createSessionClient();
+  const { data, error } = await supabase.rpc("list_platform_plan_history", { p_plan_id: planId, p_limit: 100 });
+
+  if (error) fail("list_platform_plan_history", error.message, "Não foi possível carregar o histórico do plano.");
+  return (data ?? []) as unknown as PlatformPlanHistoryRow[];
 }
 
 export interface PlatformAuditFilters {

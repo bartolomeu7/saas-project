@@ -58,8 +58,49 @@ export interface Plan {
   updated_at: string;
 }
 
-/** Subconjunto público de Plan (retorno de get_public_plans()) — sem provider/provider_plan_id. */
-export type PublicPlan = Omit<Plan, "created_at" | "updated_at" | "lifetime">;
+/** Benefício COMERCIAL (texto) de um plano — não concede nenhum direito; os direitos reais são os limites/flags do plano. */
+export interface PublicPlanBenefit {
+  text: string;
+  highlighted: boolean;
+  /** false = linha "não incluído" (ex.: teste grátis sem suporte). */
+  included: boolean;
+}
+
+export type PlanKind = "standard" | "trial" | "custom" | "lifetime";
+
+/**
+ * Retorno de get_public_plans() (anon pode ler): só campos seguros para o público — sem provider, sem flags
+ * administrativas. Desconto/preço anterior/economia vêm CALCULADOS pelo banco e só quando a promoção está vigente.
+ */
+export interface PublicPlan {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  price: number | null;
+  currency: string;
+  access_duration_days: number | null;
+  additional_user_limit: number;
+  trial: boolean;
+  support_enabled: boolean;
+  tickets_enabled: boolean;
+  exclusive_groups_enabled: boolean;
+  early_access_enabled: boolean;
+  status: PlanStatus;
+  kind: PlanKind;
+  tagline: string | null;
+  highlight: "popular" | "value" | null;
+  cta_label: string | null;
+  /** https://, mailto: ou caminho interno — validado no banco. */
+  contact_url: string | null;
+  benefits_title: string | null;
+  sort_order: number;
+  compare_price: number | null;
+  discount_percent: number | null;
+  savings_amount: number | null;
+  promo_ends_at: string | null;
+  benefits: PublicPlanBenefit[];
+}
 
 /** Espelha a tabela public.subscriptions — uma única linha "atual" por empresa. */
 export interface Subscription {

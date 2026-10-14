@@ -2,7 +2,7 @@ import { MetricCard } from "@/components/app/metric-card";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getCurrentCompany } from "@/lib/companies/queries";
-import { listCompanyTeam } from "@/lib/team/queries";
+import { getSeatUsage, listCompanyTeam } from "@/lib/team/queries";
 import {
   AddMemberForm,
   MemberRoleForm,
@@ -15,7 +15,7 @@ export const metadata: Metadata = { title: "Equipe" };
 
 export default async function TeamPage() {
   const current = (await getCurrentCompany())!;
-  const team = await listCompanyTeam();
+  const [team, seats] = await Promise.all([listCompanyTeam(), getSeatUsage()]);
   const canManage = current.role === "owner" || current.role === "admin";
 
   const admins = team.filter((member) => member.role === "admin" || member.role === "owner").length;
@@ -41,6 +41,34 @@ export default async function TeamPage() {
         <MetricCard label="Administradores" value={admins} />
         <MetricCard label="Profissionais ativos" value={professionals} />
       </div>
+
+      {seats ? (
+        <div
+          role={seats.overLimit ? "alert" : undefined}
+          className={
+            seats.overLimit
+              ? "rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm"
+              : seats.atLimit
+                ? "rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm"
+                : "rounded-xl border bg-card p-4 text-sm"
+          }
+        >
+          <p className="font-medium">
+            Usuários do plano: {seats.totalUsed} de {seats.totalAllowed} (1 proprietário + {seats.additionalUsed} de {seats.additionalMax} adicionais)
+          </p>
+          {seats.overLimit ? (
+            <p className="mt-1 text-muted-foreground">
+              A empresa tem mais usuários do que o plano atual permite. Ninguém foi removido, mas novas inclusões ficam bloqueadas até você
+              remover colaboradores ou <Link href="/app/assinatura/planos" className="font-medium underline underline-offset-4">trocar de plano</Link>.
+            </p>
+          ) : seats.atLimit ? (
+            <p className="mt-1 text-muted-foreground">
+              O limite do plano foi atingido: para adicionar mais pessoas,{" "}
+              <Link href="/app/assinatura/planos" className="font-medium underline underline-offset-4">altere o plano</Link>.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
 
       {!canManage ? (
         <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm">

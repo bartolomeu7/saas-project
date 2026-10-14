@@ -1,6 +1,8 @@
 import "server-only";
 
 import { createSessionClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/public";
+import { normalizePublicPlan } from "@/lib/billing/pricing-display";
 import type {
   CompanyEntitlements,
   Plan,
@@ -33,13 +35,35 @@ export async function getPlans(options: { includeInactive?: boolean } = {}): Pro
   return (data ?? []) as Plan[];
 }
 
-/** Catálogo público (landing page, anon) — via get_public_plans(), sem provider/provider_plan_id. */
-export async function getPublicPlans(): Promise<PublicPlan[]> {
-  const supabase = await createSessionClient();
-  const { data, error } = await supabase.rpc("get_public_plans");
+/**
+ * Catálogo público — FONTE ÚNICA de planos para o site, via get_public_plans() (só planos ativos, visíveis, não
+ * vitalícios; desconto calculado no banco e só com promoção vigente). Sem sessão: usa o cliente anônimo sem cookies,
+ * então a home pode ser gerada de forma estática e revalidada. Falha => [] (a home mostra "indisponível"; nunca preço
+ * inventado). Com `authenticated: true` usa a sessão do usuário (tela de planos do app).
+ */
+export async function getPublicPlans(options: { authenticated?: boolean } = {}): Promise<PublicPlan[]> {
+  try {
+    const supabase = options.authenticated ? await createSessionClient() : createPublicClient();
+    const { data, error } = await supabase.rpc("get_public_plans");
+    if (error) {
+      console.error("[billing] get_public_plans() falhou:", error.message);
+      return [];
+    }
+    return ((data ?? []) as unknown as Record<string, unknown>[]).map(normalizePublicPlan);
+  } catch (error) {
+    console.error("[billing] catálogo público indisponível:", error instanceof Error ? error.message : "erro desconhecido");
+    return [];
+  }
+}
 
-  if (error) return [];
-  return (data ?? []) as PublicPlan[];
+/** Resultado de get_my_trial_status(): o teste grátis foi negado por limite de cadastros da conexão? */
+export async function getMyTrialStatus(): Promise<{ denied: boolean; windowHours: number }> {
+  const supabase = (await createSessionClient()) as unknown as {
+    rpc(fn: "get_my_trial_status"): Promise<{ data: { denied?: boolean; window_hours?: number } | null; error: { message: string } | null }>;
+  };
+  const { data, error } = await supabase.rpc("get_my_trial_status");
+  if (error || !data) return { denied: false, windowHours: 24 };
+  return { denied: data.denied === true, windowHours: Number(data.window_hours ?? 24) };
 }
 
 export async function getPlanById(id: string): Promise<Plan | null> {

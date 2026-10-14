@@ -13,6 +13,10 @@ const SETTING_LABELS: Record<string, { label: string; unit: string }> = {
   admin_max_free_days: { label: "Limite de dias gratuitos por operação (admin)", unit: "dias" },
   presence_online_seconds: { label: "Janela de “online agora”", unit: "segundos" },
   presence_recent_minutes: { label: "Janela de “ativo recentemente”", unit: "minutos" },
+  max_concurrent_sessions: { label: "Sessões simultâneas por conta", unit: "sessões" },
+  trial_signup_ip_limit: { label: "Cadastros com teste grátis por conexão (IP)", unit: "cadastros" },
+  trial_signup_ip_window_hours: { label: "Janela de contagem por conexão (IP)", unit: "horas" },
+  trial_signup_retention_days: { label: "Retenção dos registros antifraude", unit: "dias" },
 };
 
 /** Quem pode o quê — espelha as RPCs (a autoridade é o banco, esta tabela é só informativa). */

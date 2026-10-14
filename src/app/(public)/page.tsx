@@ -16,19 +16,24 @@ import { Reveal, ScrollProgress } from "@/components/marketing/motion";
 import {
   BENTO_CELLS,
   CREDIBILITY_ITEMS,
-  CUSTOM_PLAN,
   DIFFERENTIALS,
   FEATURES,
   HOW_IT_WORKS_STEPS,
-  PRICING_PLANS,
   PROBLEMS,
   SEGMENTS,
   buildFaq,
 } from "@/config/marketing";
 import { HomeHeroMockup, HomeProductShowcase } from "@/components/marketing/home-product-showcase";
+import { getPublicPlans } from "@/lib/billing/queries";
+import { faqFacts, toPricingView } from "@/lib/billing/pricing-display";
 
 const SEO_DESCRIPTION =
   "Gerencie clientes, produtos, serviços, vendas, fidelidade, caixa, estoque e financeiro em um só lugar com o Prime Ges.";
+
+// Os planos vêm do banco (get_public_plans): a página é estática e se renova sozinha a cada 60 s; salvar um plano no
+// /admin também chama revalidatePath("/"). Se o catálogo não carregar, a seção mostra "indisponível" — nunca um preço
+// inventado ou desatualizado.
+export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: "Prime Ges — Gestão simples, moderna e organizada",
@@ -61,9 +66,14 @@ function enter(delayMs: number): CSSProperties {
   return { "--enter-delay": delayMs + "ms" } as CSSProperties;
 }
 
-export default function HomePage() {
-  const trial = PRICING_PLANS.find((plan) => plan.id === "FREE_TRIAL");
-  const faq = buildFaq(PRICING_PLANS);
+export default async function HomePage() {
+  const catalog = await getPublicPlans();
+  const views = catalog.map(toPricingView);
+  const gridPlans = views.filter((view) => view.kind !== "custom" && view.kind !== "lifetime");
+  const customPlan = views.find((view) => view.kind === "custom") ?? null;
+  const trialPlan = catalog.find((plan) => plan.kind === "trial");
+  const trialLabel = trialPlan ? faqFacts(catalog).trialLabel : null;
+  const faq = buildFaq(faqFacts(catalog));
 
   return (
     <>
@@ -113,9 +123,9 @@ export default function HomePage() {
                 </div>
 
                 <ul className="home-v2-hero__trust prime-enter" style={enter(280)}>
-                  {trial && (
+                  {trialLabel && (
                     <li>
-                      <Check size={13} aria-hidden="true" /> Teste grátis de {trial.periodLabel}
+                      <Check size={13} aria-hidden="true" /> Teste grátis de {trialLabel}
                     </li>
                   )}
                   <li>
@@ -343,26 +353,63 @@ export default function HomePage() {
               />
             </Reveal>
 
-            <div className="mt-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              {PRICING_PLANS.map((plan, index) => (
-                <Reveal key={plan.id} delay={index * 55} className="h-full [&>div]:h-full">
-                  <PricingCard plan={plan} />
-                </Reveal>
-              ))}
-            </div>
-
-            <Reveal delay={120} className="mt-6">
-              <Card className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <Badge variant="muted">{CUSTOM_PLAN.tagline}</Badge>
-                  <h3 className="mt-3 text-lg font-semibold text-foreground">{CUSTOM_PLAN.title}</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">{CUSTOM_PLAN.description}</p>
-                </div>
-                <p className="text-sm text-muted-foreground sm:max-w-[16rem]">
-                  O canal comercial para este plano ainda não está disponível.
-                </p>
+            {gridPlans.length > 0 ? (
+              <div className="mt-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                {gridPlans.map((plan, index) => (
+                  <Reveal key={plan.id} delay={index * 55} className="h-full [&>div]:h-full">
+                    <PricingCard plan={plan} />
+                  </Reveal>
+                ))}
+              </div>
+            ) : (
+              <Card className="mt-10 p-6 text-center text-sm text-muted-foreground">
+                Os planos estão indisponíveis no momento. Tente novamente em instantes ou{" "}
+                <Link href={siteConfig.links.register} className="font-medium text-foreground underline underline-offset-4">
+                  crie a sua conta
+                </Link>{" "}
+                para conhecer a plataforma.
               </Card>
-            </Reveal>
+            )}
+
+            {customPlan && (
+              <Reveal delay={120} className="mt-6">
+                <Card className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    {customPlan.tagline && <Badge variant="muted">{customPlan.tagline}</Badge>}
+                    <h3 className="mt-3 text-lg font-semibold text-foreground">{customPlan.benefitsTitle ?? customPlan.name}</h3>
+                    {customPlan.description && <p className="mt-1 text-sm text-muted-foreground">{customPlan.description}</p>}
+                    {customPlan.lines.length > 0 && (
+                      <ul className="mt-3 flex flex-col gap-1.5">
+                        {customPlan.lines.map((line, index) => (
+                          <li key={`${index}-${line.text}`} className="flex items-start gap-2 text-sm text-foreground">
+                            <Check className="mt-0.5 h-4 w-4 shrink-0 text-success" strokeWidth={2.25} aria-hidden="true" />
+                            {line.text}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                  {customPlan.ctaHref ? (
+                    customPlan.ctaExternal ? (
+                      <a
+                        href={customPlan.ctaHref}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={cn(buttonVariants({ variant: "outline" }), "sm:self-center")}
+                      >
+                        {customPlan.ctaLabel}
+                      </a>
+                    ) : (
+                      <Link href={customPlan.ctaHref} className={cn(buttonVariants({ variant: "outline" }), "sm:self-center")}>
+                        {customPlan.ctaLabel}
+                      </Link>
+                    )
+                  ) : (
+                    <p className="text-sm text-muted-foreground sm:max-w-[16rem]">O canal comercial para este plano ainda não está disponível.</p>
+                  )}
+                </Card>
+              </Reveal>
+            )}
           </div>
         </section>
 
@@ -403,7 +450,7 @@ export default function HomePage() {
                 <h2 id="cta-title">Comece a organizar o seu negócio hoje.</h2>
                 <p>
                   Crie a conta, aceite os documentos e use o teste grátis
-                  {trial ? " de " + trial.periodLabel : ""} para conhecer a plataforma.
+                  {trialLabel ? " de " + trialLabel : ""} para conhecer a plataforma.
                 </p>
                 <div className="home-v2-final__actions">
                   <Link

@@ -6,6 +6,8 @@ import { createSessionClient } from "@/lib/supabase/server";
 import { requirePlatformAdmin, requireSuperAdmin } from "@/lib/admin/queries";
 import { confirmPaymentFromProvider } from "@/lib/billing/confirm-payment";
 import type { ActionResult } from "@/lib/auth/actions";
+import { buildPlanPayload } from "@/lib/admin/plan-form";
+import type { Json } from "@/types/supabase";
 
 /**
  * Server Actions do painel da PLATAFORMA. Cada uma só valida o formato do pedido
@@ -535,123 +537,37 @@ export async function reverifyPaymentAction(paymentId: string): Promise<ActionRe
 
 /* -------------------------------------------------------------------- planos */
 
-const planFields = z.object({
-  name: z.string().trim().min(1, "Informe o nome do plano.").max(80, "Nome muito longo."),
-  description: z.string().trim().max(500, "Descrição muito longa.").optional(),
-  // Opcionais só para o plano CUSTOM ("sob consulta"); o banco recusa vazio nos demais.
-  price: z
-    .string()
-    .transform((value) => Number(value.replace(",", ".")))
-    .pipe(z.number({ invalid_type_error: "Preço inválido." }).min(0, "Preço inválido.").max(100_000, "Preço inválido."))
-    .optional(),
-  accessDurationDays: z
-    .string()
-    .regex(/^\d{1,4}$/, "Informe a duração do acesso em dias.")
-    .transform(Number)
-    .optional(),
-  billingInterval: z.enum(["month", "year"]).optional(),
-  additionalUserLimit: z
-    .string()
-    .regex(/^\d{1,4}$/, "Limite de usuários inválido.")
-    .transform(Number),
-  sortOrder: z
-    .string()
-    .regex(/^\d{1,5}$/, "Ordem inválida.")
-    .transform(Number),
-  trial: z.boolean(),
-  supportEnabled: z.boolean(),
-  ticketsEnabled: z.boolean(),
-  exclusiveGroupsEnabled: z.boolean(),
-  earlyAccessEnabled: z.boolean(),
-});
+export type SavePlanResult = ActionResult & { planId?: string };
 
-function readPlanFields(formData: FormData) {
-  return {
-    name: formString(formData, "name"),
-    description: formString(formData, "description"),
-    price: formString(formData, "price"),
-    accessDurationDays: formString(formData, "accessDurationDays"),
-    billingInterval: formString(formData, "billingInterval"),
-    additionalUserLimit: formString(formData, "additionalUserLimit") ?? "0",
-    sortOrder: formString(formData, "sortOrder") ?? "0",
-    trial: formData.get("trial") === "on",
-    supportEnabled: formData.get("supportEnabled") === "on",
-    ticketsEnabled: formData.get("ticketsEnabled") === "on",
-    exclusiveGroupsEnabled: formData.get("exclusiveGroupsEnabled") === "on",
-    earlyAccessEnabled: formData.get("earlyAccessEnabled") === "on",
-  };
-}
-
-/** SUPER_ADMIN: cria um plano. Planos nunca são excluídos (só desativados). */
-export async function createPlanAction(formData: FormData): Promise<ActionResult> {
+/**
+ * SUPER_ADMIN: cria (planId = null) ou edita um plano em UMA operação atômica (RPC admin_save_plan). O zod só valida o
+ * FORMATO; preço mínimo, desconto válido, plano personalizado sem preço, janela de promoção, benefícios etc. são
+ * regras do banco (e a autorização também: usuário comum/admin recebem "not authorized"). Planos nunca são excluídos.
+ * Mudar o preço NÃO altera cobranças já criadas nem assinaturas existentes; limites só propagam com confirmação explícita.
+ */
+export async function savePlanAction(planId: string | null, input: unknown): Promise<SavePlanResult> {
   await requireSuperAdmin();
 
-  const parsed = planFields
-    .extend({ code: z.string().trim().toUpperCase().regex(/^[A-Z][A-Z0-9_]{1,31}$/, "Código inválido (A-Z, 0-9 e _; 2 a 32 caracteres).") })
-    .safeParse({ ...readPlanFields(formData), code: formString(formData, "code") });
-  if (!parsed.success) return invalid(parsed.error.issues[0]);
-  if (parsed.data.price === undefined) return { error: "Informe o preço." };
-  if (parsed.data.accessDurationDays === undefined) return { error: "Informe a duração do acesso em dias." };
+  if (planId !== null && !uuid.safeParse(planId).success) return { error: "Parâmetros inválidos." };
+  const built = buildPlanPayload(input, { creating: planId === null });
+  if (!built.ok) return { error: built.error };
 
   const supabase = await createSessionClient();
-  const { error } = await supabase.rpc("create_platform_plan", {
-    p_code: parsed.data.code,
-    p_name: parsed.data.name,
-    p_description: parsed.data.description,
-    p_price: parsed.data.price,
-    p_access_duration_days: parsed.data.accessDurationDays,
-    p_billing_interval: parsed.data.billingInterval,
-    p_additional_user_limit: parsed.data.additionalUserLimit,
-    p_trial: parsed.data.trial,
-    p_support_enabled: parsed.data.supportEnabled,
-    p_tickets_enabled: parsed.data.ticketsEnabled,
-    p_exclusive_groups_enabled: parsed.data.exclusiveGroupsEnabled,
-    p_early_access_enabled: parsed.data.earlyAccessEnabled,
-    p_sort_order: parsed.data.sortOrder,
+  const { data, error } = await supabase.rpc("admin_save_plan", {
+    p_plan_id: planId as unknown as string, // NULL = criar (o gerador de tipos não expressa NULL em argumentos)
+    p_payload: built.payload as unknown as Json,
   });
 
   if (error) {
-    console.error("[admin] create_platform_plan() falhou:", error.message);
+    console.error("[admin] admin_save_plan() falhou:", error.message);
     return { error: toUserMessage(error) };
   }
 
   revalidatePath("/admin/plans");
   revalidatePath("/admin/audit");
-  return { success: "Plano criado." };
-}
-
-export async function updatePlanAction(planId: string, formData: FormData): Promise<ActionResult> {
-  await requireSuperAdmin();
-
-  const parsed = planFields.extend({ planId: uuid }).safeParse({ ...readPlanFields(formData), planId });
-  if (!parsed.success) return invalid(parsed.error.issues[0]);
-
-  const supabase = await createSessionClient();
-  const { error } = await supabase.rpc("update_platform_plan", {
-    p_plan_id: parsed.data.planId,
-    p_name: parsed.data.name,
-    p_description: parsed.data.description ?? "",
-    p_price: parsed.data.price ?? (null as unknown as number),
-    p_access_duration_days: parsed.data.accessDurationDays ?? (null as unknown as number),
-    p_billing_interval: parsed.data.billingInterval ?? (null as unknown as "month"),
-    p_additional_user_limit: parsed.data.additionalUserLimit,
-    p_trial: parsed.data.trial,
-    p_support_enabled: parsed.data.supportEnabled,
-    p_tickets_enabled: parsed.data.ticketsEnabled,
-    p_exclusive_groups_enabled: parsed.data.exclusiveGroupsEnabled,
-    p_early_access_enabled: parsed.data.earlyAccessEnabled,
-    p_sort_order: parsed.data.sortOrder,
-  });
-
-  if (error) {
-    console.error("[admin] update_platform_plan() falhou:", error.message);
-    return { error: toUserMessage(error) };
-  }
-
-  revalidatePath("/admin/plans");
   revalidatePath("/app/assinatura/planos");
-  revalidatePath("/admin/audit");
-  return { success: "Plano atualizado." };
+  revalidatePath("/"); // a home lê o catálogo público (revalida também por tempo)
+  return { success: planId === null ? "Plano criado." : "Plano atualizado.", planId: typeof data === "string" ? data : (planId ?? undefined) };
 }
 
 export async function setPlanStatusAction(planId: string, status: string): Promise<ActionResult> {
@@ -676,6 +592,7 @@ export async function setPlanStatusAction(planId: string, status: string): Promi
   revalidatePath("/admin/plans");
   revalidatePath("/app/assinatura/planos");
   revalidatePath("/admin/audit");
+  revalidatePath("/");
   return { success: parsed.data.status === "active" ? "Plano ativado." : "Plano desativado." };
 }
 
@@ -857,8 +774,9 @@ export async function grantLicenseAction(companyId: string, formData: FormData):
   const { data, error } = await supabase.rpc("admin_grant_license", {
     p_company_id: parsed.data.companyId,
     p_kind: parsed.data.kind,
-    p_plan_id: parsed.data.kind === "lifetime" ? null : (parsed.data.planId ?? null),
-    p_days: parsed.data.kind === "custom_days" ? (parsed.data.days ?? null) : null,
+    // O gerador de tipos não expressa NULL em argumentos de função; a RPC aceita NULL nestes dois (cast pontual).
+    p_plan_id: (parsed.data.kind === "lifetime" ? null : (parsed.data.planId ?? null)) as unknown as string,
+    p_days: (parsed.data.kind === "custom_days" ? (parsed.data.days ?? null) : null) as unknown as number,
     p_reason: parsed.data.reason,
     p_request_key: parsed.data.requestKey,
   });
