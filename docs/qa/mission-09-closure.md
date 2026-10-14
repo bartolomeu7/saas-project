@@ -141,7 +141,10 @@ Cada requisito está classificado nas tabelas acima. **Nenhuma declaração de p
 
 ## 12. Git / CI
 
-Ver rodapé "Estado Git/CI" (atualizado após o commit e a execução do workflow).
+* Commit de trabalho: `6e9ef7f` (`fix(plans): fechamento Missão 09 …`, 31 arquivos), sobre `d217ed8`, publicado em `origin/feat/plans-management-usage-limits` (sem force-push).
+* CI *Phase 3 CI* (`verify`) em `6e9ef7f`: **SUCCESS** (run 38601112819, 1 m 45 s: `npm ci`, lint, typecheck, test:unit, build — todos *success*). Vercel Preview do mesmo SHA: build `success` (acesso protegido por SSO; não validado autenticado — §7).
+* PR #34: draft, **não mergeada** (empilhada sobre a #33, também não mergeada). Este arquivo foi atualizado em um commit só de documentação posterior a `6e9ef7f`.
+* Preservados: `b.txt` (não rastreado) e todos os commits/branches anteriores.
 
 ## 13. Arquivos
 
