@@ -31,8 +31,11 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   const admin = await requirePlatformAdmin();
   // Mesmo limite de sessões simultâneas da conta (administradores não são exceção).
   const user = await getCurrentUser().catch(() => null);
-  if (user && (await evaluateSessionGate(user.id)) === "blocked") {
-    redirect(SESSION_LIMIT_PATH);
+  if (user) {
+    const gate = await evaluateSessionGate(user.id);
+    if (gate === "blocked") redirect(SESSION_LIMIT_PATH);
+    // sessão ainda não validada (Clerk/serviço indisponível): negada só a esta sessão, de forma temporária
+    if (gate === "unverified") redirect(`${SESSION_LIMIT_PATH}?motivo=verificacao`);
   }
   const defaultOpen = (await cookies()).get("sidebar_state")?.value !== "false";
 

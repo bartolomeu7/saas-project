@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { resolveClientIp, normalizeIp, hashClientIp, antifraudSecret, readIpEnv } from "../../src/lib/security/client-ip.ts";
+import { resolveClientIp, normalizeIp, hashClientIp, antifraudSecret, resolveAntifraudSecret, antifraudRequiresDedicated, describeAntifraudConfig, readIpEnv } from "../../src/lib/security/client-ip.ts";
 
 const h = (obj) => ({ get: (name) => obj[name.toLowerCase()] ?? null });
 const vercel = { onVercel: true, trustedProxyHops: 0 };
@@ -68,12 +68,64 @@ describe("identificador derivado por HMAC (o IP em claro nunca é gravado)", () 
     assert.notEqual(hashClientIp("2001:db8:abcd:12::1", secret), hashClientIp("2001:db8:abcd:13::1", secret));
   });
 
-  it("segredo: dedicado, ou derivado do segredo do Clerk (nunca o valor cru), ou null (sem fail-open silencioso do app)", () => {
-    assert.equal(antifraudSecret({ ANTIFRAUD_HASH_SECRET: "x".repeat(32) }), "x".repeat(32));
-    const derived = antifraudSecret({ CLERK_SECRET_KEY: "sk_test_" + "a".repeat(30) });
-    assert.match(derived, /^[0-9a-f]{64}$/);
-    assert.ok(!derived.includes("sk_test_"));
-    assert.equal(antifraudSecret({ ANTIFRAUD_HASH_SECRET: "curto", CLERK_SECRET_KEY: "curto" }), null);
-    assert.equal(antifraudSecret({}), null);
+  it("segredo dedicado válido é usado em qualquer ambiente", () => {
+    const strong = "k9Xv2mQ7pLr4Tz8Wb3NcY6dHs1JfGa5E";
+    for (const env of [{}, { VERCEL_ENV: "production" }, { VERCEL_ENV: "preview" }]) {
+      assert.deepEqual(resolveAntifraudSecret({ ...env, ANTIFRAUD_HASH_SECRET: strong }), { secret: strong, source: "dedicated" });
+    }
+  });
+
+  it("segredo dedicado fraco ou curto é erro de configuração: NÃO é substituído em silêncio por outro", () => {
+    for (const weak of ["curto", "x".repeat(40), "abcabcabcabcabcabcabcabcabcabcab", "      "]) {
+      const r = resolveAntifraudSecret({ ANTIFRAUD_HASH_SECRET: weak, CLERK_SECRET_KEY: "sk_test_" + "a1b2c3d4e5".repeat(4) });
+      if (weak.trim() === "") assert.equal(r.source, "derived_from_clerk", "vazio/espaços = não definido");
+      else assert.deepEqual(r, { secret: null, source: "invalid_dedicated" }, weak);
+    }
+  });
+
+  it("fora de Production: deriva do segredo do Clerk do próprio ambiente (nunca o valor cru); sem ele, indisponível", () => {
+    const derived = resolveAntifraudSecret({ CLERK_SECRET_KEY: "sk_test_" + "a1b2c3d4e5".repeat(4) });
+    assert.equal(derived.source, "derived_from_clerk");
+    assert.match(derived.secret, /^[0-9a-f]{64}$/);
+    assert.ok(!derived.secret.includes("sk_test_"));
+    assert.deepEqual(resolveAntifraudSecret({ CLERK_SECRET_KEY: "curto" }), { secret: null, source: "missing" });
+    assert.deepEqual(resolveAntifraudSecret({}), { secret: null, source: "missing" });
+  });
+
+  it("TEST e Production nunca compartilham identificador: chaves do Clerk diferentes => segredos derivados diferentes", () => {
+    const a = resolveAntifraudSecret({ CLERK_SECRET_KEY: "sk_test_" + "a1b2c3d4e5".repeat(4) }).secret;
+    const b = resolveAntifraudSecret({ CLERK_SECRET_KEY: "sk_live_" + "f6g7h8i9j0".repeat(4) }).secret;
+    assert.notEqual(a, b);
+    assert.notEqual(hashClientIp("203.0.113.5", a), hashClientIp("203.0.113.5", b));
+  });
+
+  it("Production NÃO tem fallback: sem ANTIFRAUD_HASH_SECRET o teste grátis fica suspenso (falha segura), mesmo com a chave do Clerk", () => {
+    const env = { VERCEL_ENV: "production", CLERK_SECRET_KEY: "sk_live_" + "f6g7h8i9j0".repeat(4) };
+    assert.deepEqual(resolveAntifraudSecret(env), { secret: null, source: "required_in_production" });
+    assert.equal(antifraudSecret(env), null);
+    assert.equal(antifraudRequiresDedicated(env), true);
+    assert.equal(antifraudRequiresDedicated({ ANTIFRAUD_REQUIRE_DEDICATED: "1" }), true, "pode ser exigido fora da Vercel");
+    assert.equal(antifraudRequiresDedicated({ VERCEL_ENV: "preview" }), false);
+  });
+
+  it("o resumo de configuração nunca contém o segredo nem partes dele", () => {
+    const strong = "k9Xv2mQ7pLr4Tz8Wb3NcY6dHs1JfGa5E";
+    const clerk = "sk_test_" + "a1b2c3d4e5".repeat(4);
+    for (const env of [{ ANTIFRAUD_HASH_SECRET: strong }, { CLERK_SECRET_KEY: clerk }, { VERCEL_ENV: "production" }, { ANTIFRAUD_HASH_SECRET: "fraco" }]) {
+      const d = describeAntifraudConfig(env);
+      const dump = JSON.stringify(d);
+      assert.ok(!dump.includes(strong) && !dump.includes(clerk) && !dump.includes(strong.slice(0, 8)), "sem vazamento");
+      assert.equal(typeof d.ok, "boolean");
+    }
+    assert.equal(describeAntifraudConfig({ ANTIFRAUD_HASH_SECRET: strong }).ok, true);
+    assert.equal(describeAntifraudConfig({ VERCEL_ENV: "production" }).ok, false);
+  });
+
+  it("rotação: com outro segredo o MESMO IP gera outro identificador (contadores recomeçam; nada é corrompido)", () => {
+    const one = hashClientIp("203.0.113.5", "k9Xv2mQ7pLr4Tz8Wb3NcY6dHs1JfGa5E");
+    const two = hashClientIp("203.0.113.5", "Zq3Rt8Yu1Io6Pa2Sd5Fg9Hj4Kl7Xc0Vb");
+    assert.notEqual(one, two);
+    assert.match(one, /^[0-9a-f]{64}$/);
+    assert.match(two, /^[0-9a-f]{64}$/);
   });
 });

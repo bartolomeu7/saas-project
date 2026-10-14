@@ -42,8 +42,11 @@ export default async function AppLayout({
   }
 
   // Limite de sessões simultâneas da conta: sessão nova acima do limite vai para /acesso-sessoes (as já aceitas seguem).
-  if (user && (await evaluateSessionGate(user.id)) === "blocked") {
-    redirect(SESSION_LIMIT_PATH);
+  if (user) {
+    const gate = await evaluateSessionGate(user.id);
+    if (gate === "blocked") redirect(SESSION_LIMIT_PATH);
+    // sessão ainda não validada (Clerk/serviço indisponível): negada só a esta sessão, de forma temporária
+    if (gate === "unverified") redirect(`${SESSION_LIMIT_PATH}?motivo=verificacao`);
   }
 
   // Consentimento legal vigente (Termos + Política) antes de qualquer outra regra: sem ele, /aceite-termos.

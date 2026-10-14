@@ -3,64 +3,109 @@ import "server-only";
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createSessionClient } from "@/lib/supabase/server";
+import {
+  decideSessionAccess,
+  GateNotProvisionedError,
+  isMissingFunctionError,
+  parseSlotStatus,
+  type ActiveSessions,
+  type RegisterResult,
+  type SessionGateResult,
+} from "@/lib/auth/session-gate-core";
 
 /**
- * Limite de sessões simultâneas por conta (controle de APLICAÇÃO; o Clerk continua dono das sessões).
+ * Limite de sessões simultâneas por conta (controle de APLICAÇÃO; o Clerk continua dono das sessões e não oferece um
+ * limite "N por usuário": só o modo de sessão única, que não serve aqui).
  *
- * O Clerk não limita sessões ativas por usuário, então o app decide quem entra. A lista de sessões ativas vem do SERVIDOR
- * (API do Clerk), nunca do navegador. A decisão fica no banco, de forma atômica por usuário (register_session_slot,
- * somente service_role): sessões já aceitas NUNCA são derrubadas por uma sessão nova — a sessão nova é que é recusada,
- * até que alguém encerre uma sessão (ou ela expire). O caminho comum custa uma leitura barata (session_slot_status);
- * a API do Clerk só é consultada na primeira vez que uma sessão aparece (ou a cada 20 s enquanto estiver recusada).
+ * As regras de decisão e o comportamento diante de falhas estão em session-gate-core.ts (puro e testado). Aqui ficam só
+ * as ligações com o mundo real:
+ *  - `readStatus`  -> RPC session_slot_status com o token do próprio usuário (barato);
+ *  - `listActiveSessions` -> API do Clerk NO SERVIDOR (nunca o navegador), até 100 sessões ativas, com sinalização de lista incompleta;
+ *  - `register` -> RPC register_session_slot (service_role), atômica por usuário no banco.
  *
- * LIMITAÇÃO documentada: o gate roda na renderização do layout de /app e /admin. Chamadas diretas de API/Server Action
- * feitas por uma sessão recusada não passam por ele; a sessão recusada continua autenticada no Clerk e não ganha nenhum
- * privilégio além dos que o próprio usuário já tem. Falha de infraestrutura (Clerk/banco/chave ausente) => "allowed"
- * (não trancamos clientes por indisponibilidade), registrado em log sem dados sensíveis.
+ * Onde é imposto: o middleware lê o estado (páginas, Server Actions e APIs do produto) e os layouts de /app e /admin
+ * fazem a verificação completa. LIMITAÇÃO documentada: a recusa vale para a APLICAÇÃO; o token do Clerk da sessão
+ * recusada continua válido até ela ser encerrada e o banco (RLS) autentica pelo token, não pelo registro de vagas.
  */
 
-export const SESSION_LIMIT_PATH = "/acesso-sessoes";
-export const SESSION_LIMIT_MESSAGE =
-  "Você atingiu o limite de sessões simultâneas permitido pela sua conta. Encerre uma sessão ativa ou entre em contato com o suporte para obter ajuda.";
+export { SESSION_LIMIT_PATH, SESSION_LIMIT_MESSAGE, SESSION_UNVERIFIED_MESSAGE } from "@/lib/auth/session-gate-core";
 
-const RECHECK_BLOCKED_AFTER_SECONDS = 20;
+export type { SessionGateResult };
 
-export type SessionGateResult = "allowed" | "blocked";
-
-type StatusRpc = {
-  rpc(fn: "session_slot_status", args: { p_session_id: string }): Promise<{ data: { state?: string; verified_age_seconds?: number } | null; error: { message: string } | null }>;
+type RpcError = { message: string; code?: string } | null;
+type StatusRpc = { rpc(fn: "session_slot_status", args: { p_session_id: string }): Promise<{ data: unknown; error: RpcError }> };
+type RegisterRpc = {
+  rpc(
+    fn: "register_session_slot",
+    args: { p_user_id: string; p_session_id: string; p_active_session_ids: string[]; p_list_complete: boolean }
+  ): Promise<{ data: unknown; error: RpcError }>;
 };
 
-/** Sessões ativas do usuário no Clerk (ids, mais recentes primeiro). */
-export async function listActiveClerkSessions(clerkUserId: string) {
+const CLERK_PAGE_LIMIT = 100;
+
+/** Sessões ativas do usuário no Clerk (mais recentes primeiro) e se a lista veio completa. */
+export async function listActiveClerkSessionsPage(clerkUserId: string) {
   const client = await clerkClient();
-  const result = await client.sessions.getSessionList({ userId: clerkUserId, status: "active", limit: 100 });
-  return result.data;
+  const result = await client.sessions.getSessionList({ userId: clerkUserId, status: "active", limit: CLERK_PAGE_LIMIT });
+  return { sessions: result.data, complete: result.data.length >= result.totalCount };
+}
+
+/** Compatível com a tela /acesso-sessoes e com o encerramento de sessões. */
+export async function listActiveClerkSessions(clerkUserId: string) {
+  return (await listActiveClerkSessionsPage(clerkUserId)).sessions;
 }
 
 export async function evaluateSessionGate(internalUserId: string): Promise<SessionGateResult> {
   try {
     const { sessionId, userId: clerkUserId } = await auth();
+    // Sem sessão não há o que limitar (rotas protegidas já exigem login no middleware).
     if (!sessionId || !clerkUserId) return "allowed";
 
-    const supabase = (await createSessionClient()) as unknown as StatusRpc;
-    const { data: status } = await supabase.rpc("session_slot_status", { p_session_id: sessionId });
-    if (status?.state === "allowed") return "allowed";
-    if (status?.state === "blocked" && (status.verified_age_seconds ?? Infinity) < RECHECK_BLOCKED_AFTER_SECONDS) return "blocked";
-
-    // Primeira vez (ou recusada há mais de 20 s): confere no Clerk quais sessões estão realmente ativas e decide no banco.
-    const active = await listActiveClerkSessions(clerkUserId);
-    const ids = Array.from(new Set([sessionId, ...active.map((s) => s.id)]));
-    const admin = createAdminClient();
-    const { data, error } = await admin.rpc("register_session_slot", {
-      p_user_id: internalUserId,
-      p_session_id: sessionId,
-      p_active_session_ids: ids,
+    const { result, reason } = await decideSessionAccess({
+      async readStatus() {
+        const supabase = (await createSessionClient()) as unknown as StatusRpc;
+        const { data, error } = await supabase.rpc("session_slot_status", { p_session_id: sessionId });
+        if (error) {
+          if (isMissingFunctionError(error)) throw new GateNotProvisionedError();
+          throw new Error("status indisponível");
+        }
+        return parseSlotStatus(data);
+      },
+      async listActiveSessions(): Promise<ActiveSessions> {
+        const { sessions, complete } = await listActiveClerkSessionsPage(clerkUserId);
+        // a sessão atual sempre entra na lista que o banco confere (se o Clerk não a lista, o banco responde "invalid")
+        return { ids: Array.from(new Set(sessions.map((s) => s.id))), complete };
+      },
+      async register(activeIds, listComplete): Promise<RegisterResult> {
+        // Configuração ausente é falha de implantação, não do usuário: nega a verificação (sem liberar em silêncio) e avisa.
+        if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+          console.error("[session-gate] SUPABASE_SERVICE_ROLE_KEY ausente neste ambiente: sessões novas não podem ser verificadas.");
+          throw new Error("service role ausente");
+        }
+        const admin = createAdminClient() as unknown as RegisterRpc;
+        const { data, error } = await admin.rpc("register_session_slot", {
+          p_user_id: internalUserId,
+          p_session_id: sessionId,
+          p_active_session_ids: activeIds,
+          p_list_complete: listComplete,
+        });
+        if (error) {
+          if (isMissingFunctionError(error)) throw new GateNotProvisionedError();
+          throw new Error("registro indisponível");
+        }
+        const state = (data as { state?: unknown } | null)?.state;
+        return state === "allowed" || state === "blocked" ? state : "invalid";
+      },
+      log(event, detail) {
+        // sem tokens, cookies, ids de sessão ou dados pessoais: só o tipo do evento
+        console.warn(`[session-gate] ${event}${detail ? ` (${detail})` : ""}`);
+      },
     });
-    if (error) throw new Error(error.message);
-    return (data as { state?: string } | null)?.state === "blocked" ? "blocked" : "allowed";
+    if (result !== "allowed") console.warn(`[session-gate] decisão=${result} motivo=${reason}`);
+    return result;
   } catch (error) {
-    console.error("[session-gate] verificação indisponível (liberado):", error instanceof Error ? error.message : "erro desconhecido");
-    return "allowed";
+    // Falha inesperada FORA do fluxo de decisão (ex.: auth() indisponível): a sessão não foi validada.
+    console.error("[session-gate] erro inesperado:", error instanceof Error ? error.name : "desconhecido");
+    return "unverified";
   }
 }

@@ -9,6 +9,16 @@ import type { UserRole, UserStatus } from "@/types/profile";
 import { CONSENT_REQUIRED_CODE, decideConsentGate, isConsentGatedPath } from "@/lib/legal/gate";
 import { safeAfterConsentPath } from "@/lib/legal/safe-path";
 import {
+  isMissingFunctionError,
+  middlewareSessionAction,
+  parseSlotStatus,
+  SESSION_LIMIT_CODE,
+  SESSION_LIMIT_MESSAGE,
+  SESSION_LIMIT_PATH,
+  SESSION_UNVERIFIED_CODE,
+  SESSION_UNVERIFIED_MESSAGE,
+} from "@/lib/auth/session-gate-core";
+import {
   AUTH_BACKEND_MESSAGES,
   readJwtRole,
   type AuthBackendErrorCode,
@@ -90,6 +100,14 @@ type ConsentRpcClient = {
   }>;
 };
 
+/** Cliente tipado só para a leitura do estado da vaga de sessão (RPC da migration 20261014000000). */
+type SessionSlotRpcClient = {
+  rpc(fn: "session_slot_status", args: { p_session_id: string }): Promise<{
+    data: unknown;
+    error: { message: string; code?: string } | null;
+  }>;
+};
+
 /** Resposta 503 (fail closed) quando a autenticação no banco está indisponível/mal configurada. */
 function authBackendUnavailable(code: AuthBackendErrorCode) {
   const message = AUTH_BACKEND_MESSAGES[code];
@@ -128,7 +146,7 @@ function authBackendUnavailable(code: AuthBackendErrorCode) {
  * única consulta.
  */
 export const middleware = clerkMiddleware(async (auth, request) => {
-  const { userId, getToken } = await auth();
+  const { userId, getToken, sessionId } = await auth();
   const { pathname } = request.nextUrl;
   const isAuthenticated = Boolean(userId);
 
@@ -189,6 +207,31 @@ export const middleware = clerkMiddleware(async (auth, request) => {
     // APIs (billing/presença) tratam a conta inativa por conta própria (AccountInactiveError => 403).
     if (isApiRoute) return NextResponse.next();
     return NextResponse.redirect(new URL(ACCOUNT_BLOCKED_PATH, request.url));
+  }
+
+  // Limite de sessões simultâneas (páginas, Server Actions e APIs do produto; /acesso-sessoes não é protegido por ele).
+  // Aqui só se LÊ o estado da vaga (barato); a verificação completa com o Clerk acontece no layout. Sem perfil = primeiro
+  // acesso (o layout cria o perfil e verifica). Falha ao ler o estado = mesma resposta 503 do restante da autenticação.
+  if (profile && sessionId && isConsentGatedPath(pathname)) {
+    const { data: slotRaw, error: slotError } = await (supabase as unknown as SessionSlotRpcClient).rpc("session_slot_status", {
+      p_session_id: sessionId,
+    });
+    if (slotError && !isMissingFunctionError(slotError)) {
+      console.error("[middleware] leitura da vaga de sessão falhou:", slotError.message);
+      return authBackendUnavailable("AUTH_RPC_FAILED");
+    }
+    if (!slotError) {
+      const method = request.method.toUpperCase();
+      const isPage = (method === "GET" || method === "HEAD") && !request.headers.has("next-action") && !pathname.startsWith("/api/");
+      const action = middlewareSessionAction(parseSlotStatus(slotRaw), isPage);
+      if (action === "redirect_limit") return NextResponse.redirect(new URL(SESSION_LIMIT_PATH, request.url));
+      if (action === "deny_limit") {
+        return NextResponse.json({ error: SESSION_LIMIT_MESSAGE, code: SESSION_LIMIT_CODE }, { status: 403, headers: { "cache-control": "no-store" } });
+      }
+      if (action === "deny_unverified") {
+        return NextResponse.json({ error: SESSION_UNVERIFIED_MESSAGE, code: SESSION_UNVERIFIED_CODE }, { status: 403, headers: { "cache-control": "no-store" } });
+      }
+    }
   }
 
   if (needsAdminGuard) {

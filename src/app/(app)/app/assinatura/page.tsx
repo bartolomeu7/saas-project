@@ -12,6 +12,7 @@ import {
 } from "@/lib/billing/queries";
 import { SubscriptionStatusBadge } from "@/components/app/subscription-status-badge";
 import { SubscriptionPaymentStatusBadge } from "@/components/app/subscription-payment-status-badge";
+import { RequestTrialButton } from "@/components/app/request-trial-button";
 
 export const metadata: Metadata = {
   title: "Assinatura",
@@ -39,10 +40,17 @@ export default async function SubscriptionPage() {
         </p>
       </div>
 
-      {trialStatus.denied && !subscription && (
-        <div role="alert" className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm">
-          Você atingiu o limite de cadastros permitido para esta conexão. Aguarde o período de liberação (até {trialStatus.windowHours} h) ou
-          entre em contato com o suporte se acreditar que isso ocorreu por engano. Enquanto isso, você já pode escolher um plano abaixo.
+      {!subscription && (
+        <div role={trialStatus.denied ? "alert" : "status"} className="flex flex-col gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm">
+          {trialStatus.denied ? (
+            <p>
+              Você atingiu o limite de cadastros permitido para esta conexão. Aguarde o período de liberação (até {trialStatus.windowHours} h) ou
+              entre em contato com o suporte se acreditar que isso ocorreu por engano. Enquanto isso, você já pode escolher um plano abaixo.
+            </p>
+          ) : (
+            <p>Sua empresa ainda não tem um plano ativo. Você pode solicitar o teste grátis (se ainda não o utilizou) ou escolher um plano abaixo.</p>
+          )}
+          <RequestTrialButton />
         </div>
       )}
 

@@ -1,78 +1,89 @@
 # Planos, preços e limites de uso
 
-Referência técnica da gestão de planos (Admin Control Center → **Planos**) e dos três limites de uso: vagas de usuário por plano, sessões simultâneas por conta e teste grátis por conexão. Migration: `supabase/migrations/20261014000000_plans_management_and_usage_limits.sql` · rollback: `supabase/rollback/20261014000000_plans_management_and_usage_limits.down.sql`.
+Referência técnica da gestão de planos (Admin Control Center → **Planos**) e dos limites de uso: vagas de usuário por plano, sessões simultâneas por conta e teste grátis por conexão. Migrations (nesta ordem): `20261014000000` (expansão 1) · `20261014000100` (expansão 2) · `20261014000200` (contração) · `20261014000300` (acesso aos dados, opcional). Rollbacks em `supabase/rollback/` (ordem inversa).
 
-> Estado: aplicado **somente no projeto TEST**. Production não foi tocada. Ver o relatório `docs/qa/mission-plans-management-and-usage-limits.md` para evidências e riscos.
+> Estado: aplicado **somente no projeto TEST**. Production não foi tocada. Evidências e riscos: `docs/qa/mission-plans-management-and-usage-limits.md` e `docs/qa/mission-09-closure.md`.
 
 ## 1. Modelo (sem tabelas paralelas)
 
 | Conceito | Onde vive | Observação |
 |---|---|---|
-| Plano comercial | `plans` (+12 colunas: `tagline`, `highlight`, `public_visible`, `cta_label`, `contact_url`, `benefits_title`, `compare_price`, `promo_enabled`, `promo_starts_at`, `promo_ends_at`, `show_compare_price`, `show_discount_percent`) | Os 5 planos do sistema (Teste 1 dia, Mensal 31, Trimestral 93, Anual 365, Personalizado) continuam sendo as mesmas linhas. |
-| Benefícios **comerciais** | `plan_benefits` (texto, destaque, visível, incluído, ordem, `archived_at`) | Só texto de vitrine. Remover = arquivar (`archived_at`), nada é apagado. **Não concede acesso a nada.** |
-| Direitos **reais** | `plans.additional_user_limit`, `plans.support_enabled` (+ flags `tickets/groups/early`, existentes e ainda sem funcionalidade) → copiados para `company_entitlements` por assinatura | A vitrine só promete usuários adicionais e suporte; os demais flags não aparecem como benefício. |
-| Histórico de alterações | `audit_logs` (`platform.plan.details_updated` com `from`/`to`, ator e data) + ações já existentes de preço/estado | Lido por `list_platform_plan_history()` (e-mail do ator só para super_admin). |
-| Limites configuráveis | `platform_settings` (chaves novas abaixo) | Editáveis só por super_admin, com faixa validada e auditoria. |
+| Plano comercial | `plans` (+12 colunas: `tagline`, `highlight`, `public_visible`, `cta_label`, `contact_url`, `benefits_title`, `compare_price`, `promo_enabled`, `promo_starts_at`, `promo_ends_at`, `show_compare_price`, `show_discount_percent`) | Os 5 planos do sistema continuam sendo as mesmas linhas. |
+| Benefícios **comerciais** | `plan_benefits` (texto, destaque, visível, incluído, ordem, `archived_at`) | Só texto de vitrine; remover = arquivar. **Não concede acesso a nada.** |
+| Direitos **reais** | `plans.additional_user_limit`, `plans.support_enabled` (+ flags sem funcionalidade) → `company_entitlements` por assinatura | A vitrine só promete usuários adicionais e suporte. |
+| Histórico | `audit_logs` (`platform.plan.details_updated` com `from`/`to`) | `list_platform_plan_history()`. |
+| Limites configuráveis | `platform_settings` | super_admin; faixa validada; auditado. |
 
-Chaves novas em `platform_setting_definitions()`:
-
-| Chave | Padrão | Faixa | Efeito |
-|---|---|---|---|
-| `max_concurrent_sessions` | 3 | 1–20 | Sessões ativas por conta. |
-| `trial_signup_ip_limit` | 3 | 1–100 | Cadastros com teste grátis por conexão na janela. |
-| `trial_signup_ip_window_hours` | 24 | 1–720 | Janela de contagem (precisa caber na retenção). |
-| `trial_signup_retention_days` | 30 | 30–365 | Retenção dos registros antifraude. |
+Chaves em `platform_setting_definitions()`: `max_concurrent_sessions` (3, 1–20), `trial_signup_ip_limit` (3, 1–100), `trial_signup_ip_window_hours` (24, 1–720), `trial_signup_retention_days` (30, 30–365).
 
 ## 2. Preços e descontos
 
-* `plans.price` é o preço **vigente**; `compare_price` é o preço anterior/de referência (opcional). Moeda: BRL (CHECK `NOT VALID`: vale para escritas novas, linhas antigas não são reprovadas).
-* O desconto **nunca é digitado**: `plan_discount_percent(price, compare)` (SQL, `numeric`, arredondamento metade-para-cima, 1 casa) é a única definição; `src/lib/billing/pricing-display.ts` espelha em centavos inteiros e há testes de paridade (89,90 → 65,00 = R$ 24,90 ≈ **27,7%**). Sem anterior, anterior ≤ preço, zero ou inválido ⇒ sem desconto.
-* Promoção: `plan_promo_state()` ⇒ `none | scheduled | active | expired`. **Promoção expirada só esconde o preço anterior/desconto na vitrine; nunca reverte o preço cobrado.**
-* Vitrine pública (`get_public_plans()`, lida por anon): só planos `status = 'active'`, não vitalícios e `public_visible`; entrega desconto/economia já calculados e **nenhum** campo administrativo.
-* Cobrança: `claim_subscription_payment()` lê o preço **do banco**; recusa plano inativo, de teste, sem duração, ou com preço nulo/≤ 0 (nunca cobra R$ 0). Alterar o preço do plano **não** altera cobranças já criadas nem assinaturas existentes (o valor fica em `subscription_payments.amount`).
-* Mínimo de plano pago: R$ 1,00 (limite do provedor de pagamento). Plano `CUSTOM`: sem preço ("Sob consulta"), botão "Entre em contato" com destino configurável (`contact_url`: `https://…`, `mailto:` ou caminho interno `/…`; `//host` é rejeitado) e nunca cobra.
-
-### Oculto × inativo
-* **Oculto** (`public_visible = false`): some do catálogo; quem já está nesse plano continua podendo renová-lo em `/app/assinatura/planos`.
-* **Inativo** (`status = 'inactive'`): não pode ser comprado nem por chamada direta ao checkout (recusado em `claim_subscription_payment`). Os 5 planos do sistema não podem ser desativados. Planos não são apagados.
+* `price` = vigente; `compare_price` = anterior (opcional). O desconto **nunca é digitado**: `plan_discount_percent()` (SQL, `numeric`, metade-para-cima, 1 casa) é a definição única; `src/lib/billing/pricing-display.ts` espelha em centavos inteiros com testes de paridade (89,90 → 65,00 = R$ 24,90 ≈ **27,7%**).
+* Promoção: `plan_promo_state()` ⇒ `none | scheduled | active | expired`; **expirada só esconde o preço anterior na vitrine; nunca reverte o preço cobrado.**
+* Vitrine pública: `get_public_plans()` (anon): `active`, não vitalício, `public_visible`; desconto/economia calculados; nenhum campo administrativo.
+* Checkout: `claim_subscription_payment()` lê o preço **do banco**; recusa plano inativo, de teste, sem duração ou preço ≤ 0. Mudar o preço não altera cobranças já criadas (`subscription_payments.amount`) nem assinaturas.
+* **Oculto** (`public_visible = false`): fora do catálogo, mas quem já está no plano renova. **Inativo**: não compra nem por chamada direta. Os 5 planos do sistema não se desativam; planos não se apagam.
 
 ## 3. Quem pode o quê
 
-* `/admin/plans` (lista, detalhe, histórico, prévia): qualquer admin da plataforma lê. **Criar/editar/ativar/desativar: somente super_admin** (`admin_save_plan` e as RPCs reusadas conferem `is_super_admin()` no banco; a Server Action revalida).
-* Escrita direta em `plans`/`plan_benefits` por `anon`/`authenticated` continua barrada (RLS + `revoke`). Nenhuma `service_role` no navegador.
+Criar/editar/ativar/desativar plano: **somente super_admin** (`admin_save_plan` confere no banco; Server Action revalida). Admin comum lê. `anon`/`authenticated` não escrevem em `plans`/`plan_benefits` (RLS + `revoke`).
 
 ## 4. Vagas de usuário por plano
 
-* **O que conta**: proprietário (`owner`, sempre 1, isento) + membros adicionais (`role <> 'owner'`). O limite vem de `company_entitlements.max_additional_users`, um **snapshot por assinatura**.
-* **Onde é imposto**: (1) RPCs `add_existing_company_member` e `admin_add_company_member` (mensagens claras) e (2) trigger `BEFORE INSERT` em `company_members` (`enforce_company_seat_limit`, `SECURITY INVOKER`, trava a linha de entitlement com `FOR UPDATE`) — a defesa vale para qualquer caminho, inclusive INSERT direto. Última vaga disputada ⇒ exatamente uma passa. Sem entitlement ⇒ limite 0.
-* **INVOKER de propósito**: um INSERT direto de `authenticated` em empresa alheia recebe mensagem uniforme (não vaza o limite nem a existência do entitlement de outro tenant).
-* **Editar o plano não propaga** para quem já assinou. Só com `apply_limits_to_existing = true` (ação explícita, auditada) os entitlements `trialing/active` do plano são atualizados.
-* **Reduzir abaixo do uso** nunca remove ninguém: bloqueia novas inclusões e a UI (`/app/equipe`, `get_company_seat_usage()`) mostra "usados / limite" e o aviso de excesso.
+Conta: proprietário (isento) + adicionais. Limite = `company_entitlements.max_additional_users` (snapshot por assinatura; editar o plano **não propaga** sem `apply_limits_to_existing = true`). Imposto nas RPCs e no trigger `company_members_seat_limit` (`SECURITY INVOKER`, trava a linha do entitlement; mensagem uniforme para INSERT em empresa alheia). Reduzir abaixo do uso não remove ninguém: bloqueia novas inclusões e a UI mostra o excesso.
 
-## 5. Sessões simultâneas
+## 5. Sessões simultâneas (`session-gate-core.ts`, `session-gate.ts`, `middleware.ts`)
 
-* Controle **de aplicação**; o Clerk continua dono das sessões. Registro `user_session_slots` (`allowed|blocked`).
-* Fluxo: layout autenticado (`(app)` e `admin`) → `evaluateSessionGate()` (`src/lib/auth/session-gate.ts`) → lista de sessões **ativas** do Clerk (API server-side) → `register_session_slot(user, sid, ativas)` (service_role; trava advisory por usuário). Sessões que o Clerk já não lista liberam a vaga; sessões já aceitas **não são derrubadas**; a nova que excede o limite vai para `/acesso-sessoes` com a mensagem exigida e a lista de outras sessões (navegador/aparelho/cidade, nunca IP/token/cookie) para encerrar uma delas.
-* Auditoria: `platform.session.limit_blocked` e `platform.session.revoked` (sem tokens/cookies).
-* **Limitações**: (a) o gate roda nos layouts, não no middleware — Server Actions/rotas de API chamadas por uma sessão já bloqueada não são barradas individualmente; (b) falha de infraestrutura (Clerk/serviço) ⇒ **fail-open** (não derruba cliente por erro nosso); (c) a presença do claim `sid` no JWT do Supabase é **inferida** — a RPC de status cai para o `sid` do servidor.
+**Fontes de verdade (nenhuma vem do navegador):** o `sid` do JWT identifica QUAL sessão é (claim padrão do Clerk, assinado) — **nunca quantas existem**; as sessões ativas vêm da **API do Clerk no servidor** (`sessions.getSessionList({ status: "active" })`); a decisão é do **banco**, atômica por usuário (`register_session_slot`, `service_role`, advisory lock).
 
-## 6. Teste grátis por conexão (antifraude)
+**Onde é imposto:**
+1. **Middleware** (páginas, Server Actions e APIs sob `/app`, `/admin`, `/onboarding`, `/api/billing`): lê `session_slot_status` (barato, com o token do usuário). `allowed` ⇒ segue · `blocked` recente ⇒ páginas vão a `/acesso-sessoes`, Actions/APIs recebem **403 `SESSION_LIMIT_REACHED`** · `unknown` (nunca validada) ⇒ páginas seguem para a verificação, Actions/APIs recebem **403 `SESSION_UNVERIFIED`**. `/api/presence` (heartbeat a cada 60 s) fica de fora de propósito.
+2. **Layouts** `(app)` e `admin` e a página `/onboarding`: verificação completa (`evaluateSessionGate`): Clerk → registro no banco.
 
-* Ponto de controle: onboarding `createCompanyAction` → `authorizeTrialSignup()` (`src/lib/security/trial-signup.ts`) → RPC `authorize_trial_signup` (service_role) → `create_company_with_owner` concede o teste **somente com autorização não consumida**. Chamada direta do cliente a `create_company_with_owner` cria a empresa **sem teste**.
-* **O cadastro no Clerk não é bloqueado** (não há webhook do Clerk no projeto): a pessoa cria conta e empresa, mas, acima do limite, **sem o teste grátis**, vendo o aviso exigido em `/app/assinatura` (`get_my_trial_status`). Isso é deliberado e deve ser dito assim: não afirmamos bloqueio de signup.
-* IP confiável (`src/lib/security/client-ip.ts`): só `x-vercel-forwarded-for`/`x-forwarded-for`/`x-real-ip` quando `VERCEL=1`; ou `TRUSTED_PROXY_HOPS` = nº de proxies confiáveis, contado **do fim** de `X-Forwarded-For`; caso contrário `null`. Cabeçalho forjado pelo cliente nunca é usado. IPv6 normalizado para /64.
-* Dado mínimo: guarda-se `HMAC-SHA256(ip)` (segredo `ANTIFRAUD_HASH_SECRET`; se ausente, deriva-se do segredo do Clerk, também de servidor) — nunca o IP. Retenção limitada (`trial_signup_retention_days`) com limpeza oportunista. Contagem atômica (locks advisory conexão → usuário). Idempotente: repetir a chamada devolve a mesma decisão; o teste é concedido uma vez (`subscriptions.trial_claimed_by`).
-* IP desconhecido ⇒ permite e registra (`ip_unknown`), para não punir quem pode ser legítimo. **Sem bloqueio permanente**: expira com a janela; admin revisa falso positivo ajustando limite/janela (configurações). Auditoria `platform.signup.trial_denied` guarda só os 8 primeiros caracteres do hash.
-* Não há fingerprinting invasivo.
+**Comportamento diante de falhas (explícito e limitado):**
+| Situação | Resultado |
+|---|---|
+| Sessão **já validada** (vaga `allowed`) e Clerk/serviço fora do ar | segue acessando (ninguém é derrubado por falha nossa) |
+| Sessão **nunca validada** + Clerk falha/expira (4 s, 1 repetição) ou registro falha | `unverified`: negada **só a essa sessão**, temporariamente, com a mensagem "não foi possível verificar" e botão de nova tentativa; nenhuma vaga é consumida |
+| Clerk não lista a sessão (revogada/propagando) | `unverified` (não ocupa vaga, não é "bloqueio por limite") |
+| Função do gate ausente no banco (migration ainda não aplicada) | `allowed` com log (fase de expansão do deploy) |
+| `SUPABASE_SERVICE_ROLE_KEY` ausente no ambiente | `unverified` + erro de configuração no log (nunca libera em silêncio) |
 
-## 7. Ordem de implantação (importante)
+**Corrida:** a lista do Clerk é lida antes do registro; por isso uma vaga aceita há < 60 s **não é podada** por listas "velhas" e listas incompletas (> 100 sessões) nunca podam (`p_list_complete`). Sessões que o Clerk já não lista liberam a vaga no próximo registro.
 
-A migration e o código devem ir **juntos**. Migration antes do código: o código antigo cria empresas sem teste (nenhuma autorização é registrada). Código antes da migration: `authorize_trial_signup` não existe ⇒ sem teste; o normalizador (`normalizePublicPlan`) tolera o formato antigo de `get_public_plans`, então a home não quebra. Em ambos os casos **ninguém é cobrado errado**, mas novos cadastros ficam sem teste até os dois lados coincidirem.
+**Limitações:** o token Clerk de uma sessão revogada vale até ~60 s (vida do token); a recusa vale para a **aplicação** — quem chama o PostgREST direto com o próprio JWT continua limitado só pela RLS (por isso a M4 fecha a escrita sem acesso ativo); presença do `sid` no JWT do Supabase é **inferida** (o app sempre passa o `sid` do servidor como parâmetro).
 
-## 8. Variáveis de ambiente (nomes apenas)
+## 6. Teste grátis por conexão
 
-`ANTIFRAUD_HASH_SECRET` (recomendado em produção), `TRUSTED_PROXY_HOPS` (só fora da Vercel), `SUPABASE_SERVICE_ROLE_KEY` e `CLERK_SECRET_KEY` (já existentes; servidor). Nenhuma é exposta ao navegador.
+**Onde cada coisa é (ou não) bloqueada:**
+| Nível | Bloqueado? |
+|---|---|
+| 1. Criação da conta no Clerk | **Não** pelo app. Controles nativos do Clerk (Dashboard, do dono): *Challenge suspicious sign-ups*, bloquear e-mails descartáveis, blocklist/allowlist, modo de acesso restrito |
+| 2. Criação da empresa | **Não**: quem é negado cria a empresa **sem** teste |
+| 3. Concessão do teste | **Sim**: só com autorização do servidor (`authorize_trial_signup`) válida (1 h), não consumida, e uma única vez por usuário (`subscriptions_one_trial_per_user_idx` + locks) |
+| 4. Acesso aos recursos | **Sim**: sem acesso ativo o middleware leva a `/app/assinatura` **e** (M4) o banco recusa INSERT/UPDATE/DELETE nas tabelas de negócio (`company_has_active_access`) |
+
+* Controle de IP: `x-vercel-forwarded-for`/`x-forwarded-for`/`x-real-ip` só com `VERCEL=1`; ou `TRUSTED_PROXY_HOPS` (conta do fim do XFF); senão `null`. IPv6 /64. HMAC-SHA256 com versão `v1`. IP desconhecido ⇒ registrado, **com teto próprio** (10× o limite) — não é "livre". Janela/limite configuráveis; negação expira com a janela; auditoria só com prefixo de 8 caracteres.
+* **Pedido posterior** (`requestFreeTrialAction` → `authorize` + `claim_free_trial`): quem foi negado (ou ficou sem autorização) pode pedir o teste depois, sem recriar empresa, com a mesma regra; idempotente e serializado.
+* **Webhooks do Clerk**: não implementados. Eventos (`user.created`, `session.*`) são assíncronos (pós-fato), verificados com `verifyWebhook` e `CLERK_WEBHOOK_SIGNING_SECRET`; não bloqueiam o cadastro e (inferido) não trazem o IP. O ponto de controle server-side do onboarding já é idempotente. Fica como endurecimento opcional.
+
+## 7. Segredo antifraude (`ANTIFRAUD_HASH_SECRET`)
+
+Validado no servidor (`resolveAntifraudSecret`): ≥ 32 caracteres variados. **Production não tem fallback**: ausente/fraco ⇒ teste grátis **suspenso** (conta, empresa e compra de planos seguem). Fora de Production, ausente ⇒ deriva do `CLERK_SECRET_KEY` do próprio ambiente (chaves diferentes por ambiente ⇒ identificadores nunca coincidem). Fraco/curto é erro de configuração em qualquer ambiente (não é "consertado" com outro). O valor nunca é logado nem exibido; `/admin/settings` mostra só o **estado**. Rotação: os identificadores antigos deixam de coincidir ⇒ os contadores por conexão recomeçam (retenção 30 dias); nada é corrompido. Configurar pelo painel da Vercel, escopo do ambiente; **nunca pelo chat**.
+
+## 8. Implantação segura (expansão → código → contração)
+
+O deploy **não é atômico** (banco e Vercel são processos separados). A ordem abaixo garante que em nenhum passo o teste é negado a quem deveria ter nem concedido sem regra por erro de versão:
+
+0. Pré-requisitos: as 5 migrations da Missão 08 (PR #33) já aplicadas; `ANTIFRAUD_HASH_SECRET` definido em Production (valor próprio); backup/fingerprint do catálogo.
+1. **Expansão** — aplicar `…000000` e `…000100`. Compatíveis com o código **antigo** (provado em TEST): cadastros seguem recebendo o teste; a vitrine nova é superconjunto da antiga.
+2. **Deploy do código novo.** Funciona com a expansão (e degrada com segurança em banco antigo: gate "não instalado" ⇒ libera com log; normalizador da vitrine tolera o formato antigo).
+3. **Contração** — aplicar `…000200`: o teste passa a exigir a autorização do servidor. Verificar: cadastro novo recebe o teste; chamada direta a `create_company_with_owner` não.
+4. **Opcional/decisão de produto** — `…000300` (RLS de acesso aos dados). Pode ficar para depois.
+5. Pós-checagens: `/admin/settings` (antifraude OK), home com planos, logs sem `gate_not_provisioned`/`SUPABASE_SERVICE_ROLE_KEY ausente`.
+
+Reversão: `down` na ordem inversa (000300 → 000200 → 000100 → 000000); **reverter só a contração** devolve o comportamento anterior sem mexer no resto.
 
 ## 9. Rollback
 
-Rodar `supabase/rollback/20261014000000_plans_management_and_usage_limits.down.sql` numa transação. Restaura o corpo original das 6 funções recriadas e remove os objetos novos. **Não restaura dados**: textos de benefício, campos comerciais, slots de sessão e eventos antifraude são perdidos; preços, assinaturas, pagamentos e entitlements não são tocados. Prova de reversibilidade (impressões digitais S0/S1/S2) no relatório.
+`down` de cada migration (provas S0/S1/S2 em `docs/qa/mission-09-closure.md`). Não restauram **dados** (benefícios, campos comerciais, slots de sessão, eventos antifraude); preços, assinaturas, pagamentos e entitlements nunca são tocados.

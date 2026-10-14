@@ -2,6 +2,8 @@
 
 Data: 2026-10-14 · Branch: `feat/plans-management-usage-limits` (empilhada sobre `feat/mission-08-admin-control-center` @ `274c7bc`) · Escopo: **somente TEST** (`zlmxbqlpjstmllrvafmy`).
 
+> **Atualização (Missão 09, 2026-10-14):** os riscos deste relatório foram tratados em [`mission-09-closure.md`](mission-09-closure.md). Em resumo: a cadeia de migrations agora é **expansão → código → contração** (4 arquivos, rollback provado); o gate de sessões passou a valer também no middleware e tem política explícita de falha (**não** libera mais em silêncio); o teste grátis tem autorização com prazo, teto para IP desconhecido, pedido posterior e RLS de acesso aos dados; o segredo antifraude não tem mais fallback em Production. Onde este documento diz "migration única", "fail-open" ou "fallback do Clerk em qualquer ambiente", vale o relatório de fechamento.
+
 Legenda: **VERIFIED** (executado e observado) · **NOT VERIFIED** (não executado) · **BLOCKED** (impedido por restrição/limite do ambiente) · **INFERRED** (deduzido do código/documentação, sem execução).
 
 Documentação técnica: [`docs/plans-and-usage-limits.md`](../plans-and-usage-limits.md).

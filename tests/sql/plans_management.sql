@@ -260,7 +260,12 @@ select pg_temp.chk('limits', 'entitlement passou a 3 e a auditoria registra quan
 -- ================================================================ INTEGRIDADE DOS DADOS EXISTENTES
 select pg_temp.chk('integrity', 'nenhuma assinatura/pagamento/entitlement preexistente foi alterado ou criado pelo catálogo', $q$select ((select count(*) from public.subscriptions) - (select subs from base) = 1)::text || ',' || ((select count(*) from public.subscription_payments) - (select pays from base) = 1)::text || ',' || ((select count(*) from public.company_entitlements) - (select ents from base) = 1)::text$q$, 'OK=true,true,true');
 select pg_temp.chk('integrity', 'preços de TODOS os planos preexistentes continuam iguais', $q$select (select md5(string_agg(code || ':' || coalesce(price::text, '-'), ',' order by code)) from public.plans where code not like 'PM\_%') = (select price_md5 from base)$q$, 'OK=true');
+-- o papel precisa ser explícito: como postgres (BYPASSRLS) o DELETE seria barrado só pela FK, não pela ausência de política
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"pm_super","role":"authenticated"}', true);
 select pg_temp.chk('integrity', 'nenhum plano é excluível (sem DELETE)', $q$with d as (delete from public.plans returning 1) select count(*)::text from d$q$, 'OK=0');
+reset role;
+select set_config('request.jwt.claims', '{"role":"service_role"}', true);
 select pg_temp.chk('integrity', 'plano com benefícios não pode ser apagado nem por service_role (FK restrict)', $q$delete from public.plans where id = pg_temp.pid('a') returning 'x'$q$, 'ERR=');
 select pg_temp.chk('integrity', 'constraints do banco recusam preço anterior <= atual mesmo por SQL direto', $q$update public.plans set compare_price = 1 where id = pg_temp.pid('a') returning 'x'$q$, 'ERR=plans_compare_above_price');
 select pg_temp.chk('integrity', 'constraints: contato inválido por SQL direto', $q$update public.plans set contact_url = 'ftp://x' where id = pg_temp.pid('a') returning 'x'$q$, 'ERR=plans_contact_url_format');
