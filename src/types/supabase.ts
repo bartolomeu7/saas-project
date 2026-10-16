@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.17"
   }
   public: {
     Tables: {
@@ -1051,6 +1051,36 @@ export type Database = {
           },
         ]
       }
+      legal_document_versions: {
+        Row: {
+          content_hash: string
+          created_at: string
+          document_type: string
+          effective_at: string
+          id: string
+          status: string
+          version: string
+        }
+        Insert: {
+          content_hash: string
+          created_at?: string
+          document_type: string
+          effective_at: string
+          id?: string
+          status?: string
+          version: string
+        }
+        Update: {
+          content_hash?: string
+          created_at?: string
+          document_type?: string
+          effective_at?: string
+          id?: string
+          status?: string
+          version?: string
+        }
+        Relationships: []
+      }
       loyalty_accounts: {
         Row: {
           balance: number
@@ -1435,29 +1465,88 @@ export type Database = {
           },
         ]
       }
+      plan_benefits: {
+        Row: {
+          archived_at: string | null
+          created_at: string
+          highlighted: boolean
+          id: string
+          included: boolean
+          plan_id: string
+          sort_order: number
+          text: string
+          updated_at: string
+          visible: boolean
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at?: string
+          highlighted?: boolean
+          id?: string
+          included?: boolean
+          plan_id: string
+          sort_order?: number
+          text: string
+          updated_at?: string
+          visible?: boolean
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string
+          highlighted?: boolean
+          id?: string
+          included?: boolean
+          plan_id?: string
+          sort_order?: number
+          text?: string
+          updated_at?: string
+          visible?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_benefits_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       plans: {
         Row: {
           access_duration_days: number | null
           additional_user_limit: number
+          benefits_title: string | null
           billing_interval:
             | Database["public"]["Enums"]["billing_interval"]
             | null
           billing_interval_count: number | null
           code: string
+          compare_price: number | null
+          contact_url: string | null
           created_at: string
+          cta_label: string | null
           currency: string
           description: string | null
           early_access_enabled: boolean
           exclusive_groups_enabled: boolean
+          highlight: string | null
           id: string
           lifetime: boolean
           name: string
           price: number | null
+          promo_enabled: boolean
+          promo_ends_at: string | null
+          promo_starts_at: string | null
           provider: string | null
           provider_plan_id: string | null
+          public_visible: boolean
+          show_compare_price: boolean
+          show_discount_percent: boolean
           sort_order: number
           status: Database["public"]["Enums"]["plan_status"]
           support_enabled: boolean
+          tagline: string | null
           tickets_enabled: boolean
           trial: boolean
           updated_at: string
@@ -1465,25 +1554,37 @@ export type Database = {
         Insert: {
           access_duration_days?: number | null
           additional_user_limit?: number
+          benefits_title?: string | null
           billing_interval?:
             | Database["public"]["Enums"]["billing_interval"]
             | null
           billing_interval_count?: number | null
           code: string
+          compare_price?: number | null
+          contact_url?: string | null
           created_at?: string
+          cta_label?: string | null
           currency?: string
           description?: string | null
           early_access_enabled?: boolean
           exclusive_groups_enabled?: boolean
+          highlight?: string | null
           id?: string
           lifetime?: boolean
           name: string
           price?: number | null
+          promo_enabled?: boolean
+          promo_ends_at?: string | null
+          promo_starts_at?: string | null
           provider?: string | null
           provider_plan_id?: string | null
+          public_visible?: boolean
+          show_compare_price?: boolean
+          show_discount_percent?: boolean
           sort_order?: number
           status?: Database["public"]["Enums"]["plan_status"]
           support_enabled?: boolean
+          tagline?: string | null
           tickets_enabled?: boolean
           trial?: boolean
           updated_at?: string
@@ -1491,30 +1592,77 @@ export type Database = {
         Update: {
           access_duration_days?: number | null
           additional_user_limit?: number
+          benefits_title?: string | null
           billing_interval?:
             | Database["public"]["Enums"]["billing_interval"]
             | null
           billing_interval_count?: number | null
           code?: string
+          compare_price?: number | null
+          contact_url?: string | null
           created_at?: string
+          cta_label?: string | null
           currency?: string
           description?: string | null
           early_access_enabled?: boolean
           exclusive_groups_enabled?: boolean
+          highlight?: string | null
           id?: string
           lifetime?: boolean
           name?: string
           price?: number | null
+          promo_enabled?: boolean
+          promo_ends_at?: string | null
+          promo_starts_at?: string | null
           provider?: string | null
           provider_plan_id?: string | null
+          public_visible?: boolean
+          show_compare_price?: boolean
+          show_discount_percent?: boolean
           sort_order?: number
           status?: Database["public"]["Enums"]["plan_status"]
           support_enabled?: boolean
+          tagline?: string | null
           tickets_enabled?: boolean
           trial?: boolean
           updated_at?: string
         }
         Relationships: []
+      }
+      platform_operation_keys: {
+        Row: {
+          actor_user_id: string
+          company_id: string | null
+          created_at: string
+          operation: string
+          request_key: string
+          result: Json | null
+        }
+        Insert: {
+          actor_user_id: string
+          company_id?: string | null
+          created_at?: string
+          operation: string
+          request_key: string
+          result?: Json | null
+        }
+        Update: {
+          actor_user_id?: string
+          company_id?: string | null
+          created_at?: string
+          operation?: string
+          request_key?: string
+          result?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_operation_keys_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       platform_settings: {
         Row: {
@@ -2883,6 +3031,95 @@ export type Database = {
           },
         ]
       }
+      trial_signup_events: {
+        Row: {
+          consumed_at: string | null
+          created_at: string
+          id: string
+          ip_hash: string
+          outcome: string
+          user_id: string
+        }
+        Insert: {
+          consumed_at?: string | null
+          created_at?: string
+          id?: string
+          ip_hash: string
+          outcome: string
+          user_id: string
+        }
+        Update: {
+          consumed_at?: string | null
+          created_at?: string
+          id?: string
+          ip_hash?: string
+          outcome?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trial_signup_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      user_consents: {
+        Row: {
+          consent_type: string
+          context: string
+          created_at: string
+          document_hash: string
+          document_type: string
+          document_version_id: string
+          granted: boolean
+          granted_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          consent_type: string
+          context: string
+          created_at?: string
+          document_hash: string
+          document_type: string
+          document_version_id: string
+          granted?: boolean
+          granted_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          consent_type?: string
+          context?: string
+          created_at?: string
+          document_hash?: string
+          document_type?: string
+          document_version_id?: string
+          granted?: boolean
+          granted_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_consents_document_version_id_fkey"
+            columns: ["document_version_id"]
+            isOneToOne: false
+            referencedRelation: "legal_document_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_consents_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       user_preferences: {
         Row: {
           created_at: string
@@ -2950,6 +3187,41 @@ export type Database = {
           },
         ]
       }
+      user_session_slots: {
+        Row: {
+          first_seen_at: string
+          last_seen_at: string
+          session_id: string
+          state: string
+          user_id: string
+          verified_at: string
+        }
+        Insert: {
+          first_seen_at?: string
+          last_seen_at?: string
+          session_id: string
+          state: string
+          user_id: string
+          verified_at?: string
+        }
+        Update: {
+          first_seen_at?: string
+          last_seen_at?: string
+          session_id?: string
+          state?: string
+          user_id?: string
+          verified_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_session_slots_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       webhook_deliveries: {
         Row: {
           detail: string | null
@@ -2987,6 +3259,21 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      zz_scripts: {
+        Row: {
+          body: string
+          name: string
+        }
+        Insert: {
+          body: string
+          name: string
+        }
+        Update: {
+          body?: string
+          name?: string
+        }
+        Relationships: []
       }
     }
     Views: {
@@ -3068,6 +3355,16 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      admin_add_company_member: {
+        Args: {
+          p_company_id: string
+          p_email: string
+          p_reason: string
+          p_request_key: string
+          p_role: Database["public"]["Enums"]["company_role"]
+        }
+        Returns: Json
+      }
       admin_adjust_access_expiry: {
         Args: { p_company_id: string; p_expires_at: string; p_reason?: string }
         Returns: Json
@@ -3083,6 +3380,15 @@ export type Database = {
       }
       admin_audit_payment_reverify: {
         Args: { p_outcome: string; p_payment_id: string }
+        Returns: undefined
+      }
+      admin_audit_reconciliation: {
+        Args: {
+          p_checked: number
+          p_confirmed: number
+          p_errors: number
+          p_still_pending: number
+        }
         Returns: undefined
       }
       admin_cancel_subscription: {
@@ -3109,69 +3415,18 @@ export type Database = {
         }
         Returns: Json
       }
-      admin_add_company_member: {
-        Args: {
-          p_company_id: string
-          p_email: string
-          p_reason: string
-          p_request_key: string
-          p_role: Database["public"]["Enums"]["company_role"]
-        }
-        Returns: Json
-      }
-      admin_audit_reconciliation: {
-        Args: {
-          p_checked: number
-          p_confirmed: number
-          p_errors: number
-          p_still_pending: number
-        }
-        Returns: undefined
-      }
       admin_grant_license: {
         Args: {
           p_company_id: string
-          p_days: number | null
+          p_days: number
           p_kind: string
-          p_plan_id: string | null
-          p_reason: string
-          p_request_key: string
-        }
-        Returns: Json
-      }
-      admin_remove_company_member: {
-        Args: { p_company_id: string; p_reason: string; p_user_id: string }
-        Returns: undefined
-      }
-      admin_set_company_member_role: {
-        Args: {
-          p_company_id: string
-          p_reason: string
-          p_role: Database["public"]["Enums"]["company_role"]
-          p_user_id: string
-        }
-        Returns: undefined
-      }
-      admin_transfer_company_ownership: {
-        Args: {
-          p_company_id: string
-          p_new_owner_user_id: string
+          p_plan_id: string
           p_reason: string
           p_request_key: string
         }
         Returns: Json
       }
       admin_mark_expired_subscriptions: { Args: never; Returns: number }
-      platform_reconcile_candidates: {
-        Args: { p_limit?: number; p_min_age_minutes?: number }
-        Returns: {
-          age_minutes: number
-          company_id: string
-          company_name: string
-          created_at: string
-          payment_id: string
-        }[]
-      }
       admin_reactivate_subscription: {
         Args: { p_company_id: string; p_days?: number; p_reason?: string }
         Returns: Json
@@ -3194,9 +3449,35 @@ export type Database = {
         Args: { p_company_id: string; p_plan_id?: string; p_reason?: string }
         Returns: Json
       }
+      admin_remove_company_member: {
+        Args: { p_company_id: string; p_reason: string; p_user_id: string }
+        Returns: undefined
+      }
+      admin_save_plan: {
+        Args: { p_payload: Json; p_plan_id: string }
+        Returns: string
+      }
+      admin_set_company_member_role: {
+        Args: {
+          p_company_id: string
+          p_reason: string
+          p_role: Database["public"]["Enums"]["company_role"]
+          p_user_id: string
+        }
+        Returns: undefined
+      }
       admin_sync_company_entitlements: {
         Args: { p_company_id: string }
         Returns: undefined
+      }
+      admin_transfer_company_ownership: {
+        Args: {
+          p_company_id: string
+          p_new_owner_user_id: string
+          p_reason: string
+          p_request_key: string
+        }
+        Returns: Json
       }
       admin_update_company: {
         Args: {
@@ -3213,6 +3494,10 @@ export type Database = {
       admin_void_manual_payment: {
         Args: { p_payment_id: string; p_reason?: string }
         Returns: undefined
+      }
+      authorize_trial_signup: {
+        Args: { p_ip_hash: string; p_user_id: string }
+        Returns: Json
       }
       cancel_purchase_order: {
         Args: { p_purchase_order_id: string; p_reason?: string }
@@ -3632,6 +3917,30 @@ export type Database = {
         Returns: string
       }
       expire_loyalty_points_batch: { Args: never; Returns: number }
+      get_company_seat_usage: { Args: never; Returns: Json }
+      get_current_legal_documents: {
+        Args: never
+        Returns: {
+          content_hash: string
+          document_type: string
+          effective_at: string
+          version: string
+        }[]
+      }
+      get_my_legal_consent_history: {
+        Args: never
+        Returns: {
+          consent_type: string
+          context: string
+          document_hash: string
+          document_type: string
+          granted: boolean
+          granted_at: string
+          version: string
+        }[]
+      }
+      get_my_legal_consent_status: { Args: never; Returns: Json }
+      get_my_trial_status: { Args: never; Returns: Json }
       get_platform_admin_overview: {
         Args: never
         Returns: {
@@ -3679,16 +3988,28 @@ export type Database = {
         Returns: {
           access_duration_days: number
           additional_user_limit: number
+          benefits: Json
+          benefits_title: string
           code: string
+          compare_price: number
+          contact_url: string
+          cta_label: string
           currency: string
           description: string
+          discount_percent: number
           early_access_enabled: boolean
           exclusive_groups_enabled: boolean
+          highlight: string
           id: string
+          kind: string
           name: string
           price: number
+          promo_ends_at: string
+          savings_amount: number
+          sort_order: number
           status: Database["public"]["Enums"]["plan_status"]
           support_enabled: boolean
+          tagline: string
           tickets_enabled: boolean
           trial: boolean
         }[]
@@ -3699,6 +4020,24 @@ export type Database = {
       }
       is_platform_admin: { Args: never; Returns: boolean }
       is_super_admin: { Args: never; Returns: boolean }
+      legal_current_version: {
+        Args: { p_type: string }
+        Returns: {
+          content_hash: string
+          created_at: string
+          document_type: string
+          effective_at: string
+          id: string
+          status: string
+          version: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "legal_document_versions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       list_company_team: {
         Args: never
         Returns: {
@@ -3870,31 +4209,58 @@ export type Database = {
           total_count: number
         }[]
       }
+      list_platform_plan_history: {
+        Args: { p_limit?: number; p_plan_id: string }
+        Returns: {
+          action: string
+          actor_email: string
+          created_at: string
+          id: string
+          metadata: Json
+        }[]
+      }
       list_platform_plans: {
         Args: never
         Returns: {
           access_duration_days: number
           active_subscriptions_count: number
           additional_user_limit: number
+          benefits: Json
+          benefits_title: string
           billing_interval: Database["public"]["Enums"]["billing_interval"]
           code: string
+          compare_price: number
+          contact_url: string
           created_at: string
+          cta_label: string
           currency: string
           description: string
+          discount_percent: number
           early_access_enabled: boolean
           exclusive_groups_enabled: boolean
+          highlight: string
           is_protected: boolean
+          kind: string
           lifetime: boolean
           name: string
           payments_count: number
           plan_id: string
           price: number
+          promo_enabled: boolean
+          promo_ends_at: string
+          promo_starts_at: string
+          promo_state: string
+          public_visible: boolean
+          show_compare_price: boolean
+          show_discount_percent: boolean
           sort_order: number
           status: Database["public"]["Enums"]["plan_status"]
           subscriptions_count: number
           support_enabled: boolean
+          tagline: string
           tickets_enabled: boolean
           trial: boolean
+          updated_at: string
         }[]
       }
       list_platform_subscriptions: {
@@ -4011,10 +4377,28 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      plan_discount_percent: {
+        Args: { p_compare: number; p_price: number }
+        Returns: number
+      }
+      plan_kind: {
+        Args: { p_code: string; p_lifetime: boolean; p_trial: boolean }
+        Returns: string
+      }
+      plan_promo_state: {
+        Args: {
+          p_at?: string
+          p_enabled: boolean
+          p_ends: string
+          p_starts: string
+        }
+        Returns: string
+      }
       platform_apply_access: {
         Args: {
           p_company_id: string
           p_expires_at: string
+          p_lifetime?: boolean
           p_plan_id: string
           p_provider?: string
           p_starts_at?: string
@@ -4024,8 +4408,9 @@ export type Database = {
           cancelled_at: string | null
           company_id: string
           created_at: string
-          expires_at: string
+          expires_at: string | null
           id: string
+          lifetime: boolean
           plan_id: string
           provider: string | null
           provider_customer_id: string | null
@@ -4051,6 +4436,10 @@ export type Database = {
         Returns: undefined
       }
       platform_audit_category: { Args: { p_action: string }; Returns: string }
+      platform_begin_operation: {
+        Args: { p_company_id: string; p_key: string; p_operation: string }
+        Returns: Json
+      }
       platform_clean_reason: { Args: { p_reason: string }; Returns: string }
       platform_diagnostics: {
         Args: never
@@ -4065,6 +4454,10 @@ export type Database = {
       platform_extend_access_core: {
         Args: { p_company_id: string; p_days: number; p_plan_id: string }
         Returns: Record<string, unknown>
+      }
+      platform_finish_operation: {
+        Args: { p_key: string; p_result: Json }
+        Returns: undefined
       }
       platform_global_search: {
         Args: { p_query: string }
@@ -4084,6 +4477,16 @@ export type Database = {
       platform_presence_status: {
         Args: { p_last_seen: string }
         Returns: string
+      }
+      platform_reconcile_candidates: {
+        Args: { p_limit?: number; p_min_age_minutes?: number }
+        Returns: {
+          age_minutes: number
+          company_id: string
+          company_name: string
+          created_at: string
+          payment_id: string
+        }[]
       }
       platform_safe_metadata: { Args: { p_meta: Json }; Returns: Json }
       platform_setting_definitions: {
@@ -4191,9 +4594,29 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      record_legal_consent: {
+        Args: {
+          p_context?: string
+          p_privacy_version: string
+          p_terms_version: string
+        }
+        Returns: Json
+      }
       redeem_loyalty_points: {
         Args: { p_points: number; p_sale_id: string }
         Returns: number
+      }
+      register_session_slot: {
+        Args: {
+          p_active_session_ids: string[]
+          p_session_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      release_session_slot: {
+        Args: { p_session_id: string; p_user_id: string }
+        Returns: boolean
       }
       remove_company_member: {
         Args: { p_member_id: string }
@@ -4234,6 +4657,7 @@ export type Database = {
         Args: { p_company_id: string }
         Returns: undefined
       }
+      session_slot_status: { Args: { p_session_id?: string }; Returns: Json }
       set_appointment_status: {
         Args: {
           p_appointment_id: string
@@ -4317,6 +4741,14 @@ export type Database = {
       set_professional_services: {
         Args: { p_professional_id: string; p_services: Json }
         Returns: undefined
+      }
+      subscription_access_active: {
+        Args: {
+          p_expires_at: string
+          p_lifetime: boolean
+          p_status: Database["public"]["Enums"]["subscription_status"]
+        }
+        Returns: boolean
       }
       touch_presence: { Args: never; Returns: undefined }
       undo_loyalty_redemption_for_draft_sale: {

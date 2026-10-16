@@ -196,162 +196,10 @@ export const BENEFITS: Benefit[] = [
  */
 export type PlanId = "FREE_TRIAL" | "MONTHLY" | "QUARTERLY" | "YEARLY" | "CUSTOM";
 
-export interface PricingPlan {
-  id: PlanId;
-  name: string;
-  /** Selo curto mostrado acima/ao lado do nome (ex: "Mais escolhido"). */
-  tagline?: string;
-  /** Preço em reais. null = sob consulta (plano CUSTOM). */
-  price: number | null;
-  /** Duração do acesso em dias. null = negociável (plano CUSTOM). */
-  periodDays: number | null;
-  /** Texto de duração já formatado para exibição (ex: "93 dias"). */
-  periodLabel: string;
-  description: string;
-  includedFeatures: string[];
-  /** Só o teste grátis usa isso, para deixar claro o que NÃO está incluso. */
-  excludedFeatures?: string[];
-  /** Além do proprietário. null = negociável (plano CUSTOM). */
-  additionalUsersLimit: number | null;
-  hasSupport: boolean;
-  hasTickets: boolean;
-  hasGroups: boolean;
-  hasEarlyAccess: boolean;
-  ctaLabel: string;
-  /** null = ainda sem destino real (ex: contato comercial) — CTA fica desabilitado, nunca aponta pra link falso. */
-  ctaHref: string | null;
-  highlight?: "popular" | "value";
-}
-
-export function formatPlanPrice(price: number): string {
-  if (price === 0) return "R$ 0";
-  return `R$ ${price.toLocaleString("pt-BR", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-}
-
-function paidPlanBenefits(additionalUsers: number): string[] {
-  return [
-    "Acesso às ferramentas da plataforma",
-    `1 proprietário + até ${additionalUsers} usuários adicionais`,
-    "Suporte por e-mail",
-    "Atualizações constantes da plataforma",
-  ];
-}
-
-export const PRICING_PLANS: PricingPlan[] = [
-  {
-    id: "FREE_TRIAL",
-    name: "Teste grátis",
-    tagline: "1 dia",
-    price: 0,
-    periodDays: 1,
-    periodLabel: "1 dia",
-    description: "Experimente o Prime Ges por 1 dia e conheça a plataforma.",
-    includedFeatures: [
-      "Acesso de 1 dia à plataforma",
-      "Conhecer as principais funcionalidades",
-      "Avaliar o sistema antes de assinar",
-    ],
-    excludedFeatures: ["Suporte por e-mail", "Usuários adicionais"],
-    additionalUsersLimit: 0,
-    hasSupport: false,
-    hasTickets: false,
-    hasGroups: false,
-    hasEarlyAccess: false,
-    ctaLabel: "Começar teste grátis",
-    ctaHref: "/register",
-  },
-  {
-    id: "MONTHLY",
-    name: "Mensal",
-    tagline: "Mais escolhido",
-    price: 89,
-    periodDays: 31,
-    periodLabel: "31 dias",
-    description: "Tenha acesso completo ao Prime Ges durante 31 dias.",
-    includedFeatures: paidPlanBenefits(2),
-    additionalUsersLimit: 2,
-    hasSupport: true,
-    hasTickets: false,
-    hasGroups: false,
-    hasEarlyAccess: false,
-    ctaLabel: "Assinar mensal",
-    ctaHref: "/register",
-    highlight: "popular",
-  },
-  {
-    id: "QUARTERLY",
-    name: "Trimestral",
-    price: 240,
-    periodDays: 93,
-    periodLabel: "93 dias",
-    description: "Acesso ao Prime Ges garantido por 93 dias.",
-    includedFeatures: paidPlanBenefits(2),
-    additionalUsersLimit: 2,
-    hasSupport: true,
-    hasTickets: false,
-    hasGroups: false,
-    hasEarlyAccess: false,
-    ctaLabel: "Assinar trimestral",
-    ctaHref: "/register",
-  },
-  {
-    id: "YEARLY",
-    name: "Anual",
-    tagline: "Melhor custo-benefício",
-    price: 899,
-    periodDays: 365,
-    periodLabel: "365 dias",
-    description: "Acesso ao Prime Ges garantido por 365 dias.",
-    includedFeatures: paidPlanBenefits(2),
-    additionalUsersLimit: 2,
-    hasSupport: true,
-    hasTickets: false,
-    hasGroups: false,
-    hasEarlyAccess: false,
-    ctaLabel: "Assinar anual",
-    ctaHref: "/register",
-    highlight: "value",
-  },
-];
-
-/**
- * Plano sob medida — sem preço nem período fixo, e sem CTA funcional
- * ainda (não existe canal de contato comercial implementado). Fica de
- * fora de PRICING_PLANS porque não entra no grid de 4 colunas, é
- * apresentado como bloco separado abaixo.
+/*
+ * Planos e preços NÃO ficam mais aqui: a home lê o catálogo do banco (get_public_plans) — fonte única administrada
+ * em /admin/plans. Ver src/lib/billing/pricing-display.ts.
  */
-export const CUSTOM_PLAN = {
-  id: "CUSTOM" as const,
-  name: "Sob medida",
-  tagline: "Solicite um orçamento",
-  title: "Precisa de mais tempo?",
-  description:
-    "Precisa de um período maior ou deseja contratar o Prime Ges por um prazo personalizado? Fale com nossa equipe para solicitar uma proposta.",
-  ctaLabel: "Solicitar orçamento",
-  /** Sem canal de contato comercial implementado ainda — CTA fica desabilitado em vez de linkar pra algo que não existe. */
-  ctaHref: null as string | null,
-};
-
-export interface ComparisonRow {
-  label: string;
-  values: [boolean | string, boolean | string, boolean | string, boolean | string];
-  note?: string;
-}
-
-/** Colunas na mesma ordem de PRICING_PLANS (sem o plano CUSTOM). */
-export const COMPARISON_ROWS: ComparisonRow[] = [
-  { label: "Acesso à plataforma", values: [true, true, true, true] },
-  { label: "Suporte por e-mail", values: [false, true, true, true] },
-  { label: "Atualizações", values: [false, true, true, true] },
-  {
-    label: "Usuários adicionais",
-    values: ["—", "2", "2", "2"],
-    note: "Quantidade de usuários adicionais além do proprietário.",
-  },
-];
 
 /**
  * Credibilidade REAL: só fatos verificáveis no produto (nada de números, clientes, logos ou
@@ -448,13 +296,10 @@ export interface FaqItem {
 }
 
 /**
- * Perguntas frequentes baseadas no funcionamento real. Números (teste, usuários) vêm dos planos
- * (PRICING_PLANS), a fonte única; nenhuma política comercial é inventada aqui.
+ * Perguntas frequentes baseadas no funcionamento real. Números (teste, usuários) vêm dos planos do catálogo
+ * (faqFacts em pricing-display.ts); nenhuma política comercial é inventada aqui.
  */
-export function buildFaq(plans: PricingPlan[]): FaqItem[] {
-  const trial = plans.find((plan) => plan.id === "FREE_TRIAL");
-  const paid = plans.find((plan) => plan.id === "MONTHLY");
-  const extraUsers = paid?.additionalUsersLimit ?? 0;
+export function buildFaq({ trialLabel, extraUsers }: { trialLabel: string | null; extraUsers: number }): FaqItem[] {
   return [
     {
       question: "O que é o Prime Ges?",
@@ -467,8 +312,8 @@ export function buildFaq(plans: PricingPlan[]): FaqItem[] {
     },
     {
       question: "Como funciona o teste grátis?",
-      answer: trial
-        ? "Ao criar a conta você tem " + trial.periodLabel + " de acesso gratuito para conhecer a plataforma. O teste não inclui suporte por e-mail nem usuários adicionais."
+      answer: trialLabel
+        ? "Ao criar a conta você tem " + trialLabel + " de acesso gratuito para conhecer a plataforma. O teste não inclui suporte por e-mail nem usuários adicionais. O teste é concedido uma vez por pessoa e há um limite de cadastros por conexão para evitar abuso."
         : "Ao criar a conta você pode conhecer a plataforma antes de assinar.",
     },
     {

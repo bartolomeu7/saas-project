@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { cookies } from "next/headers";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { redirect } from "next/navigation";
 import { requirePlatformAdmin } from "@/lib/admin/queries";
+import { getCurrentUser } from "@/lib/auth/session";
+import { evaluateSessionGate, SESSION_LIMIT_PATH } from "@/lib/auth/session-gate";
 import { USER_ROLE_LABELS } from "@/types/admin";
 
 // Todo o painel depende da sessão do usuário: nunca pode ser pré-renderizado
@@ -26,6 +29,14 @@ export const metadata: Metadata = {
  */
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const admin = await requirePlatformAdmin();
+  // Mesmo limite de sessões simultâneas da conta (administradores não são exceção).
+  const user = await getCurrentUser().catch(() => null);
+  if (user) {
+    const gate = await evaluateSessionGate(user.id);
+    if (gate === "blocked") redirect(SESSION_LIMIT_PATH);
+    // sessão ainda não validada (Clerk/serviço indisponível): negada só a esta sessão, de forma temporária
+    if (gate === "unverified") redirect(`${SESSION_LIMIT_PATH}?motivo=verificacao`);
+  }
   const defaultOpen = (await cookies()).get("sidebar_state")?.value !== "false";
 
   return (

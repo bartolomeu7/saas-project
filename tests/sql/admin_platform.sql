@@ -77,7 +77,7 @@ set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"ap_admin","role":"authenticated"}', true);
 
 -- ---- configurações
-select pg_temp.chk('settings', 'admin lê configurações', $q$select count(*)::text from public.get_platform_settings()$q$, 'OK=3');
+select pg_temp.chk('settings', 'admin lê configurações', $q$select count(*)::text from public.get_platform_settings()$q$, 'OK=7');
 select pg_temp.chk('settings', 'admin NÃO altera configuração', $q$select public.set_platform_setting('admin_max_free_days', 15, 'x')::text$q$, 'ERR=not authorized');
 
 -- ---- presença
@@ -328,7 +328,7 @@ select pg_temp.chk('anon_denied', 'planos públicos continuam legíveis', $q$sel
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"ap_super","role":"authenticated"}', true);
 
-select pg_temp.chk('settings', 'super lê configurações', $q$select count(*)::text from public.get_platform_settings()$q$, 'OK=3');
+select pg_temp.chk('settings', 'super lê configurações', $q$select count(*)::text from public.get_platform_settings()$q$, 'OK=7');
 select pg_temp.chk('settings', 'super altera limite de dias para 10', $q$select public.set_platform_setting('admin_max_free_days', 10, 'teste')::text$q$, 'OK');
 select pg_temp.chk('settings', 'valor persistido', $q$select value::text from public.get_platform_settings() where key = 'admin_max_free_days'$q$, 'OK=10');
 select pg_temp.chk('settings', 'abaixo da faixa', $q$select public.set_platform_setting('admin_max_free_days', 0, 'x')::text$q$, 'ERR=');

@@ -5,6 +5,8 @@ import { getCurrentCompany } from "@/lib/companies/queries";
 import { CreateCompanyForm } from "@/components/app/create-company-form";
 import { siteConfig } from "@/config/site";
 import { requireLegalConsent } from "@/lib/legal/consent";
+import { getCurrentUser } from "@/lib/auth/session";
+import { evaluateSessionGate, SESSION_LIMIT_PATH } from "@/lib/auth/session-gate";
 
 export const metadata: Metadata = {
   title: "Configurar empresa",
@@ -27,6 +29,15 @@ export default async function OnboardingPage() {
   }
   if (current) {
     redirect("/app");
+  }
+
+  // Mesmo limite de sessões simultâneas do restante do produto: o onboarding (criação da empresa e teste grátis) não é um
+  // atalho para quem foi recusado ou ainda não foi verificado.
+  const user = await getCurrentUser().catch(() => null);
+  if (user) {
+    const gate = await evaluateSessionGate(user.id);
+    if (gate === "blocked") redirect(SESSION_LIMIT_PATH);
+    if (gate === "unverified") redirect(`${SESSION_LIMIT_PATH}?motivo=verificacao`);
   }
 
   return (

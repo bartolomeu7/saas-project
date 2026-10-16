@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { setPlatformSettingAction } from "@/lib/admin/actions";
 import { getPlatformSettings, requireSuperAdmin } from "@/lib/admin/queries";
 import { formatDateTime } from "@/lib/format";
+import { describeAntifraudConfig } from "@/lib/security/client-ip";
 
 export const metadata = { title: "Configurações" };
 
@@ -13,6 +14,10 @@ const SETTING_LABELS: Record<string, { label: string; unit: string }> = {
   admin_max_free_days: { label: "Limite de dias gratuitos por operação (admin)", unit: "dias" },
   presence_online_seconds: { label: "Janela de “online agora”", unit: "segundos" },
   presence_recent_minutes: { label: "Janela de “ativo recentemente”", unit: "minutos" },
+  max_concurrent_sessions: { label: "Sessões simultâneas por conta", unit: "sessões" },
+  trial_signup_ip_limit: { label: "Cadastros com teste grátis por conexão (IP)", unit: "cadastros" },
+  trial_signup_ip_window_hours: { label: "Janela de contagem por conexão (IP)", unit: "horas" },
+  trial_signup_retention_days: { label: "Retenção dos registros antifraude", unit: "dias" },
 };
 
 /** Quem pode o quê — espelha as RPCs (a autoridade é o banco, esta tabela é só informativa). */
@@ -39,6 +44,8 @@ const CAPABILITIES: { feature: string; admin: boolean }[] = [
 export default async function AdminSettingsPage() {
   await requireSuperAdmin();
   const settings = await getPlatformSettings();
+  // Estado (não o valor) do segredo do antifraude deste ambiente: só informativo para o super administrador.
+  const antifraud = describeAntifraudConfig();
 
   return (
     <div className="flex flex-col gap-6 px-4 py-6 sm:px-6">
@@ -47,6 +54,15 @@ export default async function AdminSettingsPage() {
         title="Configurações"
         description="Parâmetros da plataforma com efeito real. Visível apenas para super administradores."
       />
+
+      <Card className={antifraud.ok ? undefined : "border-destructive/40"}>
+        <CardHeader>
+          <CardTitle className="text-base">Antifraude do teste grátis</CardTitle>
+          <CardDescription>
+            {antifraud.message} O valor do segredo nunca é exibido; ele é configurado nas variáveis do ambiente (ANTIFRAUD_HASH_SECRET).
+          </CardDescription>
+        </CardHeader>
+      </Card>
 
       <Card className="overflow-hidden">
         <CardHeader>
