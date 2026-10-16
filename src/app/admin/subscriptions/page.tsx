@@ -185,8 +185,12 @@ export default async function AdminSubscriptionsPage({
                   </TableCell>
                   <TableCell className="whitespace-nowrap">
                     <div className="flex flex-col">
-                      <span>{formatDate(row.expires_at)}</span>
-                      {(row.state === "active" || row.state === "trialing") && (
+                      {row.lifetime || !row.expires_at ? (
+                        <Badge variant="secondary">Vitalício</Badge>
+                      ) : (
+                        <span>{formatDate(row.expires_at)}</span>
+                      )}
+                      {!row.lifetime && (row.state === "active" || row.state === "trialing") && row.days_left !== null && (
                         <span className="text-xs text-muted-foreground">restam {row.days_left} dia(s)</span>
                       )}
                     </div>

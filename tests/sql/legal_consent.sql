@@ -15,7 +15,8 @@ select set_config('request.jwt.claims', '{"role":"service_role"}', true);
 insert into public.profiles (user_id, clerk_user_id, full_name, email, role, status) values
   ('aaaaaaaa-0000-0000-0000-00000000000a', 'cn_a', 'CN A', 'cn-a@example.invalid', 'user', 'active'),
   ('aaaaaaaa-0000-0000-0000-00000000000b', 'cn_b', 'CN B', 'cn-b@example.invalid', 'user', 'active'),
-  ('aaaaaaaa-0000-0000-0000-00000000000c', 'cn_susp', 'CN S', 'cn-s@example.invalid', 'user', 'active');
+  ('aaaaaaaa-0000-0000-0000-00000000000c', 'cn_susp', 'CN S', 'cn-s@example.invalid', 'user', 'active'),
+  ('aaaaaaaa-0000-0000-0000-00000000000d', 'cn_d', 'CN D', 'cn-d@example.invalid', 'user', 'active');
 select set_config('app.platform_profile_write', 'on', true);
 update public.profiles set status = 'suspended' where user_id = 'aaaaaaaa-0000-0000-0000-00000000000c';
 select set_config('app.platform_profile_write', 'off', true);
@@ -57,7 +58,7 @@ select pg_temp.chk('schema', 'hash do seed é SHA-256 (64 hex)', $q$select count
 set local role anon;
 select set_config('request.jwt.claims', '{"role":"anon"}', true);
 select pg_temp.chk('anon', 'anon lê as versões vigentes (informação pública)', $q$select count(*)::text from public.get_current_legal_documents()$q$, 'OK=2');
-select pg_temp.chk('anon', 'anon NÃO registra consentimento', $q$select public.record_legal_consent('1.0.0-rc.1','1.0.0-rc.1','SIGNUP')::text$q$, 'ERR=permission denied');
+select pg_temp.chk('anon', 'anon NÃO registra consentimento', $q$select public.record_legal_consent('1.0.0-rc.2','1.0.0-rc.2','SIGNUP')::text$q$, 'ERR=permission denied');
 select pg_temp.chk('anon', 'anon NÃO vê status', $q$select public.get_my_legal_consent_status()::text$q$, 'ERR=permission denied');
 select pg_temp.chk('anon', 'anon NÃO vê histórico', $q$select count(*)::text from public.get_my_legal_consent_history()$q$, 'ERR=permission denied');
 select pg_temp.chk('anon', 'anon NÃO lê user_consents', $q$select count(*)::text from public.user_consents$q$, 'ERR=permission denied');
@@ -68,14 +69,14 @@ set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"cn_a","role":"authenticated"}', true);
 select pg_temp.chk('gate', 'T08 usuário sem consentimento: status incompleto', $q$select (public.get_my_legal_consent_status()->>'complete')$q$, 'OK=false');
 select pg_temp.chk('gate', 'T08 pendências = 2 documentos', $q$select jsonb_array_length(public.get_my_legal_consent_status()->'pending')::text$q$, 'OK=2');
-select pg_temp.chk('record', 'T05 versão inválida dos Termos é rejeitada', $q$select public.record_legal_consent('9.9.9','1.0.0-rc.1','SIGNUP')::text$q$, 'ERR=versão dos documentos mudou');
-select pg_temp.chk('record', 'T05 versão inválida da Política é rejeitada', $q$select public.record_legal_consent('1.0.0-rc.1','0.0.1','SIGNUP')::text$q$, 'ERR=versão dos documentos mudou');
+select pg_temp.chk('record', 'T05 versão inválida dos Termos é rejeitada', $q$select public.record_legal_consent('9.9.9','1.0.0-rc.2','SIGNUP')::text$q$, 'ERR=versão dos documentos mudou');
+select pg_temp.chk('record', 'T05 versão inválida da Política é rejeitada', $q$select public.record_legal_consent('1.0.0-rc.2','0.0.1','SIGNUP')::text$q$, 'ERR=versão dos documentos mudou');
 select pg_temp.chk('record', 'versão nula é rejeitada', $q$select public.record_legal_consent(null,null,'SIGNUP')::text$q$, 'ERR=versão dos documentos mudou');
-select pg_temp.chk('record', 'contexto inválido é rejeitado', $q$select public.record_legal_consent('1.0.0-rc.1','1.0.0-rc.1','HACK')::text$q$, 'ERR=Contexto de aceite inválido');
+select pg_temp.chk('record', 'contexto inválido é rejeitado', $q$select public.record_legal_consent('1.0.0-rc.2','1.0.0-rc.2','HACK')::text$q$, 'ERR=Contexto de aceite inválido');
 select pg_temp.chk('record', 'nada foi gravado pelas tentativas inválidas', $q$select jsonb_array_length(public.get_my_legal_consent_status()->'pending')::text$q$, 'OK=2');
-select pg_temp.chk('record', 'T04 aceite válido grava os dois documentos', $q$select (public.record_legal_consent('1.0.0-rc.1','1.0.0-rc.1','SIGNUP')->>'recorded')$q$, 'OK=2');
+select pg_temp.chk('record', 'T04 aceite válido grava os dois documentos', $q$select (public.record_legal_consent('1.0.0-rc.2','1.0.0-rc.2','SIGNUP')->>'recorded')$q$, 'OK=2');
 select pg_temp.chk('gate', 'T09 com consentimento vigente: status completo', $q$select (public.get_my_legal_consent_status()->>'complete')$q$, 'OK=true');
-select pg_temp.chk('record', 'repetir o aceite é idempotente (0 novos)', $q$select (public.record_legal_consent('1.0.0-rc.1','1.0.0-rc.1','ACCEPTANCE_GATE')->>'recorded')$q$, 'OK=0');
+select pg_temp.chk('record', 'repetir o aceite é idempotente (0 novos)', $q$select (public.record_legal_consent('1.0.0-rc.2','1.0.0-rc.2','ACCEPTANCE_GATE')->>'recorded')$q$, 'OK=0');
 select pg_temp.chk('history', 'histórico tem exatamente 2 registros', $q$select count(*)::text from public.get_my_legal_consent_history()$q$, 'OK=2');
 select pg_temp.chk('history', 'tipos separados: aceite dos Termos e ciência da Política', $q$select string_agg(consent_type, ',' order by consent_type) from public.get_my_legal_consent_history()$q$, 'OK=PRIVACY_POLICY_ACKNOWLEDGEMENT,TERMS_OF_USE_ACCEPTANCE');
 select pg_temp.chk('history', 'contexto registrado = SIGNUP', $q$select string_agg(distinct context, ',') from public.get_my_legal_consent_history()$q$, 'OK=SIGNUP');
@@ -95,9 +96,9 @@ select pg_temp.chk('isolation', 'B continua pendente mesmo com A em dia', $q$sel
 
 -- ============================================================ SUSPENSO e DESCONHECIDO
 select set_config('request.jwt.claims', '{"sub":"cn_susp","role":"authenticated"}', true);
-select pg_temp.chk('identity', 'perfil suspenso não registra consentimento', $q$select public.record_legal_consent('1.0.0-rc.1','1.0.0-rc.1','SIGNUP')::text$q$, 'ERR=not authenticated');
+select pg_temp.chk('identity', 'perfil suspenso não registra consentimento', $q$select public.record_legal_consent('1.0.0-rc.2','1.0.0-rc.2','SIGNUP')::text$q$, 'ERR=not authenticated');
 select set_config('request.jwt.claims', '{"sub":"cn_inexistente","role":"authenticated"}', true);
-select pg_temp.chk('identity', 'identidade sem perfil não registra consentimento', $q$select public.record_legal_consent('1.0.0-rc.1','1.0.0-rc.1','SIGNUP')::text$q$, 'ERR=not authenticated');
+select pg_temp.chk('identity', 'identidade sem perfil não registra consentimento', $q$select public.record_legal_consent('1.0.0-rc.2','1.0.0-rc.2','SIGNUP')::text$q$, 'ERR=not authenticated');
 select pg_temp.chk('identity', 'identidade sem perfil não vê status', $q$select public.get_my_legal_consent_status()::text$q$, 'ERR=not authenticated');
 
 -- ============================================================ IMUTABILIDADE (como dono do banco)
@@ -112,32 +113,64 @@ select pg_temp.chk('immutable', 'versão publicada: não pode ser apagada', $q$d
 select pg_temp.chk('immutable', 'T14 não existe consentimento de marketing no modelo (constraint)', $q$insert into public.user_consents(user_id, consent_type, document_type, document_version_id, document_hash, context) select 'aaaaaaaa-0000-0000-0000-00000000000a', 'MARKETING_CONSENT', 'TERMS_OF_USE', id, content_hash, 'SIGNUP' from public.legal_document_versions limit 1$q$, 'ERR=user_consents_consent_type_check');
 select pg_temp.chk('immutable', 'tipo de aceite deve casar com o documento (constraint)', $q$insert into public.user_consents(user_id, consent_type, document_type, document_version_id, document_hash, context) select 'aaaaaaaa-0000-0000-0000-00000000000a', 'TERMS_OF_USE_ACCEPTANCE', 'PRIVACY_POLICY', id, content_hash, 'SIGNUP' from public.legal_document_versions where document_type = 'PRIVACY_POLICY' limit 1$q$, 'ERR=user_consents_type_matches_document');
 
+-- ============================================================ T10 (cenário do Production): aceite da rc.1 -> rc.2 vigente
+-- O usuário D já aceitou a rc.1 (histórico pré-existente, inserido como dono: a rc.1 está aposentada
+-- e a RPC só grava a versão vigente). A rc.2 é a vigente: D deve ficar pendente e reaceitar.
+reset role;
+select set_config('request.jwt.claims', '{"role":"service_role"}', true);
+insert into public.user_consents (user_id, consent_type, document_type, document_version_id, document_hash, granted, context)
+  select 'aaaaaaaa-0000-0000-0000-00000000000d',
+         case v.document_type when 'TERMS_OF_USE' then 'TERMS_OF_USE_ACCEPTANCE' else 'PRIVACY_POLICY_ACKNOWLEDGEMENT' end,
+         v.document_type, v.id, v.content_hash, true, 'SIGNUP'
+    from public.legal_document_versions v where v.version = '1.0.0-rc.1';
+select pg_temp.chk('t10_prod', 'pré-condição: a rc.1 existe aposentada e a rc.2 publicada', $q$select string_agg(version||':'||status, ',' order by version, status) from (select distinct version, status from public.legal_document_versions where version in ('1.0.0-rc.1','1.0.0-rc.2')) x$q$, 'OK=1.0.0-rc.1:retired,1.0.0-rc.2:published');
+select pg_temp.chk('t10_prod', 'D tem 2 aceites da rc.1 antes', $q$select count(*)::text from public.user_consents where user_id = 'aaaaaaaa-0000-0000-0000-00000000000d'$q$, 'OK=2');
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"cn_d","role":"authenticated"}', true);
+select pg_temp.chk('t10_prod', 'D com aceite só da rc.1: status INCOMPLETO (vai para /aceite-termos)', $q$select (public.get_my_legal_consent_status()->>'complete')$q$, 'OK=false');
+select pg_temp.chk('t10_prod', 'D: os 2 documentos estão pendentes na rc.2', $q$select string_agg(p->>'document_type'||'@'||(p->>'version'), ',' order by p->>'document_type') from jsonb_array_elements(public.get_my_legal_consent_status()->'pending') p$q$, 'OK=PRIVACY_POLICY@1.0.0-rc.2,TERMS_OF_USE@1.0.0-rc.2');
+select pg_temp.chk('t10_prod', 'D: aceitar com a versão ANTIGA (rc.1) é rejeitado', $q$select public.record_legal_consent('1.0.0-rc.1','1.0.0-rc.1','REACCEPTANCE')::text$q$, 'ERR=versão dos documentos mudou');
+select pg_temp.chk('t10_prod', 'D: mistura rc.1/rc.2 é rejeitada', $q$select public.record_legal_consent('1.0.0-rc.2','1.0.0-rc.1','REACCEPTANCE')::text$q$, 'ERR=versão dos documentos mudou');
+select pg_temp.chk('t10_prod', 'D: ainda incompleto depois das tentativas inválidas', $q$select (public.get_my_legal_consent_status()->>'complete')$q$, 'OK=false');
+select pg_temp.chk('t10_prod', 'D: reaceite da rc.2 grava 2 registros', $q$select (public.record_legal_consent('1.0.0-rc.2','1.0.0-rc.2','REACCEPTANCE')->>'recorded')$q$, 'OK=2');
+select pg_temp.chk('t10_prod', 'D: status COMPLETO (libera /app, sem loop)', $q$select (public.get_my_legal_consent_status()->>'complete')$q$, 'OK=true');
+select pg_temp.chk('t10_prod', 'D: reaceitar de novo é idempotente (0 novos)', $q$select (public.record_legal_consent('1.0.0-rc.2','1.0.0-rc.2','ACCEPTANCE_GATE')->>'recorded')$q$, 'OK=0');
+select pg_temp.chk('t10_prod', 'D: histórico = 4 registros (rc.1 x2 preservada + rc.2 x2)', $q$select count(*)::text from public.get_my_legal_consent_history()$q$, 'OK=4');
+select pg_temp.chk('t10_prod', 'D: rc.1 preservada (2) e rc.2 registrada (2)', $q$select string_agg(version||'='||n, ',' order by version) from (select version, count(*) n from public.get_my_legal_consent_history() group by version) x$q$, 'OK=1.0.0-rc.1=2,1.0.0-rc.2=2');
+select pg_temp.chk('t10_prod', 'D: contexto do reaceite = REACCEPTANCE', $q$select string_agg(distinct context, ',') from public.get_my_legal_consent_history() where version = '1.0.0-rc.2'$q$, 'OK=REACCEPTANCE');
+select pg_temp.chk('t10_prod', 'D: hash do aceite rc.2 = hash publicado', $q$select count(*)::text from public.get_my_legal_consent_history() h join public.get_current_legal_documents() d on d.document_type = h.document_type and d.version = h.version and d.content_hash = h.document_hash$q$, 'OK=2');
+select pg_temp.chk('t10_prod', 'D: histórico antigo é imutável (UPDATE negado)', $q$update public.user_consents set granted = false returning 'x'$q$, 'ERR=permission denied');
+select pg_temp.chk('t10_prod', 'sem coluna de IP/user-agent no registro', $q$select count(*)::text from information_schema.columns where table_schema = 'public' and table_name = 'user_consents' and column_name ~* '(ip|user_agent|ua)$'$q$, 'OK=0');
+reset role;
+select set_config('request.jwt.claims', '{"role":"service_role"}', true);
+
 -- ============================================================ NOVA VERSÃO (T06 / T10 / T11)
 -- versão futura NÃO é vigente (T06): publicada com vigência no futuro
 insert into public.legal_document_versions (document_type, version, effective_at, content_hash, status)
   values ('TERMS_OF_USE', '2.0.0-fut', now() + interval '30 days', repeat('a', 64), 'published');
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"cn_a","role":"authenticated"}', true);
-select pg_temp.chk('version', 'T06 documento não vigente (futuro) é rejeitado', $q$select public.record_legal_consent('2.0.0-fut','1.0.0-rc.1','REACCEPTANCE')::text$q$, 'ERR=versão dos documentos mudou');
+select pg_temp.chk('version', 'T06 documento não vigente (futuro) é rejeitado', $q$select public.record_legal_consent('2.0.0-fut','1.0.0-rc.2','REACCEPTANCE')::text$q$, 'ERR=versão dos documentos mudou');
 select pg_temp.chk('version', 'versão futura não muda o status atual', $q$select (public.get_my_legal_consent_status()->>'complete')$q$, 'OK=true');
 
 -- nova versão material já em vigor (T10): a anterior é aposentada, a nova passa a ser a vigente
 reset role;
 select set_config('request.jwt.claims', '{"role":"service_role"}', true);
-update public.legal_document_versions set status = 'retired' where document_type = 'TERMS_OF_USE' and version = '1.0.0-rc.1';
+update public.legal_document_versions set status = 'retired' where document_type = 'TERMS_OF_USE' and version = '1.0.0-rc.2';
 insert into public.legal_document_versions (document_type, version, effective_at, content_hash, status)
   values ('TERMS_OF_USE', '1.1.0-test', now() - interval '1 minute', repeat('b', 64), 'published');
-select pg_temp.chk('version', 'aposentar versão publicada é permitido (published -> retired)', $q$select count(*)::text from public.legal_document_versions where document_type = 'TERMS_OF_USE' and version = '1.0.0-rc.1' and status = 'retired'$q$, 'OK=1');
-select pg_temp.chk('version', 'versão aposentada não volta a published', $q$update public.legal_document_versions set status = 'published' where document_type = 'TERMS_OF_USE' and version = '1.0.0-rc.1' returning 'x'$q$, 'ERR=Transição de status inválida');
+select pg_temp.chk('version', 'aposentar versão publicada é permitido (published -> retired)', $q$select count(*)::text from public.legal_document_versions where document_type = 'TERMS_OF_USE' and version = '1.0.0-rc.2' and status = 'retired'$q$, 'OK=1');
+select pg_temp.chk('version', 'versão aposentada não volta a published', $q$update public.legal_document_versions set status = 'published' where document_type = 'TERMS_OF_USE' and version = '1.0.0-rc.2' returning 'x'$q$, 'ERR=Transição de status inválida');
+select pg_temp.chk('version', 'rc.1 (aposentada em Production/TEST) também não volta a published', $q$update public.legal_document_versions set status = 'published' where document_type = 'TERMS_OF_USE' and version = '1.0.0-rc.1' returning 'x'$q$, 'ERR=Transição de status inválida');
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"cn_a","role":"authenticated"}', true);
 select pg_temp.chk('version', 'T10 nova versão vigente: usuário afetado fica pendente', $q$select (public.get_my_legal_consent_status()->>'complete')$q$, 'OK=false');
 select pg_temp.chk('version', 'T10 só os Termos estão pendentes (a Política não mudou)', $q$select public.get_my_legal_consent_status()->'pending'->0->>'document_type'$q$, 'OK=TERMS_OF_USE');
-select pg_temp.chk('version', 'T06 versão aposentada é rejeitada (hash/versão velhos)', $q$select public.record_legal_consent('1.0.0-rc.1','1.0.0-rc.1','REACCEPTANCE')::text$q$, 'ERR=versão dos documentos mudou');
-select pg_temp.chk('version', 'T10 reaceite grava apenas o documento novo', $q$select (public.record_legal_consent('1.1.0-test','1.0.0-rc.1','REACCEPTANCE')->>'recorded')$q$, 'OK=1');
+select pg_temp.chk('version', 'T06 versão aposentada é rejeitada (hash/versão velhos)', $q$select public.record_legal_consent('1.0.0-rc.2','1.0.0-rc.2','REACCEPTANCE')::text$q$, 'ERR=versão dos documentos mudou');
+select pg_temp.chk('version', 'T10 reaceite grava apenas o documento novo', $q$select (public.record_legal_consent('1.1.0-test','1.0.0-rc.2','REACCEPTANCE')->>'recorded')$q$, 'OK=1');
 select pg_temp.chk('version', 'depois do reaceite o status volta a completo', $q$select (public.get_my_legal_consent_status()->>'complete')$q$, 'OK=true');
 select pg_temp.chk('version', 'T11 histórico anterior permanece (3 registros)', $q$select count(*)::text from public.get_my_legal_consent_history()$q$, 'OK=3');
-select pg_temp.chk('version', 'T11 o aceite antigo continua apontando a versão antiga', $q$select count(*)::text from public.get_my_legal_consent_history() where document_type = 'TERMS_OF_USE' and version = '1.0.0-rc.1'$q$, 'OK=1');
+select pg_temp.chk('version', 'T11 o aceite antigo continua apontando a versão antiga', $q$select count(*)::text from public.get_my_legal_consent_history() where document_type = 'TERMS_OF_USE' and version = '1.0.0-rc.2'$q$, 'OK=1');
 select pg_temp.chk('version', 'T12 hash do reaceite = hash da nova versão', $q$select count(*)::text from public.get_my_legal_consent_history() where version = '1.1.0-test' and document_hash = repeat('b', 64)$q$, 'OK=1');
 
 -- ================================================================ RESULTADO (erro proposital: reverte tudo)

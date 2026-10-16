@@ -1,14 +1,21 @@
 name: Phase 3 CI
 
+# Nome do workflow e do job (`verify`) preservados; agora também roda na main e executa lint e testes unitários.
 on:
   pull_request:
     branches: [main]
+  push:
+    # `fix/**` roda o CI a cada push de branch de correção, sem exigir PR aberto (útil para validar antes de revisar).
+    branches: [main, "fix/**"]
+  # Execução manual (gh workflow run "Phase 3 CI" --ref <branch>). O GitHub só oferece o disparo manual depois que
+  # este arquivo existe na branch padrão; antes disso, o CI desta branch roda ao abrir um PR para a main.
+  workflow_dispatch:
 
 jobs:
   verify:
     runs-on: ubuntu-latest
-    # Valores FICTÍCIOS e não secretos: servem só para o build compilar e
-    # prerenderizar sem credenciais reais (o CI não precisa de nenhuma).
+    # Valores FICTÍCIOS e não secretos. O build não exige credenciais (as rotas autenticadas são dinâmicas),
+    # mas o Clerk valida o formato da chave publicável ao subir; nada aqui fala com serviço real.
     env:
       NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
@@ -18,8 +25,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # .nvmrc = 22 (LTS): suporta `--experimental-strip-types`, usado pelos testes unitários.
+          node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+      - run: npm run lint
       - run: npm run typecheck
+      - run: npm run test:unit
       - run: npm run build

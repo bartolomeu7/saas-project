@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/supabase";
 import type { ActiveSubscriptionResult, Subscription } from "@/types/billing";
+import { isSubscriptionAccessActive } from "@/lib/billing/access";
 
 /**
  * Subconjunto do guard de assinatura sem NENHUMA dependência Node-only
@@ -14,8 +15,9 @@ import type { ActiveSubscriptionResult, Subscription } from "@/types/billing";
  */
 
 /**
- * Fonte de verdade central do acesso: status E expires_at, sempre
- * juntos — nunca confia só no status armazenado.
+ * Fonte de verdade central do acesso: status E (vitalício OU expires_at no
+ * futuro), sempre juntos — nunca confia só no status armazenado. A regra mora
+ * em src/lib/billing/access.ts (pura, testada).
  */
 export async function getActiveSubscription(
   supabase: SupabaseClient<Database>,
@@ -32,9 +34,7 @@ export async function getActiveSubscription(
   }
 
   const subscription = data as Subscription;
-  const isActive =
-    (subscription.status === "trialing" || subscription.status === "active") &&
-    new Date(subscription.expires_at).getTime() > Date.now();
+  const isActive = isSubscriptionAccessActive(subscription);
 
   return { subscription, isActive };
 }

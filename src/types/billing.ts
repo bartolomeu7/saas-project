@@ -47,6 +47,8 @@ export interface Plan {
   billing_interval_count: number | null;
   additional_user_limit: number;
   trial: boolean;
+  /** Plano de acesso permanente (sem preço nem duração): concedido pela equipe, nunca vendido pelo Pix. */
+  lifetime: boolean;
   support_enabled: boolean;
   tickets_enabled: boolean;
   exclusive_groups_enabled: boolean;
@@ -57,7 +59,7 @@ export interface Plan {
 }
 
 /** Subconjunto público de Plan (retorno de get_public_plans()) — sem provider/provider_plan_id. */
-export type PublicPlan = Omit<Plan, "created_at" | "updated_at">;
+export type PublicPlan = Omit<Plan, "created_at" | "updated_at" | "lifetime">;
 
 /** Espelha a tabela public.subscriptions — uma única linha "atual" por empresa. */
 export interface Subscription {
@@ -66,7 +68,9 @@ export interface Subscription {
   plan_id: string;
   status: SubscriptionStatus;
   starts_at: string;
-  expires_at: string;
+  /** null somente em acesso vitalício (lifetime = true). */
+  expires_at: string | null;
+  lifetime: boolean;
   cancelled_at: string | null;
   provider: string | null;
   provider_customer_id: string | null;
@@ -84,6 +88,7 @@ export interface CompanyEntitlements {
   status: SubscriptionStatus;
   access_starts_at: string | null;
   access_expires_at: string | null;
+  lifetime: boolean;
   max_additional_users: number;
   support_enabled: boolean;
   tickets_enabled: boolean;
@@ -126,7 +131,7 @@ export interface SubscriptionPaymentWithPlan extends SubscriptionPayment {
 /** Resultado do guard de acesso — nunca confia só em status armazenado. */
 export interface ActiveSubscriptionResult {
   subscription: Subscription | null;
-  /** true somente quando status é trialing/active E expires_at ainda está no futuro. */
+  /** true somente quando status é trialing/active E (acesso vitalício OU expires_at ainda no futuro). */
   isActive: boolean;
 }
 

@@ -46,9 +46,17 @@ export function SubscriptionCard({
             <DetailRow label="Acesso">{subscription.access_active ? "Liberado" : "Bloqueado"}</DetailRow>
             <DetailRow label="Início">{formatDate(subscription.starts_at)}</DetailRow>
             <DetailRow label="Vencimento">
-              {formatDate(subscription.expires_at)}
-              {subscription.access_active && (
-                <span className="text-muted-foreground"> · restam {subscription.days_left} dia(s)</span>
+              {subscription.lifetime || !subscription.expires_at ? (
+                <span>
+                  Sem vencimento <Badge variant="secondary">Vitalício</Badge>
+                </span>
+              ) : (
+                <>
+                  {formatDate(subscription.expires_at)}
+                  {subscription.access_active && subscription.days_left !== null && (
+                    <span className="text-muted-foreground"> · restam {subscription.days_left} dia(s)</span>
+                  )}
+                </>
               )}
             </DetailRow>
             {subscription.cancelled_at && <DetailRow label="Cancelada em">{formatDate(subscription.cancelled_at)}</DetailRow>}
@@ -59,6 +67,43 @@ export function SubscriptionCard({
           <p className="text-sm text-muted-foreground">{emptyText}</p>
         )}
         {action}
+      </CardContent>
+    </Card>
+  );
+}
+
+/** Categorias de auditoria que descrevem o histórico de acesso/licença/cobrança manual de uma empresa. */
+const ACCESS_HISTORY_CATEGORIES = new Set(["ACCESS_EXTENSION", "SUBSCRIPTION_CHANGE", "PLAN_CHANGE", "MANUAL_PAYMENT"]);
+
+export function AccessHistoryCard({ entries }: { entries: AuditEntry[] }) {
+  const history = entries.filter((entry) => ACCESS_HISTORY_CATEGORIES.has(entry.category));
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Histórico de concessões e licenças</CardTitle>
+        <CardDescription>Concessões de acesso, trocas de plano, cancelamentos e pagamentos manuais (quem fez, quando e por quê).</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {history.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Nenhuma concessão ou alteração de licença registrada.</p>
+        ) : (
+          <ol className="flex flex-col divide-y divide-border">
+            {history.map((entry) => (
+              <li key={entry.id} className="flex flex-col gap-1 py-2.5 first:pt-0 last:pb-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <AuditCategoryBadge category={entry.category} />
+                  <code className="text-xs text-muted-foreground">{entry.action}</code>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {formatDateTime(entry.created_at)} · {entry.actor_name ?? entry.actor_email ?? "sistema"}
+                </p>
+                {metadataSummary(entry.metadata) && (
+                  <p className="break-words text-xs text-foreground/80">{metadataSummary(entry.metadata)}</p>
+                )}
+              </li>
+            ))}
+          </ol>
+        )}
       </CardContent>
     </Card>
   );

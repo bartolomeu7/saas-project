@@ -10,15 +10,21 @@ import { siteConfig } from "@/config/site";
 import { createPaymentSchema } from "@/lib/validations/billing";
 import { createPixCharge, EvoPayError } from "@/lib/evopay/client";
 import { buildExternalReference } from "@/types/billing";
+import { amountsMatch } from "@/lib/billing/amount";
+import { confirmPaymentFromProvider } from "@/lib/billing/confirm-payment";
 
 /**
- * Cria uma cobrança Pix para a assinatura da empresa do usuário logado.
+ * Cria (ou REAPROVEITA) a cobrança Pix da assinatura da empresa do usuário logado.
  *
- * Nunca confia em preço/company_id vindos do frontend: o plan_id é
- * validado e o preço é sempre lido de public.plans no momento da
- * chamada. subscription_payments não tem policy de INSERT para
- * `authenticated` (só service_role escreve) — por isso as escritas usam
- * createAdminClient(), nunca o client de sessão do usuário.
+ * Nunca confia em preço/company_id vindos do frontend: o plan_id é validado e o preço é sempre lido
+ * de public.plans no momento da chamada. subscription_payments não tem policy de INSERT para
+ * `authenticated` (só service_role escreve) — por isso as escritas usam createAdminClient().
+ *
+ * Idempotência (a mesma intenção = mesma empresa + mesmo plano): a reserva é feita no banco por
+ * claim_subscription_payment() (advisory lock + índice parcial único de UMA cobrança evopay
+ * "pending" por empresa+plano). Repetição após timeout, clique duplo ou chamadas simultâneas devolvem
+ * a MESMA cobrança em vez de criar outra. Uma nova compra legítima (outro plano, ou o mesmo plano
+ * depois de a anterior expirar/cancelar/ser paga) gera uma nova cobrança.
  */
 export async function POST(request: Request) {
   let current, user;
@@ -67,33 +73,52 @@ export async function POST(request: Request) {
     );
   }
 
-  const { data: subscription } = await supabase
-    .from("subscriptions")
-    .select("id")
-    .eq("company_id", current.company.id)
-    .maybeSingle();
-
   const admin = createAdminClient();
 
-  const { data: payment, error: insertError } = await admin
-    .from("subscription_payments")
-    .insert({
-      company_id: current.company.id,
-      subscription_id: subscription?.id ?? null,
-      plan_id: plan.id,
-      provider: "evopay",
-      status: "pending",
-      amount: plan.price,
-      currency: plan.currency,
-    })
-    .select("*")
-    .single();
+  async function claim() {
+    const { data, error } = await admin.rpc("claim_subscription_payment", {
+      p_company_id: current!.company.id,
+      p_plan_id: plan!.id,
+      p_amount: Number(plan!.price),
+      p_currency: plan!.currency,
+    });
+    return { claim: data?.[0] ?? null, error };
+  }
 
-  if (insertError || !payment) {
+  let { claim: reservation, error: claimError } = await claim();
+  if (claimError || !reservation) {
     return NextResponse.json({ error: "Não foi possível iniciar o pagamento." }, { status: 500 });
   }
 
-  const externalReference = buildExternalReference(payment.id);
+  if (!reservation.created) {
+    if (!reservation.has_charge) {
+      // Outra requisição da mesma intenção está criando a cobrança neste instante.
+      return NextResponse.json(
+        { error: "Seu pagamento já está sendo preparado. Aguarde alguns segundos e tente novamente.", code: "PAYMENT_IN_PROGRESS" },
+        { status: 409 }
+      );
+    }
+
+    // Já existe cobrança aberta no provedor: reconsulta para não reaproveitar um Pix expirado/pago.
+    const refreshed = await confirmPaymentFromProvider(reservation.payment_id).catch(() => null);
+    const stillOpen = !refreshed || !refreshed.ok || refreshed.status === "pending" || refreshed.status === "paid";
+    if (stillOpen) {
+      // Provedor indisponível => também reaproveita (evita cobrança duplicada com estado desconhecido).
+      return NextResponse.json({ paymentId: reservation.payment_id, reused: true });
+    }
+
+    // A anterior terminou (expirada/cancelada/falha): a vaga foi liberada, cria uma nova.
+    ({ claim: reservation, error: claimError } = await claim());
+    if (claimError || !reservation) {
+      return NextResponse.json({ error: "Não foi possível iniciar o pagamento." }, { status: 500 });
+    }
+    if (!reservation.created) {
+      return NextResponse.json({ paymentId: reservation.payment_id, reused: true });
+    }
+  }
+
+  const paymentId = reservation.payment_id;
+  const externalReference = buildExternalReference(paymentId);
 
   try {
     const charge = await createPixCharge({
@@ -101,6 +126,18 @@ export async function POST(request: Request) {
       externalReference,
       callbackUrl: `${siteConfig.url}/api/webhooks/evopay`,
     });
+
+    // O provedor tem que ter criado a cobrança exatamente no valor pedido; senão não existe QR para ninguém pagar.
+    if (!amountsMatch(plan.price, charge.amount)) {
+      await admin
+        .from("subscription_payments")
+        .update({ status: "failed", provider_transaction_id: charge.id ?? null, notes: "Valor da cobrança no provedor diferente do pedido." })
+        .eq("id", paymentId);
+      return NextResponse.json(
+        { error: "Não foi possível gerar o Pix agora. Tente novamente em instantes." },
+        { status: 502 }
+      );
+    }
 
     const { error: updateError } = await admin
       .from("subscription_payments")
@@ -112,7 +149,7 @@ export async function POST(request: Request) {
         pix_qr_code_text: charge.qrCodeText ?? null,
         pix_qr_code_url: charge.qrCodeUrl ?? null,
       })
-      .eq("id", payment.id);
+      .eq("id", paymentId);
 
     if (updateError) {
       return NextResponse.json(
@@ -125,17 +162,15 @@ export async function POST(request: Request) {
       companyId: current.company.id,
       actorUserId: user.id,
       entityType: "subscription_payment",
-      entityId: payment.id,
+      entityId: paymentId,
       action: AUDIT_ACTIONS.PAYMENT_CREATED,
       metadata: { plan_code: plan.code, provider_transaction_id: charge.id },
     });
 
-    return NextResponse.json({ paymentId: payment.id });
+    return NextResponse.json({ paymentId });
   } catch (error) {
-    await admin
-      .from("subscription_payments")
-      .update({ status: "failed" })
-      .eq("id", payment.id);
+    // Libera a vaga: a reserva só fica "pending" enquanto há chance de existir cobrança no provedor.
+    await admin.from("subscription_payments").update({ status: "failed" }).eq("id", paymentId);
 
     const message =
       error instanceof EvoPayError

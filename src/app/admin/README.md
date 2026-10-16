@@ -32,8 +32,11 @@ Regras espelhadas em `src/lib/admin/permissions.ts`.
 |---|:-:|:-:|:-:|
 | Acessar `/admin`; ver painel, usuários, empresas, assinaturas, pagamentos, planos | ❌ | ✅ | ✅ |
 | Suspender/reativar usuário comum; editar nome de usuário comum | ❌ | ✅ | ✅ |
-| Conceder dias (até o limite configurável), liberar 30 dias | ❌ | ✅ | ✅ (até 365) |
-| Registrar pagamento manual, trocar plano, reativar assinatura | ❌ | ✅ | ✅ |
+| Conceder acesso sem pagamento (30 dias, período do plano ou personalizado) até o limite configurável (`admin_max_free_days`) | ❌ | ✅ | ✅ (até 365) |
+| Conceder acesso **vitalício**; revogá-lo (atribuir plano com prazo) | ❌ | ❌ | ✅ |
+| Registrar pagamento manual (valor > 0 para liberar acesso), trocar plano preservando o período, reativar assinatura (prazo novo sem pagamento respeita o limite) | ❌ | ✅ | ✅ |
+| Adicionar/remover colaboradores e mudar `admin ⇄ employee` na empresa; reconciliar pagamentos pendentes | ❌ | ✅ | ✅ |
+| Transferir a propriedade da empresa | ❌ | ❌ | ✅ |
 | Editar nome/tipo da empresa, sincronizar entitlements, ferramentas | ❌ | ✅ | ✅ |
 | Reverificar pagamento na EvoPay | ❌ | ✅ | ✅ |
 | Suspender/reativar admin ou super_admin; alterar papéis | ❌ | ❌ | ✅ |
@@ -54,7 +57,7 @@ suspensos/inativos perdem o acesso em todas as camadas (middleware, layout, RPCs
 | `/admin/users`, `/admin/users/[id]` | Lista (busca, plano, assinatura, presença, ordenação) e detalhe com ações |
 | `/admin/companies`, `/admin/companies/[id]` | Lista e detalhe: edição, status, uso agregado, equipe, acesso/cobrança |
 | `/admin/subscriptions` | Assinaturas com estado calculado (mesma regra do guard do produto) |
-| `/admin/payments`, `/admin/payments/[id]` | Pagamentos EvoPay + manuais, resumo, reverificar, anular manual |
+| `/admin/payments`, `/admin/payments/[id]` | Pagamentos EvoPay + manuais, resumo, reverificar, **reconciliar pendentes**, anular manual |
 | `/admin/plans` | Catálogo e CRUD (nunca exclui; só desativa) |
 | `/admin/audit` | Central de auditoria por categoria |
 | `/admin/tools` | Busca global, diagnósticos, ações rápidas seguras, checagem do ambiente |
@@ -64,3 +67,5 @@ suspensos/inativos perdem o acesso em todas as camadas (middleware, layout, RPCs
 
 Toda ação nova deve gravar auditoria via `write_platform_audit_log()` dentro de
 uma RPC `SECURITY DEFINER` e ter teste em `tests/sql/admin_platform.sql`.
+
+Desenho de licenças, vitalício, idempotência, equipe e reconciliação: [`docs/license-and-lifetime.md`](../../../docs/license-and-lifetime.md).

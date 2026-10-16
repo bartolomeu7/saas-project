@@ -80,7 +80,8 @@ export async function POST(request: Request) {
   let outcome: DeliveryOutcome = "processed";
   let detail: string | undefined;
   try {
-    const result = await confirmPaymentFromProvider(payment.id);
+    // recheckPaid: uma entrega depois do pagamento pode ser o estorno — sempre reconsulta o provedor.
+    const result = await confirmPaymentFromProvider(payment.id, { recheckPaid: true });
     if (!result.ok) {
       outcome = "error";
       detail = result.message ?? "Não foi possível confirmar o pagamento.";

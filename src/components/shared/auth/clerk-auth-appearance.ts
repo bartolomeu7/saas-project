@@ -37,5 +37,8 @@ export const clerkAppearance = {
     cardBox: "w-full max-w-full border-0 bg-transparent shadow-none",
     card: "w-full max-w-full border-0 bg-transparent p-0 shadow-none",
     header: "hidden",
+    // O link do rodapé ("Registre-se"/"Entrar") fica no fundo --secondary a 13 px: o azul
+    // primário dá exatamente 4,5:1 e reprova no axe. Azul claro (o mesmo do badge da Home) dá ~7:1.
+    footerActionLink: { color: "#70BEFF" },
   },
 } as const;

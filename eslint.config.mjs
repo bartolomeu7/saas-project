@@ -3,7 +3,7 @@ import nextVitals from "eslint-config-next/core-web-vitals";
 
 const eslintConfig = defineConfig([
   ...nextVitals,
-  globalIgnores(["node_modules/**", ".next/**", "out/**", "build/**", "next-env.d.ts"]),
+  globalIgnores(["node_modules/**", ".next/**", "out/**", "build/**", "next-env.d.ts", "tests/integration/edge/**"]),
   {
     // eslint-config-next 16 passou a incluir regras novas do
     // eslint-plugin-react-hooks (voltadas para compatibilidade com o React

@@ -6,6 +6,8 @@ import { getSubscriptionGuardStatus } from "@/lib/billing/guard";
 import { isActivePlatformAdmin, isActiveSuperAdmin } from "@/lib/admin/permissions";
 import { ACCOUNT_BLOCKED_PATH } from "@/lib/auth/account-status";
 import type { UserRole, UserStatus } from "@/types/profile";
+import { CONSENT_REQUIRED_CODE, decideConsentGate, isConsentGatedPath } from "@/lib/legal/gate";
+import { safeAfterConsentPath } from "@/lib/legal/safe-path";
 import {
   AUTH_BACKEND_MESSAGES,
   readJwtRole,
@@ -80,6 +82,14 @@ function isSuperAdminOnlyRoute(pathname: string) {
   );
 }
 
+/** Cliente tipado só para a RPC de consentimento (ela ainda não está no types/supabase.ts gerado). */
+type ConsentRpcClient = {
+  rpc(fn: "get_my_legal_consent_status"): Promise<{
+    data: { complete?: unknown } | null;
+    error: { message: string } | null;
+  }>;
+};
+
 /** Resposta 503 (fail closed) quando a autenticação no banco está indisponível/mal configurada. */
 function authBackendUnavailable(code: AuthBackendErrorCode) {
   const message = AUTH_BACKEND_MESSAGES[code];
@@ -105,6 +115,11 @@ function authBackendUnavailable(code: AuthBackendErrorCode) {
  * 5. profiles.status: conta inactive/suspended não acessa /app, /onboarding nem
  *    /admin — é redirecionada para ACCOUNT_BLOCKED_PATH (a mesma regra vale no
  *    banco: current_profile_user_id() só reconhece perfil ativo).
+ * 6. Consentimento legal vigente (Termos + Política): barreira CENTRAL para páginas, Server
+ *    Actions e APIs do usuário (ver src/lib/legal/gate.ts). Páginas redirecionam para
+ *    /aceite-termos; Server Actions/APIs/POST recebem 403 LEGAL_CONSENT_REQUIRED. Se o banco não
+ *    responder, falha FECHADO (503). Quem ainda não tem perfil (primeiro acesso) passa: o layout cria o
+ *    perfil e o próprio layout/onboarding repetem a checagem.
  *
  * Os guards de role/assinatura leem o banco com o token da própria sessão
  * Clerk (Third-Party Auth do Supabase), então rodam sob as mesmas políticas
@@ -135,8 +150,10 @@ export const middleware = clerkMiddleware(async (auth, request) => {
   // aos três guards (status, admin e assinatura).
   const needsStatusGuard =
     isAuthenticated && (isAppRoute(pathname) || isOnboardingRoute(pathname) || isAdminRoute(pathname));
+  const needsConsentGate = isAuthenticated && isConsentGatedPath(pathname);
+  const isApiRoute = pathname.startsWith("/api/");
 
-  if (!needsStatusGuard) {
+  if (!needsStatusGuard && !needsConsentGate) {
     return NextResponse.next();
   }
 
@@ -169,6 +186,8 @@ export const middleware = clerkMiddleware(async (auth, request) => {
   // Perfil inexistente = primeiro acesso (segue para o onboarding, que o cria).
   // O Clerk só prova a identidade; quem libera o acesso é profiles.status.
   if (profile && profile.status !== "active") {
+    // APIs (billing/presença) tratam a conta inativa por conta própria (AccountInactiveError => 403).
+    if (isApiRoute) return NextResponse.next();
     return NextResponse.redirect(new URL(ACCOUNT_BLOCKED_PATH, request.url));
   }
 
@@ -185,6 +204,34 @@ export const middleware = clerkMiddleware(async (auth, request) => {
     // Seções exclusivas de super_admin: admin comum volta para o dashboard do painel.
     if (isSuperAdminOnlyRoute(pathname) && !isActiveSuperAdmin(role, status)) {
       return NextResponse.redirect(new URL("/admin", request.url));
+    }
+  }
+
+  // Consentimento legal vigente: sem ele nenhuma ação do produto passa, por nenhum caminho HTTP.
+  if (needsConsentGate && profile) {
+    const { data: consent, error: consentError } = await (supabase as unknown as ConsentRpcClient).rpc(
+      "get_my_legal_consent_status"
+    );
+    if (consentError) {
+      console.error("[middleware] verificação de consentimento falhou:", consentError.message);
+      return authBackendUnavailable("AUTH_RPC_FAILED");
+    }
+    const decision = decideConsentGate({
+      pathname,
+      search: request.nextUrl.search,
+      method: request.method,
+      isServerAction: request.headers.has("next-action"),
+      complete: consent?.complete,
+    });
+    if (decision.action === "redirect") {
+      const target = `/aceite-termos?next=${encodeURIComponent(safeAfterConsentPath(decision.from))}`;
+      return NextResponse.redirect(new URL(target, request.url));
+    }
+    if (decision.action === "deny") {
+      return NextResponse.json(
+        { error: "Aceite os Termos de Uso e a Política de Privacidade vigentes para continuar.", code: CONSENT_REQUIRED_CODE },
+        { status: 403, headers: { "cache-control": "no-store" } }
+      );
     }
   }
 

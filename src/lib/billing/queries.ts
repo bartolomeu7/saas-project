@@ -21,7 +21,8 @@ export async function getPlans(options: { includeInactive?: boolean } = {}): Pro
   let query = supabase.from("plans").select("*");
 
   if (!options.includeInactive) {
-    query = query.eq("status", "active");
+    // Cliente: só planos ativos e À VENDA. O plano vitalício é concedido pela equipe e nunca é oferecido.
+    query = query.eq("status", "active").eq("lifetime", false);
   }
 
   const { data, error } = await query

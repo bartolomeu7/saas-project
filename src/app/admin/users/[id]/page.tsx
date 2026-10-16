@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { AdminActionDialog } from "@/components/admin/admin-action-dialog";
 import { PresenceBadge, UserRoleBadge, UserStatusBadge } from "@/components/admin/admin-badges";
 import { AdminUserActions } from "@/components/admin/admin-user-actions";
-import { AuditCard, DetailRow, PaymentsCard, SubscriptionCard } from "@/components/admin/admin-detail-parts";
+import { AccessHistoryCard, AuditCard, DetailRow, PaymentsCard, SubscriptionCard } from "@/components/admin/admin-detail-parts";
 import { CompanyAccessActions } from "@/components/admin/company-access-actions";
 import { PageHeader } from "@/components/app/page-header";
 import { buttonVariants } from "@/components/ui/button";
@@ -159,6 +159,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
               hasSubscription={Boolean(subscription)}
               subscriptionStatus={subscription?.status ?? null}
               accessActive={subscription?.access_active ?? false}
+              isLifetime={subscription?.lifetime ?? false}
               isSuperAdmin={admin.role === "super_admin"}
               maxFreeDays={maxFreeDays}
             />
@@ -167,6 +168,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
       )}
 
       {company && <PaymentsCard payments={detail.payments} />}
+      {company && <AccessHistoryCard entries={detail.audit} />}
       <AuditCard entries={detail.audit} />
     </div>
   );

@@ -322,6 +322,7 @@ export async function recordManualPaymentAction(companyId: string, formData: For
       notes: z.string().trim().max(1000, "Observação muito longa.").optional(),
       paidAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data do pagamento inválida.").optional(),
       applyAccess: z.boolean(),
+      requestKey: uuid.optional(),
     })
     .safeParse({
       companyId,
@@ -332,6 +333,7 @@ export async function recordManualPaymentAction(companyId: string, formData: For
       notes: formString(formData, "notes"),
       paidAt: formString(formData, "paidAt"),
       applyAccess: formData.get("applyAccess") === "on",
+      requestKey: formString(formData, "requestKey"),
     });
   if (!parsed.success) return invalid(parsed.error.issues[0]);
 
@@ -339,7 +341,7 @@ export async function recordManualPaymentAction(companyId: string, formData: For
   if (paidAt && Number.isNaN(paidAt.getTime())) return { error: "Data do pagamento inválida." };
 
   const supabase = await createSessionClient();
-  const { error } = await supabase.rpc("admin_record_manual_payment", {
+  const { data, error } = await supabase.rpc("admin_record_manual_payment", {
     p_company_id: parsed.data.companyId,
     p_plan_id: parsed.data.planId,
     p_amount: parsed.data.amount,
@@ -348,6 +350,7 @@ export async function recordManualPaymentAction(companyId: string, formData: For
     p_notes: parsed.data.notes,
     p_paid_at: paidAt?.toISOString(),
     p_apply_access: parsed.data.applyAccess,
+    p_request_key: parsed.data.requestKey,
   });
 
   if (error) {
@@ -356,6 +359,9 @@ export async function recordManualPaymentAction(companyId: string, formData: For
   }
 
   revalidateCompany(parsed.data.companyId);
+  if ((data as { replayed?: boolean } | null)?.replayed) {
+    return { success: "Este pagamento já havia sido registrado nesta operação; nada foi duplicado." };
+  }
   return {
     success: parsed.data.applyAccess
       ? "Pagamento manual registrado e acesso estendido."
@@ -500,7 +506,7 @@ export async function reverifyPaymentAction(paymentId: string): Promise<ActionRe
 
   let result: Awaited<ReturnType<typeof confirmPaymentFromProvider>>;
   try {
-    result = await confirmPaymentFromProvider(parsed.data);
+    result = await confirmPaymentFromProvider(parsed.data, { recheckPaid: true });
   } catch (error) {
     // Ex.: service role/EvoPay não configurados neste ambiente. Nunca expõe o erro cru.
     console.error("[admin] reverificação falhou:", error instanceof Error ? error.message : "erro desconhecido");
@@ -807,4 +813,271 @@ export async function markExpiredSubscriptionsAction(): Promise<ActionResult> {
   revalidatePath("/admin/subscriptions");
   revalidatePath("/admin/audit");
   return { success: data === 0 ? "Nenhuma assinatura precisava ser atualizada." : `${data} assinatura(s) marcada(s) como expirada(s).` };
+}
+
+/* ------------------------------------------------- licenças (concessão unificada) */
+
+const licenseKind = z.enum(["thirty_days", "plan_period", "custom_days", "lifetime"]);
+
+/**
+ * Concessão de acesso SEM pagamento: 30 dias | período do plano | dias personalizados | vitalício (super_admin).
+ * Exige motivo, confirmação explícita e chave de idempotência; limites e papéis são revalidados no banco.
+ */
+export async function grantLicenseAction(companyId: string, formData: FormData): Promise<ActionResult> {
+  await requirePlatformAdmin();
+
+  const parsed = z
+    .object({
+      companyId: uuid,
+      kind: licenseKind,
+      planId: uuid.optional(),
+      days: z
+        .string()
+        .regex(/^\d{1,3}$/, "Informe a quantidade de dias.")
+        .transform(Number)
+        .optional(),
+      reason,
+      confirm: z.literal(true, { errorMap: () => ({ message: "Confirme a operação para continuar." }) }),
+      requestKey: uuid,
+    })
+    .safeParse({
+      companyId,
+      kind: formString(formData, "kind"),
+      planId: formString(formData, "planId"),
+      days: formString(formData, "days"),
+      reason: formString(formData, "reason"),
+      confirm: formData.get("confirm") === "on",
+      requestKey: formString(formData, "requestKey"),
+    });
+  if (!parsed.success) return invalid(parsed.error.issues[0]);
+  if (parsed.data.kind === "custom_days" && parsed.data.days === undefined) return { error: "Informe a quantidade de dias." };
+  if (parsed.data.kind === "plan_period" && !parsed.data.planId) return { error: "Escolha o plano." };
+
+  const supabase = await createSessionClient();
+  const { data, error } = await supabase.rpc("admin_grant_license", {
+    p_company_id: parsed.data.companyId,
+    p_kind: parsed.data.kind,
+    p_plan_id: parsed.data.kind === "lifetime" ? null : (parsed.data.planId ?? null),
+    p_days: parsed.data.kind === "custom_days" ? (parsed.data.days ?? null) : null,
+    p_reason: parsed.data.reason,
+    p_request_key: parsed.data.requestKey,
+  });
+
+  if (error) {
+    console.error("[admin] admin_grant_license() falhou:", error.message);
+    return { error: toUserMessage(error) };
+  }
+
+  revalidateCompany(parsed.data.companyId);
+  const result = data as { replayed?: boolean; days?: number; lifetime?: boolean } | null;
+  if (result?.replayed) return { success: "Esta concessão já havia sido aplicada; nada foi duplicado." };
+  if (result?.lifetime) return { success: "Acesso vitalício concedido." };
+  return { success: `${result?.days ?? ""} dia(s) de acesso concedido(s).`.trim() };
+}
+
+/* ---------------------------------------------------- membros e propriedade */
+
+const companyMemberRole = z.enum(["admin", "employee"]);
+
+export async function addCompanyMemberAction(companyId: string, formData: FormData): Promise<ActionResult> {
+  await requirePlatformAdmin();
+
+  const parsed = z
+    .object({
+      companyId: uuid,
+      email: z.string().trim().toLowerCase().email("E-mail inválido.").max(254),
+      role: companyMemberRole,
+      reason,
+      requestKey: uuid,
+    })
+    .safeParse({
+      companyId,
+      email: formString(formData, "email"),
+      role: formString(formData, "role"),
+      reason: formString(formData, "reason"),
+      requestKey: formString(formData, "requestKey"),
+    });
+  if (!parsed.success) return invalid(parsed.error.issues[0]);
+
+  const supabase = await createSessionClient();
+  const { data, error } = await supabase.rpc("admin_add_company_member", {
+    p_company_id: parsed.data.companyId,
+    p_email: parsed.data.email,
+    p_role: parsed.data.role,
+    p_reason: parsed.data.reason,
+    p_request_key: parsed.data.requestKey,
+  });
+
+  if (error) {
+    console.error("[admin] admin_add_company_member() falhou:", error.message);
+    return { error: toUserMessage(error) };
+  }
+
+  revalidateCompany(parsed.data.companyId);
+  return {
+    success: (data as { replayed?: boolean } | null)?.replayed
+      ? "Este colaborador já havia sido adicionado; nada foi duplicado."
+      : "Colaborador adicionado.",
+  };
+}
+
+export async function setCompanyMemberRoleAction(
+  companyId: string,
+  userId: string,
+  formData: FormData
+): Promise<ActionResult> {
+  await requirePlatformAdmin();
+
+  const parsed = z
+    .object({ companyId: uuid, userId: uuid, role: companyMemberRole, reason })
+    .safeParse({ companyId, userId, role: formString(formData, "role"), reason: formString(formData, "reason") });
+  if (!parsed.success) return invalid(parsed.error.issues[0]);
+
+  const supabase = await createSessionClient();
+  const { error } = await supabase.rpc("admin_set_company_member_role", {
+    p_company_id: parsed.data.companyId,
+    p_user_id: parsed.data.userId,
+    p_role: parsed.data.role,
+    p_reason: parsed.data.reason,
+  });
+
+  if (error) {
+    console.error("[admin] admin_set_company_member_role() falhou:", error.message);
+    return { error: toUserMessage(error) };
+  }
+
+  revalidateCompany(parsed.data.companyId);
+  return { success: "Papel do colaborador atualizado." };
+}
+
+export async function removeCompanyMemberAction(
+  companyId: string,
+  userId: string,
+  formData: FormData
+): Promise<ActionResult> {
+  await requirePlatformAdmin();
+
+  const parsed = z
+    .object({ companyId: uuid, userId: uuid, reason })
+    .safeParse({ companyId, userId, reason: formString(formData, "reason") });
+  if (!parsed.success) return invalid(parsed.error.issues[0]);
+
+  const supabase = await createSessionClient();
+  const { error } = await supabase.rpc("admin_remove_company_member", {
+    p_company_id: parsed.data.companyId,
+    p_user_id: parsed.data.userId,
+    p_reason: parsed.data.reason,
+  });
+
+  if (error) {
+    console.error("[admin] admin_remove_company_member() falhou:", error.message);
+    return { error: toUserMessage(error) };
+  }
+
+  revalidateCompany(parsed.data.companyId);
+  return { success: "Colaborador removido da empresa." };
+}
+
+/** SUPER_ADMIN: transfere a propriedade a um membro ativo (um único owner ao final). */
+export async function transferCompanyOwnershipAction(companyId: string, formData: FormData): Promise<ActionResult> {
+  await requireSuperAdmin();
+
+  const parsed = z
+    .object({
+      companyId: uuid,
+      newOwnerUserId: uuid,
+      reason,
+      confirm: z.literal(true, { errorMap: () => ({ message: "Confirme a operação para continuar." }) }),
+      requestKey: uuid,
+    })
+    .safeParse({
+      companyId,
+      newOwnerUserId: formString(formData, "newOwnerUserId"),
+      reason: formString(formData, "reason"),
+      confirm: formData.get("confirm") === "on",
+      requestKey: formString(formData, "requestKey"),
+    });
+  if (!parsed.success) return invalid(parsed.error.issues[0]);
+
+  const supabase = await createSessionClient();
+  const { error } = await supabase.rpc("admin_transfer_company_ownership", {
+    p_company_id: parsed.data.companyId,
+    p_new_owner_user_id: parsed.data.newOwnerUserId,
+    p_reason: parsed.data.reason,
+    p_request_key: parsed.data.requestKey,
+  });
+
+  if (error) {
+    console.error("[admin] admin_transfer_company_ownership() falhou:", error.message);
+    return { error: toUserMessage(error) };
+  }
+
+  revalidateCompany(parsed.data.companyId);
+  return { success: "Propriedade da empresa transferida." };
+}
+
+/* ---------------------------------------------------------- reconciliação */
+
+const RECONCILE_BATCH = 15;
+const RECONCILE_BUDGET_MS = 8_000;
+
+/**
+ * Reconsulta na EvoPay (GET /pix?id=, a única fonte de verdade: o webhook não é assinado e tem UMA tentativa)
+ * as cobranças Pix pendentes com mais de 10 minutos. Segura e repetível: o banco só concede acesso com valor igual
+ * ao esperado e é idempotente por evento. Para dentro de um orçamento de tempo; rode de novo para o restante.
+ */
+export async function reconcilePendingPaymentsAction(): Promise<ActionResult> {
+  await requirePlatformAdmin();
+
+  const supabase = await createSessionClient();
+  const { data: candidates, error } = await supabase.rpc("platform_reconcile_candidates", {
+    p_limit: RECONCILE_BATCH,
+    p_min_age_minutes: 10,
+  });
+  if (error) {
+    console.error("[admin] platform_reconcile_candidates() falhou:", error.message);
+    return { error: toUserMessage(error) };
+  }
+  if (!candidates || candidates.length === 0) {
+    return { success: "Nenhuma cobrança Pix pendente para reconciliar." };
+  }
+
+  const startedAt = Date.now();
+  let checked = 0;
+  let confirmed = 0;
+  let stillPending = 0;
+  let errors = 0;
+
+  for (const candidate of candidates) {
+    if (Date.now() - startedAt > RECONCILE_BUDGET_MS) break;
+    checked += 1;
+    try {
+      const result = await confirmPaymentFromProvider(candidate.payment_id);
+      if (!result.ok) errors += 1;
+      else if (result.status === "paid") confirmed += 1;
+      else if (result.status === "pending") stillPending += 1;
+    } catch {
+      errors += 1;
+    }
+  }
+
+  const { error: auditError } = await supabase.rpc("admin_audit_reconciliation", {
+    p_checked: checked,
+    p_confirmed: confirmed,
+    p_still_pending: stillPending,
+    p_errors: errors,
+  });
+  if (auditError) console.error("[admin] admin_audit_reconciliation() falhou:", auditError.message);
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/payments");
+  revalidatePath("/admin/subscriptions");
+  revalidatePath("/admin/tools");
+  revalidatePath("/admin/audit");
+
+  const summary = `${checked} verificada(s): ${confirmed} confirmada(s), ${stillPending} ainda pendente(s), ${errors} com erro.`;
+  if (errors > 0 && confirmed === 0 && stillPending === 0) {
+    return { error: `Não foi possível consultar a EvoPay agora. ${summary}` };
+  }
+  return { success: summary };
 }
