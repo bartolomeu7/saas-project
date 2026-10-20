@@ -213,3 +213,20 @@ de acesso pronto, mas ainda nenhuma página de conteúdo.
 
 Cada ambiente tem seu próprio conjunto de variáveis de ambiente, configurado
 na Vercel — nunca compartilhado nem commitado no repositório.
+
+
+## Roadmap final
+
+A evolução do Prime Ges fica organizada em fases funcionais e uma fase final de segurança:
+
+- Fase 1 — Estoque, fornecedores e fundação de compras.
+- Fase 2 — Compras, recebimento e contas a pagar.
+- Fase 3 — Financeiro e hardening financeiro.
+- Fase 4 — Agenda e Equipe/Colaboradores.
+- Fase 5 — Relatórios e Inteligência Operacional.
+- Fase 6 — Administração, Configurações e Governança.
+- **Fase 7 (final) — Segurança, Criptografia e Preparação de Produção.**
+
+A Fase 7 não é um módulo funcional comum. Ela é o gate final de segurança da plataforma e somente começa depois que as funcionalidades anteriores estiverem concluídas e validadas.
+
+Documento de planejamento: [docs/phase7-final-security-encryption.md](./phase7-final-security-encryption.md).
