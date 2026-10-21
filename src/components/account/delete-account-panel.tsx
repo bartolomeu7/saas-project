@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { useClerk } from "@clerk/nextjs";
 import { AlertTriangle } from "lucide-react";
 import {
@@ -41,6 +42,7 @@ export function DeleteAccountPanel({
   companies: DeletePanelCompany[];
 }) {
   const { signOut } = useClerk();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [confirmation, setConfirmation] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -63,7 +65,7 @@ export function DeleteAccountPanel({
         try {
           await signOut({ redirectUrl: target });
         } catch {
-          window.location.assign(target);
+          router.push(target);
         }
         return;
       }

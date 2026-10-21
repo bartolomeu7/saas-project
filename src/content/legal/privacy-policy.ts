@@ -121,9 +121,9 @@ export const privacyPolicy: LegalDocument = {
         "Guardamos os dados somente pelo tempo necessário para cumprir as finalidades acima, obrigações legais e a defesa de direitos. Depois disso, eliminamos ou anonimizamos.",
       ],
       items: [
-        "Conta, perfil e dados da empresa: enquanto a conta existir. Depois do encerramento, ficam disponíveis para você pedir uma cópia por 30 dias e são eliminados em até 90 dias do encerramento, salvo o que a lei nos obrigue a guardar.",
-        "Pagamentos, cobranças e registros que sustentam obrigações fiscais, contábeis e contratuais: 5 anos, contados do fato, prazo compatível com a prescrição e com as obrigações tributárias.",
-        "Registro de aceite dos documentos legais: durante a relação e por 5 anos depois dela, para comprovação.",
+        "Conta, perfil e dados da empresa: enquanto a conta existir. Quando você exclui a conta em Privacidade e segurança, seus dados pessoais e os dados das empresas que só você usava são eliminados na hora, inclusive os arquivos anexados. Pedidos feitos ao nosso canal de atendimento são cumpridos em até 15 dias.",
+        "Pagamentos, cobranças e registros que sustentam obrigações fiscais, contábeis e contratuais: 5 anos, contados do fato, prazo compatível com a prescrição e com as obrigações tributárias. Quando a conta é excluída, ficam apenas valor, data, situação e identificador da cobrança, sem nome nem documento do pagador.",
+        "Registro de aceite dos documentos legais: durante a relação e por 5 anos depois dela, para comprovação. Depois que a conta é excluída, ele fica ligado apenas a um identificador interno que não identifica a pessoa.",
         "Registros de auditoria: enquanto existir o ambiente da empresa a que pertencem.",
         "Identificador antifraude do teste grátis: 30 dias (prazo padrão).",
         "Histórico de entregas de notificações de pagamento: 60 dias.",
@@ -157,7 +157,8 @@ export const privacyPolicy: LegalDocument = {
       paragraphs: [
         "Envie o pedido para o canal de privacidade: " + BLOCKED + ". Informe o seu nome, o e-mail da conta e qual direito quer exercer. Quanto mais claro o pedido, mais rápido o atendimento.",
         "Para a sua segurança, podemos pedir uma confirmação de que você é mesmo o titular (por exemplo, responder a partir do e-mail da conta). Só pedimos o necessário para essa confirmação e não usamos esses dados para outra finalidade.",
-        "Hoje a plataforma não oferece exclusão nem exportação da conta por conta própria dentro do sistema: esses pedidos são atendidos por nós, manualmente, pelo canal acima. A cópia dos dados é entregue em formato eletrônico de uso comum (por exemplo, CSV ou JSON).",
+        "Excluir a conta você mesmo: em Privacidade e segurança (menu do usuário, \"Excluir minha conta\"), a qualquer momento e sem custo. A tela mostra antes o que será apagado; a eliminação é imediata e, quando o envio de e-mails estiver disponível, enviamos um e-mail de confirmação. Se você for a única pessoa da empresa, os dados da empresa também são apagados por inteiro. Se você for o único proprietário de uma empresa com outras pessoas, transfira a propriedade ou remova a equipe antes. Contas de administradores da plataforma não são excluídas por essa tela.",
+        "A exportação (cópia) dos dados ainda não é feita pela plataforma: é atendida por nós, manualmente, pelo canal acima, em formato eletrônico de uso comum (por exemplo, CSV ou JSON). Peça a cópia antes de excluir a conta.",
         "Se você é cliente, fornecedor ou colaborador de uma empresa que usa o Prime Ges, a empresa é a controladora dos seus dados. Faça o pedido a ela. Se o pedido chegar até nós, repassamos à empresa ou indicamos como procurá-la.",
         "Quando o pedido envolver os dados de uma empresa inteira (por exemplo, eliminar todos os dados), podemos pedir a confirmação de quem tem poderes de proprietário do ambiente.",
       ],
@@ -174,7 +175,7 @@ export const privacyPolicy: LegalDocument = {
       id: "direitos-limites",
       title: "Quando não podemos eliminar ou entregar o dado",
       paragraphs: [
-        "A eliminação dos dados tem exceções previstas no art. 16 da LGPD. Podemos manter o dado, de forma restrita, para cumprir obrigação legal ou regulatória (por exemplo, registros de pagamento por 5 anos), para exercer ou defender direitos em processo, e para o estudo ou a prevenção de fraude, em formato anonimizado sempre que possível.",
+        "A eliminação dos dados tem exceções previstas no art. 16 da LGPD. Podemos manter o dado, de forma restrita, para cumprir obrigação legal ou regulatória (por exemplo, registros de pagamento por 5 anos), para exercer ou defender direitos em processo, e para a prevenção de fraude (o identificador irreversível do teste grátis é apagado sozinho em 30 dias, por padrão), sempre em formato anonimizado ou que não identifica você.",
         "Também não entregamos dados de outras pessoas nem informações que revelem segredo de negócio ou comprometam a segurança da plataforma, mas sempre informamos o que for possível.",
       ],
     },

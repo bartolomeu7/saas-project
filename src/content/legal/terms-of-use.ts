@@ -83,7 +83,7 @@ export const termsOfUse: LegalDocument = {
       paragraphs: [
         "Como não há cobrança recorrente automática, você não precisa cancelar nada para evitar novas cobranças: basta não contratar um novo período.",
         "Você pode deixar de usar o serviço a qualquer momento. Depois do prazo de arrependimento (próxima seção), o período já pago continua valendo e você mantém o acesso até o último dia dele; não devolvemos valor proporcional pelos dias não usados, exceto nos casos da seção \"Outros casos de reembolso\".",
-        "Se você quiser encerrar a conta e eliminar os seus dados, peça pelo canal de atendimento. Veja a Política de Privacidade para os prazos de guarda e eliminação.",
+        "Se você quiser encerrar a conta e eliminar os seus dados, faça isso você mesmo, a qualquer momento, em Privacidade e segurança (menu do usuário), no botão \"Excluir minha conta\". A exclusão não devolve valores já pagos: para desistir em até 7 dias, peça o reembolso antes. Veja a Política de Privacidade para o que é apagado e o que a lei nos obriga a manter.",
       ],
     },
     {
@@ -114,7 +114,7 @@ export const termsOfUse: LegalDocument = {
       title: "Como pedir e como recebemos o reembolso",
       paragraphs: [
         "Peça pelo canal de atendimento: " + BLOCKED + ". Informe o e-mail da conta, o nome da empresa e a data e o valor do pagamento (ou o identificador da cobrança, se tiver). Para o arrependimento, basta dizer que quer desistir.",
-        "Respondemos o pedido em até 5 dias úteis. Aprovado o pedido, devolvemos o valor por Pix, para a conta de origem do pagamento, em até 10 dias úteis contados da aprovação, sem desconto de tarifas. Se a conta de origem não puder receber a devolução, combinamos com você outra forma de pagamento em seu nome.",
+        "Respondemos o pedido em até 5 dias úteis. Aprovado o pedido, devolvemos o valor por Pix, para a conta de origem do pagamento, em 10 a 15 dias úteis contados da aprovação, sem desconto de tarifas. Se a conta de origem não puder receber a devolução, combinamos com você outra forma de pagamento em seu nome.",
         "Guardamos o registro do pedido e do estorno para a sua comprovação e para as obrigações fiscais, conforme a Política de Privacidade.",
         "Se não ficar satisfeito com a resposta, você pode procurar o Procon, a plataforma consumidor.gov.br ou o Poder Judiciário.",
       ],
