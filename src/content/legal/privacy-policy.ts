@@ -18,7 +18,7 @@ export const privacyPolicy: LegalDocument = {
   slug: "politica-de-privacidade",
   title: "Política de Privacidade",
   version: "1.0.0-rc.3",
-  effectiveAt: "2026-10-22",
+  effectiveAt: "2026-10-21",
   summary:
     "Quais dados o Prime Ges trata, para quê, com quem compartilha, por quanto tempo guarda e como você exerce seus direitos.",
   sections: [

@@ -15,7 +15,7 @@ import { safeAfterConsentPath } from "../../src/lib/legal/safe-path.ts";
 const DOCS = [termsOfUse, privacyPolicy];
 const SECRET = "sk_test_unit_secret";
 const VERSIONS = { terms: "1.0.0-rc.2", privacy: "1.0.0-rc.2" };
-const MIGRATION = ["20261010000000_legal_consent.sql", "20261010000100_legal_rc2.sql"]
+const MIGRATION = ["20261010000000_legal_consent.sql", "20261010000100_legal_rc2.sql", "20261021100000_legal_rc3.sql"]
   .map((name) => readFileSync(new URL("../../supabase/migrations/" + name, import.meta.url), "utf8"))
   .join("\n");
 
