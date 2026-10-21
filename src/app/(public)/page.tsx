@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
-import { siteConfig } from "@/config/site";
+import { publicOpenGraph, siteConfig } from "@/config/site";
 import { SiteHeader } from "@/components/marketing/site-header";
 import { SiteFooter } from "@/components/marketing/site-footer";
 import { PricingCard } from "@/components/marketing/pricing-card";
@@ -27,8 +27,9 @@ import { HomeHeroMockup, HomeProductShowcase } from "@/components/marketing/home
 import { getPublicPlans } from "@/lib/billing/queries";
 import { faqFacts, toPricingView } from "@/lib/billing/pricing-display";
 
+const HOME_TITLE = "Prime Ges — Sistema de gestão online para pequenos negócios";
 const SEO_DESCRIPTION =
-  "Gerencie clientes, produtos, serviços, vendas, fidelidade, caixa, estoque e financeiro em um só lugar com o Prime Ges.";
+  "Sistema de gestão online para MEI e pequenos negócios: organize vendas, caixa, estoque, clientes e financeiro em um só lugar, direto no navegador.";
 
 // Os planos vêm do banco (get_public_plans): a página é estática e se renova sozinha a cada 60 s; salvar um plano no
 // /admin também chama revalidatePath("/"). Se o catálogo não carregar, a seção mostra "indisponível" — nunca um preço
@@ -36,22 +37,16 @@ const SEO_DESCRIPTION =
 export const revalidate = 60;
 
 export const metadata: Metadata = {
-  title: "Prime Ges — Gestão simples, moderna e organizada",
+  // `absolute`: o modelo "%s | Prime Ges" do layout raiz não se aplica à home (a marca já está no título).
+  title: { absolute: HOME_TITLE },
   description: SEO_DESCRIPTION,
   alternates: { canonical: siteConfig.url },
-  openGraph: {
-    title: "Prime Ges — Gestão simples, moderna e organizada",
-    description: SEO_DESCRIPTION,
-    url: siteConfig.url,
-    type: "website",
-    locale: "pt_BR",
-    siteName: siteConfig.name,
-  },
+  openGraph: publicOpenGraph("/", { title: HOME_TITLE, description: SEO_DESCRIPTION }),
 };
 
 const SEGMENT_MODULES: Record<string, string[]> = {
-  Padarias: ["Produtos", "Vendas", "Clientes", "Caixa"],
-  Mercadinhos: ["Produtos", "Vendas", "Clientes", "Caixa"],
+  Padarias: ["Produtos", "Estoque", "Vendas", "Caixa"],
+  "Mercadinhos e mercearias": ["Produtos", "Estoque", "Vendas", "Caixa"],
   Restaurantes: ["Clientes", "Vendas", "Produtos", "Caixa"],
   Lanchonetes: ["Clientes", "Vendas", "Produtos", "Caixa"],
   "Lava-rápidos": ["Clientes", "Serviços", "Vendas", "Caixa"],
@@ -92,18 +87,19 @@ export default async function HomePage() {
               <div className="home-v2-hero__copy">
                 <span className="home-v2-kicker prime-enter" style={enter(0)}>
                   <i />
-                  Gestão para pequenos negócios
+                  Para MEI, microempresas e pequenos negócios
                   <Sparkles size={13} aria-hidden="true" />
                 </span>
 
                 <h1 id="hero-title" className="prime-enter" style={enter(70)}>
-                  Seu negócio organizado,
-                  <span>da venda ao caixa, em um só sistema.</span>
+                  Sistema de gestão para pequenos negócios,
+                  <span>da venda ao caixa, em um só lugar.</span>
                 </h1>
 
                 <p className="prime-enter" style={enter(140)}>
-                  O Prime Ges reúne clientes, produtos, serviços, vendas, fidelidade, caixa, estoque e financeiro
-                  em uma plataforma online feita para a rotina de pequenos negócios.
+                  O Prime Ges é um sistema online que reúne clientes, produtos, serviços, vendas, fidelidade, caixa,
+                  estoque e financeiro, feito para a rotina de lava-rápidos, estética automotiva, padarias, mercadinhos
+                  e outros pequenos negócios.
                 </p>
 
                 <div className="home-v2-hero__actions prime-enter" style={enter(210)}>
@@ -119,6 +115,12 @@ export default async function HomePage() {
                     className={cn(buttonVariants({ variant: "outline", size: "lg" }), "home-v2-secondary-btn")}
                   >
                     Ver como funciona
+                  </a>
+                  <a
+                    href="#precos"
+                    className="inline-flex items-center rounded-md px-2 py-2 text-sm font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    Ver planos e preços
                   </a>
                 </div>
 
@@ -200,7 +202,7 @@ export default async function HomePage() {
             <Reveal>
               <SectionHeading
                 eyebrow="A solução"
-                title={<span id="solucao-title">Tudo o que você usa todo dia, no mesmo lugar.</span>}
+                title={<span id="solucao-title">Controle de vendas, caixa, estoque e financeiro no mesmo lugar.</span>}
                 description="Oito módulos já disponíveis, organizados pela rotina do negócio."
               />
             </Reveal>
@@ -226,6 +228,17 @@ export default async function HomePage() {
                 </Reveal>
               ))}
             </div>
+            <p className="mt-8 text-center text-sm text-muted-foreground">
+              Quer saber quanto custa?{" "}
+              <a href="#precos" className="font-medium text-foreground underline underline-offset-4">
+                Consulte os planos
+              </a>{" "}
+              ou{" "}
+              <Link href={siteConfig.links.register} className="font-medium text-foreground underline underline-offset-4">
+                crie a sua conta
+              </Link>{" "}
+              e conheça o sistema.
+            </p>
           </div>
         </section>
 
@@ -251,8 +264,8 @@ export default async function HomePage() {
             <Reveal>
               <SectionHeading
                 eyebrow="Para quem é"
-                title={<span id="segmentos-title">O sistema acompanha o jeito que o seu negócio funciona.</span>}
-                description="Diferentes operações usam a mesma base e escolhem os módulos que fazem sentido para a rotina."
+                title={<span id="segmentos-title">Sistema para pequenos negócios que vendem produtos, prestam serviços ou os dois.</span>}
+                description="MEIs, microempresas e pequenos negócios usam a mesma base e escolhem os módulos que fazem sentido para a rotina."
               />
             </Reveal>
             <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -279,6 +292,17 @@ export default async function HomePage() {
                 </li>
               ))}
             </ul>
+            <p className="mt-8 text-center text-sm text-muted-foreground">
+              Veja o que cada módulo faz em{" "}
+              <a href="#recursos" className="font-medium text-foreground underline underline-offset-4">
+                recursos
+              </a>{" "}
+              e como começar em{" "}
+              <a href="#como-funciona" className="font-medium text-foreground underline underline-offset-4">
+                como funciona
+              </a>
+              .
+            </p>
           </div>
         </section>
 
@@ -371,6 +395,18 @@ export default async function HomePage() {
               </Card>
             )}
 
+            <p className="mt-8 text-center text-sm text-muted-foreground">
+              Pagamento por Pix, sem renovação automática. Veja as regras de cancelamento e reembolso na{" "}
+              <Link href="/politica-de-reembolso" className="font-medium text-foreground underline underline-offset-4">
+                Política de Reembolso
+              </Link>{" "}
+              e as condições gerais nos{" "}
+              <Link href="/termos-de-uso" className="font-medium text-foreground underline underline-offset-4">
+                Termos de Uso
+              </Link>
+              .
+            </p>
+
             {customPlan && (
               <Reveal delay={120} className="mt-6">
                 <Card className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
@@ -427,12 +463,31 @@ export default async function HomePage() {
                 {faq.map((item, index) => (
                   <AccordionItem key={item.question} value={"faq-" + index}>
                     <AccordionTrigger className="text-left text-base">{item.question}</AccordionTrigger>
-                    <AccordionContent className="text-sm leading-6 text-muted-foreground">
+                    <AccordionContent forceMount className="text-sm leading-6 text-muted-foreground">
                       {item.answer}
                     </AccordionContent>
                   </AccordionItem>
                 ))}
               </Accordion>
+              <p className="mt-6 text-center text-sm text-muted-foreground">
+                Documentos:{" "}
+                <Link href="/termos-de-uso" className="font-medium text-foreground underline underline-offset-4">
+                  Termos de Uso
+                </Link>
+                ,{" "}
+                <Link href="/politica-de-privacidade" className="font-medium text-foreground underline underline-offset-4">
+                  Política de Privacidade
+                </Link>
+                ,{" "}
+                <Link href="/politica-de-reembolso" className="font-medium text-foreground underline underline-offset-4">
+                  Política de Reembolso
+                </Link>{" "}
+                e{" "}
+                <Link href="/direitos-do-titular" className="font-medium text-foreground underline underline-offset-4">
+                  Direitos do Titular
+                </Link>
+                .
+              </p>
             </Reveal>
           </div>
         </section>

@@ -50,12 +50,12 @@ export interface Segment {
 
 /** Máximo 6, conforme definido para a home — não é a lista completa de business_type. */
 export const SEGMENTS: Segment[] = [
-  { name: "Padarias", description: "Tenha controle sobre vendas, produtos e operação.", icon: Croissant },
-  { name: "Mercadinhos", description: "Organize produtos, vendas e caixa.", icon: ShoppingBasket },
+  { name: "Padarias", description: "Controle produtos, estoque, vendas e caixa da sua padaria.", icon: Croissant },
+  { name: "Mercadinhos e mercearias", description: "Organize produtos, estoque, vendas e caixa do dia a dia.", icon: ShoppingBasket },
   { name: "Restaurantes", description: "Controle clientes, vendas e operação do seu negócio.", icon: UtensilsCrossed },
   { name: "Lanchonetes", description: "Organize vendas, clientes e operação no dia a dia.", icon: Sandwich },
-  { name: "Lava-rápidos", description: "Organize clientes, veículos, serviços e atendimentos.", icon: Car },
-  { name: "Estética automotiva", description: "Acompanhe clientes e serviços em um só lugar.", icon: Sparkles },
+  { name: "Lava-rápidos", description: "Cadastre clientes e serviços, registre as vendas e acompanhe o caixa.", icon: Car },
+  { name: "Estética automotiva", description: "Acompanhe clientes, serviços e fidelização em um só lugar.", icon: Sparkles },
 ];
 
 export interface FeatureModule {
@@ -305,6 +305,11 @@ export function buildFaq({ trialLabel, extraUsers }: { trialLabel: string | null
       question: "O que é o Prime Ges?",
       answer:
         "É uma plataforma online de gestão para pequenos negócios. Reúne clientes, produtos, serviços, vendas, fidelidade, caixa, estoque e financeiro em um único lugar.",
+    },
+    {
+      question: "Para quem o Prime Ges é indicado?",
+      answer:
+        "Para MEIs, microempresas e pequenos negócios que vendem produtos, prestam serviços ou fazem os dois, como lava-rápidos, estética automotiva, padarias, mercadinhos, lanchonetes e restaurantes. O Prime Ges organiza a gestão do dia a dia; ele não substitui a contabilidade e não emite nota fiscal.",
     },
     {
       question: "Preciso instalar algum programa?",

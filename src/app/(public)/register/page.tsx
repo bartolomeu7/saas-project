@@ -12,6 +12,10 @@ import { SIGNUP_INTENT_COOKIE, verifySignupIntent } from "@/lib/legal/signup-int
 
 export const metadata: Metadata = {
   title: "Criar conta",
+  description:
+    "Crie a sua conta no Prime Ges, aceite os Termos de Uso e a Política de Privacidade e comece a organizar clientes, vendas, caixa e estoque do seu negócio.",
+  // Página funcional: fora do índice. O robots.txt NÃO a bloqueia, para o Google conseguir ler este noindex.
+  robots: { index: false, follow: false },
 };
 
 export const dynamic = "force-dynamic";
