@@ -27,7 +27,7 @@ import {
 /**
  * Prefixos de rota que exigem usuário autenticado.
  */
-const PROTECTED_PREFIXES = ["/app", "/admin", "/onboarding", "/acesso-sessoes"];
+const PROTECTED_PREFIXES = ["/app", "/admin", "/onboarding", "/acesso-sessoes", "/conta"];
 
 /**
  * Prefixo da área administrativa da plataforma — exige, além de

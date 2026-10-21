@@ -253,6 +253,14 @@ o middleware também bloqueia leitura/exportação de empresas sem acesso); deci
 sem gravação (em 2026-10-18 a única empresa de Production estava com a assinatura de teste vencida); validação de
 compatibilidade com Production por execução (**NOT VERIFIED**); procedimento de aplicação aprovado.
 
+## 3-E. Exclusão da própria conta — candidata (NÃO APLICADA em Production)
+
+`20261022000000_account_self_deletion.sql` (rollback em `supabase/rollback/`): `account_deletion_preview()` e
+`delete_account_data()` (só `service_role`), tabela `retained_billing_records` (cobrança sem dados do pagador, 5 anos) e
+coluna `profiles.anonymized_at`. Validada **somente no TEST**, em transação revertida (`tests/sql/account_deletion.sql`,
+37/37). O código que a usa (`/conta`, `src/lib/account/`) deve ir a Production **depois** da migration; a ordem inversa
+faz a tela mostrar erro (as RPCs não existiriam). Não há linha no histórico live.
+
 ## 4. Migration 004 — substituída pela 009 / nunca aplicada
 
 `004_billing_foundation.sql` foi um rascunho local do billing que **nunca foi

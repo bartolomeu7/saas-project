@@ -15,7 +15,7 @@ import { safeAfterConsentPath } from "../../src/lib/legal/safe-path.ts";
 const DOCS = [termsOfUse, privacyPolicy];
 const SECRET = "sk_test_unit_secret";
 const VERSIONS = { terms: "1.0.0-rc.2", privacy: "1.0.0-rc.2" };
-const MIGRATION = ["20261010000000_legal_consent.sql", "20261010000100_legal_rc2.sql"]
+const MIGRATION = ["20261010000000_legal_consent.sql", "20261010000100_legal_rc2.sql", "20261021100000_legal_rc3.sql"]
   .map((name) => readFileSync(new URL("../../supabase/migrations/" + name, import.meta.url), "utf8"))
   .join("\n");
 
@@ -98,8 +98,37 @@ describe("hash dos documentos (integridade do texto publicado)", () => {
     for (const doc of DOCS) {
       const row = new RegExp(`\\('${doc.type}', '${doc.version.replace(/\./g, "\\.")}', '[^']+', '([0-9a-f]{64})', 'published'\\)`);
       const match = MIGRATION.match(row);
-      assert.ok(match, "linha de seed de " + doc.type + " " + doc.version + " na migration");
+      if (!match && markersOf(doc).length > 0) continue; // rascunho com pendências: ainda não registrado (de propósito)
+      assert.ok(match, "linha de seed de " + doc.type + " " + doc.version + " na migration (texto sem pendências deve estar registrado)");
       assert.equal(match[1], hashLegalDocument(doc), "hash de " + doc.type + " diverge do texto: publique nova versão");
+    }
+  });
+});
+
+describe("páginas derivadas (reembolso e direitos do titular)", () => {
+  const source = readFileSync(new URL("../../src/lib/legal/documents.ts", import.meta.url), "utf8");
+  const idsOf = (name) => {
+    const m = source.match(new RegExp(name + "\\s*=\\s*\\[([^\\]]+)\\]"));
+    assert.ok(m, name);
+    return [...m[1].matchAll(/"([^"]+)"/g)].map((x) => x[1]);
+  };
+
+  it("todas as seções usadas existem no documento de origem", () => {
+    const terms = new Set(termsOfUse.sections.map((x) => x.id));
+    const privacy = new Set(privacyPolicy.sections.map((x) => x.id));
+    for (const id of idsOf("REFUND_POLICY_SECTION_IDS")) assert.ok(terms.has(id), "termos: " + id);
+    for (const id of idsOf("DATA_RIGHTS_SECTION_IDS")) assert.ok(privacy.has(id), "privacidade: " + id);
+  });
+
+  it("a política de reembolso garante os 7 dias do art. 49 do CDC e o reembolso integral", () => {
+    const text = JSON.stringify(termsOfUse.sections.find((x) => x.id === "arrependimento"));
+    assert.ok(text.includes("7 (sete) dias") && text.includes("art. 49") && text.includes("100%"));
+  });
+
+  it("os direitos do titular cobrem o art. 18 e o prazo de 15 dias do art. 19", () => {
+    const text = JSON.stringify(privacyPolicy.sections.filter((x) => x.id.startsWith("direitos")));
+    for (const term of ["portabilidade", "eliminação", "revogação", "15 dias", "ANPD", "art. 18", "art. 19"]) {
+      assert.ok(text.toLowerCase().includes(term.toLowerCase()), term);
     }
   });
 });

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useClerk } from "@clerk/nextjs";
-import { ChevronsUpDown, CreditCard, LogOut, Users, type LucideIcon } from "lucide-react";
+import { ChevronsUpDown, CreditCard, LogOut, ShieldCheck, Users, type LucideIcon } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -59,6 +59,7 @@ export interface UserMenuLink {
 const DEFAULT_LINKS: UserMenuLink[] = [
   { href: "/app/equipe", label: "Equipe", icon: Users },
   { href: "/app/assinatura", label: "Assinatura", icon: CreditCard },
+  { href: "/conta", label: "Privacidade e segurança", icon: ShieldCheck },
 ];
 
 export function UserMenu({

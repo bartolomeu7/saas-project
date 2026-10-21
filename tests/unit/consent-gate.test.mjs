@@ -81,7 +81,7 @@ describe("integridade texto do repositório × versão publicada", () => {
   });
 
   it("MISMATCH quando o banco já vigora outra versão (documento antigo/aposentado no código)", () => {
-    const newer = published.map((r) => ({ ...r, version: "1.0.0-rc.3" }));
+    const newer = published.map((r) => ({ ...r, version: "1.0.0-rc.9" }));
     assert.equal(evaluateLegalIntegrity(newer, code), "MISMATCH");
     const olderInDb = published.map((r) => ({ ...r, version: "1.0.0-rc.1" }));
     assert.equal(evaluateLegalIntegrity(olderInDb, code), "MISMATCH");
