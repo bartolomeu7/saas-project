@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test:unit": "node --no-warnings --experimental-strip-types --test \"tests/unit/*.test.mjs\"",
+    "test:seo": "node --no-warnings --test \"tests/seo/*.test.mjs\"",
     "test:integration:billing": "node --env-file=.env.local tests/integration/billing-concurrency.mjs"
   },
   "dependencies": {

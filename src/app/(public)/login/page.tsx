@@ -5,6 +5,9 @@ import { clerkAppearance } from "@/components/shared/auth/clerk-auth-appearance"
 
 export const metadata: Metadata = {
   title: "Entrar",
+  description: "Entre na sua conta do Prime Ges para acessar o sistema de gestão do seu negócio.",
+  // Página funcional: fora do índice. O robots.txt NÃO a bloqueia, para o Google conseguir ler este noindex.
+  robots: { index: false, follow: false },
 };
 
 /** Só aceita caminhos internos (evita open redirect via ?next=). */

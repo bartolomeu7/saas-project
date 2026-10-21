@@ -10,6 +10,8 @@ import { evaluateSessionGate, SESSION_LIMIT_PATH } from "@/lib/auth/session-gate
 
 export const metadata: Metadata = {
   title: "Configurar empresa",
+  // Área autenticada: nunca deve entrar no índice. (A proteção real é a autenticação; isto é só defesa em profundidade.)
+  robots: { index: false, follow: false },
 };
 
 export default async function OnboardingPage() {
