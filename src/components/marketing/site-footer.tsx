@@ -40,6 +40,8 @@ const COLUMNS: FooterColumn[] = [
     links: [
       { label: "Termos de Uso", href: "/termos-de-uso" },
       { label: "Política de Privacidade", href: "/politica-de-privacidade" },
+      { label: "Política de Reembolso", href: "/politica-de-reembolso" },
+      { label: "Direitos do Titular (LGPD)", href: "/direitos-do-titular" },
     ],
   },
 ];
