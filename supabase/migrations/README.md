@@ -56,8 +56,8 @@ dos módulos: `docs/architecture.md`.
   `20261014000100` dizem "Aplicada SOMENTE em TEST", mas o texto desses arquivos é
   byte a byte o que consta registrado no histórico live (seção 3-B); o cabeçalho
   ficou desatualizado e **não deve ser editado** (a edição quebraria a igualdade).
-- **Não aplicar `20261014000200` nem `20261014000300`** com base apenas na presença
-  dos arquivos aqui — ver seção 3-C (`000200` bloqueada; `000300` substituída/incompleta).
+- **Não aplicar `20261014000300`** (substituída/incompleta; seção 3-C). A `20261014000200` **já foi aplicada**
+  em Production em 2026-10-21 (versão `20261021015349`; seção 3-C): **não reaplicar**.
 - **Não "reproduzir" o histórico aplicando todos os arquivos em ordem em um banco
   que importa** (ex.: reconstrução de ambiente) sem decidir antes o destino de
   `000200`/`000300`/candidatas. Reprodutibilidade em banco novo **não foi testada**.
@@ -161,7 +161,7 @@ sem arquivo individual (seção 5). Critérios:
 | `20261012000200_admin_company_members_and_reconciliation` | `admin_company_members_and_reconciliation` / 20261015234234 | IDÊNTICO byte a byte (`MATCH_EXACT`) |
 | `20261014000000_plans_management_and_usage_limits` | `plans_management_and_usage_limits` / **20261016213958** | IDÊNTICO byte a byte (mapeamento exato confirmado nas Fases 1–2 e conferido por md5/tamanho: 60071) |
 | `20261014000100_session_gate_and_trial_hardening` | `session_gate_and_trial_hardening` / **20261016214156** | IDÊNTICO byte a byte (mapeamento exato confirmado nas Fases 1–2 e conferido por md5/tamanho: 15801) |
-| `20261014000200_trial_requires_authorization` | — (**não consta** no histórico analisado) | **BLOQUEADA** — ver 3-C |
+| `20261014000200_trial_requires_authorization` | `trial_requires_authorization` / **20261021015349** | IDÊNTICO byte a byte (`MATCH_EXACT`; md5 `5d9e0897…`, 2481 caracteres) — **aplicada em Production em 2026-10-21**, ver 3-C |
 | `20261014000300_data_layer_access_gate` | — (**não consta** no histórico analisado) | **SUBSTITUÍDA / INCOMPLETA, não recomendada** — ver 3-C |
 
 Observações:
@@ -172,38 +172,43 @@ Observações:
 
 ## 3-C. Arquivos presentes no GitHub sem aplicação confirmada em Production
 
-> A presença de `20261014000200` e `20261014000300` neste diretório **não prova** que foram
-> aplicadas em Production (o histórico analisado não as contém).
+> A presença de um arquivo neste diretório **não prova** que ele foi aplicado em Production. Estado em
+> 2026-10-21: `20261014000200` **aplicada** (versão `20261021015349`); `20261014000300` **não** aplicada e
+> **não deve ser**.
 
-### `20261014000200_trial_requires_authorization.sql` — **BLOQUEADA** (não aplicar)
+### `20261014000200_trial_requires_authorization.sql` — **APLICADA em Production (2026-10-21)**
 
 Faz `create or replace` de `create_company_with_owner()` para que o teste grátis só seja concedido via
-`grant_free_trial_internal()` (que exige autorização válida do servidor). Evidência de código em `main`
-(`6639727`, **VERIFIED por leitura**):
-- `src/lib/companies/actions.ts` → `createCompanyAction` chama `authorizeTrialSignup(user.id)`
-  (`src/lib/security/trial-signup.ts` → RPC `authorize_trial_signup`) **antes** de
-  `supabase.rpc("create_company_with_owner")`; falha/indisponibilidade não impede criar a empresa, só a
-  concessão do teste. `requestFreeTrialAction` repete a autorização e chama `claim_free_trial`.
-- Não há teste automatizado de `createCompanyAction`/`authorizeTrialSignup` em `tests/` (as suítes SQL
-  `usage_limits.sql`/`mission09.sql` cobrem o lado do banco e exigem banco de teste).
-- Objetos pressupostos vêm da `20261014000100` (`grant_free_trial_internal`, `authorize_trial_signup`,
-  `claim_free_trial`), registrada como idêntica a uma entrada do histórico (seção 3-B).
+`grant_free_trial_internal()` (que exige autorização válida do servidor). Aplicada em Production, com autorização
+explícita do dono, via `apply_migration` com o texto exato do arquivo em `main` (`8906656`), depois de cumpridos os
+pré-requisitos que a mantinham bloqueada:
+- **Código implantado:** o deployment ativo de Production (`8906656`, 2026-10-18 21:30Z, registrado na API de
+  deployments do GitHub) contém `authorizeTrialSignup(user.id)` em `createCompanyAction` antes de
+  `create_company_with_owner` (`src/lib/companies/actions.ts`).
+- **Segredo antifraude:** em 2026-10-21 `/admin/settings` de Production mostrou "Segredo dedicado configurado."
+  (o valor nunca foi lido). O segredo ficou válido depois de ser recriado e de um novo deploy; antes disso a página
+  mostrava "curto ou fraco".
+- **Pré-voo (somente leitura):** histórico com 78 entradas; corpo de `create_company_with_owner` igual ao do
+  `.down.sql` da `000200`; as 5 dependências (`grant_free_trial_internal`, `authorize_trial_signup`,
+  `has_trial_authorization`, `claim_free_trial`, `current_profile_user_id`) presentes; nenhum objeto do gate.
 
-Por que continua **bloqueada**:
-1. **Código implantado — BLOCKED/NOT VERIFIED:** que `main` exista no GitHub não prova que o deploy ativo em
-   produção contém a chamada; a Fase 3 não acessa a Vercel. Um deploy anterior sem a chamada passaria a criar
-   empresas **sem** teste após a contração.
-2. **`ANTIFRAUD_HASH_SECRET`:** sem segredo válido em Production **não há fallback** e o teste grátis fica
-   suspenso (`src/lib/security/client-ip.ts`, `docs/plans-and-usage-limits.md` §7). `docs/qa/go-live-final.md`
-   registrou o segredo como ausente em todos os ambientes à época; estado atual **NOT VERIFIED**.
-3. Sem cadastro novo testado ponta a ponta em ambiente real (`docs/qa/go-live-final.md`, item pendente).
+**Pós-checagem (somente leitura, VERIFIED):** histórico com 79 entradas, a nova é
+`20261021015349 / trial_requires_authorization`, com md5 e tamanho **iguais** aos do arquivo; corpo normalizado da
+função igual ao esperado da `000200`; dono (`SECURITY DEFINER`), `search_path` e permissões de `EXECUTE` de
+`create_company_with_owner` inalterados; a impressão digital oficial do catálogo (`tests/sql/catalog-fingerprint.sql`)
+mudou **somente** em `fn_body` (acl, column, constraint, fn_cfg, index, policy, rel e trigger idênticos); dados
+intactos (1 empresa, 1 assinatura).
 
-Para desbloquear (evidências necessárias, fora do repositório): (a) identificador do deployment ativo de
-Production e confirmação de que ele contém `authorizeTrialSignup` em `createCompanyAction`; (b) confirmação
-de que `ANTIFRAUD_HASH_SECRET` válido está configurado em Production (sem expor o valor); (c) plano de teste de
-cadastro novo e rollback aprovado (`supabase/rollback/20261014000200_trial_requires_authorization.down.sql`).
-Enquanto isso, o comportamento atual do banco (trial concedido a todo cadastro novo, sem antifraude)
-permanece o anterior. Arquivo **não alterado**.
+**Ainda NOT VERIFIED:** o fluxo real de cadastro em Production (conta nova → empresa criada → teste concedido). O
+esperado é: uma linha em `trial_signup_events` (hash de 64 hex ou `ip_unknown`), a empresa nasce `trialing` e uma
+chamada direta a `rpc/create_company_with_owner` (sem autorização do servidor) cria a empresa **sem** teste. Esse
+teste exige criar uma conta e deve ser feito pelo dono.
+
+**Efeito:** o teste grátis passa a exigir a autorização do servidor; se o segredo ficar ausente/fraco, o cadastro
+continua funcionando mas **sem** teste (falha segura).
+**Rollback:** `supabase/rollback/20261014000200_trial_requires_authorization.down.sql` (devolve o corpo anterior,
+em que todo cadastro novo recebe o teste, sem antifraude). O cabeçalho do arquivo diz "Aplicada SOMENTE em TEST";
+está desatualizado e **não deve ser editado** (a edição quebraria a igualdade com o histórico).
 
 ### `20261014000300_data_layer_access_gate.sql` — **SUBSTITUÍDA / INCOMPLETA, NÃO RECOMENDADA**
 
