@@ -1,5 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Não anuncia o framework em cada resposta (X-Powered-By: Next.js).
+  poweredByHeader: false,
   reactStrictMode: true,
   async headers() {
     // Headers de segurança padrão, sem CSP: a aplicação usa fontes/scripts
