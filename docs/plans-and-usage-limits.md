@@ -2,7 +2,7 @@
 
 Referência técnica da gestão de planos (Admin Control Center → **Planos**) e dos limites de uso: vagas de usuário por plano, sessões simultâneas por conta e teste grátis por conexão. Migrations (nesta ordem): `20261014000000` (expansão 1) · `20261014000100` (expansão 2) · `20261014000200` (contração) · `20261014000300` (acesso aos dados — **substituída/incompleta, não recomendada**; ver `supabase/migrations/README.md` §3-C). Rollbacks em `supabase/rollback/` (ordem inversa).
 
-> Estado na Missão 09: aplicado **somente no projeto TEST**. **Atualização de 2026-10-18** (levantamento somente leitura; detalhes em `supabase/migrations/README.md` §3-B/§3-C): as expansões `…000000` e `…000100` **constam no histórico de Production** (versões `20261016213958` e `20261016214156`, texto idêntico byte a byte ao registrado); `…000200` e `…000300` **não constam** em Production — a `000200` está **bloqueada** e a `000300` foi **substituída**. Evidências e riscos da missão original: `docs/qa/mission-plans-management-and-usage-limits.md` e `docs/qa/mission-09-closure.md`.
+> Estado na Missão 09: aplicado **somente no projeto TEST**. **Atualização de 2026-10-21** (levantamento somente leitura em 2026-10-18 e aplicação da `000200` em 2026-10-21; detalhes em `supabase/migrations/README.md` §3-B/§3-C): as expansões `…000000` e `…000100` **constam no histórico de Production** (versões `20261016213958` e `20261016214156`, texto idêntico byte a byte ao registrado); `…000200` foi aplicada em Production em 2026-10-21 (versão `20261021015349`, texto idêntico ao arquivo); `…000300` **não consta** em Production e foi **substituída** (não aplicar). Evidências e riscos da missão original: `docs/qa/mission-plans-management-and-usage-limits.md` e `docs/qa/mission-09-closure.md`.
 
 ## 1. Modelo (sem tabelas paralelas)
 
@@ -78,11 +78,11 @@ O deploy **não é atômico** (banco e Vercel são processos separados). A ordem
 0. Pré-requisitos: as 5 migrations da Missão 08 (PR #33) já aplicadas; `ANTIFRAUD_HASH_SECRET` definido em Production (valor próprio); backup/fingerprint do catálogo.
 1. **Expansão** — aplicar `…000000` e `…000100` (*concluída em Production, conforme o histórico; registro histórico desta ordem*). Compatíveis com o código **antigo** (provado em TEST): cadastros seguem recebendo o teste; a vitrine nova é superconjunto da antiga.
 2. **Deploy do código novo.** Funciona com a expansão (e degrada com segurança em banco antigo: gate "não instalado" ⇒ libera com log; normalizador da vitrine tolera o formato antigo).
-3. **Contração** — aplicar `…000200` (**BLOQUEADA até comprovar**: (a) o deploy ativo em Production contém a chamada `authorizeTrialSignup` no onboarding, (b) `ANTIFRAUD_HASH_SECRET` válido configurado em Production, (c) plano de teste de cadastro e rollback aprovados; ver `supabase/migrations/README.md` §3-C): o teste passa a exigir a autorização do servidor. Verificar: cadastro novo recebe o teste; chamada direta a `create_company_with_owner` não.
+3. **Contração** — aplicar `…000200` (*concluída em Production em 2026-10-21, após o deploy ativo conter `authorizeTrialSignup` e o segredo antifraude validar em `/admin/settings`; ver `supabase/migrations/README.md` §3-C*): o teste passa a exigir a autorização do servidor. Verificar: cadastro novo recebe o teste; chamada direta a `create_company_with_owner` não.
 4. ~~Opcional~~ — `…000300` (RLS de acesso aos dados) está **substituída/incompleta: não aplicar** (cobre só 18 tabelas e só escrita direta; RPCs `SECURITY DEFINER` provavelmente não passam por ela — inferido). O desenho substituto (Gate Integral) é uma candidata **pendente de revisão** e depende de mudança no aplicativo (tratamento de `COMMERCIAL_ACCESS_REQUIRED`, leitura/exportação livres); ver `supabase/migrations/README.md` §3-D.
 5. Pós-checagens: `/admin/settings` (antifraude OK), home com planos, logs sem `gate_not_provisioned`/`SUPABASE_SERVICE_ROLE_KEY ausente`.
 
-Reversão: `down` na ordem inversa (000200 → 000100 → 000000; a `000300` não consta aplicada em Production em 2026-10-18); **reverter só a contração** devolve o comportamento anterior sem mexer no resto.
+Reversão: `down` na ordem inversa (000200 → 000100 → 000000; a `000300` não consta aplicada em Production); **reverter só a contração** devolve o comportamento anterior sem mexer no resto.
 
 ## 9. Rollback
 
