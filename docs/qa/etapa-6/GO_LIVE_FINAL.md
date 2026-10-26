@@ -46,7 +46,7 @@ Navegador (Playwright, 390 px, build local): home sem script nem `window.Clerk`,
 
 Anônimo em rotas privadas (build local): `/app`, `/admin`, `/onboarding`, `/conta`, `/acesso-sessoes`, `/aceite-termos` → 307 para `/login?next=…`; `/acesso-indisponivel` → 307 para `/login`. **[V]**
 
-CI no GitHub (Node 22): ver seção 11.
+CI no GitHub (Node 22): **não executado** para esta branch (push negado, ver seção 11); o CI exigido pelo repositório (`Phase 3 CI`) só roda em PR para `main`.
 
 ## 5. Auditoria do diff e da autenticação
 
@@ -95,7 +95,7 @@ Variáveis de **Production** na Vercel presentes **[V]**: `NEXT_PUBLIC_CLERK_PUB
 
 ## 11. PR, merge e deploy
 
-Nenhum merge, promote ou deploy. Ver seção "Publicação" abaixo para o PR de rascunho aberto só para obter CI (se aberto).
+Nenhum merge, promote ou deploy. Tentei enviar a branch (`git push -u origin perf/etapa-6-clerk-scope`) para abrir um PR em rascunho só para obter o CI em Node 22; o sistema de permissões **negou** o push (classificador: publicação fora do lugar). Não contornei. Resultado: a branch está só local (commit `964aa83`), **não há PR nem CI do GitHub para a Etapa 6** **[V]**. Para seguir: o dono autoriza o push (ou roda `git push -u origin perf/etapa-6-clerk-scope`) e o agente abre o PR em rascunho.
 
 ## 12. Pós-deploy
 
@@ -130,7 +130,7 @@ Não aplicável: nada foi publicado.
 | Critério | Estado |
 |---|---|
 | Commit publicado identificado e confirmado | N/A — nada publicado |
-| CI, lint, typecheck, testes, build | local OK **[V]**; CI do PR conforme seção 11 |
+| CI, lint, typecheck, testes, build | local OK **[V]**; CI do GitHub **não executado** (sem push) |
 | Fluxos públicos essenciais | OK local; produção atual OK **[V]** |
 | Login e sessão validados de forma autorizada | **NÃO** — bloqueado |
 | Permissões e rotas privadas | anônimo OK **[V]**; com papéis: **NÃO validado** |
@@ -144,5 +144,6 @@ Resultado: o critério "login e sessão validados de forma autorizada" não é s
 ## AÇÃO NECESSÁRIA DO USUÁRIO
 
 1. **Executar o roteiro da Etapa 6** (`RELATORIO.md` §7) com uma conta de teste sua, no TEST, e devolver o resultado por passo (sem senha, cookie ou token). Falha nos passos 4–7 ou 10 reprova.
-2. **Depois do "passou"**, dizer explicitamente "pode publicar a Etapa 6". Com isso o agente faz o merge do PR pelo fluxo normal, acompanha o deploy, e roda a validação pós-deploy da seção 13 de `RELATORIO.md` / este relatório.
-3. (Opcional) Aplicar `account_self_deletion` e `legal_rc3` no TEST para ver o cadastro renderizar.
+2. **Autorizar o push da branch** (para abrir PR em rascunho e rodar o CI), ou rodar `git push -u origin perf/etapa-6-clerk-scope` você mesmo.
+3. **Depois do "passou"**, dizer explicitamente "pode publicar a Etapa 6". Com isso o agente faz o merge do PR pelo fluxo normal, acompanha o deploy, e roda a validação pós-deploy da seção 13 de `RELATORIO.md` / este relatório.
+4. (Opcional) Aplicar `account_self_deletion` e `legal_rc3` no TEST para ver o cadastro renderizar.
