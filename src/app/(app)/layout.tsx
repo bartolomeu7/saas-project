@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
@@ -12,6 +13,12 @@ import { evaluateSessionGate, SESSION_LIMIT_PATH } from "@/lib/auth/session-gate
 // /app/* estaticamente e, num ambiente sem credenciais (Preview), o construtor do cliente Supabase lançava
 // "supabaseKey is required" no build. Em runtime, credencial ausente continua falhando alto (não é mascarada).
 export const dynamic = "force-dynamic";
+
+// Toda a área autenticada fica fora do índice de busca (defesa em profundidade; o acesso é protegido pela autenticação).
+// Páginas filhas só definem `title`: o `robots` daqui é herdado, pois nenhuma delas o sobrescreve (há teste para isso).
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 /**
  * Layout da área autenticada.

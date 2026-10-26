@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { siteConfig } from "@/config/site";
+import { publicOpenGraph, siteConfig } from "@/config/site";
 import { LegalDocumentView } from "@/components/legal/legal-document-view";
 import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
@@ -11,6 +11,7 @@ export const metadata: Metadata = {
   title: "Direitos do Titular de Dados",
   description: "Como exercer os direitos da LGPD no Prime Ges: acesso, correção, eliminação, portabilidade e outros.",
   alternates: { canonical: `${siteConfig.url}/direitos-do-titular` },
+  openGraph: publicOpenGraph("/direitos-do-titular"),
 };
 
 export default function DataRightsPage() {

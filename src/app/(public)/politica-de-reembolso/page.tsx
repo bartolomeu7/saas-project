@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { siteConfig } from "@/config/site";
+import { publicOpenGraph, siteConfig } from "@/config/site";
 import { LegalDocumentView } from "@/components/legal/legal-document-view";
 import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
@@ -11,6 +11,7 @@ export const metadata: Metadata = {
   title: "Política de Reembolso e Cancelamento",
   description: "Como cancelar, desistir em até 7 dias (art. 49 do CDC) e receber o reembolso do Prime Ges.",
   alternates: { canonical: `${siteConfig.url}/politica-de-reembolso` },
+  openGraph: publicOpenGraph("/politica-de-reembolso"),
 };
 
 export default function RefundPolicyPage() {

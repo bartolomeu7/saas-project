@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { siteConfig } from "@/config/site";
+import { publicOpenGraph, siteConfig } from "@/config/site";
 import { LegalDocumentView } from "@/components/legal/legal-document-view";
 import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
@@ -11,6 +11,7 @@ export const metadata: Metadata = {
   title: "Política de Privacidade",
   description: "Como o Prime Ges trata dados pessoais: quais dados, para quê, com quem compartilha, por quanto tempo e seus direitos.",
   alternates: { canonical: `${siteConfig.url}/politica-de-privacidade` },
+  openGraph: publicOpenGraph("/politica-de-privacidade"),
 };
 
 export default function PrivacyPolicyPage() {

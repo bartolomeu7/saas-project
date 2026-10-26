@@ -5,7 +5,8 @@ import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Conta excluída",
-  robots: { index: false },
+  // Fora do índice; o robots.txt NÃO a bloqueia, para o Google conseguir ler este noindex.
+  robots: { index: false, follow: false },
 };
 
 /** Página pública de despedida: não recebe nem mostra dado pessoal. `e=1` = e-mail de confirmação enviado. */
