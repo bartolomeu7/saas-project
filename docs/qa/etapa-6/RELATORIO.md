@@ -163,3 +163,62 @@ Confirmado: sem mudança em produção, Supabase (schema, dados, migrações), v
 ## 12. Decisão recomendada
 
 Manter a branch isolada (`perf/etapa-6-clerk-scope`) até o roteiro autenticado ser executado. Se passar, a Etapa 6 fica pronta para uma futura autorização de release (ganho medido: −66 % de JS e −27 % de LCP no celular em laboratório). Se falhar, a correção é pontual por rota e os testes de grafo indicam onde. O commit local NÃO é aprovação para produção.
+
+## 13. Revalidação de continuidade (2026-10-26, 15:59–16:05 -03:00)
+
+Segunda passada de auditoria sobre a mesma branch, sem alterar código. Tudo abaixo foi executado nesta passada, no worktree `saas-project-fase3`.
+
+**Estado Git verificado.** Branch `perf/etapa-6-clerk-scope` em `77f79d3`, sobre o merge `cfc6f73` (que contém `origin/main` = `fa05032`). Backup `perf/etapa-6-clerk-scope-backup` = `b03a690`. `git ls-remote --heads origin perf/etapa-6-clerk-scope` = 0 (nunca enviada). Árvore limpa, exceto 4 itens não rastreados que já existiam e ficaram intactos: `.playwright-mcp/`, `.serena/`, `docs/AUDITORIA_GO_LIVE_2026-10-18_a_21.md`, `supabase/candidates/`.
+
+**Diff auditado.** 17 arquivos, +764/−27 contra `origin/main`. Nenhum toca `middleware`, `lib/auth`, Supabase, `.env*`, páginas legais, sitemap/robots. O código de aplicação muda só em: `ClerkProvider` retirado do layout raiz, `ClerkSegmentLayout`, 7 layouts de uma linha, e `<ClerkAppProvider>` em `(app)/layout.tsx` e `admin/layout.tsx` (depois das checagens de sessão/papel, que não mudaram).
+
+**Comandos desta passada**
+
+| Comando | Resultado |
+|---|---|
+| `npm run lint` | exit 0 — 0 erros, 10 avisos (os mesmos de antes) |
+| `npm run typecheck` | exit 0 |
+| `npm run test:unit` | exit 0 — 261 testes, 260 passam, 0 falham, 1 ignorado |
+| `tests/unit/performance-clerk-scope.test.mjs` | 9/9 |
+| `npm run build` (env só na memória do processo) | exit 0, sem "error" no log |
+| `npm run test:seo` (sem servidor) | 37 passam; a suíte dinâmica é ignorada sem `SEO_BASE_URL` |
+| `SEO_BASE_URL=http://localhost:3100 npm run test:seo` (`next start`) | 44/44 |
+
+O teste ignorado é `tests/unit/legal.test.mjs:66` (`LEGAL_REQUIRE_PUBLISHABLE=1`), idêntico em `origin/main`: preexistente, não removido.
+
+**Navegador (Playwright, 390 px, build local)**
+- Home: nenhum script do Clerk, `window.Clerk` inexistente, 0 erros de console (2 avisos de preload de CSS, sem relação com o Clerk).
+- `/login`: `window.Clerk.loaded = true`, formulário do Clerk com campos `identifier` e `password`, sem rolagem horizontal, 0 erros de console.
+- Anônimo em `/app`, `/admin`, `/onboarding`, `/conta`, `/acesso-sessoes`, `/aceite-termos`: 307 para `/login?next=…`; `/acesso-indisponivel`: 307 para `/login`. Igual ao registrado na seção 9. (Não comparei de novo lado a lado com a `main` nesta passada.)
+
+**Benchmark.** Não repetido. Os valores da seção 8 são da passada anterior (intercalada, n=15 por lado na home) e não foram reproduzidos nesta execução.
+
+### Diagnóstico do cadastro (`/register`)
+
+- A mensagem "documentos legais estão indisponíveis" sai de `src/app/(public)/register/page.tsx:34`, quando `getPublishedLegalVersions()` devolve nulo ou `integrity !== "OK"`. Isso acontece antes de qualquer `<SignUp/>`; não tem relação com o Clerk nem com a Etapa 6.
+- O `.env.local` local aponta para o banco `primeges-TESTE-isolado` (confirmado por comparação do identificador do projeto, sem imprimir URL ou chaves).
+- Consulta somente leitura à RPC pública `get_current_legal_documents` nesse banco: HTTP 200, `TERMS_OF_USE` e `PRIVACY_POLICY` na versão `1.0.0-rc.2`. O código da branch (e da `main`) espera `1.0.0-rc.3` (`src/content/legal/terms-of-use.ts:21`, `privacy-policy.ts:20`). Versão diferente ⇒ `MISMATCH` ⇒ cadastro "pausado".
+- Em `https://primeges.com.br/register` (GET público), a mensagem **não** aparece e o passo 1 (aceite dos documentos) é exibido. Logo, em Production a versão publicada bate com o código.
+- Conclusão: causa mais provável e consistente com todas as evidências é o banco TEST estar uma versão legal atrás do código (rc.2 vs rc.3). Não é evidência de regressão da Etapa 6; também ocorria na `main`. Não comparei os hashes do banco com os do código (o módulo não importa fora do build); a diferença de versão já basta para o `MISMATCH`.
+- Não foi alterado nada: nenhum aceite padrão, nenhum bypass, nenhuma edição de páginas legais ou do banco. Colocar o TEST na rc.3 exige aplicar a migration de publicação da rc.3 no banco de TESTE — decisão e ação do proprietário.
+- **O cadastro continua NÃO VALIDADO visualmente**, com a Etapa 6 ou sem ela. O `<SignUp/>` está coberto pelo teste de grafo (a rota `/register` tem o provider), mas ninguém o viu renderizar nesta branch.
+
+### Menu móvel (preexistente, fora do escopo)
+
+Reproduzido de novo nesta passada, apenas na branch da Etapa 6 (390×844): com clique real do Playwright em "Preços" o menu fecha e o hash vira `#precos`, mas `scrollY` fica em 0 (o alvo está a ~9.900 px). Um `.click()` programático via JavaScript rolou normalmente, o que reforça que o problema depende do clique real e do bloqueio de rolagem do menu. Não corrigido, não misturado com a Etapa 6. Nesta passada não testei a `main`; o registro de que ocorre na `main` vem da passada anterior.
+
+### Ajustes ao roteiro da seção 7
+
+- Passo 1: o TEST está na rc.3-menos-1 (rc.2). Isso não impede entrar com uma conta já existente, mas `/register` e possivelmente a tela `/aceite-termos` mostram "indisponível" até o TEST ser atualizado. Se isso acontecer no passo 4, registre como **BLOQUEADO (ambiente)**, não como falha da Etapa 6.
+- Registre cada passo como **passou**, **falhou**, **não aplicável** ou **bloqueado**, com navegador/dispositivo e a mensagem de erro, sem senha, cookie, token ou imagem com dados pessoais.
+- Passo 9: um usuário sem papel de administrador ser mandado de `/admin` para `/app` é o comportamento **correto** (acesso negado), não uma falha.
+- Passos 4–7 e 10 reprovam a etapa se falharem de verdade (não por bloqueio de ambiente).
+
+### AÇÃO NECESSÁRIA DO USUÁRIO
+
+1. Rodar o roteiro da seção 7 com uma conta de teste sua, no ambiente TEST, e devolver o resultado de cada passo (sem credenciais).
+2. (Opcional, só se quiser ver o cadastro) decidir se o banco TEST recebe a publicação da rc.3. O agente não faz isso.
+
+### Estado de prontidão
+
+**BLOQUEADA — TESTE AUTENTICADO DO USUÁRIO PENDENTE.** Verificações técnicas locais passam; nenhuma regressão técnica encontrada. Isso não é aprovação para produção, e nada foi enviado, mesclado ou publicado.
