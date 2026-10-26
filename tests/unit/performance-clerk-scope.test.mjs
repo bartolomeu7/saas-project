@@ -110,3 +110,86 @@ describe("Escopo do ClerkProvider (Etapa 6)", () => {
     assert.match(mw, /PROTECTED_PREFIXES = \["\/app", "\/admin", "\/onboarding", "\/acesso-sessoes", "\/conta"\]/);
   });
 });
+
+/**
+ * Grafo de importações: o que cada página realmente alcança (a própria página, seus layouts ancestrais, inclusive o raiz,
+ * e tudo que eles importam, transitivamente). Garante que nenhum código de cliente do Clerk (useClerk, <SignIn/>, ...)
+ * seja alcançável por uma rota sem ClerkProvider, e que o provider só entre onde ele é usado ou necessário.
+ */
+const IMPORT_RE = /(?:from|import)\s*\(?\s*["']([^"']+)["']/g;
+const EXTENSIONS = ["", ".ts", ".tsx", ".js", ".mjs", "/index.ts", "/index.tsx"];
+
+function resolveImport(fromFile, spec) {
+  let base;
+  if (spec.startsWith("@/")) base = join(SRC, spec.slice(2));
+  else if (spec.startsWith(".")) base = join(dirname(fromFile), spec);
+  else return null; // pacote externo
+  for (const ext of EXTENSIONS) {
+    const candidate = base + ext;
+    if (existsSync(candidate) && statSync(candidate).isFile()) return candidate;
+  }
+  return null;
+}
+
+function reachable(entries) {
+  const seen = new Set();
+  const queue = [...entries];
+  while (queue.length) {
+    const file = queue.pop();
+    if (seen.has(file)) continue;
+    seen.add(file);
+    for (const match of read(file).matchAll(IMPORT_RE)) {
+      const target = resolveImport(file, match[1]);
+      if (target && /\.(tsx?|jsx?|mjs)$/.test(target)) queue.push(target);
+    }
+  }
+  return seen;
+}
+
+/** Arquivos que usam a API de NAVEGADOR do Clerk (import de "@clerk/nextjs", nunca de "@clerk/nextjs/server"). */
+const clientClerkFiles = new Set(
+  walk(SRC)
+    .filter((f) => /\.tsx?$/.test(f))
+    .filter((f) => /from "@clerk\/nextjs"/.test(read(f)) && !f.endsWith(join("components", "clerk", "clerk-app-provider.tsx"))),
+);
+
+describe("Alcance de cada rota (grafo de importações)", () => {
+  const rootLayout = join(APP, "layout.tsx");
+  const entriesFor = (page) => [page, rootLayout, ...coveringLayouts(page)];
+
+  it("o conjunto de arquivos com API de navegador do Clerk é exatamente o esperado (novo uso obriga rever o escopo)", () => {
+    assert.deepEqual([...clientClerkFiles].map(rel).sort(), [
+      "src/app/(public)/login/page.tsx",
+      "src/app/(public)/register/page.tsx",
+      "src/app/acesso-indisponivel/sign-out-button.tsx",
+      "src/components/account/delete-account-panel.tsx",
+      "src/components/app/user-menu.tsx",
+    ]);
+  });
+
+  it("nenhuma página SEM provider alcança código de navegador do Clerk (nem pelo layout raiz)", () => {
+    for (const path of WITHOUT_CLERK) {
+      const page = join(root, path);
+      const hit = [...reachable(entriesFor(page))].filter((f) => clientClerkFiles.has(f)).map(rel);
+      assert.deepEqual(hit, [], `${path} alcança ${hit.join(", ")} sem ClerkProvider`);
+    }
+  });
+
+  it("toda página que alcança código de navegador do Clerk está sob um layout com o provider", () => {
+    const providerLayouts = new Set(appFiles.filter((f) => /[/\\]layout\.tsx$/.test(f) && PROVIDER.test(read(f)) && f !== join(APP, "layout.tsx")));
+    let checked = 0;
+    for (const page of pages) {
+      const hit = [...reachable(entriesFor(page))].filter((f) => clientClerkFiles.has(f));
+      if (!hit.length) continue;
+      checked++;
+      const covered = coveringLayouts(page).some((layout) => providerLayouts.has(layout));
+      assert.ok(covered, `${rel(page)} alcança ${hit.map(rel).join(", ")} mas nenhum layout ancestral entrega o provider`);
+    }
+    assert.ok(checked >= 6, "o grafo deve achar as rotas com Clerk (login, cadastro, conta, acesso-*, /app/*, /admin/*)");
+  });
+
+  it("o layout raiz e o layout de cada rota pública estática não importam nada de navegador do Clerk", () => {
+    const fromRoot = [...reachable([rootLayout])].filter((f) => clientClerkFiles.has(f)).map(rel);
+    assert.deepEqual(fromRoot, []);
+  });
+});
