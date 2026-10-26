@@ -252,6 +252,110 @@ describe("Home — título, descrição, H1, hierarquia e links (Etapa 4) — HT
   });
 });
 
+const LD_RE = /<script type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/g;
+const ldBlocks = (html) => [...html.matchAll(LD_RE)].map((m) => m[1]);
+
+describe("Dados estruturados JSON-LD (Etapa 5) — HTML gerado", { skip: !hasBuild && "rode `npm run build` antes" }, () => {
+  const read = (file) => (hasBuild && existsSync(built(file)) ? readFileSync(built(file), "utf8") : "");
+  const home = read("index.html");
+  const blocks = ldBlocks(home);
+  const data = blocks.length === 1 ? JSON.parse(blocks[0]) : null;
+  const nodes = data?.["@graph"] ?? [];
+  const byType = Object.fromEntries(nodes.map((n) => [n["@type"], n]));
+  const canonical = all(home, /<link rel="canonical" href="([^"]+)"/g)[0];
+  const origin = canonical ? new URL(canonical).origin : "";
+  const metaDescription = all(home, /<meta name="description" content="([^"]*)"/g)[0];
+
+  const keysOf = (value, out = new Set()) => {
+    if (Array.isArray(value)) value.forEach((v) => keysOf(v, out));
+    else if (value && typeof value === "object") for (const [k, v] of Object.entries(value)) (out.add(k), keysOf(v, out));
+    return out;
+  };
+
+  it("a home tem exatamente 1 bloco JSON-LD, sintaticamente válido e analisável", () => {
+    assert.equal(blocks.length, 1, "um único <script type=application/ld+json>");
+    assert.doesNotThrow(() => JSON.parse(blocks[0]));
+    assert.equal(data["@context"], "https://schema.org");
+    assert.ok(Array.isArray(data["@graph"]));
+  });
+
+  it("o conteúdo do script não tem < > & crus (nada consegue fechar a tag)", () => {
+    assert.ok(!/[<>&]/.test(blocks[0]));
+  });
+
+  it("os tipos são Organization, WebSite e SoftwareApplication, uma vez cada, com @id únicos", () => {
+    assert.deepEqual(nodes.map((n) => n["@type"]).sort(), ["Organization", "SoftwareApplication", "WebSite"]);
+    const ids = nodes.map((n) => n["@id"]);
+    assert.equal(new Set(ids).size, ids.length);
+    assert.deepEqual(ids.map((id) => id.replace(origin, "")).sort(), ["/#organization", "/#software", "/#website"]);
+  });
+
+  it("nomes, URLs e descrição coerentes com o conteúdo público (canonical, meta description, módulos visíveis)", () => {
+    for (const node of nodes) if (node.url) assert.equal(node.url, canonical, node["@type"] + ": url = canonical");
+    assert.equal(byType.Organization.name, "Prime Ges");
+    assert.equal(byType.WebSite.name, "Prime Ges");
+    assert.equal(byType.SoftwareApplication.name, "Prime Ges");
+    assert.equal(byType.SoftwareApplication.description, metaDescription);
+    assert.equal(byType.SoftwareApplication.applicationCategory, "BusinessApplication");
+    assert.equal(byType.WebSite.inLanguage, "pt-BR");
+    const visible = text(home.replace(/<script[\s\S]*?<\/script>/g, ""));
+    for (const feature of byType.SoftwareApplication.featureList) assert.ok(visible.includes(feature), "módulo exibido na home: " + feature);
+    assert.equal(byType.SoftwareApplication.featureList.length, 8);
+  });
+
+  it("referências entre objetos apontam para entidades existentes (publisher, isPartOf)", () => {
+    const ids = new Set(nodes.map((n) => n["@id"]));
+    assert.ok(ids.has(byType.WebSite.publisher["@id"]));
+    assert.ok(ids.has(byType.SoftwareApplication.publisher["@id"]));
+    assert.ok(ids.has(byType.SoftwareApplication.isPartOf["@id"]));
+  });
+
+  it("sem localhost/preview (com SEO_EXPECT_ORIGIN, a origem é exatamente a esperada) e com URLs absolutas", () => {
+    assert.ok(!/vercel\.app/.test(blocks[0]));
+    if (process.env.SEO_EXPECT_ORIGIN) {
+      assert.equal(origin, process.env.SEO_EXPECT_ORIGIN);
+      assert.ok(!/localhost|127\.0\.0\.1/.test(blocks[0]));
+    }
+    const urls = [...blocks[0].matchAll(/"(?:url|@id)":"([^"]+)"/g)].map((m) => m[1]);
+    assert.ok(urls.length >= 6);
+    for (const u of urls) assert.equal(new URL(u).origin, origin, u);
+  });
+
+  it("sem propriedades inventadas: nada de preços, ofertas, avaliações, dados da empresa, redes sociais ou busca interna", () => {
+    const forbidden = ["offers", "price", "priceCurrency", "aggregateRating", "review", "reviewCount", "ratingValue", "sameAs", "contactPoint", "address", "telephone", "email", "legalName", "taxID", "vatID", "foundingDate", "potentialAction", "screenshot"];
+    const keys = keysOf(data);
+    for (const key of forbidden) assert.ok(!keys.has(key), "propriedade proibida: " + key);
+    assert.ok(!/R\$|BLOCKED|VALIDAÇÃO/.test(blocks[0]), "sem moeda nem marcadores pendentes");
+    assert.deepEqual(Object.keys(byType.Organization).sort(), ["@id", "@type", "logo", "name", "url"]);
+  });
+
+  it("o logotipo do Organization é o arquivo oficial, existe no build e tem as dimensões declaradas", () => {
+    const logo = byType.Organization.logo;
+    assert.equal(logo.url, origin + "/logo.png");
+    assert.deepEqual([logo.width, logo.height], [512, 512]);
+    const file = readFileSync(new URL("public/logo.png", root));
+    assert.deepEqual([file.readUInt32BE(16), file.readUInt32BE(20)], [512, 512]);
+  });
+
+  it("não há JSON-LD duplicado nem em outras páginas públicas estáticas (legais)", () => {
+    for (const file of ["termos-de-uso.html", "politica-de-privacidade.html", "politica-de-reembolso.html", "direitos-do-titular.html"]) {
+      assert.equal(ldBlocks(read(file)).length, 0, file);
+    }
+    assert.equal(ldBlocks(read("_not-found.html")).length, 0);
+  });
+
+  it("os metadados, a imagem de compartilhamento e o FAQ das Etapas 1 a 4 seguem na home", () => {
+    assert.equal(all(home, /<title>([\s\S]*?)<\/title>/g).length, 1);
+    assert.equal(value_(home, "og:image").length, 1);
+    assert.equal(value_(home, "og:url")[0], canonical);
+    assert.equal((home.match(/role="region"/g) ?? []).length, QUESTIONS.length);
+  });
+});
+
+function value_(html, key) {
+  return [...html.matchAll(/<meta (?:property|name)="((?:og|twitter):[^"]+)" content="([^"]*)"/g)].filter((m) => m[1] === key).map((m) => m[2]);
+}
+
 /** Interpretador mínimo de robots.txt (Google: regra mais longa vence; Allow vence empate; suporta * e $). */
 function robotsAllows(rules, path) {
   const toRegex = (rule) => {
@@ -411,6 +515,21 @@ describe("Rotas dinâmicas (servidor local) — login, cadastro e noindex", { sk
       assert.match(response.headers.get("content-type") ?? "", /^image\//, url);
       assert.ok((await response.arrayBuffer()).byteLength > 1000, url + " não vazio");
     }
+  });
+
+  it("login, cadastro e conta excluída não têm JSON-LD; o logotipo do Organization responde 200 como imagem", async () => {
+    for (const path of ["/login", "/register", "/conta-excluida", "/aceite-termos"]) {
+      const { html } = await get(path);
+      assert.equal(ldBlocks(html).length, 0, path);
+    }
+    for (const path of ["/app", "/onboarding", "/admin"]) {
+      const response = await fetch(BASE + path, { redirect: "manual" });
+      assert.equal(response.status, 307, path);
+      assert.ok(!/ld\+json/.test(await response.text()), path);
+    }
+    const logo = await fetch(BASE + "/logo.png");
+    assert.equal(logo.status, 200);
+    assert.match(logo.headers.get("content-type") ?? "", /^image\/png/);
   });
 
   it("anônimo nunca vê /app, /onboarding ou /admin: redireciona para o login (o noindex é só defesa em profundidade)", async () => {
