@@ -26,6 +26,8 @@ import {
 import { HomeHeroMockup, HomeProductShowcase } from "@/components/marketing/home-product-showcase";
 import { getPublicPlans } from "@/lib/billing/queries";
 import { faqFacts, toPricingView } from "@/lib/billing/pricing-display";
+import { JsonLd } from "@/components/seo/json-ld";
+import { buildStructuredData } from "@/lib/seo/structured-data";
 
 const HOME_TITLE = "Prime Ges — Sistema de gestão online para pequenos negócios";
 const SEO_DESCRIPTION =
@@ -53,7 +55,19 @@ const SEGMENT_MODULES: Record<string, string[]> = {
   "Estética automotiva": ["Clientes", "Serviços", "Fidelidade", "Caixa"],
 };
 
-const FEATURE_NAMES = new Set(FEATURES.filter((feature) => feature.available).map((feature) => feature.name));
+const AVAILABLE_FEATURE_NAMES = FEATURES.filter((feature) => feature.available).map((feature) => feature.name);
+const FEATURE_NAMES = new Set(AVAILABLE_FEATURE_NAMES);
+
+// Dados estruturados (JSON-LD) só aqui: a home é a única página pública com a apresentação do produto. Sem `offers`,
+// avaliações nem dados da empresa pendentes (ver src/lib/seo/structured-data.ts).
+const STRUCTURED_DATA = buildStructuredData({
+  origin: siteConfig.url,
+  name: siteConfig.name,
+  description: SEO_DESCRIPTION,
+  logoPath: "/logo.png",
+  logoSize: 512,
+  featureNames: AVAILABLE_FEATURE_NAMES,
+});
 const SECTION = "py-16 sm:py-24";
 const iconTile = "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary";
 
@@ -72,6 +86,7 @@ export default async function HomePage() {
 
   return (
     <>
+      <JsonLd data={STRUCTURED_DATA} />
       <ScrollProgress />
       <SiteHeader />
 
