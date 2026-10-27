@@ -56,3 +56,33 @@ Verificação em navegador (Playwright, **Home pré-renderizada servida por um s
 - Contraste medido, navegação por teclado completa e leitor de tela não foram testados em navegador.
 - Logo e imagens otimizadas não foram avaliados no servidor estático.
 - `www.primeges.com.br` sem certificado válido (preexistente).
+
+---
+
+## D. Go Live (verificado em 2026-10-27, após o merge do PR #43)
+
+**Estado: GO LIVE CONCLUÍDO para a área pública (Home/navegação). Shell autenticado e `/conta` NÃO validados em produção.**
+
+| Item | Evidência |
+|---|---|
+| PR | [#43](https://github.com/bartolomeu7/saas-project/pull/43) — `MERGED` em 2026-10-27T12:22:00Z, merge commit `15430ba71719c14385d2c3372e279ecacf03a7a6` (feito pelo dono; o merge feito pelo Claude foi negado pelo ambiente, sem contorno) |
+| Commit publicado | `15430ba71719c14385d2c3372e279ecacf03a7a6` (`main`); contém `bd49724` (Ondas 1 e 2) sobre `7f7ba8c` (Onda 0) |
+| Deployment de produção | `dpl_AeerNhxkqTSJNNybinhwC7j36zqS` — status do commit no Vercel: `success` ("Deployment has completed"); https://vercel.com/juninhormatos-9956s-projects/saas-project/AeerNhxkqTSJNNybinhwC7j36zqS |
+| Domínio | alias `primeges.com.br` listado nesse deployment |
+| CI pós-merge na `main` | `verify` = success |
+
+### Testes em produção (https://primeges.com.br) — efetivamente executados
+- HTTP: `/` 200; `http://` → 308 para `https://primeges.com.br/`; `/login`, `/register`, `/termos-de-uso`, `/politica-de-privacidade`, `/robots.txt`, `/sitemap.xml` → 200; `/app` e `/conta` sem sessão → 307 para `/login?next=…` (guarda funcionando).
+- CSS servido: contém `.prime-site-header{…position:sticky…}`, a regra `.prime-site-header--scrolled` e `--popover`; título e canonical `https://primeges.com.br` preservados.
+- Navegador (Playwright, produção real), mobile 390 px: cabeçalho `sticky` em `top: 0`; botão "Criar conta" visível (106×44 px); sem overflow horizontal; **menu abre e fecha e os 5 itens (Preços, Recursos, Perguntas, Para quem é, Produto) rolam até a seção** (posição final = 84 px, hash atualizado, menu fechado). O bug de "Preços" está corrigido em produção.
+- Navegador, desktop 1366 px: `/#precos` abre na seção; cabeçalho com classe `--scrolled`; item "Preços" com `aria-current`; sem overflow; links de login/cadastro presentes. Sem requisições com falha na Home em produção.
+
+### Não foi possível / não executado
+- **Shell autenticado, sidebar (item ativo), breadcrumb e `/conta`**: não há sessão de teste autorizada; não criei contas nem usei credenciais. Só cobertos por testes unitários/estáticos, typecheck, build e CI.
+- Contraste medido, navegação por teclado completa e leitor de tela.
+- Tooltips/menus/popovers da Onda 0 (ficam no app autenticado).
+- Nenhum teste gravou dados; nenhuma variável, segredo, banco, RLS ou Clerk/Supabase foi alterado.
+
+### Problemas remanescentes
+- `www.primeges.com.br` sem certificado válido para o nome (preexistente, fora do escopo).
+- Validação visual do shell autenticado e de `/conta` pendente: conferir logado — breadcrumb no header (md+), barra indicadora no item ativo da sidebar e a moldura de `/conta`.
