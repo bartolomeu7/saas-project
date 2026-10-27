@@ -1,0 +1,122 @@
+
+### desktop /  (baseline n=15, etapa6 n=15)
+LCP ms                           base med      208 | etapa6 med      204 | Δ       -4 (-1.9%)
+FCP ms                           base med      208 | etapa6 med      204 | Δ       -4 (-1.9%)
+CLS                              base med   0.0000 | etapa6 med   0.0000 | Δ   0.0000 (-)
+TBT ms (lab, não é INP)          base med        0 | etapa6 med        0 | Δ        0 (-)
+load ms                          base med      311 | etapa6 med      240 | Δ      -72 (-23.0%)
+requisições (CDP)                base med       42 | etapa6 med       29 | Δ      -13 (-31.0%)
+bytes totais KB (CDP)            base med    749.5 | etapa6 med    317.5 | Δ   -432.0 (-57.6%)
+JS transferido KB (CDP Script)   base med    588.7 | etapa6 med    199.6 | Δ   -389.2 (-66.1%)
+arquivos JS (CDP)                base med       28 | etapa6 med       18 | Δ      -10 (-35.7%)
+terceiros KB (CDP)               base med    348.9 | etapa6 med      0.0 | Δ   -348.9 (-100.0%)
+terceiros requisições            base med        8 | etapa6 med        0 | Δ       -8 (-100.0%)
+  LCP individuais base:   2124, 204, 208, 204, 224, 1632, 212, 208, 212, 204, 1680, 208, 208, 236, 196
+  LCP individuais etapa6: 1416, 204, 204, 200, 196, 1404, 196, 212, 208, 212, 1668, 192, 192, 200, 204
+
+### desktop /login  (baseline n=9, etapa6 n=9)
+LCP ms                           base med       92 | etapa6 med       76 | Δ      -16 (-17.4%)
+FCP ms                           base med       92 | etapa6 med       76 | Δ      -16 (-17.4%)
+CLS                              base med   0.0186 | etapa6 med   0.0186 | Δ   0.0000 (0.0%)
+TBT ms (lab, não é INP)          base med        0 | etapa6 med        0 | Δ        0 (-)
+load ms                          base med      157 | etapa6 med      153 | Δ       -4 (-2.7%)
+requisições (CDP)                base med       47 | etapa6 med       47 | Δ        0 (0.0%)
+bytes totais KB (CDP)            base med    771.6 | etapa6 med    754.2 | Δ    -17.4 (-2.3%)
+JS transferido KB (CDP Script)   base med    629.0 | etapa6 med    628.5 | Δ     -0.5 (-0.1%)
+arquivos JS (CDP)                base med       34 | etapa6 med       34 | Δ        0 (0.0%)
+terceiros KB (CDP)               base med    392.5 | etapa6 med    392.5 | Δ      0.0 (0.0%)
+terceiros requisições            base med       16 | etapa6 med       16 | Δ        0 (0.0%)
+  LCP individuais base:   112, 72, 76, 108, 76, 92, 108, 92, 72
+  LCP individuais etapa6: 128, 76, 96, 104, 68, 72, 100, 64, 72
+
+### desktop /register  (baseline n=9, etapa6 n=9)
+LCP ms                           base med      628 | etapa6 med      680 | Δ       52 (8.3%)
+FCP ms                           base med      612 | etapa6 med      648 | Δ       36 (5.9%)
+CLS                              base med   0.0000 | etapa6 med   0.0000 | Δ   0.0000 (-)
+TBT ms (lab, não é INP)          base med        0 | etapa6 med        0 | Δ        0 (-)
+load ms                          base med      674 | etapa6 med      699 | Δ       25 (3.7%)
+requisições (CDP)                base med       40 | etapa6 med       40 | Δ        0 (0.0%)
+bytes totais KB (CDP)            base med    733.8 | etapa6 med    716.2 | Δ    -17.5 (-2.4%)
+JS transferido KB (CDP Script)   base med    595.1 | etapa6 med    594.5 | Δ     -0.5 (-0.1%)
+arquivos JS (CDP)                base med       30 | etapa6 med       30 | Δ        0 (0.0%)
+terceiros KB (CDP)               base med    348.9 | etapa6 med    348.9 | Δ     -0.0 (-0.0%)
+terceiros requisições            base med        8 | etapa6 med        8 | Δ        0 (0.0%)
+  LCP individuais base:   676, 612, 624, 680, 628, 412, 888, 384, 640
+  LCP individuais etapa6: 424, 616, 704, 1016, 900, 680, 696, 620, 368
+
+### desktop /termos-de-uso  (baseline n=9, etapa6 n=9)
+LCP ms                           base med      104 | etapa6 med      112 | Δ        8 (7.7%)
+FCP ms                           base med      104 | etapa6 med      112 | Δ        8 (7.7%)
+CLS                              base med   0.0056 | etapa6 med   0.0056 | Δ   0.0000 (0.0%)
+TBT ms (lab, não é INP)          base med        0 | etapa6 med        0 | Δ        0 (-)
+load ms                          base med      178 | etapa6 med      129 | Δ      -49 (-27.7%)
+requisições (CDP)                base med       43 | etapa6 med       31 | Δ      -12 (-27.9%)
+bytes totais KB (CDP)            base med    742.9 | etapa6 med    313.6 | Δ   -429.3 (-57.8%)
+JS transferido KB (CDP Script)   base med    589.5 | etapa6 med    200.4 | Δ   -389.1 (-66.0%)
+arquivos JS (CDP)                base med       29 | etapa6 med       19 | Δ      -10 (-34.5%)
+terceiros KB (CDP)               base med    348.9 | etapa6 med      0.0 | Δ   -348.9 (-100.0%)
+terceiros requisições            base med        8 | etapa6 med        0 | Δ       -8 (-100.0%)
+  LCP individuais base:   96, 96, 116, 88, 104, 100, 112, 120, 104
+  LCP individuais etapa6: 140, 140, 92, 112, 96, 92, 88, 120, 116
+
+### mobile /  (baseline n=15, etapa6 n=15)
+LCP ms                           base med     2904 | etapa6 med     2120 | Δ     -784 (-27.0%)
+FCP ms                           base med     1424 | etapa6 med     1192 | Δ     -232 (-16.3%)
+CLS                              base med   0.0000 | etapa6 med   0.0000 | Δ   0.0000 (-)
+TBT ms (lab, não é INP)          base med      255 | etapa6 med      193 | Δ      -62 (-24.3%)
+load ms                          base med     3170 | etapa6 med     2084 | Δ    -1086 (-34.3%)
+requisições (CDP)                base med       39 | etapa6 med       27 | Δ      -12 (-30.8%)
+bytes totais KB (CDP)            base med    751.1 | etapa6 med    320.9 | Δ   -430.2 (-57.3%)
+JS transferido KB (CDP Script)   base med    588.8 | etapa6 med    199.6 | Δ   -389.2 (-66.1%)
+arquivos JS (CDP)                base med       28 | etapa6 med       18 | Δ      -10 (-35.7%)
+terceiros KB (CDP)               base med    348.9 | etapa6 med      0.0 | Δ   -348.9 (-100.0%)
+terceiros requisições            base med        8 | etapa6 med        0 | Δ       -8 (-100.0%)
+  LCP individuais base:   2924, 2904, 2876, 2912, 2872, 2928, 2896, 2900, 2960, 2916, 2896, 2896, 2928, 2932, 2900
+  LCP individuais etapa6: 2120, 2232, 2112, 2168, 2216, 1960, 2120, 1976, 1984, 2028, 2144, 2132, 2012, 2112, 2208
+
+### mobile /login  (baseline n=9, etapa6 n=9)
+LCP ms                           base med     2492 | etapa6 med     2360 | Δ     -132 (-5.3%)
+FCP ms                           base med      876 | etapa6 med      804 | Δ      -72 (-8.2%)
+CLS                              base med   0.1023 | etapa6 med   0.1023 | Δ   0.0000 (0.0%)
+TBT ms (lab, não é INP)          base med      192 | etapa6 med      186 | Δ       -6 (-3.1%)
+load ms                          base med     2622 | etapa6 med     2678 | Δ       56 (2.1%)
+requisições (CDP)                base med       47 | etapa6 med       47 | Δ        0 (0.0%)
+bytes totais KB (CDP)            base med    773.0 | etapa6 med    755.5 | Δ    -17.5 (-2.3%)
+JS transferido KB (CDP Script)   base med    629.1 | etapa6 med    628.6 | Δ     -0.5 (-0.1%)
+arquivos JS (CDP)                base med       34 | etapa6 med       34 | Δ        0 (0.0%)
+terceiros KB (CDP)               base med    392.5 | etapa6 med    392.5 | Δ     -0.0 (-0.0%)
+terceiros requisições            base med       16 | etapa6 med       16 | Δ        0 (0.0%)
+  LCP individuais base:   2492, 2488, 2492, 2532, 2476, 2464, 2528, 2472, 2512
+  LCP individuais etapa6: 2560, 2356, 2360, 2356, 2352, 2560, 2352, 2556, 2524
+
+### mobile /register  (baseline n=9, etapa6 n=9)
+LCP ms                           base med     2908 | etapa6 med     2764 | Δ     -144 (-5.0%)
+FCP ms                           base med     1240 | etapa6 med     1156 | Δ      -84 (-6.8%)
+CLS                              base med   0.0000 | etapa6 med   0.0000 | Δ   0.0000 (-)
+TBT ms (lab, não é INP)          base med       76 | etapa6 med       98 | Δ       22 (28.9%)
+load ms                          base med     3053 | etapa6 med     3079 | Δ       26 (0.8%)
+requisições (CDP)                base med       40 | etapa6 med       40 | Δ        0 (0.0%)
+bytes totais KB (CDP)            base med    735.1 | etapa6 med    717.6 | Δ    -17.5 (-2.4%)
+JS transferido KB (CDP Script)   base med    595.1 | etapa6 med    594.6 | Δ     -0.5 (-0.1%)
+arquivos JS (CDP)                base med       30 | etapa6 med       30 | Δ        0 (0.0%)
+terceiros KB (CDP)               base med    349.0 | etapa6 med    349.0 | Δ      0.0 (0.0%)
+terceiros requisições            base med        8 | etapa6 med        8 | Δ        0 (0.0%)
+  LCP individuais base:   3008, 2876, 2676, 3692, 3024, 2908, 2904, 2848, 2912
+  LCP individuais etapa6: 2772, 2764, 2508, 2816, 2804, 2740, 2644, 2740, 2776
+
+### mobile /termos-de-uso  (baseline n=9, etapa6 n=9)
+LCP ms                           base med      996 | etapa6 med      896 | Δ     -100 (-10.0%)
+FCP ms                           base med      996 | etapa6 med      896 | Δ     -100 (-10.0%)
+CLS                              base med   0.0047 | etapa6 med   0.0047 | Δ   0.0000 (0.0%)
+TBT ms (lab, não é INP)          base med       80 | etapa6 med       70 | Δ      -10 (-12.5%)
+load ms                          base med     2888 | etapa6 med     1910 | Δ     -978 (-33.9%)
+requisições (CDP)                base med       39 | etapa6 med       27 | Δ      -12 (-30.8%)
+bytes totais KB (CDP)            base med    741.9 | etapa6 med    312.5 | Δ   -429.4 (-57.9%)
+JS transferido KB (CDP Script)   base med    589.6 | etapa6 med    200.4 | Δ   -389.2 (-66.0%)
+arquivos JS (CDP)                base med       29 | etapa6 med       19 | Δ      -10 (-34.5%)
+terceiros KB (CDP)               base med    348.9 | etapa6 med      0.0 | Δ   -348.9 (-100.0%)
+terceiros requisições            base med        8 | etapa6 med        0 | Δ       -8 (-100.0%)
+  LCP individuais base:   996, 992, 992, 980, 992, 1012, 1052, 1008, 1028
+  LCP individuais etapa6: 1004, 896, 892, 892, 948, 864, 892, 956, 912
+
+chrome: Chrome/155.0.8059.85 | datas: 2026-10-26T16:57:26.237Z 2026-10-26T17:02:39.991Z 2026-10-26T17:07:55.470Z | 2026-10-26T17:00:07.809Z 2026-10-26T17:05:22.200Z 2026-10-26T17:10:36.648Z

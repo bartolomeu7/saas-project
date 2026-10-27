@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { cookies } from "next/headers";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { ClerkAppProvider } from "@/components/clerk/clerk-app-provider";
 import { redirect } from "next/navigation";
 import { requirePlatformAdmin } from "@/lib/admin/queries";
 import { getCurrentUser } from "@/lib/auth/session";
@@ -40,14 +41,16 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   const defaultOpen = (await cookies()).get("sidebar_state")?.value !== "false";
 
   return (
-    <AdminShell
-      userName={admin.fullName}
-      userEmail={admin.email}
-      role={admin.role}
-      roleLabel={USER_ROLE_LABELS[admin.role]}
-      defaultOpen={defaultOpen}
-    >
-      {children}
-    </AdminShell>
+    <ClerkAppProvider>
+      <AdminShell
+        userName={admin.fullName}
+        userEmail={admin.email}
+        role={admin.role}
+        roleLabel={USER_ROLE_LABELS[admin.role]}
+        defaultOpen={defaultOpen}
+      >
+        {children}
+      </AdminShell>
+    </ClerkAppProvider>
   );
 }

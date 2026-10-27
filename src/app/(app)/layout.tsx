@@ -6,6 +6,7 @@ import { ACCOUNT_BLOCKED_PATH, AccountInactiveError } from "@/lib/auth/account-s
 import { getCurrentUser, getCurrentProfile } from "@/lib/auth/session";
 import { getCurrentCompany } from "@/lib/companies/queries";
 import { AppShell } from "@/components/app/app-shell";
+import { ClerkAppProvider } from "@/components/clerk/clerk-app-provider";
 import { requireLegalConsent } from "@/lib/legal/consent";
 import { evaluateSessionGate, SESSION_LIMIT_PATH } from "@/lib/auth/session-gate";
 
@@ -66,13 +67,15 @@ export default async function AppLayout({
   const defaultOpen = (await cookies()).get("sidebar_state")?.value !== "false";
 
   return (
-    <AppShell
-      company={current.company}
-      userName={profile?.full_name}
-      userEmail={user?.email}
-      defaultOpen={defaultOpen}
-    >
-      {children}
-    </AppShell>
+    <ClerkAppProvider>
+      <AppShell
+        company={current.company}
+        userName={profile?.full_name}
+        userEmail={user?.email}
+        defaultOpen={defaultOpen}
+      >
+        {children}
+      </AppShell>
+    </ClerkAppProvider>
   );
 }
