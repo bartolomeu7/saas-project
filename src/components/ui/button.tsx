@@ -10,7 +10,7 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-[hsl(211_89%_44%)] text-white shadow-soft hover:bg-[hsl(211_89%_39%)]",
+          "bg-primary-solid text-white shadow-soft hover:bg-primary-solid-hover",
         destructive:
           "bg-red-600 text-white hover:bg-red-700",
         success:
