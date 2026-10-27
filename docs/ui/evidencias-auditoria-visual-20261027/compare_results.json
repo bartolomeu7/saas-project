@@ -1,0 +1,145 @@
+[
+  {
+    "name": "home_desktop_faq",
+    "size": "1366x900",
+    "diffPct": 0.84,
+    "bbox": [
+      0,
+      0,
+      1350,
+      64
+    ]
+  },
+  {
+    "name": "home_desktop_precos",
+    "size": "1366x900",
+    "diffPct": 0.82,
+    "bbox": [
+      0,
+      0,
+      1362,
+      722
+    ]
+  },
+  {
+    "name": "home_desktop_produto",
+    "size": "1366x900",
+    "diffPct": 0.72,
+    "bbox": [
+      0,
+      0,
+      1350,
+      709
+    ]
+  },
+  {
+    "name": "home_desktop_recursos",
+    "size": "1366x900",
+    "diffPct": 0.69,
+    "bbox": [
+      0,
+      0,
+      1350,
+      64
+    ]
+  },
+  {
+    "name": "home_desktop_segmentos",
+    "size": "1366x900",
+    "diffPct": 0.76,
+    "bbox": [
+      0,
+      0,
+      1350,
+      64
+    ]
+  },
+  {
+    "name": "home_desktop_topo",
+    "size": "1366x900",
+    "diffPct": 4.49,
+    "bbox": [
+      0,
+      64,
+      1350,
+      838
+    ]
+  },
+  {
+    "name": "home_mobile_faq",
+    "size": "390x844",
+    "diffPct": 2.56,
+    "bbox": [
+      0,
+      0,
+      374,
+      64
+    ]
+  },
+  {
+    "name": "home_mobile_menu_open",
+    "size": "390x844",
+    "diffPct": 1.42,
+    "bbox": [
+      32,
+      10,
+      290,
+      499
+    ]
+  },
+  {
+    "name": "home_mobile_precos",
+    "size": "390x844",
+    "diffPct": 2.16,
+    "bbox": [
+      0,
+      0,
+      374,
+      64
+    ]
+  },
+  {
+    "name": "home_mobile_produto",
+    "size": "390x844",
+    "diffPct": 2.39,
+    "bbox": [
+      0,
+      0,
+      374,
+      64
+    ]
+  },
+  {
+    "name": "home_mobile_recursos",
+    "size": "390x844",
+    "diffPct": 2,
+    "bbox": [
+      0,
+      0,
+      374,
+      64
+    ]
+  },
+  {
+    "name": "home_mobile_segmentos",
+    "size": "390x844",
+    "diffPct": 2.16,
+    "bbox": [
+      0,
+      0,
+      374,
+      64
+    ]
+  },
+  {
+    "name": "home_mobile_topo",
+    "size": "390x844",
+    "diffPct": 8.98,
+    "bbox": [
+      32,
+      10,
+      374,
+      843
+    ]
+  }
+]

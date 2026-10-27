@@ -1,0 +1,42 @@
+[
+  {
+    "shot": "home_desktop_faq.png",
+    "bodyDiffPct": 0
+  },
+  {
+    "shot": "home_desktop_precos.png",
+    "bodyDiffPct": 0.003
+  },
+  {
+    "shot": "home_desktop_produto.png",
+    "bodyDiffPct": 0
+  },
+  {
+    "shot": "home_desktop_recursos.png",
+    "bodyDiffPct": 0
+  },
+  {
+    "shot": "home_desktop_segmentos.png",
+    "bodyDiffPct": 0
+  },
+  {
+    "shot": "home_mobile_faq.png",
+    "bodyDiffPct": 0
+  },
+  {
+    "shot": "home_mobile_precos.png",
+    "bodyDiffPct": 0
+  },
+  {
+    "shot": "home_mobile_produto.png",
+    "bodyDiffPct": 0
+  },
+  {
+    "shot": "home_mobile_recursos.png",
+    "bodyDiffPct": 0
+  },
+  {
+    "shot": "home_mobile_segmentos.png",
+    "bodyDiffPct": 0
+  }
+]

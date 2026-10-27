@@ -12,7 +12,7 @@ import type { PricingView } from "@/lib/billing/pricing-display";
 export function PricingCard({ plan, preview = false }: { plan: PricingView; preview?: boolean }) {
   const highlightStyles =
     plan.highlight === "popular"
-      ? "border-primary/40 bg-card shadow-card ring-1 ring-primary/20"
+      ? "border-primary/50 bg-card shadow-[0_24px_60px_-24px_hsl(var(--primary)/0.45)] ring-1 ring-primary/30 xl:-translate-y-2"
       : plan.highlight === "value"
         ? "border-success/40 bg-card shadow-card"
         : "border-border bg-card/60";
@@ -33,11 +33,14 @@ export function PricingCard({ plan, preview = false }: { plan: PricingView; prev
         highlightStyles
       )}
     >
-      {plan.tagline && (
-        <span className={cn("mb-3 w-fit rounded-full px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-wide", badgeStyles)}>
-          {plan.tagline}
-        </span>
-      )}
+      {/* Faixa do selo sempre reservada: sem ela, o plano sem selo (ex.: Trimestral) ficava com o preço ~32 px acima dos demais. */}
+      <div className="mb-3 flex min-h-[1.375rem] items-center">
+        {plan.tagline && (
+          <span className={cn("w-fit rounded-full px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-wide", badgeStyles)}>
+            {plan.tagline}
+          </span>
+        )}
+      </div>
 
       <p className="text-sm font-semibold uppercase tracking-wide text-foreground">{plan.name}</p>
 

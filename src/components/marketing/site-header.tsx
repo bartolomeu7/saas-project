@@ -66,6 +66,15 @@ export function SiteHeader({ isHome = true }: { isHome?: boolean }) {
           .filter((entry) => entry.isIntersecting)
           .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
         if (visible?.target.id) setActiveHref("#" + visible.target.id);
+        // Fora de qualquer seção do menu (hero, painel, faixa de credibilidade, problema), nenhuma fica marcada.
+        else if (
+          !sections.some((section) => {
+            const box = section.getBoundingClientRect();
+            return box.top < window.innerHeight * 0.45 && box.bottom > window.innerHeight * 0.12;
+          })
+        ) {
+          setActiveHref(null);
+        }
       },
       { threshold: [0.15, 0.3, 0.55], rootMargin: "-12% 0px -55% 0px" },
     );
