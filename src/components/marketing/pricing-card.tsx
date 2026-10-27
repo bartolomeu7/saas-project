@@ -19,7 +19,7 @@ export function PricingCard({ plan, preview = false }: { plan: PricingView; prev
 
   const badgeStyles =
     plan.highlight === "popular"
-      ? "bg-primary/15 text-[hsl(207_100%_72%)]"
+      ? "bg-primary/15 text-primary-text"
       : plan.highlight === "value"
         ? "bg-success/15 text-success"
         : "bg-secondary text-muted-foreground";

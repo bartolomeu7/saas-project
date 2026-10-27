@@ -32,23 +32,37 @@ export default async function PrivacyAndSecurityPage() {
   const preview = error ? null : parseDeletionPreview(data);
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-2xl flex-col gap-8 px-4 py-8">
-      <header className="flex items-center justify-between">
-        <Link href="/app" className="inline-flex items-center gap-2 font-semibold tracking-tight">
-          <Logo iconSize={22} />
-        </Link>
-        <Link href="/app" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Voltar ao sistema
-        </Link>
+    <div className="min-h-screen bg-background">
+      <a
+        href="#conteudo"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-primary focus:px-3 focus:py-2 focus:text-sm focus:text-primary-foreground"
+      >
+        Pular para o conteúdo
+      </a>
+      <header className="sticky top-0 z-20 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+        <div className="mx-auto flex h-16 max-w-2xl items-center justify-between gap-3 px-4">
+          <Link
+            href="/app"
+            className="inline-flex items-center gap-2 rounded-md font-semibold tracking-tight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <Logo iconSize={22} />
+          </Link>
+          <Link
+            href="/app"
+            className="inline-flex h-10 items-center gap-1 rounded-md px-2 text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Voltar ao sistema
+          </Link>
+        </div>
       </header>
 
-      <main id="conteudo" className="flex flex-col gap-8">
+      <main id="conteudo" className="mx-auto flex max-w-2xl flex-col gap-8 px-4 py-8">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Privacidade e segurança</h1>
           <p className="mt-1 text-sm text-muted-foreground">Seus dados e seus direitos como titular, segundo a LGPD.</p>
         </div>
 
-        <section aria-labelledby="seus-dados" className="rounded-lg border border-border p-5">
+        <section aria-labelledby="seus-dados" className="rounded-lg border border-border bg-card p-5 shadow-soft">
           <h2 id="seus-dados" className="text-base font-semibold">
             Seus dados
           </h2>
@@ -83,7 +97,7 @@ export default async function PrivacyAndSecurityPage() {
             }))}
           />
         ) : (
-          <p role="alert" className="rounded-lg border border-border p-5 text-sm text-muted-foreground">
+          <p role="alert" className="rounded-lg border border-border bg-card p-5 text-sm text-muted-foreground">
             Não foi possível carregar as opções de exclusão agora. Atualize a página em instantes.
           </p>
         )}

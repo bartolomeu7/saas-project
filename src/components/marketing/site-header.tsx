@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Menu } from "lucide-react";
 import { Logo } from "@/components/shared/logo";
@@ -23,13 +23,27 @@ import { siteConfig } from "@/config/site";
  * fica marcado (aria-current). Nas outras páginas públicas (Termos, Privacidade) os mesmos links
  * apontam para `/#secao`. O menu mobile é o Sheet do shadcn/ui (foco preso, Escape fecha, rótulos
  * corretos), no lugar do painel manual anterior.
+ *
+ * Âncoras no menu mobile: o Sheet trava a rolagem enquanto está aberto, então o salto nativo para `#secao`
+ * (que acontece no mesmo clique que fecha o menu) não rolava a página. Por isso o clique só marca o destino e a
+ * rolagem acontece depois que o Sheet fechou (`onCloseAutoFocus`).
  */
 export function SiteHeader({ isHome = true }: { isHome?: boolean }) {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [activeHref, setActiveHref] = useState<string | null>(null);
+  const pendingHash = useRef<string | null>(null);
 
   const hrefFor = (hash: string) => (isHome ? hash : "/" + hash);
+
+  function scrollToSection(hash: string) {
+    const section = document.getElementById(hash.slice(1));
+    if (!section) return;
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    section.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+    window.history.replaceState(null, "", hash);
+    setActiveHref(hash);
+  }
 
   useEffect(() => {
     const update = () => setScrolled(window.scrollY > 16);
@@ -85,8 +99,10 @@ export function SiteHeader({ isHome = true }: { isHome?: boolean }) {
               href={hrefFor(item.href)}
               aria-current={isHome && activeHref === item.href ? "location" : undefined}
               className={cn(
-                "whitespace-nowrap rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none",
-                isHome && activeHref === item.href && "text-foreground",
+                "relative whitespace-nowrap rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none",
+                isHome &&
+                  activeHref === item.href &&
+                  "text-foreground after:absolute after:inset-x-3 after:-bottom-px after:h-0.5 after:rounded-full after:bg-primary-text",
               )}
             >
               {item.label}
@@ -103,17 +119,35 @@ export function SiteHeader({ isHome = true }: { isHome?: boolean }) {
           </Link>
         </div>
 
+        <div className="flex items-center gap-2 lg:hidden">
+        {/* CTA sempre à mão no celular (antes só existia dentro do menu). */}
+        <Link
+          href={siteConfig.links.register}
+          className={cn(buttonVariants({ size: "sm" }), "prime-cta h-11 px-4")}
+        >
+          Criar conta
+        </Link>
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
             <button
               type="button"
-              className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-border text-foreground transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-border text-foreground transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               aria-label="Abrir menu"
             >
               <Menu size={22} aria-hidden="true" />
             </button>
           </SheetTrigger>
-          <SheetContent side="right" className="flex w-[min(88vw,22rem)] flex-col gap-6">
+          <SheetContent
+            side="right"
+            className="flex w-[min(88vw,22rem)] flex-col gap-6"
+            onCloseAutoFocus={(event) => {
+              const hash = pendingHash.current;
+              if (!hash) return;
+              pendingHash.current = null;
+              event.preventDefault();
+              window.requestAnimationFrame(() => scrollToSection(hash));
+            }}
+          >
             <SheetHeader className="text-left">
               <SheetTitle>Menu</SheetTitle>
               <SheetDescription>Navegue pelas seções ou acesse a sua conta.</SheetDescription>
@@ -123,6 +157,16 @@ export function SiteHeader({ isHome = true }: { isHome?: boolean }) {
                 <SheetClose asChild key={item.label}>
                   <Link
                     href={hrefFor(item.href)}
+                    onClick={
+                      isHome
+                        ? (event) => {
+                            // preventDefault também impede o SheetClose de fechar (Radix ignora cliques já cancelados).
+                            event.preventDefault();
+                            pendingHash.current = item.href;
+                            setOpen(false);
+                          }
+                        : undefined
+                    }
                     aria-current={isHome && activeHref === item.href ? "location" : undefined}
                     className={cn(
                       "rounded-md px-3 py-3 text-base text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
@@ -148,6 +192,7 @@ export function SiteHeader({ isHome = true }: { isHome?: boolean }) {
             </div>
           </SheetContent>
         </Sheet>
+        </div>
       </div>
     </header>
   );
