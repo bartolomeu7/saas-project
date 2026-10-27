@@ -10,8 +10,15 @@
     --card: 0 0% 100%;
     --card-foreground: 222 47% 11%;
 
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
     --primary: 222 47% 11%;
     --primary-foreground: 210 40% 98%;
+    /* Variantes do azul de marca com função própria (mesmos valores no tema escuro; ver .dark). */
+    --primary-solid: 211 89% 44%;
+    --primary-solid-hover: 211 89% 39%;
+    --primary-text: 207 100% 68%;
 
     --secondary: 210 40% 96%;
     --secondary-foreground: 222 47% 11%;
@@ -67,8 +74,17 @@
     --card: 211 31% 13%; /* #17212C */
     --card-foreground: 212 39% 94%;
 
+    --popover: 211 31% 13%; /* mesma superfície do card (dropdown, popover, select, tooltip, command) */
+    --popover-foreground: 212 39% 94%;
+
     --primary: 207 100% 54%; /* #168BFF — azul Prime Ges */
     --primary-foreground: 0 0% 100%;
+    /* Mesmo padrão do botão destrutivo (--destructive é texto/borda; o botão sólido usa red-600):
+       o azul primário puro dá só ~3,1:1 com texto branco, então o botão sólido usa um tom mais escuro. */
+    --primary-solid: 211 89% 44%; /* botão primário: texto branco ≈ 5,1:1 */
+    --primary-solid-hover: 211 89% 39%; /* ≈ 6,2:1 */
+    /* Texto/ícone em azul sobre fundo escuro (item ativo da sidebar, badge "info"): ≈ 7,4–8,3:1. */
+    --primary-text: 207 100% 68%;
 
     --secondary: 212 30% 16%; /* #1B2633 — cards secundários / hover */
     --secondary-foreground: 212 39% 94%;
