@@ -33,11 +33,14 @@ export function PricingCard({ plan, preview = false }: { plan: PricingView; prev
         highlightStyles
       )}
     >
-      {plan.tagline && (
-        <span className={cn("mb-3 w-fit rounded-full px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-wide", badgeStyles)}>
-          {plan.tagline}
-        </span>
-      )}
+      {/* Faixa do selo sempre reservada: sem ela, o plano sem selo (ex.: Trimestral) ficava com o preço ~32 px acima dos demais. */}
+      <div className="mb-3 flex min-h-[1.375rem] items-center">
+        {plan.tagline && (
+          <span className={cn("w-fit rounded-full px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-wide", badgeStyles)}>
+            {plan.tagline}
+          </span>
+        )}
+      </div>
 
       <p className="text-sm font-semibold uppercase tracking-wide text-foreground">{plan.name}</p>
 
