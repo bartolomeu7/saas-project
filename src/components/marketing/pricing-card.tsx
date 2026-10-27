@@ -12,7 +12,7 @@ import type { PricingView } from "@/lib/billing/pricing-display";
 export function PricingCard({ plan, preview = false }: { plan: PricingView; preview?: boolean }) {
   const highlightStyles =
     plan.highlight === "popular"
-      ? "border-primary/40 bg-card shadow-card ring-1 ring-primary/20"
+      ? "border-primary/50 bg-card shadow-[0_24px_60px_-24px_hsl(var(--primary)/0.45)] ring-1 ring-primary/30 xl:-translate-y-2"
       : plan.highlight === "value"
         ? "border-success/40 bg-card shadow-card"
         : "border-border bg-card/60";

@@ -43,7 +43,8 @@ describe("cabeçalho público (Onda 1)", () => {
   });
 
   it("cartão de preço usa o token primary-text (sem HSL fixo)", () => {
-    assert.doesNotMatch(read("src/components/marketing/pricing-card.tsx"), /hsl\(/);
+    // só HSL fixo é proibido; hsl(var(--token)) é permitido
+    assert.doesNotMatch(read("src/components/marketing/pricing-card.tsx"), /hsl\(\d/);
   });
 
   it("cartão de preço reserva a faixa do selo (preços alinhados entre planos com e sem selo)", () => {

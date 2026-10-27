@@ -34,6 +34,16 @@ function money(value: number) {
   });
 }
 
+/** Data de hoje no fuso do negócio (dado real, não uma afirmação de status). */
+function todayLabel() {
+  return new Date().toLocaleDateString("pt-BR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    timeZone: "America/Sao_Paulo",
+  });
+}
+
 function firstName(fullName?: string | null) {
   return fullName?.trim().split(" ")[0] ?? "";
 }
@@ -57,8 +67,8 @@ function ProgressStep({
         {done ? <CheckCircle2 className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-xs font-medium text-foreground">{label}</span>
-        <span className="mt-0.5 block text-[10px] text-muted-foreground">
+        <span className="block truncate text-sm font-medium text-foreground">{label}</span>
+        <span className="mt-0.5 block text-xs text-muted-foreground">
           {done ? "Concluído" : "Próximo passo"}
         </span>
       </span>
@@ -97,13 +107,15 @@ export default async function DashboardPage() {
     saleStats.completedCount > 0,
   ].filter(Boolean).length;
 
+  const setupDone = completedSetup === 3;
+
   const attentionCount =
     productStats.lowStock + productStats.outOfStock + (customerStats.total === 0 ? 1 : 0);
 
   return (
     <div className="prime-dashboard mx-auto flex max-w-[1440px] flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
       <section className="prime-dashboard-hero">
-        <div>
+        <div className="min-w-0">
           <span className="prime-dashboard-eyebrow">
             <Sparkles className="h-3.5 w-3.5" />
             Visão operacional
@@ -114,10 +126,11 @@ export default async function DashboardPage() {
           <p className="mt-1.5 text-sm text-muted-foreground">
             O que está acontecendo na {company.name} hoje.
           </p>
+          <p className="mt-1 text-xs text-muted-foreground first-letter:uppercase">{todayLabel()}</p>
         </div>
-        <div className="prime-dashboard-status">
-          <span className="prime-live-dot" aria-hidden="true" />
-          Operação online
+        {/* Atalhos no topo (antes ficavam num painel solto no meio da página). */}
+        <div className="prime-dashboard-actions" aria-label="Atalhos">
+          <QuickActions businessType={company.business_type} />
         </div>
       </section>
 
@@ -126,7 +139,7 @@ export default async function DashboardPage() {
           <h2 id="dashboard-kpis" className="prime-dashboard-section-title">
             Hoje e este mês
           </h2>
-          <span className="text-[10px] text-muted-foreground">Dados reais da empresa</span>
+          <span className="text-xs text-muted-foreground">Dados reais da empresa</span>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -161,7 +174,7 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(320px,.9fr)]">
+      <section className={setupDone ? "grid gap-4" : "grid gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(320px,.9fr)]"}>
         <div className="prime-dashboard-panel">
           <div className="prime-panel-heading">
             <div>
@@ -202,6 +215,7 @@ export default async function DashboardPage() {
           </div>
         </div>
 
+        {!setupDone && (
         <div className="prime-dashboard-panel">
           <div className="prime-panel-heading">
             <div>
@@ -219,6 +233,7 @@ export default async function DashboardPage() {
             <ProgressStep done={saleStats.completedCount > 0} label={saleHints.newSaleLabel} href="/app/vendas/nova" />
           </div>
         </div>
+        )}
       </section>
 
       <section className="grid gap-4 lg:grid-cols-[minmax(0,1.65fr)_minmax(280px,.75fr)]">
@@ -230,15 +245,14 @@ export default async function DashboardPage() {
             </div>
             <Link href="/app/vendas" className="prime-panel-link">Ver vendas <ArrowRight className="h-3.5 w-3.5" /></Link>
           </div>
-          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <div className="prime-mini-stat"><span>Vendas</span><strong>{saleStats.totalInPeriod}</strong></div>
-            <div className="prime-mini-stat"><span>Faturamento</span><strong>{money(saleStats.revenue)}</strong></div>
+          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <div className="prime-mini-stat"><span>Concluídas</span><strong>{saleStats.completedCount}</strong></div>
             <div className="prime-mini-stat"><span>Ticket médio</span><strong>{saleStats.averageTicket === null ? "—" : money(saleStats.averageTicket)}</strong></div>
             <div className="prime-mini-stat"><span>Canceladas</span><strong>{saleStats.cancelledCount}</strong></div>
           </div>
           <div className="prime-no-chart">
             <Activity className="h-4 w-4" />
-            <span>O gráfico histórico entra quando houver dados suficientes para uma leitura útil.</span>
+            <span>Ainda não há gráfico histórico de vendas; os números acima são do mês corrente.</span>
           </div>
         </div>
 
@@ -257,19 +271,7 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      <section className="prime-dashboard-panel">
-        <div className="prime-panel-heading">
-          <div>
-            <p className="prime-panel-eyebrow">Atalhos</p>
-            <h2>Faça mais rápido</h2>
-          </div>
-        </div>
-        <div className="mt-4">
-          <QuickActions businessType={company.business_type} />
-        </div>
-      </section>
-
-      <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+      <section className="grid gap-4">
         <div className="prime-dashboard-panel">
           <div className="prime-panel-heading">
             <div><p className="prime-panel-eyebrow">Clientes</p><h2>Mais recentes</h2></div>
@@ -291,15 +293,6 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        <div className="prime-dashboard-panel">
-          <div className="prime-panel-heading">
-            <div><p className="prime-panel-eyebrow">Atividade</p><h2>Histórico recente</h2></div>
-          </div>
-          <div className="prime-inline-empty mt-3">
-            <Activity className="h-5 w-5" />
-            <span><strong>Ainda sem linha do tempo</strong><small>O sistema já preserva os dados das operações; a timeline unificada será adicionada numa próxima etapa.</small></span>
-          </div>
-        </div>
       </section>
     </div>
   );

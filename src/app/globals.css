@@ -3271,3 +3271,53 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* =========================================================
+   Onda 3 — Dashboard do cliente: legibilidade e hierarquia.
+   Escopo `.prime-dashboard` (só /app). O dashboard usava 9–11 px em quase todo o texto de apoio (medido no CSS);
+   aqui os mínimos sobem para 12 px, os números dos KPIs ganham destaque e os atalhos passam a viver no topo.
+   Padrão de referência: cabeçalho de página com ações + cartões de KPI do dashboard do ShadcnStore.
+   ========================================================= */
+@layer components {
+  .prime-dashboard .prime-dashboard-eyebrow { font-size: 11px; }
+  .prime-dashboard .prime-dashboard-section-title { font-size: 12px; }
+  .prime-dashboard .prime-panel-eyebrow { font-size: 11px; }
+  .prime-dashboard .prime-panel-heading h2 { font-size: 16px; }
+  .prime-dashboard .prime-panel-link { font-size: 12px; }
+
+  .prime-dashboard .prime-dashboard-hero { align-items: flex-start; flex-wrap: wrap; gap: 20px 32px; }
+  .prime-dashboard .prime-dashboard-actions { flex: 1 1 360px; max-width: 760px; }
+  .prime-dashboard .prime-dashboard-actions > div { justify-content: flex-end; gap: 8px; }
+  .prime-dashboard .prime-dashboard-actions a,
+  .prime-dashboard .prime-dashboard-actions span[aria-disabled] { min-width: 0; flex: 0 1 auto; padding: 8px 12px; }
+
+  .prime-dashboard .prime-kpi-card { min-height: 140px; padding: 18px; }
+  .prime-dashboard .prime-kpi-card p { font-size: 13px; }
+  .prime-dashboard .prime-kpi-card strong { font-size: 30px; letter-spacing: -.02em; }
+  .prime-dashboard .prime-kpi-card > span { font-size: 12px; }
+
+  .prime-dashboard .prime-attention-item small,
+  .prime-dashboard .prime-attention-empty small { font-size: 12px; }
+  .prime-dashboard .prime-attention-item strong,
+  .prime-dashboard .prime-attention-empty strong { font-size: 14px; }
+
+  .prime-dashboard .prime-mini-stat { padding: 14px; }
+  .prime-dashboard .prime-mini-stat span { font-size: 12px; }
+  .prime-dashboard .prime-mini-stat strong { font-size: 20px; }
+  .prime-dashboard .prime-no-chart { font-size: 12px; }
+
+  .prime-dashboard .prime-health-row { font-size: 14px; }
+  .prime-dashboard .prime-health-row strong { font-size: 14px; }
+  .prime-dashboard .prime-customer-avatar { font-size: 12px; }
+  .prime-dashboard .prime-customer-row strong { font-size: 14px; }
+  .prime-dashboard .prime-customer-row small { font-size: 12px; }
+  .prime-dashboard .prime-inline-empty strong { font-size: 14px; }
+  .prime-dashboard .prime-inline-empty small { font-size: 12px; }
+
+  @media (max-width: 640px) {
+    .prime-dashboard .prime-dashboard-actions { flex-basis: 100%; }
+    .prime-dashboard .prime-dashboard-actions > div { justify-content: flex-start; }
+    .prime-dashboard .prime-kpi-card { min-height: 128px; }
+    .prime-dashboard .prime-kpi-card strong { font-size: 26px; }
+  }
+}

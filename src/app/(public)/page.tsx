@@ -69,7 +69,7 @@ const STRUCTURED_DATA = buildStructuredData({
   featureNames: AVAILABLE_FEATURE_NAMES,
 });
 const SECTION = "py-16 sm:py-24";
-const iconTile = "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary";
+const iconTile = "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/20";
 
 function enter(delayMs: number): CSSProperties {
   return { "--enter-delay": delayMs + "ms" } as CSSProperties;
@@ -162,7 +162,7 @@ export default async function HomePage() {
         </section>
 
         {/* CREDIBILIDADE REAL — só fatos verificáveis do produto */}
-        <section aria-labelledby="credibilidade-title" className="border-y border-border bg-card/30 py-10">
+        <section aria-labelledby="credibilidade-title" className="border-y border-border home-v3-band py-10">
           <div className="container">
             <h2 id="credibilidade-title" className="sr-only">
               Como o Prime Ges funciona por baixo
@@ -185,34 +185,41 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {/* PROBLEMA */}
+        {/* PROBLEMA — título à esquerda (fixo ao rolar no desktop) e os três pontos empilhados à direita */}
         <section id="problema" className={SECTION} aria-labelledby="problema-title">
           <div className="container">
-            <Reveal>
-              <SectionHeading
-                eyebrow="O problema"
-                title={<span id="problema-title">Administrar sem um lugar único toma tempo e esconde o que importa.</span>}
-                description="Quando cada informação mora num lugar, o dia a dia vira busca, retrabalho e decisão no escuro."
-              />
-            </Reveal>
-            <div className="mt-10 grid gap-4 md:grid-cols-3">
-              {PROBLEMS.map((problem, index) => (
-                <Reveal key={problem.title} delay={index * 60}>
-                  <Card className="h-full p-6">
-                    <span className={iconTile}>
-                      <problem.icon size={18} aria-hidden="true" />
-                    </span>
-                    <h3 className="mt-4 text-base font-semibold text-foreground">{problem.title}</h3>
-                    <p className="mt-2 text-sm leading-6 text-muted-foreground">{problem.description}</p>
-                  </Card>
-                </Reveal>
-              ))}
+            <div className="grid gap-10 lg:grid-cols-[minmax(0,.9fr)_minmax(0,1.1fr)] lg:gap-16">
+              <Reveal className="lg:sticky lg:top-28 lg:self-start">
+                <SectionHeading
+                  align="left"
+                  eyebrow="O problema"
+                  title={<span id="problema-title">Administrar sem um lugar único toma tempo e esconde o que importa.</span>}
+                  description="Quando cada informação mora num lugar, o dia a dia vira busca, retrabalho e decisão no escuro."
+                />
+              </Reveal>
+              <ul className="flex flex-col gap-4">
+                {PROBLEMS.map((problem, index) => (
+                  <li key={problem.title}>
+                    <Reveal delay={index * 60}>
+                      <Card className="prime-card flex gap-5 p-6">
+                        <span className={iconTile}>
+                          <problem.icon size={20} aria-hidden="true" />
+                        </span>
+                        <div className="min-w-0">
+                          <h3 className="text-lg font-semibold text-foreground">{problem.title}</h3>
+                          <p className="mt-2 text-sm leading-6 text-muted-foreground">{problem.description}</p>
+                        </div>
+                      </Card>
+                    </Reveal>
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
         </section>
 
         {/* SOLUÇÃO — bento com os módulos reais */}
-        <section id="recursos" className={cn(SECTION, "border-y border-border bg-card/30")} aria-labelledby="solucao-title">
+        <section id="recursos" className={cn(SECTION, "border-y border-border home-v3-band")} aria-labelledby="solucao-title">
           <div className="container">
             <Reveal>
               <SectionHeading
@@ -274,7 +281,7 @@ export default async function HomePage() {
         </section>
 
         {/* PARA QUEM É */}
-        <section id="segmentos" className={cn(SECTION, "border-y border-border bg-card/30")} aria-labelledby="segmentos-title">
+        <section id="segmentos" className={cn(SECTION, "border-y border-border home-v3-band")} aria-labelledby="segmentos-title">
           <div className="container">
             <Reveal>
               <SectionHeading
@@ -336,10 +343,13 @@ export default async function HomePage() {
                 <li key={step.number}>
                   <Reveal delay={index * 70} className="h-full">
                     <Card className="h-full p-6">
-                      <span className="text-sm font-semibold text-primary" aria-hidden="true">
+                      <span
+                        className="flex h-11 w-11 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-sm font-semibold text-primary-text"
+                        aria-hidden="true"
+                      >
                         {step.number}
                       </span>
-                      <h3 className="mt-2 text-lg font-semibold text-foreground">
+                      <h3 className="mt-4 text-lg font-semibold text-foreground">
                         <span className="sr-only">Passo {index + 1}: </span>
                         {step.title}
                       </h3>
@@ -353,7 +363,7 @@ export default async function HomePage() {
         </section>
 
         {/* DIFERENCIAIS REAIS */}
-        <section id="diferenciais" className={cn(SECTION, "border-y border-border bg-card/30")} aria-labelledby="dif-title">
+        <section id="diferenciais" className={cn(SECTION, "border-y border-border home-v3-band")} aria-labelledby="dif-title">
           <div className="container">
             <Reveal>
               <SectionHeading
@@ -465,15 +475,17 @@ export default async function HomePage() {
         </section>
 
         {/* FAQ */}
-        <section id="faq" className={cn(SECTION, "border-t border-border bg-card/30")} aria-labelledby="faq-title">
+        <section id="faq" className={cn(SECTION, "border-t border-border home-v3-band")} aria-labelledby="faq-title">
           <div className="container">
-            <Reveal>
+            <div className="grid gap-10 lg:grid-cols-[minmax(0,.8fr)_minmax(0,1.2fr)] lg:gap-16">
+            <Reveal className="lg:sticky lg:top-28 lg:self-start">
               <SectionHeading
+                align="left"
                 eyebrow="Perguntas frequentes"
                 title={<span id="faq-title">O que você precisa saber antes de começar.</span>}
               />
             </Reveal>
-            <Reveal delay={80} className="mx-auto mt-10 max-w-3xl">
+            <Reveal delay={80}>
               <Accordion type="single" collapsible className="w-full">
                 {faq.map((item, index) => (
                   <AccordionItem key={item.question} value={"faq-" + index}>
@@ -504,6 +516,7 @@ export default async function HomePage() {
                 .
               </p>
             </Reveal>
+            </div>
           </div>
         </section>
 
