@@ -2510,9 +2510,25 @@
 
 /* Prime Ges — compact navigation menu */
 @layer components {
+  /* Cabeçalho público fixo no topo; ao rolar ganha fundo translúcido e borda (classe --scrolled, já aplicada pelo
+     SiteHeader). O recuo `section[id] { scroll-margin-top }` acima compensa a altura dele nas âncoras. */
   .prime-site-header {
-    position: relative;
+    position: sticky;
+    top: 0;
     z-index: 100;
+    border-bottom: 1px solid transparent;
+    transition: background-color .2s ease, border-color .2s ease;
+  }
+
+  .prime-site-header--scrolled {
+    border-bottom-color: hsl(var(--border));
+    background: hsl(var(--background) / .85);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .prime-site-header { transition: none; }
   }
 
   .prime-menu-button {

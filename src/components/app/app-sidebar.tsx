@@ -107,7 +107,7 @@ export function AppSidebar({
                         asChild
                         isActive={isActive}
                         tooltip={item.label}
-                        className="text-sidebar-foreground/70 data-[active=true]:bg-primary/15 data-[active=true]:text-primary-text"
+                        className="relative text-sidebar-foreground/70 data-[active=true]:bg-primary/15 data-[active=true]:font-medium data-[active=true]:text-primary-text data-[active=true]:before:absolute data-[active=true]:before:inset-y-1.5 data-[active=true]:before:left-0 data-[active=true]:before:w-0.5 data-[active=true]:before:rounded-full data-[active=true]:before:bg-primary-text"
                       >
                         <Link
                           href={item.href}
