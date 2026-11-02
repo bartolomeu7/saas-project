@@ -152,7 +152,10 @@ describe("intenção de aceite do cadastro (cookie assinado)", () => {
     const [body, sig] = token.split(".");
     const forged = Buffer.from(JSON.stringify({ t: "9.9.9", p: VERSIONS.privacy, i: now, n: "x" })).toString("base64url");
     assert.equal(verifySignupIntent(SECRET, forged + "." + sig, now), null);
-    assert.equal(verifySignupIntent(SECRET, body + "." + sig.slice(0, -2) + "AA", now), null);
+    // A cauda adulterada precisa DIFERIR da original: com "AA" fixo, 1 em cada ~1000 assinaturas sorteadas já terminava
+    // em "AA", o token continuava válido e o teste falhava sem motivo (flaky).
+    const tamperedTail = sig.endsWith("AA") ? "BB" : "AA";
+    assert.equal(verifySignupIntent(SECRET, body + "." + sig.slice(0, -2) + tamperedTail, now), null);
     for (const junk of ["", "a.b.c", "abc", null, undefined, "." , "x."]) {
       assert.equal(verifySignupIntent(SECRET, junk, now), null, String(junk));
     }
