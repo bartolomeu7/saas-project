@@ -114,3 +114,34 @@ describe("Onda B2 — Home: Diferenciais, chamada final e rodapé", () => {
     assert.doesNotMatch(footer, /@clerk\//);
   });
 });
+
+describe("Onda C — login e cadastro: moldura nova, fluxo do Clerk e do aceite intactos", () => {
+  const card = read("src/components/shared/auth/auth-card.tsx");
+  const login = read("src/app/(public)/login/page.tsx");
+  const register = read("src/app/(public)/register/page.tsx");
+
+  it("a moldura não importa o Clerk (o escopo do Clerk fica nas páginas de login/cadastro)", () => {
+    assert.doesNotMatch(card, /@clerk\//);
+  });
+
+  it("o login mantém SignIn, redirecionamento seguro e aparência do Clerk", () => {
+    assert.match(login, /<SignIn/);
+    assert.match(login, /safeNextPath\(/);
+    assert.match(login, /appearance=\{clerkAppearance\}/);
+  });
+
+  it("o cadastro continua em duas etapas: aceite assinado no servidor antes do SignUp", () => {
+    assert.match(register, /verifySignupIntent\(/);
+    assert.match(register, /startSignupAction/);
+    assert.ok(register.indexOf("<ConsentForm") < register.indexOf("<SignUp"), "aceite vem antes do formulário do Clerk");
+    assert.match(register, /step=\{\{ current: 1, total: 2 \}\}/);
+    assert.match(register, /step=\{\{ current: 2, total: 2 \}\}/);
+  });
+
+  it("os selos do painel só repetem fatos já publicados na home", () => {
+    for (const fact of ["Pagamento por Pix", "Sem renovação automática", "Sem instalar nada"]) {
+      assert.ok(card.includes(fact), fact);
+      assert.ok(read("src/app/(public)/page.tsx").includes(fact) || read("src/config/marketing.ts").includes(fact), fact + " deve existir na home");
+    }
+  });
+});
