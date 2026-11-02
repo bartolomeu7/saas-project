@@ -13,6 +13,7 @@ import { CashMovementForm } from "@/components/app/cash-movement-form";
 import { CashMovementsTable } from "@/components/app/cash-movements-table";
 import { CashRegisterSummaryCards } from "@/components/app/cash-register-summary";
 import { formatDate } from "@/lib/format";
+import { PageHeader } from "@/components/app/page-header";
 
 export const metadata: Metadata = {
   title: "Caixa",
@@ -44,18 +45,17 @@ export default async function CashRegisterPage() {
 
     return (
       <div className="prime-module-page prime-module-page--caixa flex flex-col gap-6 px-4 py-6 sm:px-6">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Caixa</h1>
-          <p className="text-sm text-muted-foreground">Controle de abertura, movimentações e fechamento do caixa.</p>
-        </div>
+        <PageHeader title="Caixa" description="Controle de abertura, movimentações e fechamento do caixa." />
 
-        <div className="flex items-center gap-2 rounded-lg border border-border bg-card/60 px-4 py-3">
-          <Lock className="h-4 w-4 text-muted-foreground" strokeWidth={1.75} />
+        <div className="flex items-center gap-3 rounded-xl border border-border bg-card/60 px-4 py-3">
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-secondary text-muted-foreground">
+            <Lock className="h-4 w-4" strokeWidth={1.75} />
+          </span>
           <span className="text-sm font-medium text-foreground">Caixa fechado</span>
         </div>
 
         {lastClosed && (
-          <div className="rounded-lg border border-border bg-card/60 p-5">
+          <div className="rounded-xl border border-border bg-card/60 p-5">
             <h2 className="text-sm font-semibold text-muted-foreground">Último fechamento</h2>
             <dl className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-4">
               <div>
@@ -91,7 +91,7 @@ export default async function CashRegisterPage() {
           </div>
         )}
 
-        <div className="max-w-xl rounded-lg border border-border bg-card p-5">
+        <div className="max-w-xl rounded-xl border border-border bg-card p-5">
           <h2 className="text-sm font-semibold text-foreground">Abrir caixa</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Informe o saldo inicial em dinheiro para começar um novo turno.
@@ -114,17 +114,14 @@ export default async function CashRegisterPage() {
   const summary = summarizeCashMovements(Number(openRegister.opening_balance), movements);
 
   return (
-    <div className="flex flex-col gap-6 px-4 py-6 sm:px-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Caixa</h1>
-          <p className="text-sm text-muted-foreground">Controle de abertura, movimentações e fechamento do caixa.</p>
-        </div>
-      </div>
+    <div className="prime-module-page prime-module-page--caixa flex flex-col gap-6 px-4 py-6 sm:px-6">
+      <PageHeader title="Caixa" description="Controle de abertura, movimentações e fechamento do caixa." />
 
-      <div className="flex flex-col gap-1 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2">
-          <Unlock className="h-4 w-4 text-emerald-600 dark:text-emerald-400" strokeWidth={1.75} />
+      <div className="flex flex-col gap-1 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500/15">
+            <Unlock className="h-4 w-4 text-emerald-600 dark:text-emerald-400" strokeWidth={1.75} />
+          </span>
           <span className="text-sm font-medium text-emerald-700 dark:text-emerald-400">Caixa aberto</span>
         </div>
         <span className="text-xs text-muted-foreground">
@@ -135,7 +132,7 @@ export default async function CashRegisterPage() {
       <CashRegisterSummaryCards summary={summary} />
 
       {canOperate && (
-        <div className="rounded-lg border border-border bg-card p-5">
+        <div className="rounded-xl border border-border bg-card p-5">
           <h2 className="text-sm font-semibold text-foreground">Lançar movimentação</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Sangria, suprimento ou outra entrada/saída avulsa do caixa.
@@ -152,7 +149,7 @@ export default async function CashRegisterPage() {
       </div>
 
       {canOperate ? (
-        <div className="max-w-xl rounded-lg border border-border bg-card p-5">
+        <div className="max-w-xl rounded-xl border border-border bg-card p-5">
           <h2 className="text-sm font-semibold text-foreground">Fechar caixa</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Conte o dinheiro na gaveta e informe o valor para conferência.

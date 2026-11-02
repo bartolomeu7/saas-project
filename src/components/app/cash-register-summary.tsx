@@ -24,7 +24,7 @@ export function CashRegisterSummaryCards({ summary }: { summary: CashRegisterSum
         <StatCard label="Saldo esperado em espécie" value={formatMoney(summary.expectedCashBalance)} icon={Coins} />
       </div>
 
-      <div className="rounded-lg border border-border bg-card/60 p-4">
+      <div className="rounded-xl border border-border bg-card/60 p-4">
         <h3 className="text-sm font-semibold text-muted-foreground">Entradas por forma de pagamento</h3>
         <dl className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-5">
           {(Object.keys(SALE_PAYMENT_METHOD_LABELS) as Array<keyof typeof SALE_PAYMENT_METHOD_LABELS>).map(

@@ -1,4 +1,7 @@
+import { CircleDollarSign, Package, Scale, TrendingUp, Wallet } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { MetricCard } from "@/components/app/metric-card";
+import { PageHeader } from "@/components/app/page-header";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getCurrentCompany } from "@/lib/companies/queries";
@@ -37,11 +40,19 @@ const directionLabels = {
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
-function Kpi({ label, value, detail }: { label: string; value: string; detail?: string }) {
+function Kpi({ label, value, detail, icon = CircleDollarSign }: { label: string; value: string; detail?: string; icon?: LucideIcon }) {
   return (
-    <MetricCard label={label} value={value} detail={detail} />
+    <MetricCard label={label} value={value} detail={detail} icon={icon} />
   );
 }
+
+/** Situação da conta a pagar em português (o banco guarda o código em inglês). Código desconhecido aparece como está. */
+const PAYABLE_STATUS_LABELS: Record<string, string> = {
+  open: "Em aberto",
+  partial: "Pago parcialmente",
+  paid: "Pago",
+  cancelled: "Cancelado",
+};
 
 function NavTabs({ current }: { current: string }) {
   const tabs = [
@@ -53,10 +64,11 @@ function NavTabs({ current }: { current: string }) {
   ];
 
   return (
-    <div className="flex flex-wrap gap-2">
+    <nav aria-label="Seções do financeiro" className="flex flex-wrap gap-2">
       {tabs.map(([key, label]) => (
         <Link
           key={key}
+          aria-current={current === key ? "page" : undefined}
           href={key === "visao" ? "/app/financeiro" : "/app/financeiro?view=" + key}
           className={cn(
             buttonVariants({ variant: current === key ? "default" : "outline", size: "sm" })
@@ -65,7 +77,7 @@ function NavTabs({ current }: { current: string }) {
           {label}
         </Link>
       ))}
-    </div>
+    </nav>
   );
 }
 
@@ -78,16 +90,13 @@ function PageShell({
 }) {
   return (
     <div className="prime-module-page prime-module-page--financeiro flex flex-col gap-6 px-4 py-6 sm:px-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-[0.16em] text-primary">Financeiro</p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight">Visão financeira da empresa</h1>
-          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            Caixa, contas, resultado e lançamentos conectados às vendas e compras reais.
-          </p>
-        </div>
-        <NavTabs current={current} />
-      </div>
+      <PageHeader
+        eyebrow="Financeiro"
+        title="Visão financeira da empresa"
+        description="Caixa, contas, resultado e lançamentos conectados às vendas e compras reais."
+        className="lg:items-end"
+        actions={<NavTabs current={current} />}
+      />
       {children}
     </div>
   );
@@ -122,9 +131,9 @@ export default async function FinancePage({
           </div>
         )}
 
-        <div className="overflow-x-auto rounded-xl border bg-card">
+        <div className="overflow-x-auto rounded-xl border border-border bg-card/40">
           <Table className="w-full min-w-[900px] text-sm">
-            <TableHeader>
+            <TableHeader className="bg-secondary/60 text-[11px] uppercase tracking-wider">
               <TableRow className="border-b text-left text-muted-foreground">
                 <TableHead className="p-3">Descrição</TableHead>
                 <TableHead className="p-3">Fornecedor</TableHead>
@@ -141,7 +150,7 @@ export default async function FinancePage({
                   <TableRow key={payable.id} className="border-b align-top last:border-0 hover:bg-muted/30">
                     <TableCell className="p-3">
                       <div className="font-medium">{payable.description}</div>
-                      <div className="text-xs text-muted-foreground">{payable.status}</div>
+                      <div className="text-xs text-muted-foreground">{PAYABLE_STATUS_LABELS[payable.status] ?? payable.status}</div>
                     </TableCell>
                     <TableCell className="p-3">{(payable as typeof payable & { suppliers?: { name: string } | null }).suppliers?.name ?? "—"}</TableCell>
                     <TableCell className="p-3">{dateOnly(payable.due_date)}</TableCell>
@@ -180,9 +189,9 @@ export default async function FinancePage({
           </div>
         )}
 
-        <div className="overflow-x-auto rounded-xl border bg-card">
+        <div className="overflow-x-auto rounded-xl border border-border bg-card/40">
           <Table className="w-full min-w-[850px] text-sm">
-            <TableHeader>
+            <TableHeader className="bg-secondary/60 text-[11px] uppercase tracking-wider">
               <TableRow className="border-b text-left text-muted-foreground">
                 <TableHead className="p-3">Venda</TableHead>
                 <TableHead className="p-3">Cliente</TableHead>
@@ -223,7 +232,7 @@ export default async function FinancePage({
     return (
       <PageShell current="lancamentos">
         <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-          <div className="rounded-xl border bg-card p-5">
+          <div className="rounded-xl border border-border bg-card/40 p-5">
             <h2 className="text-base font-semibold">Novo lançamento</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               Use para receitas/despesas que não passam por vendas ou compras.
@@ -235,10 +244,10 @@ export default async function FinancePage({
             )}
           </div>
 
-          <div className="overflow-x-auto rounded-xl border bg-card">
+          <div className="overflow-x-auto rounded-xl border border-border bg-card/40">
             <div className="border-b p-4"><h2 className="font-semibold">Últimos lançamentos</h2></div>
             <Table className="w-full text-sm">
-              <TableHeader><TableRow className="border-b text-left text-muted-foreground"><TableHead className="p-3">Data</TableHead><TableHead className="p-3">Descrição</TableHead><TableHead className="p-3">Tipo</TableHead><TableHead className="p-3 text-right">Valor</TableHead></TableRow></TableHeader>
+              <TableHeader className="bg-secondary/60 text-[11px] uppercase tracking-wider"><TableRow className="border-b text-left text-muted-foreground"><TableHead className="p-3">Data</TableHead><TableHead className="p-3">Descrição</TableHead><TableHead className="p-3">Tipo</TableHead><TableHead className="p-3 text-right">Valor</TableHead></TableRow></TableHeader>
               <TableBody>
                 {entries.map((entry) => (
                   <TableRow key={entry.id} className="border-b last:border-0">
@@ -262,7 +271,7 @@ export default async function FinancePage({
     return (
       <PageShell current="estrutura">
         <div className="grid gap-6 lg:grid-cols-2">
-          <div className="rounded-xl border bg-card p-5">
+          <div className="rounded-xl border border-border bg-card/40 p-5">
             <h2 className="text-base font-semibold">Categorias financeiras</h2>
             <div className="mt-4 grid gap-2">
               {categories.map((category) => (
@@ -275,7 +284,7 @@ export default async function FinancePage({
             {canOperate && <FinancialCategoryForm />}
           </div>
 
-          <div className="rounded-xl border bg-card p-5">
+          <div className="rounded-xl border border-border bg-card/40 p-5">
             <h2 className="text-base font-semibold">Centros de custo</h2>
             <div className="mt-4 grid gap-2">
               {costCenters.map((center) => (
@@ -292,15 +301,15 @@ export default async function FinancePage({
   return (
     <PageShell current="visao">
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        <Kpi label="Faturamento" value={money(dashboard.revenue)} detail="vendas concluídas no mês" />
-        <Kpi label="Custo dos produtos" value={money(dashboard.costOfGoods)} detail="CMV estimado pelas vendas" />
-        <Kpi label="Resultado" value={money(dashboard.netResult)} detail="após despesas operacionais" />
-        <Kpi label="Caixa do período" value={money(dashboard.cashNet)} detail={money(dashboard.cashIn) + " entrada • " + money(dashboard.cashOut) + " saída"} />
-        <Kpi label="Saldo financeiro" value={money(dashboard.accountsReceivable - dashboard.accountsPayable)} detail="a receber − a pagar" />
+        <Kpi label="Faturamento" value={money(dashboard.revenue)} detail="vendas concluídas no mês" icon={CircleDollarSign} />
+        <Kpi label="Custo dos produtos" value={money(dashboard.costOfGoods)} detail="CMV estimado pelas vendas" icon={Package} />
+        <Kpi label="Resultado" value={money(dashboard.netResult)} detail="após despesas operacionais" icon={TrendingUp} />
+        <Kpi icon={Wallet} label="Caixa do período" value={money(dashboard.cashNet)} detail={money(dashboard.cashIn) + " entrada • " + money(dashboard.cashOut) + " saída"} />
+        <Kpi label="Saldo financeiro" value={money(dashboard.accountsReceivable - dashboard.accountsPayable)} detail="a receber − a pagar" icon={Scale} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-        <section className="rounded-xl border bg-card p-5">
+        <section className="rounded-xl border border-border bg-card/40 p-5">
           <div className="flex items-center justify-between gap-4">
             <div>
               <h2 className="font-semibold">DRE simplificada</h2>
@@ -319,7 +328,7 @@ export default async function FinancePage({
           </div>
         </section>
 
-        <section className="rounded-xl border bg-card p-5">
+        <section className="rounded-xl border border-border bg-card/40 p-5">
           <h2 className="font-semibold">Obrigações</h2>
           <div className="mt-4 grid gap-3">
             <Link href="/app/financeiro?view=pagar" className="rounded-lg border p-4 transition hover:-translate-y-0.5 hover:bg-muted/30">
@@ -334,14 +343,14 @@ export default async function FinancePage({
         </section>
       </div>
 
-      <section className="rounded-xl border bg-card">
+      <section className="rounded-xl border border-border bg-card/40">
         <div className="flex items-center justify-between border-b px-5 py-4">
           <div><h2 className="font-semibold">Últimos movimentos financeiros</h2><p className="text-sm text-muted-foreground">Recebimentos de vendas e lançamentos registrados.</p></div>
           <Link href="/app/financeiro?view=lancamentos" className="text-sm font-medium text-primary hover:underline">Ver lançamentos</Link>
         </div>
         <div className="overflow-x-auto">
           <Table className="w-full min-w-[680px] text-sm">
-            <TableHeader><TableRow className="border-b text-left text-muted-foreground"><TableHead className="p-3">Data</TableHead><TableHead className="p-3">Descrição</TableHead><TableHead className="p-3">Forma</TableHead><TableHead className="p-3 text-right">Valor</TableHead></TableRow></TableHeader>
+            <TableHeader className="bg-secondary/60 text-[11px] uppercase tracking-wider"><TableRow className="border-b text-left text-muted-foreground"><TableHead className="p-3">Data</TableHead><TableHead className="p-3">Descrição</TableHead><TableHead className="p-3">Forma</TableHead><TableHead className="p-3 text-right">Valor</TableHead></TableRow></TableHeader>
             <TableBody>
               {entries.slice(0, 8).map((entry) => (
                 <TableRow key={entry.id} className="border-b last:border-0 hover:bg-muted/30">
