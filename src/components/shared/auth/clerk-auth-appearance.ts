@@ -43,8 +43,10 @@ export const clerkAppearance = {
     cardBox: { width: "100%", maxWidth: "100%", border: 0, background: "transparent", boxShadow: "none", overflow: "visible" },
     card: { width: "100%", maxWidth: "100%", margin: 0, border: 0, background: "transparent", padding: 0, boxShadow: "none" },
     header: "hidden",
+    // `!important`: sem ele a regra do próprio Clerk (maior especificidade) vence e o anel grosso de 4 px continua
+    // em produção (verificado em 02/11/2026 após o PR #46).
     formFieldInput: {
-      "&:focus": { boxShadow: "0 0 0 1px #168BFF, 0 0 0 3px rgba(22, 139, 255, 0.25)" },
+      "&:focus": { boxShadow: "0 0 0 1px #168BFF, 0 0 0 3px rgba(22, 139, 255, 0.25) !important" },
     },
     footer: { background: "transparent" },
     // O link do rodapé ("Registre-se"/"Entrar") fica no fundo --secondary a 13 px: o azul

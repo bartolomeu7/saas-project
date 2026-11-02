@@ -46,6 +46,13 @@ const COLUMNS: FooterColumn[] = [
   },
 ];
 
+/**
+ * Identificação da versão publicada: os 7 primeiros caracteres do commit do deploy (variável de sistema da
+ * Vercel). Serve para saber, em qualquer aparelho, qual versão está sendo vista. Fora da Vercel (ou com a
+ * variável desligada) nada é exibido.
+ */
+const BUILD_SHA = process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7);
+
 export function SiteFooter() {
   return (
     <footer className="border-t border-border">
@@ -81,6 +88,12 @@ export function SiteFooter() {
 
         <p className="text-xs text-muted-foreground">
           © {new Date().getFullYear()} {siteConfig.name}
+          {BUILD_SHA && (
+            <span data-build-sha={BUILD_SHA}>
+              {" · versão "}
+              {BUILD_SHA}
+            </span>
+          )}
         </p>
       </div>
     </footer>
