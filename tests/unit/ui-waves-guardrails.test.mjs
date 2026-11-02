@@ -284,3 +284,45 @@ describe("Onda E (lote 2): Produtos, Serviços e Vendas no mesmo padrão, mesma 
     assert.match(table, /sale\.status !== "completed"/);
   });
 });
+
+describe("Onda E (lote 3): Estoque, Compras e Fornecedores, mesma funcionalidade", () => {
+  const stock = read("src/app/(app)/app/estoque/page.tsx");
+  const purchases = read("src/app/(app)/app/compras/page.tsx");
+  const suppliers = read("src/app/(app)/app/fornecedores/page.tsx");
+
+  it("Estoque mantém a mesma consulta e as mesmas regras de nível de estoque", () => {
+    assert.match(stock, /listProducts\(\{ companyId: current\.company\.id, status: "active", pageSize: 1000, sortBy: "stock", sortDirection: "asc" \}\)/);
+    assert.match(stock, /getStockLevel\(p\) === "out"/);
+    assert.match(stock, /getStockLevel\(p\) === "low"/);
+    assert.match(stock, /\/app\/compras/);
+  });
+
+  it("Compras mantém as consultas, o link do pedido e dá cor a todos os status do pedido", () => {
+    assert.match(purchases, /getPurchaseStats\(current\.company\.id\)/);
+    assert.match(purchases, /listPurchaseOrders\(current\.company\.id\)/);
+    assert.match(purchases, /"\/app\/compras\/" \+ order\.id/);
+    for (const status of ["draft", "ordered", "partially_received", "received", "cancelled"]) {
+      assert.match(purchases, new RegExp(`${status}: "`), status);
+    }
+    assert.match(purchases, /hidden px-4 py-3 [^"]*md:table-cell/);
+    assert.match(purchases, /sm:min-w-\[/);
+    assert.doesNotMatch(purchases, /"w-full min-w-\[/);
+  });
+
+  it("Fornecedores mantém busca por GET (?q), as mesmas consultas e o link do fornecedor", () => {
+    assert.match(suppliers, /getSupplierStats\(current\.company\.id\)/);
+    assert.match(suppliers, /listSuppliers\(current\.company\.id, searchParams\?\.q\)/);
+    assert.match(suppliers, /name="q"/);
+    assert.match(suppliers, /\/app\/fornecedores\/\$\{s\.id\}/);
+    assert.match(suppliers, /aria-label="Buscar fornecedores"/);
+  });
+
+  it("os três módulos têm esqueleto de carregamento e nenhum acessa banco direto na apresentação", () => {
+    for (const dir of ["estoque", "compras", "fornecedores"]) {
+      assert.match(read(`src/app/(app)/app/${dir}/loading.tsx`), /ListLoading/);
+    }
+    for (const source of [stock, purchases, suppliers]) {
+      assert.doesNotMatch(source, /@\/lib\/supabase|@clerk\//);
+    }
+  });
+});
