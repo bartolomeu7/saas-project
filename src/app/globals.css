@@ -3321,3 +3321,34 @@
     .prime-dashboard .prime-kpi-card strong { font-size: 26px; }
   }
 }
+
+/* Onda D1 (novo visual): casca da área logada — barra lateral, cabeçalho e fundo. Só apresentação. */
+.prime-app-sidebar [data-sidebar="sidebar"] {
+  background:
+    linear-gradient(180deg, hsl(var(--primary) / 0.07), transparent 220px),
+    hsl(var(--sidebar-background));
+}
+
+.prime-app-sidebar__brand {
+  background: linear-gradient(135deg, hsl(var(--primary) / 0.1), transparent 70%);
+}
+
+.prime-app-nav-item {
+  border-radius: 10px;
+}
+
+.prime-app-header {
+  box-shadow: 0 1px 0 hsl(var(--primary) / 0.12), 0 10px 24px -22px hsl(var(--primary) / 0.55);
+}
+
+.prime-app-header__avatar {
+  color: hsl(var(--primary-foreground));
+  background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.6));
+  box-shadow: 0 8px 18px -10px hsl(var(--primary) / 0.8);
+}
+
+.prime-app-main {
+  background:
+    radial-gradient(900px 320px at 85% -80px, hsl(var(--primary) / 0.09), transparent 62%),
+    hsl(var(--background));
+}
