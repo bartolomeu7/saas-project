@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { Logo } from "@/components/shared/logo";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { siteConfig } from "@/config/site";
 
 interface FooterLink {
@@ -55,16 +57,22 @@ const BUILD_SHA = process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7);
 
 export function SiteFooter() {
   return (
-    <footer className="border-t border-border">
-      <div className="container flex flex-col gap-10 py-12">
-        <div className="grid grid-cols-2 gap-8 sm:grid-cols-4">
-          <div className="col-span-2 flex flex-col gap-3 sm:col-span-1">
+    <footer className="home-v4-footer">
+      <div className="container flex flex-col gap-10 py-12 sm:py-14">
+        <div className="grid grid-cols-2 gap-8 sm:grid-cols-3 lg:grid-cols-[1.6fr_1fr_1fr_1fr]">
+          <div className="col-span-2 flex flex-col gap-4 sm:col-span-3 lg:col-span-1">
             <span className="inline-flex items-center gap-2 font-semibold tracking-tight text-foreground">
               <Logo iconSize={22} />
             </span>
-            <p className="max-w-[220px] text-sm text-muted-foreground">
-              Gestão simples para pequenas empresas.
+            <p className="max-w-[300px] text-sm leading-6 text-muted-foreground">
+              Gestão simples para pequenas empresas: vendas, caixa, estoque e financeiro no mesmo lugar.
             </p>
+            <Link
+              href={siteConfig.links.register}
+              className={cn(buttonVariants({ size: "sm" }), "w-fit")}
+            >
+              Criar conta
+            </Link>
           </div>
 
           {COLUMNS.map((column) => (
@@ -86,7 +94,7 @@ export function SiteFooter() {
           ))}
         </div>
 
-        <p className="text-xs text-muted-foreground">
+        <p className="border-t border-border pt-6 text-xs text-muted-foreground">
           © {new Date().getFullYear()} {siteConfig.name}
           {BUILD_SHA && (
             <span data-build-sha={BUILD_SHA}>
