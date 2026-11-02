@@ -32,7 +32,7 @@ export function Header({ company }: { company: Company }) {
   const crumbs = buildAppBreadcrumbs(pathname, NAV_MODULES);
 
   return (
-    <header className="sticky top-0 z-20 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+    <header className="prime-app-header sticky top-0 z-20 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
       <div className="flex h-16 items-center justify-between gap-3 px-4 sm:px-6">
         <div className="flex min-w-0 items-center gap-3">
           <SidebarTrigger
@@ -40,13 +40,21 @@ export function Header({ company }: { company: Company }) {
             aria-label="Abrir ou recolher o menu"
           />
           <Separator orientation="vertical" className="hidden h-6 sm:block" />
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-foreground">
-              {company.name}
-            </p>
-            <p className="truncate text-xs text-muted-foreground">
-              {BUSINESS_TYPE_LABELS[company.business_type]}
-            </p>
+          <div className="flex min-w-0 items-center gap-2.5">
+            <span
+              className="prime-app-header__avatar hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sm font-semibold sm:flex"
+              aria-hidden="true"
+            >
+              {company.name.trim().slice(0, 1).toUpperCase()}
+            </span>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-foreground">
+                {company.name}
+              </p>
+              <p className="truncate text-xs text-muted-foreground">
+                {BUSINESS_TYPE_LABELS[company.business_type]}
+              </p>
+            </div>
           </div>
           {crumbs.length > 0 && (
             <>

@@ -39,7 +39,7 @@ export function AppShell({
         </a>
         <AppSidebar userName={userName} userEmail={userEmail} />
         {/* SidebarInset já renderiza o landmark <main>; o alvo do skip link é um <div>. */}
-        <SidebarInset className="min-w-0 bg-background">
+        <SidebarInset className="prime-app-main min-w-0 bg-background">
           <Header company={company} />
           <div id="conteudo-principal" className="flex-1" tabIndex={-1}>
             {children}

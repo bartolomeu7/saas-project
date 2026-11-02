@@ -145,3 +145,34 @@ describe("Onda C — login e cadastro: moldura nova, fluxo do Clerk e do aceite 
     }
   });
 });
+
+describe("Onda D1 — casca da área logada: só apresentação", () => {
+  const sidebar = read("src/components/app/app-sidebar.tsx");
+  const header = read("src/components/app/header.tsx");
+  const shell = read("src/components/app/app-shell.tsx");
+
+  it("mantém navegação por grupos, estado ativo acessível e menu do usuário", () => {
+    assert.match(sidebar, /NAV_GROUPS\.map/);
+    assert.match(sidebar, /aria-current=\{isActive \? "page" : undefined\}/);
+    assert.match(sidebar, /<UserMenu/);
+    assert.match(sidebar, /aria-label="Navegação principal"/);
+  });
+
+  it("o cabeçalho continua com breadcrumb, busca rápida e notificações", () => {
+    assert.match(header, /buildAppBreadcrumbs\(/);
+    assert.match(header, /<CommandMenu/);
+    assert.match(header, /<NotificationButton/);
+    assert.match(header, /Localização na área da empresa/);
+  });
+
+  it("a casca mantém o skip link e o container do conteúdo", () => {
+    assert.match(shell, /Pular para o conteúdo/);
+    assert.match(shell, /id="conteudo-principal"/);
+  });
+
+  it("a casca não importa Clerk nem Supabase (apresentação apenas)", () => {
+    for (const source of [sidebar, header, shell]) {
+      assert.doesNotMatch(source, /@clerk\/|@\/lib\/supabase/);
+    }
+  });
+});
