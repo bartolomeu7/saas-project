@@ -72,3 +72,21 @@ describe("licença e verificação pós-deploy (regras fixas 5 e 7)", () => {
     assert.match(read("src/components/marketing/site-footer.tsx"), /data-build-sha=\{BUILD_SHA\}/);
   });
 });
+
+describe("Onda B1 — Home: Funcionalidades e Segmentos sem conteúdo inventado", () => {
+  const home = read("src/app/(public)/page.tsx");
+
+  it("os cartões só mostram módulos disponíveis (nunca 'em breve' como pronto)", () => {
+    assert.match(home, /FEATURES\.filter\(\(feature\) => feature\.available\)\.map\(\(feature\) => \[feature\.name, feature\]\)/);
+    assert.match(home, /FEATURE_BY_NAME\.get\(name\)/);
+  });
+
+  it("não há depoimentos, logos de clientes nem números de uso na home (D6)", () => {
+    assert.doesNotMatch(home, /depoimento|testimonial|nossos clientes|clientes atendidos|\+\s?\d+\s?(mil\s)?(empresas|usuários)/i);
+  });
+
+  it("o rótulo dos segmentos não afirma estatística de uso", () => {
+    assert.match(home, /Módulos indicados/);
+    assert.doesNotMatch(home, /mais usados/i);
+  });
+});
