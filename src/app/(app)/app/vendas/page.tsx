@@ -12,6 +12,7 @@ import { SaleFilters } from "@/components/app/sale-filters";
 import { SaleStats } from "@/components/app/sale-stats";
 import { SaleTable } from "@/components/app/sale-table";
 import { EmptyState } from "@/components/app/empty-state";
+import { ListSummary, ListToolbar } from "@/components/app/list-toolbar";
 import { Pagination } from "@/components/app/pagination";
 import type { SaleStatus, SalePaymentStatus } from "@/types/sale";
 import type { SalePeriod } from "@/lib/sales/queries";
@@ -103,10 +104,10 @@ export default async function SalesPage({
         <>
           <SaleStats stats={stats} />
 
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <ListToolbar className="sm:flex-col sm:items-stretch">
             <SaleSearch />
             <SaleFilters />
-          </div>
+          </ListToolbar>
 
           {result.sales.length === 0 ? (
             <p className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
@@ -114,6 +115,7 @@ export default async function SalesPage({
             </p>
           ) : (
             <>
+              <ListSummary page={result.page} pageSize={result.pageSize} total={result.total} itemLabel="venda" itemLabelPlural="vendas" />
               <SaleTable
                 sales={result.sales}
                 currentRole={current.role}
