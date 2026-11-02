@@ -10,7 +10,13 @@ const FILTERS: { label: string; value: "all" | "active" | "inactive" }[] = [
   { label: "Inativos", value: "inactive" },
 ];
 
-export function CustomerFilters() {
+export interface CustomerFilterCounts {
+  all: number;
+  active: number;
+  inactive: number;
+}
+
+export function CustomerFilters({ counts }: { counts?: CustomerFilterCounts }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -34,20 +40,26 @@ export function CustomerFilters() {
 
   return (
     <div className="flex items-center gap-2">
-      <div className="inline-flex max-w-full flex-wrap rounded-md border border-border p-1">
+      <div className="inline-flex max-w-full flex-wrap rounded-lg border border-border bg-background/40 p-1">
         {FILTERS.map((filter) => (
           <button
             key={filter.value}
             type="button"
             onClick={() => setStatus(filter.value)}
+            aria-pressed={current === filter.value}
             className={cn(
-              "rounded px-3 py-1.5 text-sm font-medium transition-colors",
+              "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
               current === filter.value
-                ? "bg-secondary text-secondary-foreground"
+                ? "bg-primary/15 text-primary-text shadow-sm"
                 : "text-muted-foreground hover:text-foreground"
             )}
           >
             {filter.label}
+            {counts && (
+              <span className="ml-1.5 rounded-full bg-background/60 px-1.5 py-0.5 text-[11px] tabular-nums text-muted-foreground">
+                {counts[filter.value]}
+              </span>
+            )}
           </button>
         ))}
       </div>

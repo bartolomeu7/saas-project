@@ -10,6 +10,7 @@ import { CustomerFilters } from "@/components/app/customer-filters";
 import { CustomerStats } from "@/components/app/customer-stats";
 import { CustomerTable } from "@/components/app/customer-table";
 import { EmptyState } from "@/components/app/empty-state";
+import { ListSummary, ListToolbar } from "@/components/app/list-toolbar";
 import { Pagination } from "@/components/app/pagination";
 import type { CustomerStatus } from "@/types/customer";
 
@@ -78,10 +79,12 @@ export default async function CustomersPage({
         <>
           <CustomerStats stats={stats} />
 
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <ListToolbar>
             <CustomerSearch />
-            <CustomerFilters />
-          </div>
+            <CustomerFilters
+              counts={{ all: stats.total, active: stats.active, inactive: Math.max(0, stats.total - stats.active) }}
+            />
+          </ListToolbar>
 
           {result.customers.length === 0 ? (
             <p className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
@@ -89,6 +92,7 @@ export default async function CustomersPage({
             </p>
           ) : (
             <>
+              <ListSummary page={result.page} pageSize={result.pageSize} total={result.total} />
               <CustomerTable customers={result.customers} />
               <Pagination
                 page={result.page}
