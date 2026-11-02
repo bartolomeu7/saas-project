@@ -206,7 +206,7 @@ describe("Onda E (piloto Clientes): visual novo, mesma funcionalidade", () => {
     assert.match(filters, /params\.set\("status", value\)/);
     assert.match(search, /params\.set\("q", value\)/);
     assert.match(filters, /aria-pressed=/);
-    assert.match(search, /aria-label="Buscar clientes"/);
+    assert.match(search, /aria-label="Buscar clientes por nome, telefone, e-mail ou documento"/);
   });
 
   it("os componentes novos não acessam banco nem dependências novas", () => {
@@ -219,5 +219,21 @@ describe("Onda E (piloto Clientes): visual novo, mesma funcionalidade", () => {
     const loading = read("src/app/(app)/app/clientes/loading.tsx");
     assert.match(loading, /aria-busy="true"/);
     assert.match(loading, /role="status"/);
+  });
+});
+
+describe("Clientes no celular: as ações precisam estar acessíveis sem rolar para o lado", () => {
+  const table = read("src/components/app/customer-table.tsx");
+
+  it("há um bloco de ações visível só no celular (sm:hidden) e outro na coluna Ações (hidden sm:table-cell)", () => {
+    assert.match(table, /sm:hidden/);
+    assert.match(table, /hidden px-4 py-3 sm:table-cell/);
+    assert.equal((table.match(/<DeactivateCustomerButton/g) ?? []).length, 2);
+    assert.equal((table.match(/<ReactivateCustomerButton/g) ?? []).length, 2);
+  });
+
+  it("não impõe largura mínima no celular (só a partir de sm)", () => {
+    assert.match(table, /sm:min-w-\[560px\]/);
+    assert.doesNotMatch(table, /"w-full min-w-\[/);
   });
 });

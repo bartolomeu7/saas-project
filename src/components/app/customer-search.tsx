@@ -47,8 +47,8 @@ export function CustomerSearch() {
         />
         <Input
           type="search"
-          aria-label="Buscar clientes"
-          placeholder="Buscar por nome, telefone, e-mail ou documento..."
+          aria-label="Buscar clientes por nome, telefone, e-mail ou documento"
+          placeholder="Buscar cliente..."
           value={value}
           onChange={(event) => setValue(event.target.value)}
           className="pl-9"
