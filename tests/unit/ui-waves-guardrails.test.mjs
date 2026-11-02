@@ -176,3 +176,48 @@ describe("Onda D1 — casca da área logada: só apresentação", () => {
     }
   });
 });
+
+describe("Onda E (piloto Clientes): visual novo, mesma funcionalidade", () => {
+  const page = read("src/app/(app)/app/clientes/page.tsx");
+  const table = read("src/components/app/customer-table.tsx");
+  const filters = read("src/components/app/customer-filters.tsx");
+  const search = read("src/components/app/customer-search.tsx");
+  const toolbar = read("src/components/app/list-toolbar.tsx");
+
+  it("a página mantém as mesmas consultas do servidor e a paginação por URL", () => {
+    assert.match(page, /getCustomerStats\(companyId\)/);
+    assert.match(page, /listCustomers\(\{ companyId, search: q, status, page \}\)/);
+    assert.match(page, /basePath="\/app\/clientes"/);
+    assert.match(page, /EmptyState/);
+  });
+
+  it("a tabela preserva links de ver/editar e os botões de desativar/reativar", () => {
+    assert.match(table, /\/app\/clientes\/\$\{customer\.id\}\/editar/);
+    assert.match(table, /<DeactivateCustomerButton/);
+    assert.match(table, /<ReactivateCustomerButton/);
+    assert.match(table, /<CustomerStatusBadge/);
+  });
+
+  it("busca e filtros continuam guiados pela URL (?q, ?status) e resetam a página", () => {
+    for (const source of [filters, search]) {
+      assert.match(source, /params\.delete\("page"\)/);
+      assert.match(source, /router\.push\(/);
+    }
+    assert.match(filters, /params\.set\("status", value\)/);
+    assert.match(search, /params\.set\("q", value\)/);
+    assert.match(filters, /aria-pressed=/);
+    assert.match(search, /aria-label="Buscar clientes"/);
+  });
+
+  it("os componentes novos não acessam banco nem dependências novas", () => {
+    for (const source of [toolbar, table, filters, search]) {
+      assert.doesNotMatch(source, /@\/lib\/supabase|@clerk\//);
+    }
+  });
+
+  it("existe esqueleto de carregamento específico e acessível", () => {
+    const loading = read("src/app/(app)/app/clientes/loading.tsx");
+    assert.match(loading, /aria-busy="true"/);
+    assert.match(loading, /role="status"/);
+  });
+});
