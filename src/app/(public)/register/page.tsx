@@ -56,6 +56,7 @@ export default async function RegisterPage() {
       <AuthCard
         title="Criar conta"
         description="Primeiro, leia e aceite os documentos abaixo. Leva menos de um minuto."
+        step={{ current: 1, total: 2 }}
         footer={
           <>
             Já tem conta?{" "}
@@ -77,7 +78,7 @@ export default async function RegisterPage() {
   }
 
   return (
-    <AuthCard title="Criar conta" description="Documentos aceitos. Agora crie o seu acesso.">
+    <AuthCard title="Criar conta" description="Documentos aceitos. Agora crie o seu acesso." step={{ current: 2, total: 2 }}>
       <SignUp routing="hash" signInUrl="/login" forceRedirectUrl="/app" appearance={clerkAppearance} />
     </AuthCard>
   );
