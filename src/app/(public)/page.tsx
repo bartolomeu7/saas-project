@@ -386,18 +386,16 @@ export default async function HomePage() {
                 title={<span id="dif-title">O que torna o Prime Ges diferente na prática.</span>}
               />
             </Reveal>
-            <ul className="mt-10 grid gap-4 sm:grid-cols-2">
+            <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {DIFFERENTIALS.map((item, index) => (
                 <li key={item.title}>
                   <Reveal delay={index * 60} className="h-full">
-                    <Card className="prime-card flex h-full gap-4 p-6">
-                      <span className={iconTile}>
-                        <item.icon size={18} aria-hidden="true" />
+                    <Card className="prime-card home-v4-diff h-full p-6">
+                      <span className="home-v4-feature__icon">
+                        <item.icon size={22} aria-hidden="true" />
                       </span>
-                      <div className="min-w-0">
-                        <h3 className="text-base font-semibold text-foreground">{item.title}</h3>
-                        <p className="mt-1.5 text-sm leading-6 text-muted-foreground">{item.description}</p>
-                      </div>
+                      <h3 className="mt-5 text-base font-semibold text-foreground">{item.title}</h3>
+                      <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.description}</p>
                     </Card>
                   </Reveal>
                 </li>
@@ -541,7 +539,7 @@ export default async function HomePage() {
           <div className="home-v2-final__glow home-v2-final__glow--two" aria-hidden="true" />
           <div className="container relative">
             <Reveal>
-              <div className="home-v2-final__inner">
+              <div className="home-v2-final__inner home-v4-cta">
                 <span className="home-v2-final__badge">
                   <Sparkles size={13} aria-hidden="true" /> Prime Ges
                 </span>
@@ -565,6 +563,19 @@ export default async function HomePage() {
                     Entrar
                   </Link>
                 </div>
+                <ul className="home-v4-cta__trust">
+                  {trialLabel && (
+                    <li>
+                      <Check size={14} aria-hidden="true" /> Teste grátis de {trialLabel}
+                    </li>
+                  )}
+                  <li>
+                    <Check size={14} aria-hidden="true" /> Pagamento por Pix
+                  </li>
+                  <li>
+                    <Check size={14} aria-hidden="true" /> Sem renovação automática
+                  </li>
+                </ul>
               </div>
             </Reveal>
           </div>

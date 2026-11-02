@@ -90,3 +90,27 @@ describe("Onda B1 — Home: Funcionalidades e Segmentos sem conteúdo inventado"
     assert.doesNotMatch(home, /mais usados/i);
   });
 });
+
+describe("Onda B2 — Home: Diferenciais, chamada final e rodapé", () => {
+  const home = read("src/app/(public)/page.tsx");
+  const footer = read("src/components/marketing/site-footer.tsx");
+
+  it("os diferenciais continuam vindo de DIFFERENTIALS (afirmações reais do produto)", () => {
+    assert.match(home, /DIFFERENTIALS\.map\(\(item, index\)/);
+  });
+
+  it("a chamada final mantém os links de cadastro e login e só cita fatos já existentes na home", () => {
+    assert.match(home, /siteConfig\.links\.register/);
+    assert.match(home, /siteConfig\.links\.login/);
+    assert.match(home, /home-v4-cta__trust/);
+    assert.match(home, /Sem renovação automática/);
+  });
+
+  it("o rodapé preserva todas as colunas de links legais, o commit publicado e não importa o Clerk", () => {
+    for (const href of ["/termos-de-uso", "/politica-de-privacidade", "/politica-de-reembolso", "/direitos-do-titular", "/#precos", "/#faq"]) {
+      assert.ok(footer.includes(href), href);
+    }
+    assert.match(footer, /data-build-sha=\{BUILD_SHA\}/);
+    assert.doesNotMatch(footer, /@clerk\//);
+  });
+});
