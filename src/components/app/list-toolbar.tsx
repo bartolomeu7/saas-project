@@ -43,3 +43,18 @@ export function ListSummary({
     </p>
   );
 }
+
+/** Avatar redondo da primeira coluna das tabelas (inicial do nome ou um ícone do módulo). */
+export function ListAvatar({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <span
+      className={cn(
+        "flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/15 text-sm font-semibold text-primary-text",
+        className,
+      )}
+      aria-hidden="true"
+    >
+      {children}
+    </span>
+  );
+}

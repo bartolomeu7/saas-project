@@ -216,9 +216,10 @@ describe("Onda E (piloto Clientes): visual novo, mesma funcionalidade", () => {
   });
 
   it("existe esqueleto de carregamento específico e acessível", () => {
-    const loading = read("src/app/(app)/app/clientes/loading.tsx");
+    const loading = read("src/components/app/list-loading.tsx");
     assert.match(loading, /aria-busy="true"/);
     assert.match(loading, /role="status"/);
+    assert.match(read("src/app/(app)/app/clientes/loading.tsx"), /ListLoading/);
   });
 });
 
@@ -235,5 +236,51 @@ describe("Clientes no celular: as ações precisam estar acessíveis sem rolar p
   it("não impõe largura mínima no celular (só a partir de sm)", () => {
     assert.match(table, /sm:min-w-\[560px\]/);
     assert.doesNotMatch(table, /"w-full min-w-\[/);
+  });
+});
+
+describe("Onda E (lote 2): Produtos, Serviços e Vendas no mesmo padrão, mesma funcionalidade", () => {
+  const modules = [
+    { dir: "produtos", table: "product-table", search: "product-search", queries: [/getProductStats\(companyId\)/, /listProducts\(\{/], buttons: [/<DeactivateProductButton/, /<ReactivateProductButton/], edit: /\/app\/produtos\/\$\{product\.id\}\/editar/ },
+    { dir: "servicos", table: "service-table", search: "service-search", queries: [/getServiceStats\(companyId\)/, /listServices\(\{/], buttons: [/<DeactivateServiceButton/, /<ReactivateServiceButton/], edit: /\/app\/servicos\/\$\{service\.id\}\/editar/ },
+    { dir: "vendas", table: "sale-table", search: "sale-search", queries: [/getSaleStats\(companyId, range\.from, range\.to\)/, /listSales\(\{/], buttons: [/<CancelSaleButton/], edit: /\/app\/vendas\/\$\{sale\.id\}/ },
+  ];
+
+  for (const m of modules) {
+    it(`${m.dir}: mesmas consultas do servidor, paginação por URL e barra de lista nova`, () => {
+      const page = read(`src/app/(app)/app/${m.dir}/page.tsx`);
+      for (const query of m.queries) assert.match(page, query);
+      assert.match(page, /<ListToolbar/);
+      assert.match(page, /<ListSummary/);
+      assert.match(page, new RegExp(`basePath="/app/${m.dir}"`));
+    });
+
+    it(`${m.dir}: tabela mantém ações e tem versão para celular sem rolar para o lado`, () => {
+      const table = read(`src/components/app/${m.table}.tsx`);
+      for (const button of m.buttons) assert.match(table, button);
+      assert.match(table, m.edit);
+      assert.match(table, /sm:hidden/);
+      assert.match(table, /hidden px-4 py-3 sm:table-cell/);
+      assert.match(table, /sm:min-w-\[/);
+      assert.doesNotMatch(table, /"w-full min-w-\[/);
+    });
+
+    it(`${m.dir}: busca com rótulo acessível e ainda guiada pela URL (?q)`, () => {
+      const search = read(`src/components/app/${m.search}.tsx`);
+      assert.match(search, /aria-label="Buscar /);
+      assert.match(search, /params\.set\("q", value\)/);
+      assert.match(search, /params\.delete\("page"\)/);
+    });
+
+    it(`${m.dir}: esqueleto de carregamento próprio`, () => {
+      assert.match(read(`src/app/(app)/app/${m.dir}/loading.tsx`), /ListLoading/);
+    });
+  }
+
+  it("Vendas continua restringindo o cancelamento (owner/admin sempre; funcionário só a própria venda)", () => {
+    const table = read("src/components/app/sale-table.tsx");
+    assert.match(table, /role === "owner" \|\| role === "admin"/);
+    assert.match(table, /sale\.user_id === userId/);
+    assert.match(table, /sale\.status !== "completed"/);
   });
 });

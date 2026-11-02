@@ -12,6 +12,7 @@ import { ServiceFilters } from "@/components/app/service-filters";
 import { ServiceStats } from "@/components/app/service-stats";
 import { ServiceTable } from "@/components/app/service-table";
 import { EmptyState } from "@/components/app/empty-state";
+import { ListSummary, ListToolbar } from "@/components/app/list-toolbar";
 import { Pagination } from "@/components/app/pagination";
 import type { ServiceStatus } from "@/types/service";
 
@@ -116,10 +117,10 @@ export default async function ServicesPage({
         <>
           <ServiceStats stats={stats} />
 
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <ListToolbar className="sm:flex-col sm:items-stretch">
             <ServiceSearch />
             <ServiceFilters categories={categories} />
-          </div>
+          </ListToolbar>
 
           {result.services.length === 0 ? (
             <p className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
@@ -127,6 +128,7 @@ export default async function ServicesPage({
             </p>
           ) : (
             <>
+              <ListSummary page={result.page} pageSize={result.pageSize} total={result.total} itemLabel="serviço" itemLabelPlural="serviços" />
               <ServiceTable services={result.services} />
               <Pagination
                 page={result.page}

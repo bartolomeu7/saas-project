@@ -12,6 +12,7 @@ import { ProductFilters } from "@/components/app/product-filters";
 import { ProductStats } from "@/components/app/product-stats";
 import { ProductTable } from "@/components/app/product-table";
 import { EmptyState } from "@/components/app/empty-state";
+import { ListSummary, ListToolbar } from "@/components/app/list-toolbar";
 import { Pagination } from "@/components/app/pagination";
 import type { ProductStatus, StockLevel } from "@/types/product";
 
@@ -102,10 +103,10 @@ export default async function ProductsPage({
         <>
           <ProductStats stats={stats} />
 
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <ListToolbar className="sm:flex-col sm:items-stretch">
             <ProductSearch />
             <ProductFilters categories={categories} />
-          </div>
+          </ListToolbar>
 
           {result.products.length === 0 ? (
             <p className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
@@ -113,6 +114,7 @@ export default async function ProductsPage({
             </p>
           ) : (
             <>
+              <ListSummary page={result.page} pageSize={result.pageSize} total={result.total} itemLabel="produto" itemLabelPlural="produtos" />
               <ProductTable products={result.products} />
               <Pagination
                 page={result.page}

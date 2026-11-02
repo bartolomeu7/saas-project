@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
 /**
@@ -36,14 +37,21 @@ export function ServiceSearch() {
   }, [value]);
 
   return (
-    <div className="flex items-center gap-2">
-      <Input
-        type="search"
-        placeholder="Buscar por nome do serviço..."
-        value={value}
-        onChange={(event) => setValue(event.target.value)}
-        className="max-w-sm"
-      />
+    <div className="flex items-center gap-2 sm:min-w-[320px]">
+      <div className="relative w-full max-w-sm">
+        <Search
+          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+          aria-hidden="true"
+        />
+        <Input
+          type="search"
+          aria-label="Buscar serviços por nome"
+          placeholder="Buscar serviço..."
+          value={value}
+          onChange={(event) => setValue(event.target.value)}
+          className="pl-9"
+        />
+      </div>
       {isPending && (
         <span className="text-xs text-muted-foreground">Buscando...</span>
       )}
