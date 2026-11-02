@@ -2733,11 +2733,11 @@
   .prime-kpi-icon {
     display: grid;
     place-items: center;
-    width: 32px;
-    height: 32px;
-    border-radius: 9px;
-    background: hsl(var(--primary) / .09);
-    color: hsl(var(--primary));
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, hsl(var(--primary) / .22), hsl(var(--primary) / .08));
+    color: hsl(var(--primary-text, var(--primary)));
   }
 
   .prime-kpi-card[data-alert="true"] .prime-kpi-icon {
@@ -2748,14 +2748,14 @@
   .prime-kpi-card p {
     margin-top: 11px;
     color: hsl(var(--muted-foreground));
-    font-size: 11px;
+    font-size: 12px;
   }
 
   .prime-kpi-card strong {
     display: block;
     margin-top: 2px;
     color: hsl(var(--foreground));
-    font-size: 22px;
+    font-size: 28px;
     font-weight: 700;
     letter-spacing: -.03em;
   }
@@ -2764,7 +2764,7 @@
     display: block;
     margin-top: 4px;
     color: hsl(var(--muted-foreground));
-    font-size: 9px;
+    font-size: 12px;
   }
 
   .prime-dashboard-panel {

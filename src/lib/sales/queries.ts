@@ -1,6 +1,7 @@
 import "server-only";
 
 import { cache } from "react";
+import { buildDailySeries, type DailyPoint } from "@/lib/sales/daily-series";
 import { createSessionClient } from "@/lib/supabase/server";
 import {
   startOfDaySaoPaulo,
@@ -94,6 +95,27 @@ export function resolveSalePeriodRange(
 
   return { from: start.toISOString(), to: end.toISOString() };
 }
+
+/**
+ * Faturamento por dia das vendas CONCLUÍDAS do intervalo (mesmo filtro dos relatórios: status completed, por
+ * completed_at). Só leitura; dias sem venda entram com valor 0.
+ */
+export const getSalesRevenueByDay = cache(async function getSalesRevenueByDay(
+  companyId: string,
+  from: string,
+  to: string
+): Promise<DailyPoint[]> {
+  const supabase = await createSessionClient();
+  const { data } = await supabase
+    .from("sales")
+    .select("completed_at, total_amount")
+    .eq("company_id", companyId)
+    .eq("status", "completed")
+    .gte("completed_at", from)
+    .lte("completed_at", to)
+    .order("completed_at", { ascending: true });
+  return buildDailySeries(data ?? [], from, to);
+});
 
 export interface ListSalesParams {
   companyId: string;

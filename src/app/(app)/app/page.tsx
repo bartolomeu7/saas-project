@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
-  Activity,
   AlertTriangle,
   ArrowRight,
   CheckCircle2,
@@ -19,9 +18,11 @@ import { getCurrentCompany } from "@/lib/companies/queries";
 import { getCustomerStats, getRecentCustomers } from "@/lib/customers/queries";
 import { getProductStats } from "@/lib/products/queries";
 import { getServiceStats } from "@/lib/services/queries";
-import { getSaleStats, resolveSalePeriodRange } from "@/lib/sales/queries";
+import { getSaleStats, getSalesRevenueByDay, listSales, resolveSalePeriodRange } from "@/lib/sales/queries";
 import { getSaleSegmentHints } from "@/config/sale-segments";
 import { QuickActions } from "@/components/app/quick-actions";
+import { BarChart } from "@/components/admin/admin-charts";
+import { SaleStatusBadge } from "@/components/app/sale-status-badge";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -91,13 +92,17 @@ export default async function DashboardPage() {
 
   const company = current.company;
   const monthRange = resolveSalePeriodRange("month");
-  const [customerStats, productStats, serviceStats, saleStats, recentCustomers] =
+  const [customerStats, productStats, serviceStats, saleStats, recentCustomers, dailyRevenue, recentSales] =
     await Promise.all([
       getCustomerStats(company.id),
       getProductStats(company.id),
       getServiceStats(company.id),
       getSaleStats(company.id, monthRange.from, monthRange.to),
       getRecentCustomers(company.id, 5),
+      monthRange.from && monthRange.to
+        ? getSalesRevenueByDay(company.id, monthRange.from, monthRange.to)
+        : Promise.resolve([]),
+      listSales({ companyId: company.id, pageSize: 5 }),
     ]);
 
   const saleHints = getSaleSegmentHints(company.business_type);
@@ -250,9 +255,18 @@ export default async function DashboardPage() {
             <div className="prime-mini-stat"><span>Ticket médio</span><strong>{saleStats.averageTicket === null ? "—" : money(saleStats.averageTicket)}</strong></div>
             <div className="prime-mini-stat"><span>Canceladas</span><strong>{saleStats.cancelledCount}</strong></div>
           </div>
-          <div className="prime-no-chart">
-            <Activity className="h-4 w-4" />
-            <span>Ainda não há gráfico histórico de vendas; os números acima são do mês corrente.</span>
+          <div className="mt-5">
+            <p className="prime-panel-eyebrow mb-2">Faturamento por dia · vendas concluídas</p>
+            <BarChart
+              title="Faturamento por dia, vendas concluídas neste mês"
+              valueLabel="Faturamento"
+              height={160}
+              data={dailyRevenue.map((point) => ({
+                label: point.label,
+                value: point.value,
+                detail: `${money(point.value)} · ${point.count} ${point.count === 1 ? "venda" : "vendas"}`,
+              }))}
+            />
           </div>
         </div>
 
@@ -271,7 +285,31 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      <section className="grid gap-4">
+      <section className="grid gap-4 lg:grid-cols-2">
+        <div className="prime-dashboard-panel">
+          <div className="prime-panel-heading">
+            <div><p className="prime-panel-eyebrow">Vendas</p><h2>Mais recentes</h2></div>
+            <Link href="/app/vendas" className="prime-panel-link">Abrir <ArrowRight className="h-3.5 w-3.5" /></Link>
+          </div>
+          <div className="mt-3 divide-y divide-border">
+            {recentSales.sales.length > 0 ? recentSales.sales.map((sale) => (
+              <Link key={sale.id} href={`/app/vendas/${sale.id}`} className="prime-customer-row">
+                <span className="prime-customer-avatar"><ShoppingCart className="h-3.5 w-3.5" /></span>
+                <span className="min-w-0 flex-1">
+                  <strong className="block truncate">{sale.customer_name ?? "Cliente não informado"}</strong>
+                  <small>{new Date(sale.sold_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", timeZone: "America/Sao_Paulo" })} · {money(sale.total_amount)}</small>
+                </span>
+                <SaleStatusBadge status={sale.status} />
+              </Link>
+            )) : (
+              <div className="prime-inline-empty">
+                <ShoppingCart className="h-5 w-5" />
+                <span><strong>Nenhuma venda registrada</strong><small>Registre o primeiro atendimento para ver o histórico aqui.</small></span>
+              </div>
+            )}
+          </div>
+        </div>
+
         <div className="prime-dashboard-panel">
           <div className="prime-panel-heading">
             <div><p className="prime-panel-eyebrow">Clientes</p><h2>Mais recentes</h2></div>
