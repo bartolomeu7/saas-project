@@ -15,7 +15,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 export function CustomerTable({ customers }: { customers: Customer[] }) {
   return (
     <div className="overflow-x-auto rounded-xl border border-border bg-card/40">
-      <Table className="w-full min-w-[560px] text-sm">
+      <Table className="w-full text-sm sm:min-w-[560px]">
         <TableHeader className="bg-secondary/60 text-left text-[11px] uppercase tracking-wider text-muted-foreground">
           <TableRow>
             <TableHead className="px-4 py-3 font-semibold">Cliente</TableHead>
@@ -23,7 +23,7 @@ export function CustomerTable({ customers }: { customers: Customer[] }) {
             <TableHead className="hidden px-4 py-3 font-semibold lg:table-cell">E-mail</TableHead>
             <TableHead className="px-4 py-3 font-semibold">Status</TableHead>
             <TableHead className="hidden px-4 py-3 font-semibold sm:table-cell">Cadastro</TableHead>
-            <TableHead className="px-4 py-3 text-right font-semibold">Ações</TableHead>
+            <TableHead className="hidden px-4 py-3 text-right font-semibold sm:table-cell">Ações</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -47,6 +47,31 @@ export function CustomerTable({ customers }: { customers: Customer[] }) {
                     <span className="block truncate text-xs text-muted-foreground lg:hidden">
                       {customer.phone ?? customer.email ?? "Sem contato"}
                     </span>
+                    <div className="mt-2 flex flex-wrap items-center gap-2 sm:hidden">
+                      <Link
+                        href={`/app/clientes/${customer.id}`}
+                        className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+                      >
+                        Ver
+                      </Link>
+                      <Link
+                        href={`/app/clientes/${customer.id}/editar`}
+                        className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
+                      >
+                        Editar
+                      </Link>
+                      {customer.status === "active" ? (
+                        <DeactivateCustomerButton
+                          customerId={customer.id}
+                          customerName={customer.name}
+                        />
+                      ) : (
+                        <ReactivateCustomerButton
+                          customerId={customer.id}
+                          customerName={customer.name}
+                        />
+                      )}
+                    </div>
                   </div>
                 </div>
               </TableCell>
@@ -62,7 +87,7 @@ export function CustomerTable({ customers }: { customers: Customer[] }) {
               <TableCell className="hidden px-4 py-3 text-muted-foreground sm:table-cell">
                 {formatDate(customer.created_at)}
               </TableCell>
-              <TableCell className="px-4 py-3">
+              <TableCell className="hidden px-4 py-3 sm:table-cell">
                 <div className="flex items-center justify-end gap-2">
                   <Link
                     href={`/app/clientes/${customer.id}`}
