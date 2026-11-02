@@ -18,6 +18,7 @@ import {
   CREDIBILITY_ITEMS,
   DIFFERENTIALS,
   FEATURES,
+  type FeatureModule,
   HOW_IT_WORKS_STEPS,
   PROBLEMS,
   SEGMENTS,
@@ -56,7 +57,8 @@ const SEGMENT_MODULES: Record<string, string[]> = {
 };
 
 const AVAILABLE_FEATURE_NAMES = FEATURES.filter((feature) => feature.available).map((feature) => feature.name);
-const FEATURE_NAMES = new Set(AVAILABLE_FEATURE_NAMES);
+// Só módulos disponíveis aparecem nos cartões da home (nunca um "em breve" apresentado como pronto).
+const FEATURE_BY_NAME = new Map(FEATURES.filter((feature) => feature.available).map((feature) => [feature.name, feature]));
 
 // Dados estruturados (JSON-LD) só aqui: a home é a única página pública com a apresentação do produto. Sem `offers`,
 // avaliações nem dados da empresa pendentes (ver src/lib/seo/structured-data.ts).
@@ -231,18 +233,31 @@ export default async function HomePage() {
             <div className="mt-10 grid gap-4 lg:grid-cols-6">
               {BENTO_CELLS.map((cell, index) => (
                 <Reveal key={cell.id} delay={index * 60} className={cell.size === "lg" ? "lg:col-span-4" : "lg:col-span-2"}>
-                  <Card className="prime-card h-full p-6">
-                    <span className={iconTile}>
-                      <cell.icon size={18} aria-hidden="true" />
-                    </span>
-                    <h3 className="mt-4 text-lg font-semibold text-foreground">{cell.title}</h3>
+                  <Card className="prime-card home-v4-feature h-full p-6 sm:p-7">
+                    <div className="flex items-start justify-between gap-4">
+                      <span className="home-v4-feature__icon">
+                        <cell.icon size={22} aria-hidden="true" />
+                      </span>
+                      <span className="home-v4-feature__index" aria-hidden="true">
+                        {String(index + 1).padStart(2, "0")}
+                      </span>
+                    </div>
+                    <h3 className="mt-5 text-xl font-semibold text-foreground">{cell.title}</h3>
                     <p className="mt-2 text-sm leading-6 text-muted-foreground">{cell.description}</p>
-                    <ul className="mt-4 flex flex-wrap gap-2" aria-label={"Módulos de " + cell.title}>
+                    <ul
+                      className={cn("home-v4-feature__modules", cell.size === "lg" && "sm:grid-cols-2")}
+                      aria-label={"Módulos de " + cell.title}
+                    >
                       {cell.modules
-                        .filter((name) => FEATURE_NAMES.has(name))
-                        .map((name) => (
-                          <li key={name}>
-                            <Badge variant="muted">{name}</Badge>
+                        .map((name) => FEATURE_BY_NAME.get(name))
+                        .filter((feature): feature is FeatureModule => Boolean(feature))
+                        .map((feature) => (
+                          <li key={feature.name}>
+                            <feature.icon size={16} aria-hidden="true" />
+                            <span>
+                              <strong>{feature.name}</strong>
+                              {cell.size === "lg" && <small>{feature.description}</small>}
+                            </span>
                           </li>
                         ))}
                     </ul>
@@ -294,18 +309,18 @@ export default async function HomePage() {
               {SEGMENTS.map((segment, index) => (
                 <li key={segment.name}>
                   <Reveal delay={index * 45} className="h-full">
-                    <Card className="prime-card h-full p-6">
-                      <div className="flex items-center gap-3">
-                        <span className={iconTile}>
-                          <segment.icon size={18} aria-hidden="true" />
-                        </span>
-                        <h3 className="text-base font-semibold text-foreground">{segment.name}</h3>
-                      </div>
-                      <p className="mt-3 text-sm leading-6 text-muted-foreground">{segment.description}</p>
-                      <ul className="mt-4 flex flex-wrap gap-2" aria-label={"Módulos para " + segment.name}>
+                    <Card className="prime-card home-v4-segment h-full p-6">
+                      <span className="home-v4-segment__icon">
+                        <segment.icon size={26} aria-hidden="true" />
+                      </span>
+                      <h3 className="mt-5 text-lg font-semibold text-foreground">{segment.name}</h3>
+                      <p className="mt-2 text-sm leading-6 text-muted-foreground">{segment.description}</p>
+                      <p className="home-v4-segment__label">Módulos indicados</p>
+                      <ul className="home-v4-segment__modules" aria-label={"Módulos para " + segment.name}>
                         {(SEGMENT_MODULES[segment.name] ?? []).map((module) => (
                           <li key={module}>
-                            <Badge variant="muted">{module}</Badge>
+                            <Check size={14} aria-hidden="true" />
+                            {module}
                           </li>
                         ))}
                       </ul>
