@@ -326,3 +326,56 @@ describe("Onda E (lote 3): Estoque, Compras e Fornecedores, mesma funcionalidade
     }
   });
 });
+
+describe("Onda E (lote 4): Caixa e Financeiro, só apresentação", () => {
+  const cash = read("src/app/(app)/app/caixa/page.tsx");
+  const movements = read("src/components/app/cash-movements-table.tsx");
+  const finance = read("src/app/(app)/app/financeiro/page.tsx");
+
+  it("Caixa mantém as consultas, a regra de quem opera e todos os formulários", () => {
+    assert.match(cash, /getCurrentOpenCashRegister\(current\.company\.id\)/);
+    assert.match(cash, /getLastClosedCashRegister\(current\.company\.id\)/);
+    assert.match(cash, /listCashMovements\(openRegister\.id\)/);
+    assert.match(cash, /summarizeCashMovements\(/);
+    assert.match(cash, /const canOperate = current\.role === "owner" \|\| current\.role === "admin"/);
+    for (const form of ["CashRegisterOpenForm", "CashRegisterCloseForm", "CashMovementForm"]) {
+      assert.match(cash, new RegExp(`<${form}`), form);
+    }
+    assert.match(cash, /prime-module-page--caixa/);
+  });
+
+  it("o histórico do caixa continua sem coluna de ações (imutável) e sem largura mínima no celular", () => {
+    assert.doesNotMatch(movements, /<TableHead[^>]*>Ações|<Link|<button/);
+    assert.match(movements, /sm:min-w-\[/);
+    assert.doesNotMatch(movements, /"w-full min-w-\[/);
+  });
+
+  it("Financeiro mantém a consulta única, as visões e os formulários só para owner/admin", () => {
+    assert.match(finance, /getFinanceWorkspace\(current\.company\.id\)/);
+    assert.match(finance, /const canOperate = current\.role === "owner" \|\| current\.role === "admin"/);
+    for (const view of ['view === "pagar"', 'view === "receber"', 'view === "lancamentos"', 'view === "estrutura"']) {
+      assert.ok(finance.includes(view), view);
+    }
+    for (const form of ["AccountsPayablePaymentForm", "SalePaymentForm", "FinancialEntryForm", "FinancialCategoryForm", "CostCenterForm"]) {
+      assert.match(finance, new RegExp(`<${form}`), form);
+    }
+    assert.match(finance, /canOperate \?/);
+  });
+
+  it("Financeiro: navegação acessível e situação da conta em português", () => {
+    assert.match(finance, /aria-label="Seções do financeiro"/);
+    assert.match(finance, /aria-current=\{current === key \? "page" : undefined\}/);
+    for (const label of ["Em aberto", "Pago parcialmente", "Pago", "Cancelado"]) {
+      assert.ok(finance.includes(`"${label}"`), label);
+    }
+  });
+
+  it("esqueletos de carregamento próprios e nenhuma apresentação acessa banco direto", () => {
+    for (const dir of ["caixa", "financeiro"]) {
+      assert.match(read(`src/app/(app)/app/${dir}/loading.tsx`), /ListLoading/);
+    }
+    for (const source of [cash, movements, finance]) {
+      assert.doesNotMatch(source, /@\/lib\/supabase|@clerk\//);
+    }
+  });
+});

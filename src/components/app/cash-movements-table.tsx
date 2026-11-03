@@ -21,24 +21,24 @@ function formatMoney(value: number): string {
 export function CashMovementsTable({ movements }: { movements: CashMovementWithName[] }) {
   if (movements.length === 0) {
     return (
-      <p className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+      <p className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
         Nenhuma movimentação registrada neste caixa ainda.
       </p>
     );
   }
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-border">
-      <Table className="w-full min-w-[820px] text-sm">
-        <TableHeader className="bg-secondary/50 text-left text-xs uppercase text-muted-foreground">
+    <div className="overflow-x-auto rounded-xl border border-border bg-card/40">
+      <Table className="w-full text-sm sm:min-w-[560px]">
+        <TableHeader className="bg-secondary/60 text-left text-[11px] uppercase tracking-wider text-muted-foreground">
           <TableRow>
-            <TableHead className="px-4 py-3 font-medium">Data/hora</TableHead>
-            <TableHead className="px-4 py-3 font-medium">Tipo</TableHead>
-            <TableHead className="px-4 py-3 font-medium">Valor</TableHead>
-            <TableHead className="px-4 py-3 font-medium">Forma</TableHead>
-            <TableHead className="px-4 py-3 font-medium">Descrição</TableHead>
-            <TableHead className="px-4 py-3 font-medium">Origem</TableHead>
-            <TableHead className="px-4 py-3 font-medium">Responsável</TableHead>
+            <TableHead className="px-4 py-3 font-semibold">Data/hora</TableHead>
+            <TableHead className="px-4 py-3 font-semibold">Tipo</TableHead>
+            <TableHead className="px-4 py-3 font-semibold">Valor</TableHead>
+            <TableHead className="hidden px-4 py-3 font-semibold md:table-cell">Forma</TableHead>
+            <TableHead className="px-4 py-3 font-semibold">Descrição</TableHead>
+            <TableHead className="hidden px-4 py-3 font-semibold lg:table-cell">Origem</TableHead>
+            <TableHead className="hidden px-4 py-3 font-semibold lg:table-cell">Responsável</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -65,9 +65,9 @@ export function CashMovementsTable({ movements }: { movements: CashMovementWithN
                 </span>
               </TableCell>
               <TableCell className="px-4 py-3 font-medium text-foreground">{formatMoney(Number(movement.amount))}</TableCell>
-              <TableCell className="px-4 py-3 text-muted-foreground">{SALE_PAYMENT_METHOD_LABELS[movement.method]}</TableCell>
+              <TableCell className="hidden px-4 py-3 text-muted-foreground md:table-cell">{SALE_PAYMENT_METHOD_LABELS[movement.method]}</TableCell>
               <TableCell className="px-4 py-3 text-muted-foreground">{movement.description}</TableCell>
-              <TableCell className="px-4 py-3">
+              <TableCell className="hidden px-4 py-3 lg:table-cell">
                 <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
                   {movement.source === "sale_payment" ? (
                     <>
@@ -80,7 +80,7 @@ export function CashMovementsTable({ movements }: { movements: CashMovementWithN
                   )}
                 </span>
               </TableCell>
-              <TableCell className="px-4 py-3 text-muted-foreground">{movement.created_by_name ?? "—"}</TableCell>
+              <TableCell className="hidden px-4 py-3 text-muted-foreground lg:table-cell">{movement.created_by_name ?? "—"}</TableCell>
             </TableRow>
           ))}
         </TableBody>
