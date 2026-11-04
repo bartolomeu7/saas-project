@@ -1,4 +1,7 @@
+import { CalendarCheck, CalendarClock, CalendarDays, CheckCircle2 } from "lucide-react";
 import { MetricCard } from "@/components/app/metric-card";
+import { PageHeader } from "@/components/app/page-header";
+import { buttonVariants } from "@/components/ui/button";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getCurrentCompany } from "@/lib/companies/queries";
@@ -83,28 +86,29 @@ export default async function AgendaPage({
 
   return (
     <div className="prime-module-page prime-module-page--agenda flex flex-col gap-6 px-4 py-6 sm:px-6">
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-[0.16em] text-primary">Operação</p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight">Agenda</h1>
-          <p className="mt-1 text-sm text-muted-foreground capitalize">{dateLabel(date)}</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Link href={"/app/agenda?date=" + shiftDate(date, -1)} className="inline-flex h-9 items-center rounded-md border px-3 text-sm hover:bg-muted">← Dia anterior</Link>
-          <Link href="/app/agenda" className="inline-flex h-9 items-center rounded-md border px-3 text-sm hover:bg-muted">Hoje</Link>
-          <Link href={"/app/agenda?date=" + shiftDate(date, 1)} className="inline-flex h-9 items-center rounded-md border px-3 text-sm hover:bg-muted">Próximo dia →</Link>
-        </div>
-      </div>
+      <PageHeader
+        eyebrow="Operação"
+        title="Agenda"
+        description={<span className="capitalize">{dateLabel(date)}</span>}
+        className="xl:items-end"
+        actions={
+          <nav aria-label="Navegar entre os dias" className="flex flex-wrap gap-2">
+            <Link href={"/app/agenda?date=" + shiftDate(date, -1)} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>← Dia anterior</Link>
+            <Link href="/app/agenda" className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>Hoje</Link>
+            <Link href={"/app/agenda?date=" + shiftDate(date, 1)} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>Próximo dia →</Link>
+          </nav>
+        }
+      />
 
       <div className="grid gap-3 sm:grid-cols-4">
-        <MetricCard label="Total" value={stats.total} />
-        <MetricCard label="Agendados" value={stats.scheduled} />
-        <MetricCard label="Confirmados" value={stats.confirmed} />
-        <MetricCard label="Concluídos" value={stats.completed} />
+        <MetricCard label="Total" value={stats.total} icon={CalendarDays} />
+        <MetricCard label="Agendados" value={stats.scheduled} icon={CalendarClock} />
+        <MetricCard label="Confirmados" value={stats.confirmed} icon={CalendarCheck} />
+        <MetricCard label="Concluídos" value={stats.completed} icon={CheckCircle2} />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[360px_1fr]">
-        <section className="rounded-xl border bg-card p-5">
+        <section className="rounded-xl border border-border bg-card/40 p-5">
           <div className="mb-5">
             <h2 className="font-semibold">Novo agendamento</h2>
             <p className="mt-1 text-sm text-muted-foreground">O sistema bloqueia conflito de profissional, bloqueios e disponibilidade configurada.</p>
@@ -125,17 +129,18 @@ export default async function AgendaPage({
           )}
         </section>
 
-        <section className="rounded-xl border bg-card">
+        <section className="rounded-xl border border-border bg-card/40">
           <div className="flex flex-col gap-3 border-b px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="font-semibold">Atendimentos do dia</h2>
               <p className="text-sm text-muted-foreground">Selecione um profissional para focar a agenda.</p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Link href={"/app/agenda?date=" + date} className={cn("rounded-full border px-3 py-1.5 text-xs", !professional && "bg-primary text-primary-foreground")}>Todos</Link>
+              <Link href={"/app/agenda?date=" + date} aria-current={!professional ? "true" : undefined} className={cn("rounded-full border px-3 py-1.5 text-xs", !professional && "bg-primary text-primary-foreground")}>Todos</Link>
               {professionals.map((person) => (
                 <Link
                   key={person.id}
+                  aria-current={professional === person.id ? "true" : undefined}
                   href={"/app/agenda?date=" + date + "&professional=" + person.id}
                   className={cn("rounded-full border px-3 py-1.5 text-xs", professional === person.id && "bg-primary text-primary-foreground")}
                 >

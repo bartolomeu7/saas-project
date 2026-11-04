@@ -15,7 +15,7 @@ const TABS = [
 
 export function LoyaltyTabs({ activeTab }: { activeTab: string }) {
   return (
-    <div className="flex gap-1 overflow-x-auto border-b border-border">
+    <nav aria-label="Seções da fidelidade" className="flex gap-1 overflow-x-auto border-b border-border">
       {TABS.map((tab) => {
         if (!tab.enabled) {
           return (
@@ -37,6 +37,7 @@ export function LoyaltyTabs({ activeTab }: { activeTab: string }) {
           <Link
             key={tab.key}
             href={`/app/fidelidade?tab=${tab.key}`}
+            aria-current={isActive ? "page" : undefined}
             className={cn(
               "shrink-0 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors",
               isActive
@@ -48,6 +49,6 @@ export function LoyaltyTabs({ activeTab }: { activeTab: string }) {
           </Link>
         );
       })}
-    </div>
+    </nav>
   );
 }

@@ -1,4 +1,8 @@
+import { CalendarCheck, ShieldCheck, Users } from "lucide-react";
 import { MetricCard } from "@/components/app/metric-card";
+import { PageHeader } from "@/components/app/page-header";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getCurrentCompany } from "@/lib/companies/queries";
@@ -23,23 +27,22 @@ export default async function TeamPage() {
 
   return (
     <div className="prime-module-page prime-module-page--equipe flex flex-col gap-6 px-4 py-6 sm:px-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-[0.16em] text-primary">Empresa</p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight">Equipe e profissionais</h1>
-          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            Permissões de acesso, ficha profissional, especialidade e disponibilidade para a agenda.
-          </p>
-        </div>
-        <Link href="/app/agenda" className="inline-flex h-9 items-center justify-center rounded-md border px-3 text-sm font-medium hover:bg-muted">
-          Abrir agenda
-        </Link>
-      </div>
+      <PageHeader
+        eyebrow="Empresa"
+        title="Equipe e profissionais"
+        description="Permissões de acesso, ficha profissional, especialidade e disponibilidade para a agenda."
+        className="lg:items-end"
+        actions={
+          <Link href="/app/agenda" className={cn(buttonVariants({ variant: "outline" }))}>
+            Abrir agenda
+          </Link>
+        }
+      />
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <MetricCard label="Colaboradores" value={team.length} />
-        <MetricCard label="Administradores" value={admins} />
-        <MetricCard label="Profissionais ativos" value={professionals} />
+        <MetricCard label="Colaboradores" value={team.length} icon={Users} />
+        <MetricCard label="Administradores" value={admins} icon={ShieldCheck} />
+        <MetricCard label="Profissionais ativos" value={professionals} icon={CalendarCheck} />
       </div>
 
       {seats ? (
@@ -50,7 +53,7 @@ export default async function TeamPage() {
               ? "rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm"
               : seats.atLimit
                 ? "rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm"
-                : "rounded-xl border bg-card p-4 text-sm"
+                : "rounded-xl border border-border bg-card/40 p-4 text-sm"
           }
         >
           <p className="font-medium">
@@ -77,7 +80,7 @@ export default async function TeamPage() {
       ) : null}
 
       {canManage ? (
-        <section className="rounded-xl border bg-card p-5">
+        <section className="rounded-xl border border-border bg-card/40 p-5">
           <h2 className="font-semibold">Adicionar colaborador existente</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             A pessoa precisa ter uma conta Prime Ges antes de ser vinculada à empresa.
@@ -88,7 +91,7 @@ export default async function TeamPage() {
         </section>
       ) : null}
 
-      <section className="overflow-x-auto rounded-xl border bg-card">
+      <section className="overflow-x-auto rounded-xl border border-border bg-card/40">
         <div className="border-b px-5 py-4">
           <h2 className="font-semibold">Colaboradores</h2>
           <p className="text-sm text-muted-foreground">Acesso ao sistema e configuração profissional.</p>
@@ -105,7 +108,7 @@ export default async function TeamPage() {
 
         <div className="hidden xl:block">
         <Table className="w-full min-w-[980px] text-sm">
-          <TableHeader>
+          <TableHeader className="bg-secondary/60 text-[11px] uppercase tracking-wider">
             <TableRow className="border-b text-left text-muted-foreground">
               <TableHead className="p-3">Pessoa</TableHead>
               <TableHead className="p-3">Função</TableHead>
