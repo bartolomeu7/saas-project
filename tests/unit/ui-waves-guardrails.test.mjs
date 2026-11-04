@@ -477,3 +477,47 @@ describe("Onda E (lote 6): Relatórios e Assinatura, só apresentação", () => 
     }
   });
 });
+
+describe("Onda F1: casca do painel admin no novo visual, guardas intactas", () => {
+  const layout = read("src/app/admin/layout.tsx");
+  const sidebar = read("src/components/admin/admin-sidebar.tsx");
+  const header = read("src/components/admin/admin-header.tsx");
+  const shell = read("src/components/admin/admin-shell.tsx");
+
+  it("o layout continua exigindo administrador da plataforma e respeitando o limite de sessões", () => {
+    assert.match(layout, /await requirePlatformAdmin\(\)/);
+    assert.match(layout, /evaluateSessionGate\(user\.id\)/);
+    assert.match(layout, /robots: \{ index: false, follow: false \}/);
+    assert.match(layout, /export const dynamic = "force-dynamic"/);
+  });
+
+  it("a barra lateral continua escondendo o que é só de super_admin e marcando o item ativo", () => {
+    assert.match(sidebar, /item\.superAdminOnly \|\| role === "super_admin"/);
+    assert.match(sidebar, /aria-current=\{isActive \? "page" : undefined\}/);
+    assert.match(sidebar, /\/app/);
+  });
+
+  it("a casca usa as mesmas classes visuais da área da empresa (D1)", () => {
+    assert.match(sidebar, /prime-app-sidebar/);
+    assert.match(sidebar, /prime-app-sidebar__brand/);
+    assert.match(sidebar, /prime-app-nav-item/);
+    assert.match(header, /prime-app-header/);
+    assert.match(shell, /prime-app-main/);
+    const css = read("src/app/globals.css");
+    for (const cls of [".prime-app-sidebar", ".prime-app-header", ".prime-app-main"]) assert.ok(css.includes(cls), cls);
+  });
+
+  it("o cabeçalho mantém breadcrumb, selo do papel e o link de volta ao app", () => {
+    assert.match(header, /<Breadcrumb/);
+    assert.match(header, /roleLabel/);
+    assert.match(header, /href="\/app"/);
+    assert.match(shell, /Pular para o conteúdo/);
+    assert.match(shell, /id="conteudo-principal"/);
+  });
+
+  it("a casca do admin não acessa banco nem Clerk diretamente", () => {
+    for (const source of [sidebar, header, shell]) {
+      assert.doesNotMatch(source, /@\/lib\/supabase|@clerk\//);
+    }
+  });
+});

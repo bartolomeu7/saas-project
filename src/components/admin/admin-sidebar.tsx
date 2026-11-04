@@ -50,8 +50,8 @@ export function AdminSidebar({
   })).filter((group) => group.items.length > 0);
 
   return (
-    <Sidebar collapsible="icon" className="border-sidebar-border">
-      <SidebarHeader className="h-16 justify-center border-b border-sidebar-border px-3">
+    <Sidebar collapsible="icon" className="prime-app-sidebar border-sidebar-border">
+      <SidebarHeader className="prime-app-sidebar__brand h-16 justify-center border-b border-sidebar-border px-3">
         <Link
           href="/admin"
           onClick={() => isMobile && setOpenMobile(false)}
@@ -61,10 +61,10 @@ export function AdminSidebar({
           <Image
             src="/logo.png"
             alt=""
-            width={24}
-            height={24}
+            width={28}
+            height={28}
             priority
-            style={{ width: 24, height: 24 }}
+            style={{ width: 28, height: 28 }}
             className="shrink-0"
           />
           <span className="flex items-center gap-2 truncate group-data-[collapsible=icon]:hidden">
@@ -80,7 +80,7 @@ export function AdminSidebar({
         {groups.map((group, index) => (
           <SidebarGroup key={group.label ?? `group-${index}`} className="py-1.5">
             {group.label && (
-              <SidebarGroupLabel className="h-7 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/45">
+              <SidebarGroupLabel className="h-7 text-[11px] font-semibold uppercase tracking-[0.12em] text-sidebar-foreground/60">
                 {group.label}
               </SidebarGroupLabel>
             )}
@@ -98,7 +98,7 @@ export function AdminSidebar({
                         asChild
                         isActive={isActive}
                         tooltip={item.label}
-                        className="text-sidebar-foreground/70 data-[active=true]:bg-primary/15 data-[active=true]:text-[hsl(207_100%_68%)]"
+                        className="prime-app-nav-item text-sidebar-foreground/75 data-[active=true]:bg-gradient-to-r data-[active=true]:from-primary/25 data-[active=true]:to-primary/5 data-[active=true]:font-medium data-[active=true]:text-[hsl(207_100%_68%)]"
                       >
                         <Link
                           href={item.href}

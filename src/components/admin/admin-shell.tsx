@@ -33,7 +33,7 @@ export function AdminShell({
       <PresenceHeartbeat />
       <SidebarProvider defaultOpen={defaultOpen}>
         <AdminSidebar userName={userName} userEmail={userEmail} role={role} />
-        <SidebarInset className="min-w-0 bg-background">
+        <SidebarInset className="prime-app-main min-w-0 bg-background">
           <a
             href="#conteudo-principal"
             className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-primary focus:px-3 focus:py-2 focus:text-sm focus:text-primary-foreground"

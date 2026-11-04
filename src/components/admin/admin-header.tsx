@@ -29,7 +29,7 @@ export function AdminHeader({ roleLabel }: { roleLabel: string }) {
   const isHome = pathname === "/admin";
 
   return (
-    <header className="sticky top-0 z-20 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+    <header className="prime-app-header sticky top-0 z-20 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
       <div className="flex h-16 items-center justify-between gap-3 px-4 sm:px-6">
         <div className="flex min-w-0 items-center gap-3">
           <SidebarTrigger
