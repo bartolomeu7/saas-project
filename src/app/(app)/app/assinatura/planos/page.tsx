@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getCurrentCompany } from "@/lib/companies/queries";
 import { getCurrentSubscription, getPlanById, getPublicPlans } from "@/lib/billing/queries";
 import { PlanCard } from "@/components/app/plan-card";
+import { PageHeader } from "@/components/app/page-header";
 import { toPricingView } from "@/lib/billing/pricing-display";
 import type { Plan, PublicPlan } from "@/types/billing";
 
@@ -46,11 +47,8 @@ export default async function PlansPage() {
   const cards = [...(hiddenCurrent ? [{ plan: hiddenCurrent, hidden: true }] : []), ...purchasable.map((plan) => ({ plan, hidden: false }))];
 
   return (
-    <div className="flex flex-col gap-6 px-4 py-6 sm:px-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Planos</h1>
-        <p className="text-sm text-muted-foreground">Escolha o plano ideal para a sua empresa. Pagamento via Pix.</p>
-      </div>
+    <div className="prime-module-page prime-module-page--assinatura flex flex-col gap-6 px-4 py-6 sm:px-6">
+      <PageHeader title="Planos" description="Escolha o plano ideal para a sua empresa. Pagamento via Pix." />
 
       {cards.length === 0 ? (
         <p className="rounded-md border border-border bg-card p-6 text-sm text-muted-foreground">

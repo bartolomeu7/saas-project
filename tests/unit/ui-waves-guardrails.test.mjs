@@ -432,3 +432,48 @@ describe("Onda E (lote 5): Agenda, Equipe e Fidelidade, só apresentação", () 
     }
   });
 });
+
+describe("Onda E (lote 6): Relatórios e Assinatura, só apresentação", () => {
+  const reports = read("src/app/(app)/app/relatorios/page.tsx");
+  const subscription = read("src/app/(app)/app/assinatura/page.tsx");
+  const plans = read("src/app/(app)/app/assinatura/planos/page.tsx");
+  const history = read("src/app/(app)/app/assinatura/historico/page.tsx");
+
+  it("Relatórios mantém a consulta, os períodos, a exportação CSV e o aviso de dados reais", () => {
+    assert.match(reports, /getReportsWorkspace\(current\.company\.id, period\)/);
+    for (const period of ['"today"', '"7d"', '"30d"', '"month"', '"year"']) assert.ok(reports.includes(period), period);
+    assert.match(reports, /\/app\/relatorios\/export\?period=/);
+    assert.match(reports, /Nenhuma métrica fictícia/);
+    assert.match(reports, /aria-label="Período do relatório"/);
+    assert.match(reports, /aria-current=/);
+  });
+
+  it("Assinatura mantém consultas, regras de expiração/vitalício, teste grátis e links de plano e histórico", () => {
+    for (const query of [/getCurrentSubscription\(companyId\)/, /getSubscriptionPayments\(companyId\)/, /getMyTrialStatus\(\)/, /isSubscriptionAccessActive\(subscription\)/]) {
+      assert.match(subscription, query);
+    }
+    assert.match(subscription, /<RequestTrialButton/);
+    assert.match(subscription, /\/app\/assinatura\/planos/);
+    assert.match(subscription, /\/app\/assinatura\/historico/);
+    assert.match(subscription, /Continuar pagamento/);
+    assert.match(subscription, /Acesso suspenso/);
+    assert.match(subscription, /Vitalício/);
+  });
+
+  it("Planos usa o mesmo catálogo da home e o histórico mantém o link do Pix pendente", () => {
+    assert.match(plans, /getPublicPlans\(\{ authenticated: true \}\)/);
+    assert.match(plans, /<PlanCard/);
+    assert.match(history, /getSubscriptionPayments\(current\.company\.id\)/);
+    assert.match(history, /\/app\/assinatura\/pagamento\/\$\{payment\.id\}/);
+    assert.match(history, /sm:table-cell/);
+  });
+
+  it("esqueletos de carregamento e nenhuma apresentação acessa banco direto", () => {
+    for (const dir of ["relatorios", "assinatura"]) {
+      assert.match(read(`src/app/(app)/app/${dir}/loading.tsx`), /ListLoading/);
+    }
+    for (const source of [reports, subscription, plans, history]) {
+      assert.doesNotMatch(source, /@\/lib\/supabase|@clerk\//);
+    }
+  });
+});

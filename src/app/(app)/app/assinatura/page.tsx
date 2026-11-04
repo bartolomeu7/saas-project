@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { CreditCard } from "lucide-react";
+import { PageHeader } from "@/components/app/page-header";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getCurrentCompany } from "@/lib/companies/queries";
@@ -32,16 +34,11 @@ export default async function SubscriptionPage() {
   const isExpired = !isSubscriptionAccessActive(subscription);
 
   return (
-    <div className="flex flex-col gap-6 px-4 py-6 sm:px-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Assinatura</h1>
-        <p className="text-sm text-muted-foreground">
-          Gerencie o plano e os pagamentos do Prime Ges.
-        </p>
-      </div>
+    <div className="prime-module-page prime-module-page--assinatura flex flex-col gap-6 px-4 py-6 sm:px-6">
+      <PageHeader title="Assinatura" description="Gerencie o plano e os pagamentos do Prime Ges." />
 
       {!subscription && (
-        <div role={trialStatus.denied ? "alert" : "status"} className="flex flex-col gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm">
+        <div role={trialStatus.denied ? "alert" : "status"} className="flex flex-col gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm">
           {trialStatus.denied ? (
             <p>
               Você atingiu o limite de cadastros permitido para esta conexão. Aguarde o período de liberação (até {trialStatus.windowHours} h) ou
@@ -54,19 +51,24 @@ export default async function SubscriptionPage() {
         </div>
       )}
 
-      <div className="rounded-lg border border-border bg-card p-6 shadow-soft">
+      <div className="relative overflow-hidden rounded-xl border border-border bg-gradient-to-br from-primary/10 via-card to-card p-6 shadow-soft">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="text-sm text-muted-foreground">Plano atual</p>
-            <p className="text-xl font-semibold text-foreground">
-              {plan?.name ?? "Nenhum plano ativo"}
-            </p>
+          <div className="flex items-center gap-4">
+            <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/15 text-primary-text">
+              <CreditCard className="h-5 w-5" strokeWidth={1.75} aria-hidden="true" />
+            </span>
+            <div>
+              <p className="text-sm text-muted-foreground">Plano atual</p>
+              <p className="text-xl font-semibold text-foreground">
+                {plan?.name ?? "Nenhum plano ativo"}
+              </p>
+            </div>
           </div>
           {subscription && <SubscriptionStatusBadge status={subscription.status} />}
         </div>
 
         {subscription && (
-          <dl className="mt-4 grid grid-cols-1 gap-4 text-sm sm:grid-cols-3">
+          <dl className="mt-5 grid grid-cols-1 gap-3 text-sm sm:grid-cols-3 [&>div]:rounded-lg [&>div]:border [&>div]:border-border [&>div]:bg-background/40 [&>div]:p-3">
             <div>
               <dt className="text-muted-foreground">Válido até</dt>
               <dd className="font-medium text-foreground">
@@ -118,7 +120,7 @@ export default async function SubscriptionPage() {
       </div>
 
       {lastPayment && (
-        <div className="rounded-lg border border-border bg-card p-6 shadow-soft">
+        <div className="rounded-xl border border-border bg-card p-6 shadow-soft">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-muted-foreground">Última cobrança</p>
