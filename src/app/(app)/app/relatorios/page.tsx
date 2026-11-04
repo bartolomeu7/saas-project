@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowDownToLine, BarChart3, CalendarDays, CircleDollarSign, FileText, Package, ShoppingCart } from "lucide-react";
+import { PageHeader } from "@/components/app/page-header";
 import { getCurrentCompany } from "@/lib/companies/queries";
 import { getReportsWorkspace } from "@/lib/reports/queries";
 import type { ReportPeriod } from "@/types/report";
@@ -40,28 +41,30 @@ export default async function ReportsPage({
 
   return (
     <div className="prime-module-page flex flex-col gap-6 px-4 py-6 sm:px-6">
-      <section className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-[0.16em] text-primary">Análises</p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight">Relatórios</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Leitura operacional baseada nos dados reais da empresa.</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {PERIODS.map((item) => (
-            <Link
-              key={item.value}
-              href={item.value === "month" ? "/app/relatorios" : "/app/relatorios?period=" + item.value}
-              className={"rounded-full border px-3 py-1.5 text-xs " + (period === item.value ? "bg-primary text-primary-foreground" : "hover:bg-muted")}
-            >
-              {item.label}
-            </Link>
-          ))}
-          <a href={"/app/relatorios/export?period=" + period} className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium hover:bg-muted">
-            <ArrowDownToLine className="h-3.5 w-3.5" />
-            Exportar CSV
-          </a>
-        </div>
-      </section>
+      <PageHeader
+        eyebrow="Análises"
+        title="Relatórios"
+        description="Leitura operacional baseada nos dados reais da empresa."
+        className="xl:items-end"
+        actions={
+          <nav aria-label="Período do relatório" className="flex flex-wrap gap-2">
+            {PERIODS.map((item) => (
+              <Link
+                key={item.value}
+                href={item.value === "month" ? "/app/relatorios" : "/app/relatorios?period=" + item.value}
+                aria-current={period === item.value ? "true" : undefined}
+                className={"rounded-full border px-3 py-1.5 text-xs " + (period === item.value ? "bg-primary text-primary-foreground" : "hover:bg-muted")}
+              >
+                {item.label}
+              </Link>
+            ))}
+            <a href={"/app/relatorios/export?period=" + period} className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium hover:bg-muted">
+              <ArrowDownToLine className="h-3.5 w-3.5" />
+              Exportar CSV
+            </a>
+          </nav>
+        }
+      />
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <article className="prime-kpi-card">
