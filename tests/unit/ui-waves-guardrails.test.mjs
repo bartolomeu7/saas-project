@@ -521,3 +521,49 @@ describe("Onda F1: casca do painel admin no novo visual, guardas intactas", () =
     }
   });
 });
+
+describe("Configurações: central somente leitura, sem novo poder de escrita", () => {
+  const page = read("src/app/(app)/app/configuracoes/page.tsx");
+  const nav = read("src/components/app/nav-items.ts");
+
+  it("o item do menu está habilitado e aponta para a rota que existe", () => {
+    assert.match(nav, /label: "Configurações",\s*href: "\/app\/configuracoes",\s*icon: Settings,\s*enabled: true/);
+    assert.ok(existsSync(new URL("src/app/(app)/app/configuracoes/page.tsx", base)));
+  });
+
+  it("a página só lê a empresa atual e não altera dados (sem ações, formulários nem banco direto)", () => {
+    assert.match(page, /getCurrentCompany\(\)/);
+    assert.doesNotMatch(page, /"use server"|<form|@\/lib\/.*\/actions|@\/lib\/supabase|\.(insert|update|delete|upsert|rpc)\(/);
+    assert.match(page, /ainda não está disponível/);
+  });
+
+  it("todos os atalhos apontam para rotas que existem", () => {
+    const hrefs = [...page.matchAll(/href: "(\/[^"]+)"/g)].map((m) => m[1]);
+    assert.ok(hrefs.length >= 10, "esperava os atalhos principais");
+    const appRoutes = {
+      "/app/equipe": "src/app/(app)/app/equipe/page.tsx",
+      "/app/assinatura": "src/app/(app)/app/assinatura/page.tsx",
+      "/app/produtos/categorias": "src/app/(app)/app/produtos/categorias/page.tsx",
+      "/app/servicos/categorias": "src/app/(app)/app/servicos/categorias/page.tsx",
+      "/app/fidelidade": "src/app/(app)/app/fidelidade/page.tsx",
+      "/conta": "src/app/conta/page.tsx",
+      "/termos-de-uso": "src/app/(public)/termos-de-uso/page.tsx",
+      "/politica-de-privacidade": "src/app/(public)/politica-de-privacidade/page.tsx",
+      "/politica-de-reembolso": "src/app/(public)/politica-de-reembolso/page.tsx",
+      "/direitos-do-titular": "src/app/(public)/direitos-do-titular/page.tsx",
+    };
+    for (const href of hrefs) {
+      assert.ok(appRoutes[href], `rota não mapeada no teste: ${href}`);
+      assert.ok(existsSync(new URL(appRoutes[href], base)), `${href} deve existir`);
+    }
+  });
+
+  it("documentos legais abrem em nova aba com rel seguro e aviso para leitor de tela", () => {
+    assert.match(page, /target: "_blank", rel: "noopener noreferrer"/);
+    assert.match(page, /abre em nova aba/);
+  });
+
+  it("tem esqueleto de carregamento", () => {
+    assert.match(read("src/app/(app)/app/configuracoes/loading.tsx"), /ListLoading/);
+  });
+});

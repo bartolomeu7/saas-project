@@ -74,7 +74,7 @@ export const NAV_GROUPS: NavGroup[] = [
         label: "Configurações",
         href: "/app/configuracoes",
         icon: Settings,
-        enabled: false,
+        enabled: true,
       },
     ],
   },
