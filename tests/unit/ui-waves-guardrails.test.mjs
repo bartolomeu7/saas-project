@@ -379,3 +379,56 @@ describe("Onda E (lote 4): Caixa e Financeiro, só apresentação", () => {
     }
   });
 });
+
+describe("Onda E (lote 5): Agenda, Equipe e Fidelidade, só apresentação", () => {
+  const agenda = read("src/app/(app)/app/agenda/page.tsx");
+  const team = read("src/app/(app)/app/equipe/page.tsx");
+  const loyalty = read("src/app/(app)/app/fidelidade/page.tsx");
+  const loyaltyTabs = read("src/components/app/loyalty-tabs.tsx");
+
+  it("Agenda mantém as consultas, a navegação por data/profissional e os formulários de ação", () => {
+    for (const query of [/listAppointments\(current\.company\.id, date, professional\)/, /getAgendaStats\(current\.company\.id, date\)/, /listAgendaServices\(current\.company\.id\)/]) {
+      assert.match(agenda, query);
+    }
+    assert.match(agenda, /shiftDate\(date, -1\)/);
+    assert.match(agenda, /shiftDate\(date, 1\)/);
+    for (const form of ["AppointmentForm", "AppointmentStatusForm", "RescheduleForm"]) {
+      assert.match(agenda, new RegExp(`<${form}`), form);
+    }
+    assert.match(agenda, /aria-label="Navegar entre os dias"/);
+    assert.match(agenda, /aria-current=/);
+  });
+
+  it("Equipe mantém consultas, regra de gestão (owner/admin), limites de assentos e formulários", () => {
+    assert.match(team, /listCompanyTeam\(\)/);
+    assert.match(team, /getSeatUsage\(\)/);
+    assert.match(team, /const canManage = current\.role === "owner" \|\| current\.role === "admin"/);
+    for (const form of ["AddMemberForm", "MemberRoleForm", "RemoveMemberForm", "TeamMemberCard"]) {
+      assert.match(team, new RegExp(`<${form}`), form);
+    }
+    assert.match(team, /seats\.overLimit/);
+    assert.match(team, /xl:hidden/);
+    assert.match(team, /\/app\/assinatura\/planos/);
+  });
+
+  it("Fidelidade mantém a busca de dados por aba, as quatro abas e a regra de edição", () => {
+    for (const query of [/getLoyaltySettings\(/, /getLoyaltyTierThresholds\(/, /getLoyaltyMultipliers\(/, /getLoyaltyCampaigns\(/]) {
+      assert.match(loyalty, query);
+    }
+    assert.match(loyalty, /const canEdit = current\.role === "owner" \|\| current\.role === "admin"/);
+    for (const tab of ["configuracoes", "multiplicadores", "niveis", "campanhas"]) {
+      assert.ok(loyaltyTabs.includes(`key: "${tab}"`), tab);
+    }
+    assert.match(loyaltyTabs, /aria-label="Seções da fidelidade"/);
+    assert.match(loyaltyTabs, /aria-current=\{isActive \? "page" : undefined\}/);
+  });
+
+  it("esqueletos de carregamento e nenhuma apresentação acessa banco direto", () => {
+    for (const dir of ["agenda", "equipe", "fidelidade"]) {
+      assert.match(read(`src/app/(app)/app/${dir}/loading.tsx`), /ListLoading/);
+    }
+    for (const source of [agenda, team, loyalty, loyaltyTabs]) {
+      assert.doesNotMatch(source, /@\/lib\/supabase|@clerk\//);
+    }
+  });
+});

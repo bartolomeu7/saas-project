@@ -8,6 +8,7 @@ import {
 } from "@/lib/loyalty/queries";
 import { DEFAULT_TIER_THRESHOLDS } from "@/lib/loyalty/tiers";
 import { LoyaltyTabs } from "@/components/app/loyalty-tabs";
+import { PageHeader } from "@/components/app/page-header";
 import { LoyaltySettingsForm } from "@/components/app/loyalty-settings-form";
 import { LoyaltyTiersSection } from "@/components/app/loyalty-tiers-section";
 import { LoyaltyMultipliersSection } from "@/components/app/loyalty-multipliers-section";
@@ -50,12 +51,7 @@ export default async function LoyaltyPage({
 
   return (
     <div className="prime-module-page prime-module-page--fidelidade flex flex-col gap-6 px-4 py-6 sm:px-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Fidelidade</h1>
-        <p className="text-sm text-muted-foreground">
-          Configure o programa de pontos da sua empresa.
-        </p>
-      </div>
+      <PageHeader title="Fidelidade" description="Configure o programa de pontos da sua empresa." />
 
       <div className="max-w-3xl">
         <LoyaltyTabs activeTab={tab} />
