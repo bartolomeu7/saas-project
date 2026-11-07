@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Package, Search, ShoppingCart, UserPlus, Wrench } from "lucide-react";
-import { NAV_GROUPS } from "@/components/app/nav-items";
+import { visibleNavGroups } from "@/components/app/visible-nav";
 import { Button } from "@/components/ui/button";
 import {
   CommandDialog,
@@ -15,14 +15,14 @@ import {
   CommandSeparator,
 } from "@/components/ui/command";
 import { getSaleSegmentHints } from "@/config/sale-segments";
-import type { BusinessType } from "@/types/company";
+import type { BusinessType, CompanyRole } from "@/types/company";
 
 /**
  * Busca rápida (Ctrl/⌘ + K) para navegar entre módulos e abrir os
  * cadastros mais usados. Só usa rotas que já existem: itens de menu
  * desabilitados ("Em breve") não aparecem.
  */
-export function CommandMenu({ businessType }: { businessType: BusinessType }) {
+export function CommandMenu({ businessType, role }: { businessType: BusinessType; role: CompanyRole }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const saleLabel = getSaleSegmentHints(businessType).newSaleLabel;
@@ -100,7 +100,7 @@ export function CommandMenu({ businessType }: { businessType: BusinessType }) {
             })}
           </CommandGroup>
           <CommandSeparator />
-          {NAV_GROUPS.map((group, index) => {
+          {visibleNavGroups(role).map((group, index) => {
             const items = group.items.filter((item) => item.enabled);
             if (items.length === 0) return null;
             return (

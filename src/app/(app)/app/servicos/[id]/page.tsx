@@ -5,6 +5,7 @@ import { DollarSign, TrendingUp, Clock, Tag } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getCurrentCompany } from "@/lib/companies/queries";
+import { can } from "@/lib/permissions/matrix";
 import { getServiceById } from "@/lib/services/queries";
 import { listAuditLogsForEntity } from "@/lib/audit/queries";
 import { calculateMargin, formatDuration } from "@/types/service";
@@ -77,7 +78,10 @@ export default async function ServiceDetailPage({
         <h2 className="mb-3 text-sm font-semibold text-muted-foreground">Indicadores</h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <DashboardCard label="Preço de venda" value={formatMoney(service.sale_price)} icon={DollarSign} />
-          <DashboardCard label="Preço de custo" value={formatMoney(service.cost_price)} icon={Tag} />
+          {can(current.role, "cost.view") && (
+            <DashboardCard label="Preço de custo" value={formatMoney(service.cost_price)} icon={Tag} />
+          )}
+          {can(current.role, "cost.view") && (
           <DashboardCard
             label="Margem"
             value={formatMoney(margin.value)}
@@ -85,6 +89,7 @@ export default async function ServiceDetailPage({
             hint={margin.percentage === null ? "Sem preço de venda definido" : `${margin.percentage.toFixed(2)}% sobre a venda`}
             indicator={margin.value > 0 ? "success" : margin.value < 0 ? "warning" : "neutral"}
           />
+          )}
           <DashboardCard label="Duração" value={formatDuration(service.duration_minutes)} icon={Clock} />
         </div>
       </div>

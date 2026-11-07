@@ -5,6 +5,8 @@ import { PageHeader } from "@/components/app/page-header";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getCurrentCompany } from "@/lib/companies/queries";
+import { can } from "@/lib/permissions/matrix";
+import { NoAccess } from "@/components/app/no-access";
 import { getFinanceWorkspace } from "@/lib/finance/queries";
 import {
   AccountsPayablePaymentForm,
@@ -109,6 +111,7 @@ export default async function FinancePage({
 }) {
   const searchParams = await searchParamsPromise;
   const current = (await getCurrentCompany())!;
+  if (!can(current.role, "finance.view")) return <NoAccess area="o Financeiro" />;
   const workspace = await getFinanceWorkspace(current.company.id);
   const rawView = searchParams?.view;
   const requestedView = Array.isArray(rawView) ? rawView[0] : rawView;

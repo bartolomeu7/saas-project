@@ -7,6 +7,8 @@ import { EmptyState } from "@/components/app/empty-state";
 import { ListAvatar } from "@/components/app/list-toolbar";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { getCurrentCompany } from "@/lib/companies/queries";
+import { can } from "@/lib/permissions/matrix";
+import { NoAccess } from "@/components/app/no-access";
 import { getPurchaseStats, listPurchaseOrders } from "@/lib/purchases/queries";
 import { PURCHASE_ORDER_STATUS_LABELS, type PurchaseOrderStatus } from "@/types/purchase";
 import { buttonVariants } from "@/components/ui/button";
@@ -31,6 +33,7 @@ const STATUS_VARIANT: Record<PurchaseOrderStatus, BadgeProps["variant"]> = {
 
 export default async function PurchasesPage() {
   const current = (await getCurrentCompany())!;
+  if (!can(current.role, "purchases.view")) return <NoAccess area="as Compras" />;
   const [stats, orders] = await Promise.all([
     getPurchaseStats(current.company.id),
     listPurchaseOrders(current.company.id),

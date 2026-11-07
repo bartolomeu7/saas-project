@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCurrentCompany } from "@/lib/companies/queries";
+import { can } from "@/lib/permissions/matrix";
 import { getProductById } from "@/lib/products/queries";
 import { listActiveCategories } from "@/lib/product-categories/queries";
 import { getProductSegmentHints } from "@/config/product-segments";
@@ -44,7 +45,9 @@ export default async function EditProductPage({
       <div className="max-w-3xl">
         <ProductForm
           action={action}
-          defaultValues={product}
+          defaultValues={can(current.role, "cost.view") ? product : { ...product, cost_price: undefined }}
+          canViewCost={can(current.role, "cost.view")}
+          canEditPrice={can(current.role, "pricing.edit")}
           categories={categories}
           currentCategoryName={product.category_name}
           segmentHints={hints}

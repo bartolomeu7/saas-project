@@ -24,6 +24,10 @@ interface ServiceFormProps {
   /** Ver o mesmo parâmetro em ProductForm — evita apagar silenciosamente a categoria do serviço quando ela já foi desativada. */
   currentCategoryName?: string | null;
   submitLabel: string;
+  /** Matriz de permissões: funcionário não vê o custo nem a margem (padrão: vê). */
+  canViewCost?: boolean;
+  /** Matriz de permissões: funcionário não altera o preço de um item já cadastrado (padrão: altera). */
+  canEditPrice?: boolean;
 }
 
 export function ServiceForm({
@@ -32,6 +36,8 @@ export function ServiceForm({
   categories,
   currentCategoryName,
   submitLabel,
+  canViewCost = true,
+  canEditPrice = true,
 }: ServiceFormProps) {
   const currentCategoryIsInactive =
     !!defaultValues?.category_id &&
@@ -117,6 +123,7 @@ export function ServiceForm({
       <section className="flex flex-col gap-4">
         <h2 className="text-sm font-semibold text-muted-foreground">Preços</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          {canViewCost && (
           <div className="flex flex-col gap-2">
             <Label htmlFor="costPrice">Preço de custo</Label>
             <Input
@@ -129,11 +136,14 @@ export function ServiceForm({
               onChange={(event) => setCostPrice(event.target.value)}
             />
           </div>
+          )}
           <div className="flex flex-col gap-2">
             <Label htmlFor="salePrice">Preço de venda</Label>
             <Input
               id="salePrice"
               name="salePrice"
+              readOnly={!canEditPrice}
+              title={canEditPrice ? undefined : "Só owner/admin alteram o preço de um item já cadastrado."}
               type="number"
               step="0.01"
               min="0"
@@ -141,6 +151,7 @@ export function ServiceForm({
               onChange={(event) => setSalePrice(event.target.value)}
             />
           </div>
+          {canViewCost && (
           <div className="flex flex-col gap-2">
             <Label>Margem</Label>
             <div className="flex h-10 flex-col justify-center rounded-md border border-dashed border-border px-3 text-sm">
@@ -152,6 +163,7 @@ export function ServiceForm({
               </span>
             </div>
           </div>
+          )}
         </div>
       </section>
 

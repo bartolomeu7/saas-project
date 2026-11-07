@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getCurrentCompany } from "@/lib/companies/queries";
+import { can } from "@/lib/permissions/matrix";
 import { listActiveCategories } from "@/lib/service-categories/queries";
 import { createServiceAction } from "@/lib/services/actions";
 import { ServiceForm } from "@/components/app/service-form";
@@ -33,6 +34,7 @@ export default async function NewServicePage() {
           action={createServiceAction}
           categories={categories}
           submitLabel="Salvar serviço"
+          canViewCost={can(current.role, "cost.view")}
         />
       </div>
     </div>

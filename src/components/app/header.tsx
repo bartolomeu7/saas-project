@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { BUSINESS_TYPE_LABELS, type Company } from "@/types/company";
+import { BUSINESS_TYPE_LABELS, type Company, type CompanyRole } from "@/types/company";
 
 const NAV_MODULES = NAV_GROUPS.flatMap((group) =>
   group.items.filter((item) => item.enabled).map(({ label, href }) => ({ label, href })),
@@ -27,7 +27,7 @@ const NAV_MODULES = NAV_GROUPS.flatMap((group) =>
  * Header da área da empresa: gatilho da sidebar, identidade da empresa, breadcrumb da rota atual (md+; mesmo padrão
  * do header do admin) e as ações (busca rápida e notificações).
  */
-export function Header({ company }: { company: Company }) {
+export function Header({ company, role }: { company: Company; role: CompanyRole }) {
   const pathname = usePathname() ?? "/app";
   const crumbs = buildAppBreadcrumbs(pathname, NAV_MODULES);
 
@@ -86,7 +86,7 @@ export function Header({ company }: { company: Company }) {
         </div>
 
         <div className="flex items-center gap-1.5">
-          <CommandMenu businessType={company.business_type} />
+          <CommandMenu businessType={company.business_type} role={role} />
           <NotificationButton />
         </div>
       </div>

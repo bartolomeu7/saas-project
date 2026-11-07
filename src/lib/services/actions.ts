@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createSessionClient } from "@/lib/supabase/server";
 import { getCurrentCompany } from "@/lib/companies/queries";
+import { can } from "@/lib/permissions/matrix";
 import { getCurrentUser } from "@/lib/auth/session";
 import { serviceSchema } from "@/lib/validations/service";
 import { writeAuditLog } from "@/lib/audit/log";
@@ -77,7 +78,8 @@ export async function createServiceAction(
       category_id: parsed.data.categoryId,
       name: parsed.data.name,
       description: parsed.data.description,
-      cost_price: parsed.data.costPrice,
+      // Matriz de permissões: funcionário define o preço de venda ao cadastrar, mas não o custo (fica 0).
+      cost_price: can(current.role, "cost.view") ? parsed.data.costPrice : 0,
       sale_price: parsed.data.salePrice,
       duration_minutes: parsed.data.durationMinutes,
       status: parsed.data.status,
@@ -137,8 +139,10 @@ export async function updateServiceAction(
       category_id: parsed.data.categoryId,
       name: parsed.data.name,
       description: parsed.data.description,
-      cost_price: parsed.data.costPrice,
-      sale_price: parsed.data.salePrice,
+      // Matriz de permissões: só owner/admin alteram preço e custo de um item já cadastrado (trigger no banco também exige).
+      ...(can(current.role, "pricing.edit")
+        ? { cost_price: parsed.data.costPrice, sale_price: parsed.data.salePrice }
+        : {}),
       duration_minutes: parsed.data.durationMinutes,
       status: parsed.data.status,
     })

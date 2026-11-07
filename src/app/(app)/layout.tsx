@@ -75,6 +75,7 @@ export default async function AppLayout({
       <ThemeSync />
       <AppShell
         company={current.company}
+        role={current.role}
         userName={profile?.full_name}
         userEmail={user?.email}
         defaultOpen={defaultOpen}

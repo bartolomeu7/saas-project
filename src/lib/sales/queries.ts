@@ -490,7 +490,8 @@ export async function searchProductsForSale(
 
   const { data, error } = await supabase
     .from("products")
-    .select("id, name, sku, barcode, sale_price, cost_price, stock_quantity, unit")
+    // O custo NÃO é enviado ao navegador: funcionário não vê custo/margem (o servidor lê o custo por conta própria ao incluir o item).
+    .select("id, name, sku, barcode, sale_price, stock_quantity, unit")
     .eq("company_id", companyId)
     .eq("status", "active")
     .or(`name.ilike.%${term}%,sku.ilike.%${term}%,barcode.ilike.%${term}%`)
@@ -516,7 +517,7 @@ export async function searchServicesForSale(
 
   const { data, error } = await supabase
     .from("services")
-    .select("id, name, sale_price, cost_price, duration_minutes, service_categories(name)")
+    .select("id, name, sale_price, duration_minutes, service_categories(name)")
     .eq("company_id", companyId)
     .eq("status", "active")
     .ilike("name", `%${term}%`)
@@ -530,7 +531,6 @@ export async function searchServicesForSale(
       name: row.name,
       category_name: row.service_categories?.name ?? null,
       sale_price: row.sale_price,
-      cost_price: row.cost_price,
       duration_minutes: row.duration_minutes,
     })
   );

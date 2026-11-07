@@ -129,7 +129,6 @@ export interface ProductPick {
   sku: string | null;
   barcode: string | null;
   sale_price: number;
-  cost_price: number;
   stock_quantity: number;
   unit: string;
 }
@@ -140,7 +139,6 @@ export interface ServicePick {
   name: string;
   category_name: string | null;
   sale_price: number;
-  cost_price: number;
   duration_minutes: number;
 }
 

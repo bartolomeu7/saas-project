@@ -7,6 +7,8 @@ import { EmptyState } from "@/components/app/empty-state";
 import { ListAvatar, ListToolbar } from "@/components/app/list-toolbar";
 import { Badge } from "@/components/ui/badge";
 import { getCurrentCompany } from "@/lib/companies/queries";
+import { can } from "@/lib/permissions/matrix";
+import { NoAccess } from "@/components/app/no-access";
 import { listSuppliers, getSupplierStats } from "@/lib/suppliers/queries";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -21,6 +23,7 @@ export default async function SuppliersPage({
 }) {
   const searchParams = await searchParamsPromise;
   const current = (await getCurrentCompany())!;
+  if (!can(current.role, "suppliers.view")) return <NoAccess area="os Fornecedores" />;
   const [stats, suppliers] = await Promise.all([
     getSupplierStats(current.company.id),
     listSuppliers(current.company.id, searchParams?.q),
