@@ -41,6 +41,10 @@ export const APP_ROUTE_PATTERNS: readonly string[] = [
   "/app/compras/[id]",
   "/app/compras/nova",
   "/app/configuracoes",
+  "/app/configuracoes/aparencia",
+  "/app/configuracoes/empresa",
+  "/app/configuracoes/perfil",
+  "/app/configuracoes/seguranca",
   "/app/equipe",
   "/app/equipe/[id]",
   "/app/estoque",
@@ -79,6 +83,10 @@ const SEGMENT_LABELS: Record<string, string> = {
   historico: "Histórico",
   planos: "Planos",
   pagamento: "Pagamento",
+  perfil: "Perfil",
+  seguranca: "Segurança",
+  aparencia: "Aparência",
+  empresa: "Empresa",
 };
 
 const DYNAMIC_LABEL = "Detalhes";

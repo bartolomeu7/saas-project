@@ -91,8 +91,15 @@ describe("Escopo do ClerkProvider (Etapa 6)", () => {
       "src/components/account/delete-account-panel.tsx",
       "src/components/app/user-menu.tsx",
       "src/components/clerk/clerk-app-provider.tsx",
+      "src/components/settings/email-addresses-panel.tsx",
+      "src/components/settings/password-form.tsx",
+      "src/components/settings/phone-numbers-panel.tsx",
+      "src/components/settings/profile-identity-form.tsx",
+      "src/components/settings/security-level-card.tsx",
     ]);
-    // quem consome: login/cadastro e acesso-indisponivel têm layout próprio; delete-account-panel vive em /conta; user-menu nas sidebars
+    // quem consome: login/cadastro e acesso-indisponivel têm layout próprio; delete-account-panel vive em /conta; user-menu nas sidebars;
+    // components/settings/* (perfil, e-mails, telefone, senha, duas etapas) só são usados em /app/configuracoes e /admin/account,
+    // ambos dentro dos layouts (app) e admin, que têm o provider (conferido pelo teste do grafo de importações abaixo)
     for (const route of ["(public)/login", "(public)/register", "acesso-indisponivel", "conta", "onboarding", "aceite-termos", "acesso-sessoes"]) {
       assert.match(read(join(APP, route, "layout.tsx")), /ClerkSegmentLayout/, route);
     }
@@ -107,7 +114,7 @@ describe("Escopo do ClerkProvider (Etapa 6)", () => {
   it("a proteção de rotas continua no servidor: o middleware segue sendo o clerkMiddleware, para todas as rotas", () => {
     const mw = read(join(SRC, "middleware.ts"));
     assert.match(mw, /export const middleware = clerkMiddleware\(/);
-    assert.match(mw, /PROTECTED_PREFIXES = \["\/app", "\/admin", "\/onboarding", "\/acesso-sessoes", "\/conta"\]/);
+    assert.match(mw, /PROTECTED_PREFIXES = \["\/app", "\/admin", "\/onboarding", "\/acesso-sessoes", "\/conta", TWO_FACTOR_PATH\]/);
   });
 });
 
@@ -164,6 +171,11 @@ describe("Alcance de cada rota (grafo de importações)", () => {
       "src/app/acesso-indisponivel/sign-out-button.tsx",
       "src/components/account/delete-account-panel.tsx",
       "src/components/app/user-menu.tsx",
+      "src/components/settings/email-addresses-panel.tsx",
+      "src/components/settings/password-form.tsx",
+      "src/components/settings/phone-numbers-panel.tsx",
+      "src/components/settings/profile-identity-form.tsx",
+      "src/components/settings/security-level-card.tsx",
     ]);
   });
 

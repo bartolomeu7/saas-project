@@ -2,7 +2,7 @@
 
 import { toast } from "sonner";
 import { ConfirmActionForm } from "@/components/app/confirm-dialog";
-import { setUserRoleAction, setUserStatusAction } from "@/lib/admin/actions";
+import { resetUserTwoFactorAction, setUserRoleAction, setUserStatusAction } from "@/lib/admin/actions";
 import { canChangeUserRole, canChangeUserStatus } from "@/lib/admin/permissions";
 import { USER_ROLE_LABELS } from "@/types/admin";
 import type { ActionResult } from "@/lib/auth/actions";
@@ -45,8 +45,10 @@ export function AdminUserActions({
 }) {
   const showStatus = canChangeUserStatus(actorRole, targetRole, isSelf);
   const showRole = canChangeUserRole(actorRole, isSelf);
+  // Recuperação da verificação em duas etapas: só super admin, nunca em si mesmo (o banco repete as duas regras).
+  const showTwoFactorReset = actorRole === "super_admin" && !isSelf;
 
-  if (!showStatus && !showRole) {
+  if (!showStatus && !showRole && !showTwoFactorReset) {
     return <span className="text-xs text-muted-foreground">{isSelf ? "Você" : "—"}</span>;
   }
 
@@ -85,6 +87,17 @@ export function AdminUserActions({
             triggerClassName="text-xs text-muted-foreground"
           />
         ))}
+      {showTwoFactorReset && (
+        <ConfirmActionForm
+          action={async () => notify(await resetUserTwoFactorAction(userId))}
+          label="Remover verificação em 2 etapas"
+          title={`Remover a verificação em duas etapas de ${userName}?`}
+          description="Use só quando a pessoa perdeu o aparelho e os códigos de backup. Ela volta a entrar apenas com o login. A ação fica registrada na auditoria."
+          confirmLabel="Remover"
+          destructive
+          triggerClassName="text-xs text-muted-foreground"
+        />
+      )}
     </div>
   );
 }

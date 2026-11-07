@@ -1,6 +1,7 @@
 "use server";
 
 import { clerkClient } from "@clerk/nextjs/server";
+import { purgeTwoFactor } from "@/lib/security/two-factor/service";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentUser } from "@/lib/auth/session";
 import type { ActionResult } from "@/lib/auth/actions";
@@ -86,6 +87,12 @@ export async function deleteMyAccountAction(_prev: DeleteAccountResult, formData
   }
 
   const result = (deleted ?? {}) as { companies_deleted?: number; companies_left?: number; clerk_user_id?: string | null };
+
+  // A segunda etapa só é apagada DEPOIS que a exclusão deu certo (uma falha acima não pode enfraquecer a conta que continua).
+  // O perfil é anonimizado (não apagado) para guardar o aceite dos termos; por isso o segredo e os códigos são apagados aqui.
+  await purgeTwoFactor(user.id).catch((error) => {
+    console.error("[account-deletion] não foi possível apagar a segunda etapa:", error instanceof Error ? error.message : "erro desconhecido");
+  });
 
   // A partir daqui os dados já foram apagados: falhas só são registradas, nunca desfazem nem escondem a exclusão.
   if (result.clerk_user_id) {

@@ -522,7 +522,7 @@ describe("Onda F1: casca do painel admin no novo visual, guardas intactas", () =
   });
 });
 
-describe("Configurações: central somente leitura, sem novo poder de escrita", () => {
+describe("Configurações: a visão geral é somente leitura (as alterações vivem nas abas próprias)", () => {
   const page = read("src/app/(app)/app/configuracoes/page.tsx");
   const nav = read("src/components/app/nav-items.ts");
 
@@ -534,18 +534,23 @@ describe("Configurações: central somente leitura, sem novo poder de escrita", 
   it("a página só lê a empresa atual e não altera dados (sem ações, formulários nem banco direto)", () => {
     assert.match(page, /getCurrentCompany\(\)/);
     assert.doesNotMatch(page, /"use server"|<form|@\/lib\/.*\/actions|@\/lib\/supabase|\.(insert|update|delete|upsert|rpc)\(/);
-    assert.match(page, /ainda não está disponível/);
+    // a edição do nome/segmento mora na aba Empresa (só owner/admin): a visão geral apenas aponta para ela
+    assert.match(page, /href="\/app\/configuracoes\/empresa"/);
+    assert.doesNotMatch(page, /ainda não está disponível/);
   });
 
   it("todos os atalhos apontam para rotas que existem", () => {
     const hrefs = [...page.matchAll(/href: "(\/[^"]+)"/g)].map((m) => m[1]);
-    assert.ok(hrefs.length >= 10, "esperava os atalhos principais");
+    assert.ok(hrefs.length >= 13, "esperava os atalhos principais");
     const appRoutes = {
       "/app/equipe": "src/app/(app)/app/equipe/page.tsx",
       "/app/assinatura": "src/app/(app)/app/assinatura/page.tsx",
       "/app/produtos/categorias": "src/app/(app)/app/produtos/categorias/page.tsx",
       "/app/servicos/categorias": "src/app/(app)/app/servicos/categorias/page.tsx",
       "/app/fidelidade": "src/app/(app)/app/fidelidade/page.tsx",
+      "/app/configuracoes/perfil": "src/app/(app)/app/configuracoes/perfil/page.tsx",
+      "/app/configuracoes/seguranca": "src/app/(app)/app/configuracoes/seguranca/page.tsx",
+      "/app/configuracoes/aparencia": "src/app/(app)/app/configuracoes/aparencia/page.tsx",
       "/conta": "src/app/conta/page.tsx",
       "/termos-de-uso": "src/app/(public)/termos-de-uso/page.tsx",
       "/politica-de-privacidade": "src/app/(public)/politica-de-privacidade/page.tsx",

@@ -3066,6 +3066,84 @@ export type Database = {
           },
         ]
       }
+      two_factor_session_verifications: {
+        Row: {
+          clerk_session_id: string
+          user_id: string
+          verified_at: string
+        }
+        Insert: {
+          clerk_session_id: string
+          user_id: string
+          verified_at?: string
+        }
+        Update: {
+          clerk_session_id?: string
+          user_id?: string
+          verified_at?: string
+        }
+        Relationships: []
+      }
+      user_two_factor: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          enabled_at: string | null
+          failed_attempts: number
+          last_used_step: number
+          locked_until: string | null
+          secret_enc: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          enabled_at?: string | null
+          failed_attempts?: number
+          last_used_step?: number
+          locked_until?: string | null
+          secret_enc: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          enabled_at?: string | null
+          failed_attempts?: number
+          last_used_step?: number
+          locked_until?: string | null
+          secret_enc?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_two_factor_backup_codes: {
+        Row: {
+          code_hash: string
+          created_at: string
+          id: string
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          code_hash: string
+          created_at?: string
+          id?: string
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          code_hash?: string
+          created_at?: string
+          id?: string
+          used_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_consents: {
         Row: {
           consent_type: string
@@ -3478,6 +3556,18 @@ export type Database = {
           p_request_key: string
         }
         Returns: Json
+      }
+      admin_reset_two_factor: {
+        Args: { p_user_id: string }
+        Returns: undefined
+      }
+      two_factor_gate_status: {
+        Args: { p_session_id: string }
+        Returns: Json
+      }
+      two_factor_reserve_attempt: {
+        Args: { p_user_id: string }
+        Returns: string
       }
       admin_update_company: {
         Args: {
@@ -4770,6 +4860,26 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "company_members"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      update_own_company: {
+        Args: {
+          p_business_type: Database["public"]["Enums"]["business_type"]
+          p_name: string
+        }
+        Returns: {
+          business_type: Database["public"]["Enums"]["business_type"]
+          created_at: string
+          id: string
+          name: string
+          status: Database["public"]["Enums"]["company_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "companies"
           isOneToOne: true
           isSetofReturn: false
         }

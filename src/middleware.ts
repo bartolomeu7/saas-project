@@ -19,6 +19,14 @@ import {
   SESSION_UNVERIFIED_MESSAGE,
 } from "@/lib/auth/session-gate-core";
 import {
+  decideTwoFactorGate,
+  isTwoFactorGatedPath,
+  parseTwoFactorGateStatus,
+  TWO_FACTOR_PATH,
+  TWO_FACTOR_REQUIRED_CODE,
+  TWO_FACTOR_REQUIRED_MESSAGE,
+} from "@/lib/security/two-factor/gate";
+import {
   AUTH_BACKEND_MESSAGES,
   readJwtRole,
   type AuthBackendErrorCode,
@@ -27,7 +35,7 @@ import {
 /**
  * Prefixos de rota que exigem usuário autenticado.
  */
-const PROTECTED_PREFIXES = ["/app", "/admin", "/onboarding", "/acesso-sessoes", "/conta"];
+const PROTECTED_PREFIXES = ["/app", "/admin", "/onboarding", "/acesso-sessoes", "/conta", TWO_FACTOR_PATH];
 
 /**
  * Prefixo da área administrativa da plataforma — exige, além de
@@ -133,6 +141,8 @@ function authBackendUnavailable(code: AuthBackendErrorCode) {
  * 5. profiles.status: conta inactive/suspended não acessa /app, /onboarding nem
  *    /admin — é redirecionada para ACCOUNT_BLOCKED_PATH (a mesma regra vale no
  *    banco: current_profile_user_id() só reconhece perfil ativo).
+ * 5b. Verificação em duas etapas própria (TOTP): quem ativou precisa cumpri-la uma vez por sessão do Clerk (ver
+ *    src/lib/security/two-factor/gate.ts). Páginas redirecionam para /verificacao-2fa; Server Actions/APIs recebem 403.
  * 6. Consentimento legal vigente (Termos + Política): barreira CENTRAL para páginas, Server
  *    Actions e APIs do usuário (ver src/lib/legal/gate.ts). Páginas redirecionam para
  *    /aceite-termos; Server Actions/APIs/POST recebem 403 LEGAL_CONSENT_REQUIRED. Se o banco não
@@ -169,9 +179,11 @@ export const middleware = clerkMiddleware(async (auth, request) => {
   const needsStatusGuard =
     isAuthenticated && (isAppRoute(pathname) || isOnboardingRoute(pathname) || isAdminRoute(pathname));
   const needsConsentGate = isAuthenticated && isConsentGatedPath(pathname);
+  // Segunda etapa própria do Prime Ges (TOTP): barreira central, como o consentimento e o limite de sessões.
+  const needsTwoFactorGate = isAuthenticated && isTwoFactorGatedPath(pathname);
   const isApiRoute = pathname.startsWith("/api/");
 
-  if (!needsStatusGuard && !needsConsentGate) {
+  if (!needsStatusGuard && !needsConsentGate && !needsTwoFactorGate) {
     return NextResponse.next();
   }
 
@@ -203,7 +215,8 @@ export const middleware = clerkMiddleware(async (auth, request) => {
   // Conta inativa ou suspensa: sem produto e sem painel, qualquer que seja o papel.
   // Perfil inexistente = primeiro acesso (segue para o onboarding, que o cria).
   // O Clerk só prova a identidade; quem libera o acesso é profiles.status.
-  if (profile && profile.status !== "active") {
+  // (/conta entra aqui só por causa da segunda etapa: o direito de excluir os próprios dados NÃO depende do status da conta.)
+  if (profile && profile.status !== "active" && (needsStatusGuard || needsConsentGate)) {
     // APIs (billing/presença) tratam a conta inativa por conta própria (AccountInactiveError => 403).
     if (isApiRoute) return NextResponse.next();
     return NextResponse.redirect(new URL(ACCOUNT_BLOCKED_PATH, request.url));
@@ -230,6 +243,34 @@ export const middleware = clerkMiddleware(async (auth, request) => {
       }
       if (action === "deny_unverified") {
         return NextResponse.json({ error: SESSION_UNVERIFIED_MESSAGE, code: SESSION_UNVERIFIED_CODE }, { status: 403, headers: { "cache-control": "no-store" } });
+      }
+    }
+  }
+
+  // Verificação em duas etapas própria: quem ativou precisa cumpri-la uma vez por sessão do Clerk. Aqui só se LÊ o estado
+  // (com o token do próprio usuário); quem grava a verificação é a Server Action, com a chave de serviço.
+  if (profile && sessionId && needsTwoFactorGate) {
+    const { data: gateRaw, error: gateError } = await supabase.rpc("two_factor_gate_status", { p_session_id: sessionId });
+    if (gateError && !isMissingFunctionError(gateError)) {
+      console.error("[middleware] leitura da segunda etapa falhou:", gateError.message);
+      return authBackendUnavailable("AUTH_RPC_FAILED");
+    }
+    if (!gateError) {
+      const decision = decideTwoFactorGate({
+        pathname,
+        search: request.nextUrl.search,
+        method: request.method,
+        isServerAction: request.headers.has("next-action"),
+        status: parseTwoFactorGateStatus(gateRaw),
+      });
+      if (decision.action === "redirect") {
+        return NextResponse.redirect(new URL(`${TWO_FACTOR_PATH}?next=${encodeURIComponent(decision.from)}`, request.url));
+      }
+      if (decision.action === "deny") {
+        return NextResponse.json(
+          { error: TWO_FACTOR_REQUIRED_MESSAGE, code: TWO_FACTOR_REQUIRED_CODE },
+          { status: 403, headers: { "cache-control": "no-store" } }
+        );
       }
     }
   }

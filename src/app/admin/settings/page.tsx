@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { PageHeader } from "@/components/app/page-header";
 import { AdminActionDialog } from "@/components/admin/admin-action-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +8,7 @@ import { setPlatformSettingAction } from "@/lib/admin/actions";
 import { getPlatformSettings, requireSuperAdmin } from "@/lib/admin/queries";
 import { formatDateTime } from "@/lib/format";
 import { describeAntifraudConfig } from "@/lib/security/client-ip";
+import { USER_ROLE_LABELS } from "@/types/admin";
 
 export const metadata = { title: "Configurações" };
 
@@ -42,7 +44,7 @@ const CAPABILITIES: { feature: string; admin: boolean }[] = [
  * coerência são validadas no banco e toda alteração é auditada.
  */
 export default async function AdminSettingsPage() {
-  await requireSuperAdmin();
+  const admin = await requireSuperAdmin();
   const settings = await getPlatformSettings();
   // Estado (não o valor) do segredo do antifraude deste ambiente: só informativo para o super administrador.
   const antifraud = describeAntifraudConfig();
@@ -54,6 +56,30 @@ export default async function AdminSettingsPage() {
         title="Configurações"
         description="Parâmetros da plataforma com efeito real. Visível apenas para super administradores."
       />
+
+      <Card>
+        <CardHeader>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <CardTitle className="text-base">Minha conta de administrador</CardTitle>
+            <Badge variant="info">{USER_ROLE_LABELS[admin.role]}</Badge>
+          </div>
+          <CardDescription>
+            {admin.email ?? "—"}. Perfil, senha, verificação em duas etapas, aparelhos conectados e tema ficam em{" "}
+            <Link href="/admin/account" className="font-medium text-primary-text underline-offset-4 hover:underline">
+              Minha conta
+            </Link>
+            . Para ver as ações dos administradores, abra a{" "}
+            <Link href="/admin/audit" className="font-medium text-primary-text underline-offset-4 hover:underline">
+              auditoria
+            </Link>{" "}
+            ou a lista de{" "}
+            <Link href="/admin/administrators" className="font-medium text-primary-text underline-offset-4 hover:underline">
+              administradores
+            </Link>
+            .
+          </CardDescription>
+        </CardHeader>
+      </Card>
 
       <Card className={antifraud.ok ? undefined : "border-destructive/40"}>
         <CardHeader>

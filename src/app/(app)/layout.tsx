@@ -7,6 +7,8 @@ import { getCurrentUser, getCurrentProfile } from "@/lib/auth/session";
 import { getCurrentCompany } from "@/lib/companies/queries";
 import { AppShell } from "@/components/app/app-shell";
 import { ClerkAppProvider } from "@/components/clerk/clerk-app-provider";
+import { ThemeSync } from "@/components/settings/theme-sync";
+import { THEME_INIT_SCRIPT } from "@/lib/settings/theme";
 import { requireLegalConsent } from "@/lib/legal/consent";
 import { evaluateSessionGate, SESSION_LIMIT_PATH } from "@/lib/auth/session-gate";
 
@@ -68,6 +70,9 @@ export default async function AppLayout({
 
   return (
     <ClerkAppProvider>
+      {/* Tema escolhido em Configurações → Aparência: aplicado antes da primeira pintura (sem piscar) e mantido em dia. */}
+      <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      <ThemeSync />
       <AppShell
         company={current.company}
         userName={profile?.full_name}

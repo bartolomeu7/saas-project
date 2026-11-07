@@ -77,6 +77,54 @@ export async function createCompanyAction(
 }
 
 /**
+ * Mensagens do banco que são texto curado em português (raise exception de update_own_company). Qualquer outra coisa
+ * (permissão do Postgres, rede, constraint) vira a mensagem genérica: nunca vaza detalhe interno.
+ */
+const COMPANY_EDIT_SAFE_MESSAGES = [
+  "Apenas o proprietário ou um administrador",
+  "Informe o nome da empresa.",
+  "O nome da empresa pode ter no máximo",
+  "Selecione o segmento da empresa.",
+  "Nenhuma empresa encontrada.",
+  "Usuário não autenticado.",
+];
+
+/**
+ * Proprietário ou administrador da empresa altera nome e segmento. Nada de identidade vem do formulário: a função do
+ * banco `update_own_company` resolve a empresa e o papel a partir da sessão (JWT do Clerk), recusa funcionário, não
+ * mexe em status/plano e audita a mudança.
+ */
+export async function updateOwnCompanyAction(
+  _prevState: ActionResult,
+  formData: FormData
+): Promise<ActionResult> {
+  const parsed = createCompanySchema.safeParse({
+    name: formData.get("name"),
+    businessType: formData.get("businessType"),
+  });
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    return { error: issue?.message ?? "Dados inválidos.", field: issue?.path[0] === "businessType" ? "businessType" : "name" };
+  }
+
+  const supabase = await createSessionClient();
+  const { error } = await supabase.rpc("update_own_company", {
+    p_name: parsed.data.name,
+    p_business_type: parsed.data.businessType,
+  });
+
+  if (error) {
+    const known = COMPANY_EDIT_SAFE_MESSAGES.some((prefix) => error.message.startsWith(prefix));
+    if (!known) console.error("[company] update_own_company() falhou:", error.message);
+    return { error: known ? error.message : "Não foi possível salvar agora. Tente novamente." };
+  }
+
+  // O nome aparece no menu lateral (layout) e em Configurações.
+  revalidatePath("/app", "layout");
+  return { success: "Dados da empresa atualizados." };
+}
+
+/**
  * Pedido de teste grátis por quem JÁ tem empresa mas ainda não recebeu o teste (negado antes por limite de conexão, ou a
  * autorização estava indisponível). Repete a MESMA regra do cadastro: o servidor autoriza (IP confiável -> HMAC, janela,
  * limite, auditoria) e só então o banco concede, uma única vez, à empresa do dono (claim_free_trial). Nada vem do cliente.

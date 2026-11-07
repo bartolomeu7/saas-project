@@ -72,8 +72,8 @@ describe("consumidores dos tokens (sem HSL arbitrário nos componentes de funda�
   });
 });
 
-describe("tema permanece exclusivamente escuro", () => {
-  it("o <html> raiz fixa a classe dark e não há alternância de tema", () => {
+describe("tema: escuro por padrão em todo o site; claro só opcional na área logada", () => {
+  it("o <html> raiz fixa a classe dark (páginas públicas nunca ficam claras) e não há biblioteca de tema", () => {
     const layout = read("src/app/layout.tsx");
     assert.match(layout, /<html[^>]*className=\{`dark /);
     const pkg = JSON.parse(read("package.json"));
@@ -85,9 +85,36 @@ describe("tema permanece exclusivamente escuro", () => {
     assert.equal(Object.keys(deps).some((n) => n.startsWith("@base-ui")), false);
   });
 
-  it("os tokens claros do :root continuam definidos (decisão de tema pendente)", () => {
+  it("o tema claro opcional tem paleta própria no :root, com contraste suficiente", () => {
     const rootBlock = block(css, ":root");
-    assert.equal(token(rootBlock, "background"), "0 0% 100%");
-    assert.ok(token(rootBlock, "primary"));
+    // converte "H S% L%" em luminância relativa (WCAG)
+    const lum = (hsl) => {
+      const [h, s, l] = hsl.replace(/%/g, "").split(/\s+/).map(Number);
+      const a = (s / 100) * Math.min(l / 100, 1 - l / 100);
+      const f = (n) => {
+        const k = (n + h / 30) % 12;
+        return l / 100 - a * Math.max(-1, Math.min(k - 3, Math.min(9 - k, 1)));
+      };
+      const lin = (c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+      return 0.2126 * lin(f(0)) + 0.7152 * lin(f(8)) + 0.0722 * lin(f(4));
+    };
+    const ratio = (a, b) => {
+      const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x);
+      return (hi + 0.05) / (lo + 0.05);
+    };
+    const t = (name) => token(rootBlock, name);
+    const card = t("card");
+    const bg = t("background");
+    // texto de corpo e texto secundário sobre as superfícies claras
+    for (const [fg, surface] of [["foreground", "background"], ["foreground", "card"], ["muted-foreground", "card"], ["muted-foreground", "background"], ["muted-foreground", "muted"], ["primary-text", "card"], ["primary-text", "background"], ["destructive", "card"], ["success", "card"], ["warning", "card"]]) {
+      assert.ok(ratio(t(fg), t(surface)) >= 4.5, `--${fg} sobre --${surface} abaixo de 4,5:1 (${ratio(t(fg), t(surface)).toFixed(2)})`);
+    }
+    // texto branco sobre o botão primário sólido e sobre o destrutivo
+    assert.ok(ratio("0 0% 100%", t("primary-solid")) >= 4.5, "texto branco sobre --primary-solid");
+    // borda de campo (WCAG 1.4.11): ≥ 3:1 sobre o cartão e sobre o fundo
+    assert.ok(ratio(t("input"), card) >= 3, "--input sobre --card");
+    assert.ok(ratio(t("input"), bg) >= 3, "--input sobre --background");
+    // o cartão se distingue do fundo da página
+    assert.notEqual(card, bg);
   });
 });

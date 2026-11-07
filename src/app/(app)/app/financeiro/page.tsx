@@ -254,7 +254,7 @@ export default async function FinancePage({
                     <TableCell className="p-3">{dateOnly(entry.occurred_on)}</TableCell>
                     <TableCell className="p-3"><div>{entry.description}</div><div className="text-xs text-muted-foreground">{entry.category_id ? "Categorizado" : "Sem categoria"}</div></TableCell>
                     <TableCell className="p-3">{directionLabels[entry.direction]}</TableCell>
-                    <TableCell className={cn("p-3 text-right font-semibold", entry.direction === "income" ? "text-emerald-500" : "text-rose-500")}>
+                    <TableCell className={cn("p-3 text-right font-semibold", entry.direction === "income" ? "text-emerald-600 dark:text-emerald-500" : "text-rose-600 dark:text-rose-500")}>
                       {entry.direction === "expense" ? "−" : "+"}{money(Number(entry.amount))}
                     </TableCell>
                   </TableRow>
@@ -357,7 +357,7 @@ export default async function FinancePage({
                   <TableCell className="p-3">{dateOnly(entry.occurred_on)}</TableCell>
                   <TableCell className="p-3">{entry.description}</TableCell>
                   <TableCell className="p-3">{entry.method ? paymentLabels[entry.method] ?? entry.method : "—"}</TableCell>
-                  <TableCell className={cn("p-3 text-right font-semibold", entry.direction === "income" ? "text-emerald-500" : "text-rose-500")}>
+                  <TableCell className={cn("p-3 text-right font-semibold", entry.direction === "income" ? "text-emerald-600 dark:text-emerald-500" : "text-rose-600 dark:text-rose-500")}>
                     {entry.direction === "expense" ? "−" : "+"}{money(Number(entry.amount))}
                   </TableCell>
                 </TableRow>
