@@ -66,6 +66,8 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
 ];
 
 /** Rótulo de cada rota, usado pelo breadcrumb do header. */
-export const ADMIN_ROUTE_LABELS: Record<string, string> = Object.fromEntries(
-  ADMIN_NAV_GROUPS.flatMap((group) => group.items.map((item) => [item.href, item.label]))
-);
+export const ADMIN_ROUTE_LABELS: Record<string, string> = {
+  ...Object.fromEntries(ADMIN_NAV_GROUPS.flatMap((group) => group.items.map((item) => [item.href, item.label]))),
+  // Fora do menu lateral (abre pelo menu do usuário).
+  "/admin/account": "Minha conta",
+};

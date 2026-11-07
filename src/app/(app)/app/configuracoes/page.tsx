@@ -6,15 +6,19 @@ import {
   CreditCard,
   FileText,
   Gift,
+  KeyRound,
+  Palette,
   ShieldCheck,
   Tags,
+  UserCircle,
   UserCog,
   type LucideIcon,
 } from "lucide-react";
-import { PageHeader } from "@/components/app/page-header";
+import { SettingsPageShell } from "@/components/settings/settings-page-shell";
 import { Badge } from "@/components/ui/badge";
 import { getCurrentCompany } from "@/lib/companies/queries";
 import { formatDate } from "@/lib/format";
+import { appSettingsNav, canEditCompany } from "@/lib/settings/nav";
 import { BUSINESS_TYPE_LABELS, type CompanyRole } from "@/types/company";
 
 export const metadata: Metadata = { title: "Configurações" };
@@ -41,11 +45,20 @@ interface SettingsGroup {
 }
 
 /**
- * Central de configurações da empresa: reúne, num só lugar, os atalhos para onde cada ajuste já existe no sistema.
- * Só leitura e navegação: não altera nenhum dado nem cria permissão nova (cada destino continua com a sua própria
- * regra de acesso, aplicada no servidor).
+ * Central de configurações: reúne, num só lugar, os atalhos para onde cada ajuste existe no sistema. A visão geral é só
+ * leitura e navegação (não altera nenhum dado nem cria permissão nova: cada destino continua com a sua própria regra de
+ * acesso, aplicada no servidor). As alterações acontecem nas abas Perfil, Segurança, Aparência e Empresa.
  */
 const GROUPS: SettingsGroup[] = [
+  {
+    title: "Minha conta",
+    description: "Seus dados pessoais, a segurança do login e o visual do sistema.",
+    links: [
+      { label: "Perfil", description: "Nome, foto, e-mail e telefone.", href: "/app/configuracoes/perfil", icon: UserCircle },
+      { label: "Segurança", description: "Senha, verificação em duas etapas e aparelhos conectados.", href: "/app/configuracoes/seguranca", icon: KeyRound },
+      { label: "Aparência", description: "Tema escuro, claro ou automático.", href: "/app/configuracoes/aparencia", icon: Palette },
+    ],
+  },
   {
     title: "Pessoas e plano",
     description: "Quem acessa o sistema e qual plano a empresa usa.",
@@ -81,12 +94,12 @@ export default async function SettingsPage() {
   const { company, role } = current;
 
   return (
-    <div className="prime-module-page prime-module-page--configuracoes flex flex-col gap-6 px-4 py-6 sm:px-6">
-      <PageHeader
-        eyebrow="Empresa"
-        title="Configurações"
-        description="Dados da empresa e atalhos para os ajustes do sistema."
-      />
+    <SettingsPageShell
+      title="Configurações"
+      description="Sua conta, os dados da empresa e atalhos para os ajustes do sistema."
+      nav={appSettingsNav(role)}
+      wide
+    >
 
       <section className="rounded-xl border border-border bg-gradient-to-br from-primary/10 via-card to-card p-5 shadow-soft" aria-labelledby="config-empresa">
         <div className="flex items-center gap-4">
@@ -119,7 +132,17 @@ export default async function SettingsPage() {
           </div>
         </dl>
         <p className="mt-4 text-xs text-muted-foreground">
-          A edição do nome e do segmento da empresa ainda não está disponível nesta tela.
+          {canEditCompany(role) ? (
+            <>
+              Para mudar o nome ou o segmento, use a aba{" "}
+              <Link href="/app/configuracoes/empresa" className="font-medium text-primary-text underline-offset-4 hover:underline">
+                Empresa
+              </Link>
+              .
+            </>
+          ) : (
+            "Só o proprietário ou um administrador da empresa pode alterar o nome e o segmento."
+          )}
         </p>
       </section>
 
@@ -154,6 +177,6 @@ export default async function SettingsPage() {
           </ul>
         </section>
       ))}
-    </div>
+    </SettingsPageShell>
   );
 }

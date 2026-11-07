@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, UserCircle } from "lucide-react";
 import { ADMIN_NAV_GROUPS } from "@/components/admin/admin-nav-items";
 import { UserMenu } from "@/components/app/user-menu";
 import { Badge } from "@/components/ui/badge";
@@ -24,7 +24,10 @@ import {
 import { siteConfig } from "@/config/site";
 import type { UserRole } from "@/types/profile";
 
-const ADMIN_USER_LINKS = [{ href: "/app", label: "Voltar ao Prime Ges", icon: ArrowLeft }];
+const ADMIN_USER_LINKS = [
+  { href: "/admin/account", label: "Minha conta", icon: UserCircle },
+  { href: "/app", label: "Voltar ao Prime Ges", icon: ArrowLeft },
+];
 
 /**
  * Sidebar do painel da plataforma. Estrutura do bloco `sidebar-07` do shadcn/ui

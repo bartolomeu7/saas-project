@@ -3,8 +3,13 @@
 @tailwind utilities;
 
 @layer base {
+  /*
+   * Tema CLARO (opcional, só na área logada: Configurações → Aparência). O padrão do produto segue sendo o escuro (.dark,
+   * abaixo); estes valores só aparecem quando a pessoa escolhe "Claro" (ou "Automático" num aparelho claro) e o <html>
+   * perde a classe .dark. Contrastes conferidos para texto de corpo (≥ 4,5:1) e bordas de campos (≥ 3:1).
+   */
   :root {
-    --background: 0 0% 100%;
+    --background: 210 40% 98%; /* #F8FAFC */
     --foreground: 222 47% 11%;
 
     --card: 0 0% 100%;
@@ -13,59 +18,58 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    --primary: 222 47% 11%;
-    --primary-foreground: 210 40% 98%;
-    /* Variantes do azul de marca com função própria (mesmos valores no tema escuro; ver .dark). */
+    --primary: 211 89% 44%; /* azul Prime Ges para fundos e bordas */
+    --primary-foreground: 0 0% 100%;
+    /* Variantes do azul de marca com função própria (os dois primeiros iguais ao tema escuro; ver .dark). */
     --primary-solid: 211 89% 44%;
     --primary-solid-hover: 211 89% 39%;
-    --primary-text: 207 100% 68%;
+    --primary-text: 211 89% 36%; /* texto/ícone azul sobre fundo claro: ≈ 6,6:1 */
 
-    --secondary: 210 40% 96%;
+    --secondary: 210 40% 94%;
     --secondary-foreground: 222 47% 11%;
 
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
+    --muted: 210 40% 94%;
+    --muted-foreground: 215 19% 38%; /* ≈ 6,9:1 sobre branco */
 
-    --accent: 210 40% 96%;
+    --accent: 210 40% 94%;
     --accent-foreground: 222 47% 11%;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 72% 45%; /* texto/borda: ≈ 5,7:1 sobre branco */
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 222 47% 11%;
+    --border: 214 28% 86%;
+    --input: 215 16% 52%; /* borda de campos ≥ 3:1 (WCAG 1.4.11) */
+    --ring: 211 89% 44%;
 
     --sidebar: 0 0% 100%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-border: 220 13% 91%;
+    --sidebar-foreground: 222 30% 22%;
+    --sidebar-border: 214 28% 88%;
 
-    --success: 142 71% 45%;
+    --success: 142 64% 26%; /* texto: ≈ 7:1 sobre branco */
     --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
+    --warning: 32 92% 30%; /* texto âmbar escuro: ≈ 6:1 sobre branco */
     --warning-foreground: 26 40% 15%;
 
     --radius: 0.6rem;
 
-    --sidebar-background: 0 0% 98%;
+    --sidebar-background: 210 40% 98%;
 
-    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary: 211 89% 44%;
 
-    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-primary-foreground: 0 0% 100%;
 
-    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent: 210 40% 94%;
 
-    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-accent-foreground: 222 47% 11%;
 
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-ring: 211 89% 44%;
   }
 
   /*
-   * Prime Ges usa uma identidade "dark modern / premium" fixa — não é um
-   * dark mode alternável, é a aparência padrão do produto. Os valores de
-   * :root acima ficam disponíveis caso uma opção de tema claro seja
-   * adicionada no futuro, mas hoje <html> sempre carrega a classe .dark
-   * (ver src/app/layout.tsx).
+   * Prime Ges usa uma identidade "dark modern / premium" como aparência padrão do produto: <html> carrega a classe
+   * .dark (ver src/app/layout.tsx) em TODAS as páginas, inclusive as públicas. Só a área logada (/app e /admin) deixa
+   * a pessoa escolher o tema claro em Configurações → Aparência (ver src/components/settings/theme-sync.tsx); ao sair
+   * dela, a classe volta. As páginas públicas nunca ficam claras.
    */
   .dark {
     --background: 212 31% 10%; /* #111820 */
