@@ -1,3 +1,5 @@
+import { getCurrentUser } from "@/lib/auth/session";
+import { getTwoFactorStatus } from "@/lib/security/two-factor/service";
 import { ActiveDevices } from "@/components/settings/active-devices";
 import { EmailAddressesPanel } from "@/components/settings/email-addresses-panel";
 import { PasswordForm } from "@/components/settings/password-form";
@@ -29,11 +31,14 @@ export function ProfileSections() {
   );
 }
 
-export function SecuritySections() {
+export async function SecuritySections() {
+  const user = await getCurrentUser().catch(() => null);
+  const twoFactor = user ? await getTwoFactorStatus(user.id) : { configured: false, enabled: false, backupCodesRemaining: 0 };
+
   return (
     <>
       <SettingsSection id="nivel" title="Nível de segurança" description="O que já protege a sua conta e o que ainda dá para melhorar.">
-        <SecurityLevelCard />
+        <SecurityLevelCard twoFactorEnabled={twoFactor.enabled} backupCodesRemaining={twoFactor.backupCodesRemaining} />
       </SettingsSection>
       <SettingsSection id="senha" title="Senha" description="Troque a senha com regularidade e nunca a reutilize em outros sites.">
         <PasswordForm />
@@ -41,9 +46,9 @@ export function SecuritySections() {
       <SettingsSection
         id="duas-etapas"
         title="Verificação em duas etapas"
-        description="Além da senha, o login pede um código do Google Authenticator. É a melhor proteção contra invasão."
+        description="Além do login, o Prime Ges pede um código do Google Authenticator. É a melhor proteção contra invasão."
       >
-        <TwoFactorPanel />
+        <TwoFactorPanel enabled={twoFactor.enabled} configured={twoFactor.configured} backupCodesRemaining={twoFactor.backupCodesRemaining} />
       </SettingsSection>
       <SettingsSection id="aparelhos" title="Aparelhos conectados" description="Onde a sua conta está aberta agora. Desconecte o que você não reconhece.">
         <ActiveDevices />

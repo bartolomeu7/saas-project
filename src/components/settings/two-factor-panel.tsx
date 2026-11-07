@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useReverification, useUser } from "@clerk/nextjs";
-import type { TOTPResource } from "@clerk/nextjs/types";
+import { useRouter } from "next/navigation";
+import { useFormState } from "react-dom";
 import { QRCodeSVG } from "qrcode.react";
 import { Copy, Download, KeyRound, Loader2, ShieldCheck, Smartphone } from "lucide-react";
 import { toast } from "sonner";
@@ -10,9 +10,15 @@ import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ConfirmDialog } from "@/components/app/confirm-dialog";
 import { FormField } from "@/components/shared/form-field";
-import { describeClerkError } from "@/lib/settings/clerk-errors";
+import { SubmitButton } from "@/components/shared/auth/submit-button";
+import {
+  confirmTwoFactorSetupAction,
+  disableTwoFactorAction,
+  regenerateBackupCodesAction,
+  startTwoFactorSetupAction,
+  type TwoFactorActionState,
+} from "@/lib/security/two-factor/actions";
 
 async function copyText(text: string, okMessage: string) {
   try {
@@ -64,102 +70,102 @@ function BackupCodesBox({ codes, onDone }: { codes: string[]; onDone: () => void
   );
 }
 
+const initialState: TwoFactorActionState = {};
+
+/** Pede um código (app ou backup) para confirmar uma ação sensível: desativar ou gerar novos códigos. */
+function CodeConfirmForm({
+  action,
+  label,
+  submitLabel,
+  pendingLabel,
+  destructive,
+  onCancel,
+  onSuccess,
+}: {
+  action: (prev: TwoFactorActionState, formData: FormData) => Promise<TwoFactorActionState>;
+  label: string;
+  submitLabel: string;
+  pendingLabel: string;
+  destructive?: boolean;
+  onCancel: () => void;
+  onSuccess: (state: TwoFactorActionState) => void;
+}) {
+  const [state, formAction] = useFormState(
+    async (prev: TwoFactorActionState, formData: FormData) => {
+      const result = await action(prev, formData);
+      if (result.success) onSuccess(result);
+      return result;
+    },
+    initialState
+  );
+
+  return (
+    <form action={formAction} className="flex flex-col gap-3 rounded-lg border border-border p-4" noValidate>
+      <FormField label={label}>
+        <Input name="code" autoFocus autoComplete="one-time-code" inputMode="text" autoCapitalize="characters" spellCheck={false} maxLength={20} required className="max-w-[14rem] tracking-[0.2em]" />
+      </FormField>
+      {state.error && <Alert variant="destructive">{state.error}</Alert>}
+      <div className="flex flex-wrap gap-2">
+        <SubmitButton state={state} pendingLabel={pendingLabel} variant={destructive ? "destructive" : "default"} className="w-auto">
+          {submitLabel}
+        </SubmitButton>
+        <Button type="button" variant="ghost" onClick={onCancel}>
+          Cancelar
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+type Mode = "idle" | "setup" | "disable" | "regenerate";
+
 /**
- * Verificação em duas etapas por aplicativo autenticador (Google Authenticator, Microsoft Authenticator, Authy…).
- * Ativar: gera o segredo, mostra o QR e o link para abrir o app, confere o primeiro código e então mostra os códigos de
- * backup uma única vez. O segredo nunca passa pelo nosso servidor: vem do Clerk e fica só nesta tela até confirmar.
+ * Verificação em duas etapas PRÓPRIA do Prime Ges (aplicativo autenticador: Google Authenticator, Microsoft Authenticator,
+ * Authy…). O segredo é gerado e guardado cifrado no servidor; esta tela só o mostra uma vez, na ativação. Desativar e
+ * gerar novos códigos de backup exigem um código válido.
  */
-export function TwoFactorPanel() {
-  const { isLoaded, user } = useUser();
+export function TwoFactorPanel({
+  enabled,
+  configured,
+  backupCodesRemaining,
+}: {
+  enabled: boolean;
+  /** A chave de cifra existe neste ambiente. Sem ela não dá para ativar. */
+  configured: boolean;
+  backupCodesRemaining: number;
+}) {
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [mode, setMode] = useState<Mode>("idle");
   const [error, setError] = useState<string | null>(null);
-  const [setup, setSetup] = useState<TOTPResource | null>(null);
-  const [code, setCode] = useState("");
+  const [setup, setSetup] = useState<{ secret: string; uri: string } | null>(null);
   const [backupCodes, setBackupCodes] = useState<string[] | null>(null);
 
-  const createTotp = useReverification(() => user?.createTOTP());
-  const disableTotp = useReverification(() => user?.disableTOTP());
-  const createBackup = useReverification(() => user?.createBackupCode());
-
-  if (!isLoaded || !user) {
-    return <div className="h-32 animate-pulse rounded-lg bg-muted/40" aria-busy="true" aria-label="Carregando" />;
-  }
-
-  const currentUser = user;
-  const enabled = currentUser.totpEnabled;
+  const [confirmState, confirmAction] = useFormState(
+    async (prev: TwoFactorActionState, formData: FormData) => {
+      const result = await confirmTwoFactorSetupAction(prev, formData);
+      if (result.success) {
+        setSetup(null);
+        setMode("idle");
+        setBackupCodes(result.backupCodes ?? null);
+        toast.success(result.success);
+        router.refresh();
+      }
+      return result;
+    },
+    initialState
+  );
 
   function start() {
     setError(null);
     startTransition(async () => {
-      try {
-        const totp = await createTotp();
-        if (!totp) {
-          setError("Confirmação cancelada. Nada foi alterado.");
-          return;
-        }
-        setSetup(totp);
-        setCode("");
-      } catch (err) {
-        setError(describeClerkError(err));
+      const result = await startTwoFactorSetupAction();
+      if (result.error || !result.setup) {
+        setError(result.error ?? "Não foi possível iniciar agora. Tente novamente.");
+        return;
       }
-    });
-  }
-
-  function confirm(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError(null);
-    const typed = code.replace(/\s/g, "");
-    if (!/^\d{6}$/.test(typed)) {
-      setError("Digite os 6 números que aparecem no aplicativo.");
-      return;
-    }
-    startTransition(async () => {
-      try {
-        await currentUser.verifyTOTP({ code: typed });
-        setSetup(null);
-        setCode("");
-        await currentUser.reload();
-        toast.success("Verificação em duas etapas ativada.");
-        try {
-          const backup = await createBackup();
-          if (backup?.codes?.length) setBackupCodes(backup.codes);
-        } catch {
-          // Códigos de backup indisponíveis nesta conta: a verificação em duas etapas já está ativa.
-        }
-      } catch (err) {
-        setError(describeClerkError(err));
-      }
-    });
-  }
-
-  function regenerate() {
-    setError(null);
-    startTransition(async () => {
-      try {
-        const backup = await createBackup();
-        if (!backup) {
-          setError("Confirmação cancelada. Nada foi alterado.");
-          return;
-        }
-        setBackupCodes(backup.codes);
-        await currentUser.reload();
-      } catch (err) {
-        setError(describeClerkError(err));
-      }
-    });
-  }
-
-  function disable() {
-    setError(null);
-    startTransition(async () => {
-      try {
-        await disableTotp();
-        await currentUser.reload();
-        setBackupCodes(null);
-        toast.success("Verificação em duas etapas desativada.");
-      } catch (err) {
-        setError(describeClerkError(err));
-      }
+      setSetup(result.setup);
+      setMode("setup");
     });
   }
 
@@ -172,13 +178,19 @@ export function TwoFactorPanel() {
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium text-foreground">Aplicativo autenticador</p>
           <p className="text-sm text-muted-foreground">
-            {enabled ? "Ao entrar, além da senha, pedimos o código do aplicativo." : "Proteja a conta mesmo se a senha vazar."}
+            {enabled
+              ? `Ao entrar, além do login, pedimos o código do aplicativo. ${backupCodesRemaining} código${backupCodesRemaining === 1 ? "" : "s"} de backup sobrando.`
+              : "Proteja a conta mesmo se a senha vazar."}
           </p>
         </div>
         <Badge variant={enabled ? "success" : "muted"}>{enabled ? "Ativada" : "Desativada"}</Badge>
       </div>
 
-      {!enabled && !setup && (
+      {!enabled && !configured && (
+        <Alert>Este recurso ainda está sendo liberado neste ambiente. Volte em breve.</Alert>
+      )}
+
+      {!enabled && configured && mode === "idle" && (
         <div>
           <Button type="button" onClick={start} disabled={pending}>
             {pending ? <Loader2 className="animate-spin" aria-hidden="true" /> : <Smartphone aria-hidden="true" />}
@@ -187,88 +199,102 @@ export function TwoFactorPanel() {
         </div>
       )}
 
-      {setup && (
-        <form onSubmit={confirm} className="flex flex-col gap-4 rounded-lg border border-primary/30 bg-primary/5 p-4" noValidate>
+      {mode === "setup" && setup && (
+        <form action={confirmAction} className="flex flex-col gap-4 rounded-lg border border-primary/30 bg-primary/5 p-4" noValidate>
           <ol className="flex list-decimal flex-col gap-3 pl-5 text-sm text-foreground">
             <li>
               Abra o <strong>Google Authenticator</strong> (ou outro app autenticador) e adicione uma conta.
               <div className="mt-3 flex flex-wrap items-start gap-4">
-                {setup.uri && (
-                  <div className="rounded-lg bg-white p-2" aria-label="QR code para o aplicativo autenticador" role="img">
-                    <QRCodeSVG value={setup.uri} size={168} marginSize={1} />
-                  </div>
-                )}
+                <div className="rounded-lg bg-white p-2" aria-label="QR code para o aplicativo autenticador" role="img">
+                  <QRCodeSVG value={setup.uri} size={168} marginSize={1} />
+                </div>
                 <div className="flex min-w-0 flex-1 flex-col gap-2">
-                  {setup.uri && (
-                    <a
-                      href={setup.uri}
-                      className="inline-flex w-fit items-center gap-2 rounded-md border border-input px-3 py-2 text-sm font-medium text-foreground hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    >
-                      <KeyRound className="h-4 w-4" aria-hidden="true" />
-                      Abrir no app autenticador (celular)
-                    </a>
-                  )}
-                  {setup.secret && (
-                    <div className="flex flex-col gap-1">
-                      <span className="text-xs text-muted-foreground">Ou digite esta chave no app:</span>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <code className="break-all rounded-md border border-border bg-background/60 px-2 py-1 font-mono text-xs text-foreground">{setup.secret}</code>
-                        <Button type="button" size="xs" variant="outline" onClick={() => void copyText(setup.secret ?? "", "Chave copiada.")}>
-                          <Copy aria-hidden="true" />
-                          Copiar
-                        </Button>
-                      </div>
+                  <a
+                    href={setup.uri}
+                    className="inline-flex w-fit items-center gap-2 rounded-md border border-input px-3 py-2 text-sm font-medium text-foreground hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <KeyRound className="h-4 w-4" aria-hidden="true" />
+                    Abrir no app autenticador (celular)
+                  </a>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs text-muted-foreground">Ou digite esta chave no app:</span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <code className="break-all rounded-md border border-border bg-background/60 px-2 py-1 font-mono text-xs text-foreground">{setup.secret}</code>
+                      <Button type="button" size="xs" variant="outline" onClick={() => void copyText(setup.secret, "Chave copiada.")}>
+                        <Copy aria-hidden="true" />
+                        Copiar
+                      </Button>
                     </div>
-                  )}
+                  </div>
                 </div>
               </div>
             </li>
             <li>
               Digite aqui o código de 6 números que o app mostrar:
               <FormField label="Código do aplicativo" hideLabel>
-                <Input
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  maxLength={7}
-                  placeholder="000000"
-                  className="mt-2 max-w-[12rem] tracking-[0.3em]"
-                />
+                <Input name="code" inputMode="numeric" autoComplete="one-time-code" maxLength={7} placeholder="000000" required className="mt-2 max-w-[12rem] tracking-[0.3em]" />
               </FormField>
             </li>
           </ol>
+          {confirmState.error && <Alert variant="destructive">{confirmState.error}</Alert>}
           <div className="flex flex-wrap gap-2">
-            <Button type="submit" disabled={pending}>
-              {pending && <Loader2 className="animate-spin" aria-hidden="true" />}
+            <SubmitButton state={confirmState} pendingLabel="Verificando..." className="w-auto">
               Confirmar e ativar
-            </Button>
-            <Button type="button" variant="ghost" disabled={pending} onClick={() => setSetup(null)}>
+            </SubmitButton>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => {
+                setSetup(null);
+                setMode("idle");
+              }}
+            >
               Cancelar
             </Button>
           </div>
         </form>
       )}
 
-      {enabled && !backupCodes && (
+      {enabled && !backupCodes && mode === "idle" && (
         <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={regenerate} disabled={pending}>
-            {pending && <Loader2 className="animate-spin" aria-hidden="true" />}
+          <Button type="button" variant="outline" size="sm" onClick={() => setMode("regenerate")}>
             Gerar novos códigos de backup
           </Button>
-          <ConfirmDialog
-            destructive
-            title="Desativar a verificação em duas etapas?"
-            description="A sua conta ficará protegida só pela senha (ou pela conta social). Você pode ativar de novo quando quiser."
-            confirmLabel="Desativar"
-            onConfirm={disable}
-            trigger={
-              <Button type="button" variant="outline" size="sm" disabled={pending} className="text-destructive">
-                Desativar
-              </Button>
-            }
-          />
+          <Button type="button" variant="outline" size="sm" className="text-destructive" onClick={() => setMode("disable")}>
+            Desativar
+          </Button>
         </div>
+      )}
+
+      {enabled && mode === "regenerate" && (
+        <CodeConfirmForm
+          action={regenerateBackupCodesAction}
+          label="Código do aplicativo (6 números) para gerar novos códigos"
+          submitLabel="Gerar novos códigos"
+          pendingLabel="Gerando..."
+          onCancel={() => setMode("idle")}
+          onSuccess={(result) => {
+            setMode("idle");
+            setBackupCodes(result.backupCodes ?? null);
+            router.refresh();
+          }}
+        />
+      )}
+
+      {enabled && mode === "disable" && (
+        <CodeConfirmForm
+          action={disableTwoFactorAction}
+          label="Código do aplicativo (ou de backup) para desativar"
+          submitLabel="Desativar verificação"
+          pendingLabel="Desativando..."
+          destructive
+          onCancel={() => setMode("idle")}
+          onSuccess={(result) => {
+            setMode("idle");
+            toast.success(result.success ?? "Verificação em duas etapas desativada.");
+            router.refresh();
+          }}
+        />
       )}
 
       {backupCodes && <BackupCodesBox codes={backupCodes} onDone={() => setBackupCodes(null)} />}

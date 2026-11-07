@@ -96,7 +96,6 @@ describe("Escopo do ClerkProvider (Etapa 6)", () => {
       "src/components/settings/phone-numbers-panel.tsx",
       "src/components/settings/profile-identity-form.tsx",
       "src/components/settings/security-level-card.tsx",
-      "src/components/settings/two-factor-panel.tsx",
     ]);
     // quem consome: login/cadastro e acesso-indisponivel têm layout próprio; delete-account-panel vive em /conta; user-menu nas sidebars;
     // components/settings/* (perfil, e-mails, telefone, senha, duas etapas) só são usados em /app/configuracoes e /admin/account,
@@ -115,7 +114,7 @@ describe("Escopo do ClerkProvider (Etapa 6)", () => {
   it("a proteção de rotas continua no servidor: o middleware segue sendo o clerkMiddleware, para todas as rotas", () => {
     const mw = read(join(SRC, "middleware.ts"));
     assert.match(mw, /export const middleware = clerkMiddleware\(/);
-    assert.match(mw, /PROTECTED_PREFIXES = \["\/app", "\/admin", "\/onboarding", "\/acesso-sessoes", "\/conta"\]/);
+    assert.match(mw, /PROTECTED_PREFIXES = \["\/app", "\/admin", "\/onboarding", "\/acesso-sessoes", "\/conta", TWO_FACTOR_PATH\]/);
   });
 });
 
@@ -177,7 +176,6 @@ describe("Alcance de cada rota (grafo de importações)", () => {
       "src/components/settings/phone-numbers-panel.tsx",
       "src/components/settings/profile-identity-form.tsx",
       "src/components/settings/security-level-card.tsx",
-      "src/components/settings/two-factor-panel.tsx",
     ]);
   });
 

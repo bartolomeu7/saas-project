@@ -12,8 +12,8 @@
 | `/admin/account` | qualquer administrador da plataforma | seu acesso, perfil, segurança, tema; atalhos extras para super admin |
 | `/admin/settings` | super admin | já existia; ganhou o bloco "Minha conta de administrador" |
 
-A conta (nome, foto, e-mail, telefone, senha, duas etapas, aparelhos) fala direto com o Clerk pelo navegador, com
-interface própria. Ações sensíveis passam pela reverificação do Clerk (`useReverification`). Depois de mudar nome,
+A conta (nome, foto, e-mail, telefone, senha, aparelhos) fala direto com o Clerk pelo navegador, com interface própria.
+A **verificação em duas etapas é do próprio Prime Ges** (não do Clerk, cujo plano gratuito não oferece MFA): ver seção abaixo. Ações sensíveis passam pela reverificação do Clerk (`useReverification`). Depois de mudar nome,
 foto ou e-mail, `syncProfileFromClerkAction` copia os dados, lidos do Clerk no servidor, para `public.profiles`
 (só e-mail já verificado; nunca role nem status).
 
@@ -24,13 +24,34 @@ Só dono/administrador da empresa atual; usa `current_profile_user_id()`; não m
 `audit_logs` (`company.updated`). Sem policy nova. Bateria: `tests/sql/company_self_edit.sql` (17 testes, só no TEST).
 Rollback: `supabase/rollback/20261106000000_company_self_edit.down.sql`.
 
-## Configuração do Clerk (produção) necessária
+## Verificação em duas etapas própria (TOTP)
 
-Sem isto os botões aparecem, mas o Clerk recusa:
-- **Verificação em duas etapas**: `auth_multi_factor.authenticator_app.enabled = true`.
-- **Códigos de backup**: `auth_multi_factor.backup_code.enabled = true`.
-- **Telefone**: `auth_phone` com verificação por código SMS (pode ter custo/limite no plano do Clerk).
-- Senha: o Clerk exige no mínimo 15 caracteres (a tela já avisa).
+O Clerk continua provando QUEM é a pessoa. A segunda etapa é uma camada do produto: quem ativou digita o código do
+Google Authenticator (ou um código de backup) **uma vez por sessão do Clerk** para usar `/app`, `/admin` e `/conta`.
+
+- **Onde barra:** no middleware (`src/lib/security/two-factor/gate.ts`), como o aceite dos termos e o limite de sessões:
+  páginas redirecionam para `/verificacao-2fa`; Server Actions e APIs recebem 403 `TWO_FACTOR_REQUIRED`. Sem a função no
+  banco (deploy antes da migration) o middleware libera e registra em log; erro de leitura fecha (503).
+- **Segredo:** TOTP (RFC 6238, SHA-1, 6 dígitos, 30 s, tolerância ±1 passo) com a biblioteca `otpauth`; cifrado com
+  AES-256-GCM (o id do usuário entra como dado autenticado) antes de ir ao banco. Códigos de backup: 10, só o HMAC-SHA256.
+- **Chave:** variável de ambiente `TWO_FACTOR_ENCRYPTION_KEY` (32 bytes em base64), no Vercel. **Sem ela o recurso fica
+  indisponível (a tela mostra "sendo liberado") e ninguém é bloqueado.** NUNCA remova nem troque a chave depois que
+  houver usuários com a segunda etapa ativa: eles não conseguiriam mais verificar (a recuperação é o reset por super admin).
+- **Força bruta:** `two_factor_reserve_attempt()` reserva cada tentativa no banco, de forma atômica, antes de conferir:
+  5 erradas = bloqueio de 15 min, mesmo com pedidos simultâneos. O mesmo código do app não vale duas vezes (`last_used_step`).
+- **Tabelas** (`user_two_factor`, `user_two_factor_backup_codes`, `two_factor_session_verifications`): sem policy e sem
+  privilégio para usuário; só `service_role` (Server Actions).
+- **Recuperação:** super administrador remove a segunda etapa de OUTRA pessoa em `/admin/users/[id]` (`admin_reset_two_factor`,
+  audita; nunca em si mesmo). Excluir a própria conta apaga o segredo e os códigos.
+- **Migration:** `20261107000000_two_factor.sql`; rollback `supabase/rollback/20261107000000_two_factor.down.sql`;
+  bateria `tests/sql/two_factor.sql` (só no TEST).
+- **Não cobre:** quem chama o Supabase direto com o próprio JWT (fora do Next) não passa pelo middleware; o isolamento
+  entre empresas segue pela RLS. A segunda etapa não protege a tela de login do Clerk em si, e sim o acesso ao produto.
+
+## Telefone (Clerk)
+
+Cadastrar telefone depende de o Clerk ter o atributo ligado (hoje desligado) e pode ter custo de SMS. Senha: o Clerk
+exige no mínimo 15 caracteres (a tela já avisa).
 
 ## Tema claro
 
@@ -40,5 +61,6 @@ Telas conferidas no claro: Configurações. Os demais módulos usam os mesmos to
 
 ## Não coberto por teste automático
 
-Fluxos reais do Clerk (trocar senha, QR/código, SMS, reverificação) e a gravação da empresa em Produção: dependem de
-login real e foram conferidos só no site publicado.
+Fluxos reais do Clerk (trocar senha, e-mail, SMS, reverificação), a ativação da segunda etapa com o aplicativo
+autenticador de verdade e a gravação da empresa em Produção: dependem de login real e só podem ser conferidos no site
+publicado.

@@ -8,8 +8,8 @@ import { computeSecurityLevel } from "@/lib/settings/security-level";
 
 const LEVEL_BADGE = { basic: "warning", good: "info", strong: "success" } as const;
 
-/** Resumo do nível de segurança da conta e do que ainda dá para melhorar. Só leitura: lê os fatos da conta no Clerk. */
-export function SecurityLevelCard() {
+/** Resumo do nível de segurança da conta e do que ainda dá para melhorar. Só leitura: fatos da conta no Clerk + estado da segunda etapa (servidor). */
+export function SecurityLevelCard({ twoFactorEnabled, backupCodesRemaining }: { twoFactorEnabled: boolean; backupCodesRemaining: number }) {
   const { isLoaded, user } = useUser();
 
   if (!isLoaded || !user) {
@@ -20,8 +20,9 @@ export function SecurityLevelCard() {
     hasPassword: user.passwordEnabled,
     hasVerifiedEmail: user.emailAddresses.some((item) => item.verification?.status === "verified"),
     hasVerifiedPhone: user.phoneNumbers.some((item) => item.verification?.status === "verified"),
-    twoFactorEnabled: user.totpEnabled,
-    hasBackupCodes: user.backupCodeEnabled,
+    // a segunda etapa é do Prime Ges (não do Clerk): o estado vem do nosso servidor
+    twoFactorEnabled,
+    hasBackupCodes: backupCodesRemaining > 0,
   });
 
   return (

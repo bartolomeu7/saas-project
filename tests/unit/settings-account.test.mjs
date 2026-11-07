@@ -223,20 +223,19 @@ describe("travas de segurança do código", () => {
   });
 
   it("os componentes de conta não guardam senha, código nem segredo fora da memória da tela", () => {
-    for (const file of ["password-form", "two-factor-panel", "email-addresses-panel", "phone-numbers-panel", "profile-identity-form"]) {
+    for (const file of ["password-form", "two-factor-panel", "two-factor-verify-form", "email-addresses-panel", "phone-numbers-panel", "profile-identity-form"]) {
       const source = read(`src/components/settings/${file}.tsx`);
       assert.doesNotMatch(source, /localStorage|sessionStorage|document\.cookie|console\.(log|info|debug)/, file);
       assert.doesNotMatch(source, /fetch\(/, `${file} não deve mandar dados da conta para o nosso servidor`);
     }
   });
 
-  it("ações sensíveis do Clerk (e-mail, telefone, duas etapas) passam por reverificação", () => {
+  it("ações sensíveis do Clerk (e-mail e telefone) passam por reverificação; a segunda etapa é própria e exige código", () => {
     assert.match(read("src/components/settings/email-addresses-panel.tsx"), /useReverification\(\(email: string\)/);
     assert.match(read("src/components/settings/phone-numbers-panel.tsx"), /useReverification\(\(phoneNumber: string\)/);
     const two = read("src/components/settings/two-factor-panel.tsx");
-    for (const call of ["createTOTP", "disableTOTP", "createBackupCode"]) {
-      assert.match(two, new RegExp(`useReverification\\(\\(\\) => user\\?\\.${call}\\(\\)\\)`), call);
-    }
+    assert.doesNotMatch(two, /@clerk\/nextjs|createTOTP|disableTOTP|createBackupCode/);
+    for (const action of ["startTwoFactorSetupAction", "confirmTwoFactorSetupAction", "disableTwoFactorAction", "regenerateBackupCodesAction"]) assert.match(two, new RegExp(action), action);
   });
 
   it("o painel /admin/account é só do próprio administrador (sem id de outro usuário) e super admin vê os atalhos extras", () => {

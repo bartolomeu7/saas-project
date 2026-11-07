@@ -104,6 +104,29 @@ export async function setUserStatusAction(
   return { success: "Status do usuário atualizado." };
 }
 
+/**
+ * Remove a verificação em duas etapas de OUTRA pessoa que perdeu o aparelho e os códigos de backup. SUPER_ADMIN ONLY
+ * (revalidado no banco, que também recusa o próprio usuário e audita). A pessoa volta a entrar só com o login e pode
+ * ativar de novo em Configurações → Segurança.
+ */
+export async function resetUserTwoFactorAction(targetUserId: string): Promise<ActionResult> {
+  await requireSuperAdmin();
+
+  const parsed = z.object({ id: uuid }).safeParse({ id: targetUserId });
+  if (!parsed.success) return { error: "Parâmetros inválidos." };
+
+  const supabase = await createSessionClient();
+  const { error } = await supabase.rpc("admin_reset_two_factor", { p_user_id: parsed.data.id });
+  if (error) {
+    console.error("[admin] admin_reset_two_factor() falhou:", error.message);
+    return { error: toUserMessage(error) };
+  }
+
+  revalidatePath(`/admin/users/${parsed.data.id}`);
+  revalidatePath("/admin/audit");
+  return { success: "Verificação em duas etapas removida. A pessoa já pode entrar só com o login." };
+}
+
 /** Promover ou rebaixar o papel de um usuário. SUPER_ADMIN ONLY (revalidado no banco). */
 export async function setUserRoleAction(targetUserId: string, role: string): Promise<ActionResult> {
   await requirePlatformAdmin();
