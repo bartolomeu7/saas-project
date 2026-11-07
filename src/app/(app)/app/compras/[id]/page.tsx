@@ -10,6 +10,7 @@ import {
 } from "@/lib/purchases/actions";
 import { PURCHASE_ORDER_STATUS_LABELS } from "@/types/purchase";
 import { PurchaseReceiveForm } from "@/components/app/purchase-receive-form";
+import { ConfirmActionForm } from "@/components/app/confirm-dialog";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
@@ -60,17 +61,20 @@ export default async function PurchaseOrderPage({
         </div>
 
         {order.status === "ordered" && (
-          <form
-            action={async (formData) => {
+          <ConfirmActionForm
+            label="Cancelar pedido"
+            title="Cancelar este pedido de compra?"
+            description="O pedido será cancelado e não poderá mais receber mercadoria."
+            confirmLabel="Cancelar pedido"
+            destructive
+            triggerClassName={cn(buttonVariants({ variant: "outline" }), "hover:no-underline")}
+            action={async () => {
               "use server";
+              const formData = new FormData();
+              formData.set("reason", "Cancelamento manual");
               await cancelPurchaseOrderAction(order.id, formData);
             }}
-          >
-            <input type="hidden" name="reason" value="Cancelamento manual" />
-            <button className={cn(buttonVariants({ variant: "outline" }), "text-destructive")}>
-              Cancelar pedido
-            </button>
-          </form>
+          />
         )}
       </div>
 
@@ -153,22 +157,20 @@ export default async function PurchaseOrderPage({
                 </div>
 
                 {receipt.status === "posted" && (
-                  <form
-                    action={async (formData) => {
+                  <ConfirmActionForm
+                    label="Estornar recebimento"
+                    title="Estornar este recebimento?"
+                    description="A entrada no estoque será desfeita e a conta a pagar correspondente será ajustada."
+                    confirmLabel="Estornar"
+                    destructive
+                    triggerClassName={cn(buttonVariants({ variant: "outline" }), "hover:no-underline")}
+                    action={async () => {
                       "use server";
+                      const formData = new FormData();
+                      formData.set("reason", "Correção de recebimento");
                       await cancelPurchaseReceiptAction(receipt.id, order.id, formData);
                     }}
-                  >
-                    <input type="hidden" name="reason" value="Correção de recebimento" />
-                    <button
-                      className={cn(
-                        buttonVariants({ variant: "outline" }),
-                        "text-destructive"
-                      )}
-                    >
-                      Estornar recebimento
-                    </button>
-                  </form>
+                  />
                 )}
               </div>
             ))}

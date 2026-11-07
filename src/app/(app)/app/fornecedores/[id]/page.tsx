@@ -4,6 +4,7 @@ import { getCurrentCompany } from "@/lib/companies/queries";
 import { getSupplierById } from "@/lib/suppliers/queries";
 import { updateSupplierAction, toggleSupplierAction } from "@/lib/suppliers/actions";
 import { SupplierForm } from "@/components/app/supplier-form";
+import { ConfirmActionForm } from "@/components/app/confirm-dialog";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -41,14 +42,20 @@ export default async function SupplierDetailPage({ params: paramsPromise }: { pa
           <h1 className="mt-2 text-2xl font-semibold tracking-tight">{supplier.name}</h1>
           <p className="text-sm text-muted-foreground">{supplier.status === "active" ? "Fornecedor ativo" : "Fornecedor inativo"}</p>
         </div>
-        <form action={async () => {
-          "use server";
-          await toggleSupplierAction(supplier.id, supplier.status === "active" ? "inactive" : "active");
-        }}>
-          <button className={cn(buttonVariants({ variant: "outline" }))}>
-            {supplier.status === "active" ? "Inativar" : "Reativar"}
-          </button>
-        </form>
+        <ConfirmActionForm
+          label={supplier.status === "active" ? "Inativar" : "Reativar"}
+          title={supplier.status === "active" ? "Inativar este fornecedor?" : "Reativar este fornecedor?"}
+          description={
+            supplier.status === "active"
+              ? "Ele deixa de aparecer para novos pedidos de compra. Você pode reativar depois."
+              : "Ele volta a aparecer para novos pedidos de compra."
+          }
+          triggerClassName={cn(buttonVariants({ variant: "outline" }), "hover:no-underline")}
+          action={async () => {
+            "use server";
+            await toggleSupplierAction(supplier.id, supplier.status === "active" ? "inactive" : "active");
+          }}
+        />
       </div>
       <div className="max-w-4xl">
         <SupplierForm action={updateSupplierAction.bind(null, supplier.id)} defaultValues={defaultValues} submitLabel="Salvar alterações" />
