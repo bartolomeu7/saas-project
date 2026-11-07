@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getCurrentCompany } from "@/lib/companies/queries";
+import { can } from "@/lib/permissions/matrix";
+import { NoAccess } from "@/components/app/no-access";
 import { getSupplierById } from "@/lib/suppliers/queries";
 import { updateSupplierAction, toggleSupplierAction } from "@/lib/suppliers/actions";
 import { SupplierForm } from "@/components/app/supplier-form";
@@ -13,6 +15,7 @@ export const metadata: Metadata = { title: "Fornecedor" };
 export default async function SupplierDetailPage({ params: paramsPromise }: { params: Promise<{ id: string }> }) {
   const params = await paramsPromise;
   const current = (await getCurrentCompany())!;
+  if (!can(current.role, "suppliers.view")) return <NoAccess area="os Fornecedores" />;
   const supplier = await getSupplierById(current.company.id, params.id);
   if (!supplier) return <div className="px-4 py-10 text-center">Fornecedor não encontrado.</div>;
 

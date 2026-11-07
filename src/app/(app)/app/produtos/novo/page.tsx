@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getCurrentCompany } from "@/lib/companies/queries";
+import { can } from "@/lib/permissions/matrix";
 import { listActiveCategories } from "@/lib/product-categories/queries";
 import { getProductSegmentHints } from "@/config/product-segments";
 import { createProductAction } from "@/lib/products/actions";
@@ -36,6 +37,7 @@ export default async function NewProductPage() {
           categories={categories}
           segmentHints={hints}
           submitLabel="Salvar produto"
+          canViewCost={can(current.role, "cost.view")}
         />
       </div>
     </div>

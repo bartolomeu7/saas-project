@@ -5,6 +5,7 @@ import { DollarSign, TrendingUp, Package, AlertTriangle } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getCurrentCompany } from "@/lib/companies/queries";
+import { can } from "@/lib/permissions/matrix";
 import { getProductById } from "@/lib/products/queries";
 import { listAuditLogsForEntity } from "@/lib/audit/queries";
 import { calculateMargin, PRODUCT_UNIT_LABELS } from "@/types/product";
@@ -80,6 +81,7 @@ export default async function ProductDetailPage({
         <h2 className="mb-3 text-sm font-semibold text-muted-foreground">Indicadores</h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <DashboardCard label="Preço de venda" value={formatMoney(product.sale_price)} icon={DollarSign} />
+          {can(current.role, "cost.view") && (
           <DashboardCard
             label="Margem"
             value={formatMoney(margin.value)}
@@ -87,6 +89,7 @@ export default async function ProductDetailPage({
             hint={margin.percentage === null ? "Sem preço de venda definido" : `${margin.percentage.toFixed(2)}% sobre a venda`}
             indicator={margin.value > 0 ? "success" : margin.value < 0 ? "warning" : "neutral"}
           />
+          )}
           <DashboardCard
             label="Estoque atual"
             value={`${product.stock_quantity} ${product.unit}`}

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentCompany } from "@/lib/companies/queries";
+import { can } from "@/lib/permissions/matrix";
 import { ACCOUNT_BLOCKED_MESSAGE, AccountInactiveError } from "@/lib/auth/account-status";
 import { getReportsWorkspace } from "@/lib/reports/queries";
 
@@ -18,6 +19,9 @@ export async function GET(request: Request) {
     throw error;
   }
   if (!current) return NextResponse.json({ error: "Empresa não encontrada." }, { status: 403 });
+  if (!can(current.role, "reports.view")) {
+    return NextResponse.json({ error: "Você não tem acesso aos relatórios." }, { status: 403 });
+  }
 
   const url = new URL(request.url);
   const period = url.searchParams.get("period") ?? "month";

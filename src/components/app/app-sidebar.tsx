@@ -3,7 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { NAV_GROUPS } from "@/components/app/nav-items";
+import { visibleNavGroups } from "@/components/app/visible-nav";
+import type { CompanyRole } from "@/types/company";
 import { UserMenu } from "@/components/app/user-menu";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -31,9 +32,11 @@ import { siteConfig } from "@/config/site";
 export function AppSidebar({
   userName,
   userEmail,
+  role,
 }: {
   userName?: string | null;
   userEmail?: string | null;
+  role: CompanyRole;
 }) {
   const pathname = usePathname();
   const { isMobile, setOpenMobile } = useSidebar();
@@ -64,7 +67,7 @@ export function AppSidebar({
 
       <SidebarContent className="gap-0 py-2">
         <nav aria-label="Navegação principal" className="flex flex-col">
-        {NAV_GROUPS.map((group, index) => (
+        {visibleNavGroups(role).map((group, index) => (
           <SidebarGroup key={group.label ?? `group-${index}`} className="py-1.5">
             {group.label && (
               <SidebarGroupLabel className="h-7 text-[11px] font-semibold uppercase tracking-[0.12em] text-sidebar-foreground/60">

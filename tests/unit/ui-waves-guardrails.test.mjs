@@ -152,7 +152,8 @@ describe("Onda D1 — casca da área logada: só apresentação", () => {
   const shell = read("src/components/app/app-shell.tsx");
 
   it("mantém navegação por grupos, estado ativo acessível e menu do usuário", () => {
-    assert.match(sidebar, /NAV_GROUPS\.map/);
+    // O menu passa pela matriz de permissões (lib/permissions/matrix.ts): cada papel vê só os módulos que pode usar.
+    assert.match(sidebar, /visibleNavGroups\(role\)\.map/);
     assert.match(sidebar, /aria-current=\{isActive \? "page" : undefined\}/);
     assert.match(sidebar, /<UserMenu/);
     assert.match(sidebar, /aria-label="Navegação principal"/);
@@ -337,7 +338,10 @@ describe("Onda E (lote 4): Caixa e Financeiro, só apresentação", () => {
     assert.match(cash, /getLastClosedCashRegister\(current\.company\.id\)/);
     assert.match(cash, /listCashMovements\(openRegister\.id\)/);
     assert.match(cash, /summarizeCashMovements\(/);
-    assert.match(cash, /const canOperate = current\.role === "owner" \|\| current\.role === "admin"/);
+    // Regra de quem opera vem da matriz: qualquer membro abre; sangria só owner/admin; funcionário fecha só o próprio caixa.
+    assert.match(cash, /const canOpen = can\(current\.role, "cash\.open"\)/);
+    assert.match(cash, /const canMove = can\(current\.role, "cash\.manual_movement"\)/);
+    assert.match(cash, /canCloseCashRegister\(current\.role, openRegister\.opened_by, user\?\.id\)/);
     for (const form of ["CashRegisterOpenForm", "CashRegisterCloseForm", "CashMovementForm"]) {
       assert.match(cash, new RegExp(`<${form}`), form);
     }

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getCurrentCompany } from "@/lib/companies/queries";
+import { can } from "@/lib/permissions/matrix";
+import { NoAccess } from "@/components/app/no-access";
 import { listProducts } from "@/lib/products/queries";
 import { listSuppliers } from "@/lib/suppliers/queries";
 import { createPurchaseOrderAction } from "@/lib/purchases/actions";
@@ -10,6 +12,7 @@ export const metadata: Metadata = { title: "Novo pedido de compra" };
 
 export default async function NewPurchasePage() {
   const current = (await getCurrentCompany())!;
+  if (!can(current.role, "purchases.view")) return <NoAccess area="as Compras" />;
   const [suppliers, products] = await Promise.all([
     listSuppliers(current.company.id),
     listProducts({

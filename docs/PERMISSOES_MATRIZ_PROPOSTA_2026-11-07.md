@@ -2,6 +2,15 @@
 
 Data: 07/11/2026. Parte do plano `docs/PLANO_ACAO_NOTA_9_2026-11-07.md`.
 
+> **ATUALIZAÇÃO (08/11/2026) — decisão do dono: "use o padrão" (caixa próprio sim; custo não; desconto 10%; Admin não remove Admin; relatórios só das próprias vendas).**
+> Implementado na etapa 1 (PR `feat/permissoes-matriz`, banco **só no TEST**; Produção depende de autorização por migration):
+> - Caixa: qualquer membro abre; funcionário fecha só o que abriu; sangria/suprimento só dono/admin.
+> - Preço e custo: funcionário não altera (trigger no banco + tela); no cadastro novo ele define só o preço de venda; custo e margem escondidos.
+> - Financeiro, fornecedores e compras: leitura só dono/admin (banco + menu + telas).
+> - Equipe: admin só adiciona/remove/troca papel de funcionário; admin e owner são do dono.
+>
+> **Ainda NÃO feito (próximas etapas):** limite de desconto de 10% para funcionário; relatórios "só das próprias vendas" (por enquanto o funcionário **não vê** Relatórios — é o mais seguro até existir a visão filtrada); funcionário ver só o próprio caixa na listagem; assinatura só do dono.
+
 **Nada aqui foi aplicado.** A coluna "Hoje" foi conferida no banco de **Produção** (somente leitura: funções e políticas de acesso). A coluna "Proposto" é minha sugestão; só vira código depois da sua aprovação.
 
 Papéis da empresa: **Dono** (quem criou), **Admin** (gerente de confiança), **Funcionário** (balcão/atendimento).

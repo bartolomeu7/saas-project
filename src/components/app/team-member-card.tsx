@@ -11,9 +11,11 @@ import type { TeamMember } from "@/types/team";
 export function TeamMemberCard({
   member,
   canManage,
+  isOwner = false,
 }: {
   member: TeamMember;
   canManage: boolean;
+  isOwner?: boolean;
 }) {
   return (
     <li className="flex flex-col gap-4 p-4">
@@ -64,7 +66,7 @@ export function TeamMemberCard({
 
       {canManage ? (
         <div className="flex flex-col gap-3 border-t pt-3">
-          <MemberRoleForm member={member} />
+          <MemberRoleForm member={member} isOwner={isOwner} />
           <RemoveMemberForm memberId={member.member_id} />
         </div>
       ) : (

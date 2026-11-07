@@ -3,6 +3,8 @@ import Link from "next/link";
 import { ArrowDownToLine, BarChart3, CalendarDays, CircleDollarSign, FileText, Package, ShoppingCart } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
 import { getCurrentCompany } from "@/lib/companies/queries";
+import { can } from "@/lib/permissions/matrix";
+import { NoAccess } from "@/components/app/no-access";
 import { getReportsWorkspace } from "@/lib/reports/queries";
 import type { ReportPeriod } from "@/types/report";
 
@@ -33,6 +35,7 @@ export default async function ReportsPage({
 }) {
   const searchParams = await searchParamsPromise;
   const current = (await getCurrentCompany())!;
+  if (!can(current.role, "reports.view")) return <NoAccess area="os Relatórios" />;
   const period = periodFromSearch(searchParams?.period);
   const report = await getReportsWorkspace(current.company.id, period);
   const maxTrend = Math.max(...report.salesTrend.map((point) => point.value), 1);

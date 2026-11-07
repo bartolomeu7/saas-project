@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCurrentCompany } from "@/lib/companies/queries";
+import { can } from "@/lib/permissions/matrix";
 import { getServiceById } from "@/lib/services/queries";
 import { listActiveCategories } from "@/lib/service-categories/queries";
 import { updateServiceAction } from "@/lib/services/actions";
@@ -42,7 +43,9 @@ export default async function EditServicePage({
       <div className="max-w-3xl">
         <ServiceForm
           action={action}
-          defaultValues={service}
+          defaultValues={can(current.role, "cost.view") ? service : { ...service, cost_price: undefined }}
+          canViewCost={can(current.role, "cost.view")}
+          canEditPrice={can(current.role, "pricing.edit")}
           categories={categories}
           currentCategoryName={service.category_name}
           submitLabel="Salvar alterações"

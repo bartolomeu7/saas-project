@@ -13,6 +13,7 @@ import {
   RemoveMemberForm,
 } from "@/components/app/team-action-forms";
 import { TeamMemberCard } from "@/components/app/team-member-card";
+import { can, canManageMember } from "@/lib/permissions/matrix";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 
 export const metadata: Metadata = { title: "Equipe" };
@@ -21,6 +22,7 @@ export default async function TeamPage() {
   const current = (await getCurrentCompany())!;
   const [team, seats] = await Promise.all([listCompanyTeam(), getSeatUsage()]);
   const canManage = current.role === "owner" || current.role === "admin";
+  const isOwner = can(current.role, "team.manage_admins");
 
   const admins = team.filter((member) => member.role === "admin" || member.role === "owner").length;
   const professionals = team.filter((member) => member.professional_active).length;
@@ -86,7 +88,7 @@ export default async function TeamPage() {
             A pessoa precisa ter uma conta Prime Ges antes de ser vinculada à empresa.
           </p>
           <div className="mt-5">
-            <AddMemberForm />
+            <AddMemberForm canAddAdmin={isOwner} />
           </div>
         </section>
       ) : null}
@@ -101,7 +103,12 @@ export default async function TeamPage() {
         {team.length ? (
           <ul className="divide-y xl:hidden">
             {team.map((member) => (
-              <TeamMemberCard key={member.member_id} member={member} canManage={canManage} />
+              <TeamMemberCard
+                key={member.member_id}
+                member={member}
+                canManage={canManageMember(current.role, member.role)}
+                isOwner={isOwner}
+              />
             ))}
           </ul>
         ) : null}
@@ -126,8 +133,8 @@ export default async function TeamPage() {
                   <div className="text-xs text-muted-foreground">{member.email ?? "—"}</div>
                 </TableCell>
                 <TableCell className="p-3">
-                  {canManage ? (
-                    <MemberRoleForm member={member} />
+                  {canManageMember(current.role, member.role) ? (
+                    <MemberRoleForm member={member} isOwner={isOwner} />
                   ) : (
                     <span className="rounded-full border px-2 py-1 text-xs">{member.role}</span>
                   )}
@@ -150,7 +157,7 @@ export default async function TeamPage() {
                   )}
                 </TableCell>
                 <TableCell className="p-3">
-                  {canManage ? <RemoveMemberForm memberId={member.member_id} /> : <span className="text-xs text-muted-foreground">Somente leitura</span>}
+                  {canManageMember(current.role, member.role) ? <RemoveMemberForm memberId={member.member_id} /> : <span className="text-xs text-muted-foreground">Somente leitura</span>}
                 </TableCell>
               </TableRow>
             ))}

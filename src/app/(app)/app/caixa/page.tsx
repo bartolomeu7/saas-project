@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Lock, Unlock } from "lucide-react";
 import { getCurrentCompany } from "@/lib/companies/queries";
+import { getCurrentUser } from "@/lib/auth/session";
+import { can, canCloseCashRegister } from "@/lib/permissions/matrix";
 import {
   getCurrentOpenCashRegister,
   getLastClosedCashRegister,
@@ -31,12 +33,13 @@ function formatMoney(value: number): string {
 
 export default async function CashRegisterPage() {
   const current = (await getCurrentCompany())!;
-  // Employee só visualiza — nunca renderiza os formulários de operação.
-  // Reforço de UX apenas: a autorização real está nas RPCs
-  // (open_cash_register/close_cash_register/create_cash_movement), que
-  // rejeitam owner/admin-only mesmo que alguém chame a Server Action
+  // Matriz de permissões (lib/permissions/matrix.ts): qualquer membro abre o caixa; o funcionário fecha só o que ele
+  // mesmo abriu; sangria/suprimento ficam com owner/admin. Reforço de UX apenas: a autorização real está nas RPCs
+  // (open_cash_register/close_cash_register/create_cash_movement), que recusam mesmo se alguém chamar a Server Action
   // diretamente sem passar pelo formulário.
-  const canOperate = current.role === "owner" || current.role === "admin";
+  const user = await getCurrentUser();
+  const canOpen = can(current.role, "cash.open");
+  const canMove = can(current.role, "cash.manual_movement");
 
   const openRegister = await getCurrentOpenCashRegister(current.company.id);
 
@@ -96,13 +99,13 @@ export default async function CashRegisterPage() {
           <p className="mt-1 text-sm text-muted-foreground">
             Informe o saldo inicial em dinheiro para começar um novo turno.
           </p>
-          {canOperate ? (
+          {canOpen ? (
             <div className="mt-4">
               <CashRegisterOpenForm />
             </div>
           ) : (
             <p className="mt-4 text-sm text-muted-foreground">
-              Peça para o owner ou um admin da empresa abrir o caixa.
+              Você não tem permissão para abrir o caixa. Peça ao owner ou a um admin da empresa.
             </p>
           )}
         </div>
@@ -131,7 +134,7 @@ export default async function CashRegisterPage() {
 
       <CashRegisterSummaryCards summary={summary} />
 
-      {canOperate && (
+      {canMove && (
         <div className="rounded-xl border border-border bg-card p-5">
           <h2 className="text-sm font-semibold text-foreground">Lançar movimentação</h2>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -148,7 +151,7 @@ export default async function CashRegisterPage() {
         <CashMovementsTable movements={movements} />
       </div>
 
-      {canOperate ? (
+      {canCloseCashRegister(current.role, openRegister.opened_by, user?.id) ? (
         <div className="max-w-xl rounded-xl border border-border bg-card p-5">
           <h2 className="text-sm font-semibold text-foreground">Fechar caixa</h2>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -163,7 +166,7 @@ export default async function CashRegisterPage() {
         </div>
       ) : (
         <p className="text-sm text-muted-foreground">
-          Só owner/admin podem fechar o caixa. Aberto desde {formatDate(openRegister.opened_at)}.
+          Só quem abriu o caixa, o owner ou um admin podem fechá-lo. Aberto desde {formatDate(openRegister.opened_at)}.
         </p>
       )}
     </div>

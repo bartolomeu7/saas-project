@@ -2,6 +2,8 @@ import { MetricCard } from "@/components/app/metric-card";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getCurrentCompany } from "@/lib/companies/queries";
+import { can } from "@/lib/permissions/matrix";
+import { NoAccess } from "@/components/app/no-access";
 import { getPurchaseOrderById, listPurchaseReceipts } from "@/lib/purchases/queries";
 import {
   cancelPurchaseOrderAction,
@@ -30,6 +32,7 @@ export default async function PurchaseOrderPage({
 }) {
   const params = await paramsPromise;
   const current = (await getCurrentCompany())!;
+  if (!can(current.role, "purchases.view")) return <NoAccess area="as Compras" />;
   const [order, receipts] = await Promise.all([
     getPurchaseOrderById(current.company.id, params.id),
     listPurchaseReceipts(current.company.id, params.id),

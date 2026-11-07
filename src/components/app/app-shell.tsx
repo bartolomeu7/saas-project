@@ -6,7 +6,7 @@ import { Header } from "@/components/app/header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { PresenceHeartbeat } from "@/components/presence-heartbeat";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import type { Company } from "@/types/company";
+import type { Company, CompanyRole } from "@/types/company";
 
 /**
  * Casca da área autenticada: SidebarProvider (shadcn/ui) + header + conteúdo.
@@ -15,12 +15,14 @@ import type { Company } from "@/types/company";
  */
 export function AppShell({
   company,
+  role,
   userName,
   userEmail,
   defaultOpen = true,
   children,
 }: {
   company: Company;
+  role: CompanyRole;
   userName?: string | null;
   userEmail?: string | null;
   defaultOpen?: boolean;
@@ -37,10 +39,10 @@ export function AppShell({
         >
           Pular para o conteúdo
         </a>
-        <AppSidebar userName={userName} userEmail={userEmail} />
+        <AppSidebar userName={userName} userEmail={userEmail} role={role} />
         {/* SidebarInset já renderiza o landmark <main>; o alvo do skip link é um <div>. */}
         <SidebarInset className="prime-app-main min-w-0 bg-background">
-          <Header company={company} />
+          <Header company={company} role={role} />
           <div id="conteudo-principal" className="flex-1" tabIndex={-1}>
             {children}
           </div>

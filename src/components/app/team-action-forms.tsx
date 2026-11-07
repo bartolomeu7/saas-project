@@ -41,7 +41,8 @@ const colors = [
   ["slate", "Cinza"],
 ] as const;
 
-export function AddMemberForm() {
+/** `canAddAdmin`: só o dono adiciona administradores; o admin adiciona apenas funcionários (o banco também exige). */
+export function AddMemberForm({ canAddAdmin = false }: { canAddAdmin?: boolean }) {
   const [state, formAction] = useFormState(addExistingMemberAction, initialState);
 
   return (
@@ -52,7 +53,7 @@ export function AddMemberForm() {
       <FormField label="Função" error={fieldError(state, "role")}>
         <NativeSelect name="role" defaultValue="employee">
           <option value="employee">Funcionário</option>
-          <option value="admin">Administrador</option>
+          {canAddAdmin && <option value="admin">Administrador</option>}
         </NativeSelect>
       </FormField>
       <SubmitButton state={state} pendingLabel="Adicionando..." className="w-auto sm:mt-6">
@@ -63,7 +64,8 @@ export function AddMemberForm() {
   );
 }
 
-export function MemberRoleForm({ member }: { member: TeamMember }) {
+/** `isOwner`: só o dono promove/rebaixa administradores e owners; para o admin a lista mostra apenas "Funcionário". */
+export function MemberRoleForm({ member, isOwner = false }: { member: TeamMember; isOwner?: boolean }) {
   const [state, formAction] = useFormState(updateMemberRoleAction, initialState);
 
   return (
@@ -75,8 +77,8 @@ export function MemberRoleForm({ member }: { member: TeamMember }) {
         error={fieldError(state, "role")}
       >
         <NativeSelect name="role" defaultValue={member.role} className="h-9 px-2">
-          <option value="owner">Owner</option>
-          <option value="admin">Administrador</option>
+          {isOwner && <option value="owner">Owner</option>}
+          {isOwner && <option value="admin">Administrador</option>}
           <option value="employee">Funcionário</option>
         </NativeSelect>
       </FormField>
