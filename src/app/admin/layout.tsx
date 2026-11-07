@@ -3,6 +3,8 @@ import type { ReactNode } from "react";
 import { cookies } from "next/headers";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { ClerkAppProvider } from "@/components/clerk/clerk-app-provider";
+import { ThemeSync } from "@/components/settings/theme-sync";
+import { THEME_INIT_SCRIPT } from "@/lib/settings/theme";
 import { redirect } from "next/navigation";
 import { requirePlatformAdmin } from "@/lib/admin/queries";
 import { getCurrentUser } from "@/lib/auth/session";
@@ -42,6 +44,9 @@ export default async function AdminLayout({ children }: { children: ReactNode })
 
   return (
     <ClerkAppProvider>
+      {/* Tema escolhido em Configurações → Aparência: aplicado antes da primeira pintura (sem piscar) e mantido em dia. */}
+      <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      <ThemeSync />
       <AdminShell
         userName={admin.fullName}
         userEmail={admin.email}

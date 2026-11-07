@@ -4774,6 +4774,26 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      update_own_company: {
+        Args: {
+          p_business_type: Database["public"]["Enums"]["business_type"]
+          p_name: string
+        }
+        Returns: {
+          business_type: Database["public"]["Enums"]["business_type"]
+          created_at: string
+          id: string
+          name: string
+          status: Database["public"]["Enums"]["company_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "companies"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       update_platform_plan: {
         Args: {
           p_access_duration_days: number

@@ -9,16 +9,19 @@ import {
 } from "lucide-react"
 import { Toaster as Sonner } from "sonner"
 
+import { useAppliedTheme } from "@/lib/settings/theme-client"
+
 type ToasterProps = React.ComponentProps<typeof Sonner>
 
 /**
- * Toaster global do Prime Ges. O produto tem identidade dark fixa (ver
- * src/app/layout.tsx), então o tema do Sonner também é fixo — sem next-themes.
+ * Toaster global do Prime Ges. O padrão é a identidade escura (ver src/app/layout.tsx); na área logada a pessoa pode
+ * escolher o tema claro em Configurações → Aparência, e o Sonner acompanha a classe aplicada no <html> — sem next-themes.
  */
 const Toaster = ({ ...props }: ToasterProps) => {
+  const theme = useAppliedTheme()
   return (
     <Sonner
-      theme="dark"
+      theme={theme}
       className="toaster group"
       position="bottom-right"
       closeButton
