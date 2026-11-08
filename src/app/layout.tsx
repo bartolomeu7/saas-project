@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { Inter } from "next/font/google";
 import { ogImage, siteConfig } from "@/config/site";
@@ -16,6 +16,16 @@ export const metadata: Metadata = {
   // `metadataBase`, ou seja, pelo domínio de siteConfig.url.
   openGraph: { type: "website", siteName: siteConfig.name, locale: "pt_BR", images: [ogImage] },
   twitter: { card: "summary_large_image", images: [ogImage] },
+  // Aplicativo instalável (PWA): o manifesto fica em src/app/manifest.ts. No iPhone/iPad o "Adicionar à Tela de Início"
+  // usa estes metadados e o apple-icon.
+  applicationName: siteConfig.name,
+  appleWebApp: { capable: true, title: siteConfig.name, statusBarStyle: "black-translucent" },
+  formatDetection: { telephone: false },
+};
+
+// Cor da barra do navegador/sistema: o fundo escuro do produto (--background do tema escuro).
+export const viewport: Viewport = {
+  themeColor: "#111820",
 };
 
 export default function RootLayout({

@@ -165,8 +165,8 @@ describe("abas de Configurações por papel", () => {
 
   it("funcionário não vê a aba Empresa; owner/admin veem; todos veem Perfil, Segurança e Aparência", () => {
     const labels = (role) => appSettingsNav(role).map((i) => i.label);
-    assert.deepEqual(labels("employee"), ["Visão geral", "Perfil", "Segurança", "Aparência"]);
-    assert.deepEqual(labels("owner"), ["Visão geral", "Perfil", "Segurança", "Aparência", "Empresa"]);
+    assert.deepEqual(labels("employee"), ["Visão geral", "Perfil", "Segurança", "Aparência", "Aplicativo"]);
+    assert.deepEqual(labels("owner"), ["Visão geral", "Perfil", "Segurança", "Aparência", "Aplicativo", "Empresa"]);
     assert.deepEqual(labels("admin"), labels("owner"));
   });
 

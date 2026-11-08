@@ -21,6 +21,14 @@ const nextConfig = {
           },
         ],
       },
+      {
+        // O service worker nunca fica em cache do navegador/CDN: uma versão nova precisa valer na hora.
+        source: "/sw.js",
+        headers: [
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+          { key: "Service-Worker-Allowed", value: "/" },
+        ],
+      },
     ];
   },
 };

@@ -42,6 +42,7 @@ export const APP_ROUTE_PATTERNS: readonly string[] = [
   "/app/compras/nova",
   "/app/configuracoes",
   "/app/configuracoes/aparencia",
+  "/app/configuracoes/aplicativo",
   "/app/configuracoes/empresa",
   "/app/configuracoes/perfil",
   "/app/configuracoes/seguranca",
@@ -86,6 +87,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   perfil: "Perfil",
   seguranca: "Segurança",
   aparencia: "Aparência",
+  aplicativo: "Aplicativo",
   empresa: "Empresa",
 };
 
