@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { formatDate } from "@/lib/format";
 import Link from "next/link";
 import { CreditCard } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
@@ -74,7 +75,7 @@ export default async function SubscriptionPage() {
               <dd className="font-medium text-foreground">
                 {isLifetime || !subscription.expires_at
                   ? "Sem vencimento"
-                  : new Date(subscription.expires_at).toLocaleDateString("pt-BR")}
+                  : formatDate(subscription.expires_at)}
               </dd>
             </div>
             <div>

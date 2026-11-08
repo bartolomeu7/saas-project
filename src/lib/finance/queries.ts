@@ -2,7 +2,7 @@ import "server-only";
 
 import { cache } from "react";
 import { createSessionClient } from "@/lib/supabase/server";
-import { endOfDaySaoPaulo, startOfMonthSaoPaulo } from "@/lib/timezone";
+import { endOfDaySaoPaulo, startOfMonthSaoPaulo, todayDateSaoPaulo } from "@/lib/timezone";
 import type {
   AccountReceivable,
   AccountsPayable,
@@ -207,7 +207,7 @@ export const getFinanceDashboard = cache(async function getFinanceDashboard(
     (sum, row) => sum + Math.max(0, money(row.amount) - money(row.paid_amount)),
     0
   );
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayDateSaoPaulo();
   const overduePayableCount = (payableResult.data ?? []).filter(
     (row) => row.due_date && row.due_date < today
   ).length;

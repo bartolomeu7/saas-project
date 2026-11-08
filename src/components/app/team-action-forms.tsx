@@ -18,6 +18,7 @@ import { FormMessage } from "@/components/shared/auth/form-message";
 import { SubmitButton } from "@/components/shared/auth/submit-button";
 import { FormField, fieldError } from "@/components/shared/form-field";
 import { Input } from "@/components/ui/input";
+import { parseMoneyInput } from "@/lib/parse-money";
 import { NativeSelect } from "@/components/ui/native-select";
 
 const initialState: ActionResult = {};
@@ -192,7 +193,7 @@ export function ProfessionalServicesForm({
           .map((service) => ({
             service_id: service.id,
             duration_override_minutes: overrides[service.id]?.duration || null,
-            price_override: overrides[service.id]?.price || null,
+            price_override: parseMoneyInput(overrides[service.id]?.price),
           }))
       ),
     [checked, overrides, services]

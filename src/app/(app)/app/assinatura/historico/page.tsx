@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { formatDate } from "@/lib/format";
 import Link from "next/link";
 import { getCurrentCompany } from "@/lib/companies/queries";
 import { getSubscriptionPayments } from "@/lib/billing/queries";
@@ -49,7 +50,7 @@ export default async function BillingHistoryPage() {
                   <TableCell className="px-4 py-3 font-medium text-foreground">
                     {payment.plan_name}
                     <span className="block text-xs font-normal text-muted-foreground sm:hidden">
-                      {new Date(payment.created_at).toLocaleDateString("pt-BR")}
+                      {formatDate(payment.created_at)}
                     </span>
                   </TableCell>
                   <TableCell className="px-4 py-3 text-foreground">
@@ -59,7 +60,7 @@ export default async function BillingHistoryPage() {
                     <SubscriptionPaymentStatusBadge status={payment.status} />
                   </TableCell>
                   <TableCell className="hidden px-4 py-3 text-muted-foreground sm:table-cell">
-                    {new Date(payment.created_at).toLocaleDateString("pt-BR")}
+                    {formatDate(payment.created_at)}
                   </TableCell>
                   <TableCell className="px-4 py-3 text-right">
                     {payment.status === "pending" && (

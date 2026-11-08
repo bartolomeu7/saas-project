@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createSessionClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/auth/actions";
 import { getCurrentCompany } from "@/lib/companies/queries";
+import { todayDateSaoPaulo } from "@/lib/timezone";
 import type { Database } from "@/types/supabase";
 
 type FinancialDirection = Database["public"]["Enums"]["financial_entry_direction"];
@@ -50,7 +51,7 @@ export async function createFinancialEntryAction(
   const direction = textValue(formData.get("direction")) as FinancialDirection;
   const description = textValue(formData.get("description"));
   const amount = parseAmount(formData.get("amount"));
-  const occurredOn = textValue(formData.get("occurredOn")) || new Date().toISOString().slice(0, 10);
+  const occurredOn = textValue(formData.get("occurredOn")) || todayDateSaoPaulo();
   const method = paymentMethod(formData.get("method"));
   const categoryId = textValue(formData.get("categoryId")) || undefined;
   const costCenterId = textValue(formData.get("costCenterId")) || undefined;
@@ -91,7 +92,7 @@ export async function payAccountsPayableAction(
   const payableId = textValue(formData.get("payableId"));
   const amount = parseAmount(formData.get("amount"));
   const method = paymentMethod(formData.get("method"));
-  const paymentDate = textValue(formData.get("paymentDate")) || new Date().toISOString().slice(0, 10);
+  const paymentDate = textValue(formData.get("paymentDate")) || todayDateSaoPaulo();
   const notes = textValue(formData.get("notes")) || undefined;
 
   if (!payableId) return { error: "Conta a pagar inválida." };

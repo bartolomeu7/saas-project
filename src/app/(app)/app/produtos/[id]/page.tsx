@@ -134,13 +134,6 @@ export default async function ProductDetailPage({
               )}
             </div>
           </div>
-
-          <div className="rounded-lg border border-border bg-card p-6">
-            <h2 className="text-sm font-semibold text-foreground">Vendas</h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Histórico de vendas estará disponível quando o módulo de Vendas for implementado.
-            </p>
-          </div>
         </div>
 
         <div className="flex flex-col gap-4">

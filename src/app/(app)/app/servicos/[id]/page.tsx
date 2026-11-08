@@ -117,14 +117,6 @@ export default async function ServiceDetailPage({
               )}
             </div>
           </div>
-
-          <div className="rounded-lg border border-border bg-card p-6">
-            <h2 className="text-sm font-semibold text-foreground">Ordens de serviço</h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Histórico de execuções estará disponível quando o módulo de Ordens de
-              Serviço for implementado.
-            </p>
-          </div>
         </div>
 
         <div className="flex flex-col gap-4">

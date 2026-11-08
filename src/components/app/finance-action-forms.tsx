@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { FormMessage } from "@/components/shared/auth/form-message";
 import { SubmitButton } from "@/components/shared/auth/submit-button";
 import { NativeSelect } from "@/components/ui/native-select";
+import { todayDateSaoPaulo } from "@/lib/timezone";
 
 const initialState: ActionResult = {};
 
@@ -27,7 +28,7 @@ const paymentLabels: Record<string, string> = {
 };
 
 function today() {
-  return new Date().toISOString().slice(0, 10);
+  return todayDateSaoPaulo();
 }
 
 export function AccountsPayablePaymentForm({

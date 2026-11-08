@@ -9,7 +9,13 @@ const dateFormatter = new Intl.DateTimeFormat("pt-BR", {
   timeZone: "America/Sao_Paulo",
 });
 
+// Datas-calendário sem hora ("1991-09-22", aniversário, vencimento) não são um instante: converter
+// "1991-09-22" com `new Date` dá meia-noite UTC e, no fuso de São Paulo, vira o dia anterior.
+const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/;
+
 export function formatDate(isoDate: string): string {
+  const dateOnly = DATE_ONLY.exec(isoDate);
+  if (dateOnly) return `${dateOnly[3]}/${dateOnly[2]}/${dateOnly[1]}`;
   return dateFormatter.format(new Date(isoDate));
 }
 
