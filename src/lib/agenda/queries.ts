@@ -32,7 +32,7 @@ export async function listAppointmentsBetween(
   let query = supabase
     .from("appointments")
     .select(
-      "*, customers(name), services(name), professional_profiles(display_name,color)"
+      "*, customers(name,phone), services(name), professional_profiles(display_name,color)"
     )
     .eq("company_id", companyId)
     .gte("starts_at", fromIso)
@@ -45,7 +45,7 @@ export async function listAppointmentsBetween(
   const { data } = await query;
 
   return (data ?? []).map((row) => {
-    const customer = row.customers as { name: string } | null;
+    const customer = row.customers as { name: string; phone: string | null } | null;
     const service = row.services as { name: string } | null;
     const professional = row.professional_profiles as
       | { display_name: string; color: string }
@@ -54,6 +54,7 @@ export async function listAppointmentsBetween(
     return {
       ...(row as Appointment),
       customer_name: customer?.name ?? null,
+      customer_phone: customer?.phone ?? null,
       service_name: service?.name ?? null,
       professional_name: professional?.display_name ?? null,
       professional_color: professional?.color ?? null,

@@ -25,6 +25,7 @@ export interface AppCrumb {
 export const APP_ROUTE_PATTERNS: readonly string[] = [
   "/app",
   "/app/agenda",
+  "/app/agenda/imprimir",
   "/app/assinatura",
   "/app/assinatura/historico",
   "/app/assinatura/pagamento/[id]",
@@ -88,6 +89,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   seguranca: "Segurança",
   aparencia: "Aparência",
   aplicativo: "Aplicativo",
+  imprimir: "Imprimir",
   empresa: "Empresa",
 };
 
