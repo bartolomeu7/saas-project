@@ -11,12 +11,22 @@ import {
   listAgendaProfessionals,
   listAgendaServices,
   listAppointments,
+  listAppointmentsBetween,
 } from "@/lib/agenda/queries";
 import {
   AppointmentForm,
   AppointmentStatusForm,
   RescheduleForm,
 } from "@/components/app/agenda-action-forms";
+import { AgendaWeekCalendar } from "@/components/app/agenda-week-calendar";
+import {
+  AGENDA_WEEK_KEYS,
+  AGENDA_WEEK_LABELS,
+  getWeekBounds,
+  resolveWeekKey,
+  shortDateLabel,
+  type AgendaWeekKey,
+} from "@/lib/agenda/week-view";
 import { APPOINTMENT_STATUS_LABELS } from "@/types/appointment";
 import { cn } from "@/lib/utils";
 
@@ -66,18 +76,34 @@ function statusBadge(status: string) {
 export default async function AgendaPage({
   searchParams: searchParamsPromise,
 }: {
-  searchParams: Promise<{ date?: string | string[]; professional?: string | string[] }>;
+  searchParams: Promise<{ date?: string | string[]; professional?: string | string[]; semana?: string | string[] }>;
 }) {
   const searchParams = await searchParamsPromise;
   const current = (await getCurrentCompany())!;
   const rawDate = searchParams?.date;
   const rawProfessional = searchParams?.professional;
+  const rawWeek = searchParams?.semana;
   const requestedDate = Array.isArray(rawDate) ? rawDate[0] : rawDate;
   const professional = Array.isArray(rawProfessional) ? rawProfessional[0] : rawProfessional;
   const date = requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate) ? requestedDate : isoTodaySaoPaulo();
+  const weekKey = resolveWeekKey(Array.isArray(rawWeek) ? rawWeek[0] : rawWeek);
+  const today = isoTodaySaoPaulo();
+  const week = getWeekBounds(weekKey, today);
 
-  const [appointments, professionals, customers, services, stats] = await Promise.all([
+  // Mantém semana, dia e profissional escolhidos ao navegar.
+  function agendaHref(next: { date?: string; semana?: AgendaWeekKey; professional?: string | null }) {
+    const params = new URLSearchParams();
+    params.set("date", next.date ?? date);
+    const semana = next.semana ?? weekKey;
+    if (semana !== "atual") params.set("semana", semana);
+    const person = next.professional === undefined ? professional : next.professional;
+    if (person) params.set("professional", person);
+    return "/app/agenda?" + params.toString();
+  }
+
+  const [appointments, calendarAppointments, professionals, customers, services, stats] = await Promise.all([
     listAppointments(current.company.id, date, professional),
+    listAppointmentsBetween(current.company.id, week.fromIso, week.toIso, professional),
     listAgendaProfessionals(current.company.id),
     listAgendaCustomers(current.company.id),
     listAgendaServices(current.company.id),
@@ -93,12 +119,46 @@ export default async function AgendaPage({
         className="xl:items-end"
         actions={
           <nav aria-label="Navegar entre os dias" className="flex flex-wrap gap-2">
-            <Link href={"/app/agenda?date=" + shiftDate(date, -1)} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>← Dia anterior</Link>
+            <Link href={agendaHref({ date: shiftDate(date, -1) })} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>← Dia anterior</Link>
             <Link href="/app/agenda" className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>Hoje</Link>
-            <Link href={"/app/agenda?date=" + shiftDate(date, 1)} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>Próximo dia →</Link>
+            <Link href={agendaHref({ date: shiftDate(date, 1) })} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>Próximo dia →</Link>
           </nav>
         }
       />
+
+      <section aria-labelledby="agenda-semanas" className="rounded-xl border border-border bg-card/40">
+        <div className="flex flex-col gap-3 border-b px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h2 id="agenda-semanas" className="font-semibold">Agenda da semana</h2>
+            <p className="text-sm text-muted-foreground">
+              {shortDateLabel(week.start)} a {shortDateLabel(week.end)} · clique em um serviço para concluir, reagendar ou cancelar.
+            </p>
+          </div>
+          <nav aria-label="Escolher a semana" className="flex flex-wrap gap-2">
+            {AGENDA_WEEK_KEYS.map((key) => (
+              <Link
+                key={key}
+                href={agendaHref({ semana: key })}
+                aria-current={key === weekKey ? "true" : undefined}
+                className={cn("rounded-full border px-3 py-1.5 text-xs", key === weekKey && "bg-primary text-primary-foreground")}
+              >
+                {AGENDA_WEEK_LABELS[key]}
+              </Link>
+            ))}
+          </nav>
+        </div>
+        <div className="p-4 sm:p-5">
+          <AgendaWeekCalendar
+            mode={weekKey === "atual" ? "hours" : "days"}
+            days={week.days}
+            appointments={calendarAppointments}
+            todayDate={today}
+            nowIso={new Date().toISOString()}
+            weekKey={weekKey}
+            professionalId={professional}
+          />
+        </div>
+      </section>
 
       <div className="grid gap-3 sm:grid-cols-4">
         <MetricCard label="Total" value={stats.total} icon={CalendarDays} />
@@ -129,19 +189,19 @@ export default async function AgendaPage({
           )}
         </section>
 
-        <section className="rounded-xl border border-border bg-card/40">
+        <section id="atendimentos-do-dia" className="scroll-mt-20 rounded-xl border border-border bg-card/40">
           <div className="flex flex-col gap-3 border-b px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="font-semibold">Atendimentos do dia</h2>
               <p className="text-sm text-muted-foreground">Selecione um profissional para focar a agenda.</p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Link href={"/app/agenda?date=" + date} aria-current={!professional ? "true" : undefined} className={cn("rounded-full border px-3 py-1.5 text-xs", !professional && "bg-primary text-primary-foreground")}>Todos</Link>
+              <Link href={agendaHref({ professional: null })} aria-current={!professional ? "true" : undefined} className={cn("rounded-full border px-3 py-1.5 text-xs", !professional && "bg-primary text-primary-foreground")}>Todos</Link>
               {professionals.map((person) => (
                 <Link
                   key={person.id}
                   aria-current={professional === person.id ? "true" : undefined}
-                  href={"/app/agenda?date=" + date + "&professional=" + person.id}
+                  href={agendaHref({ professional: person.id })}
                   className={cn("rounded-full border px-3 py-1.5 text-xs", professional === person.id && "bg-primary text-primary-foreground")}
                 >
                   {person.display_name}
@@ -174,7 +234,7 @@ export default async function AgendaPage({
 
                   <div className="flex flex-wrap gap-2 lg:justify-end">
                     {appointment.status === "scheduled" ? <AppointmentStatusForm appointmentId={appointment.id} status="confirmed" label="Confirmar" /> : null}
-                    {appointment.status === "confirmed" ? <AppointmentStatusForm appointmentId={appointment.id} status="completed" label="Concluir" /> : null}
+                    {appointment.status === "scheduled" || appointment.status === "confirmed" ? <AppointmentStatusForm appointmentId={appointment.id} status="completed" label="Concluir" /> : null}
                     {appointment.status === "scheduled" || appointment.status === "confirmed" ? (
                       <AppointmentStatusForm appointmentId={appointment.id} status="cancelled" label="Cancelar" destructive />
                     ) : null}

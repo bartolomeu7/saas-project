@@ -16,8 +16,18 @@ export async function listAppointments(
   dateValue: string,
   professionalId?: string
 ): Promise<Appointment[]> {
-  const supabase = await createSessionClient();
   const { from, to } = dateRangeSaoPaulo(dateValue);
+  return listAppointmentsBetween(companyId, from, to, professionalId);
+}
+
+/** Agendamentos que começam entre dois instantes (ISO, UTC) — usado pela agenda em semanas. */
+export async function listAppointmentsBetween(
+  companyId: string,
+  fromIso: string,
+  toIso: string,
+  professionalId?: string
+): Promise<Appointment[]> {
+  const supabase = await createSessionClient();
 
   let query = supabase
     .from("appointments")
@@ -25,9 +35,10 @@ export async function listAppointments(
       "*, customers(name), services(name), professional_profiles(display_name,color)"
     )
     .eq("company_id", companyId)
-    .gte("starts_at", from)
-    .lte("starts_at", to)
-    .order("starts_at", { ascending: true });
+    .gte("starts_at", fromIso)
+    .lte("starts_at", toIso)
+    .order("starts_at", { ascending: true })
+    .limit(1000);
 
   if (professionalId) query = query.eq("professional_id", professionalId);
 
