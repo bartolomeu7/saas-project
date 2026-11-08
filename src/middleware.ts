@@ -7,6 +7,7 @@ import { isActivePlatformAdmin, isActiveSuperAdmin } from "@/lib/admin/permissio
 import { ACCOUNT_BLOCKED_PATH } from "@/lib/auth/account-status";
 import type { UserRole, UserStatus } from "@/types/profile";
 import { CONSENT_REQUIRED_CODE, decideConsentGate, isConsentGatedPath } from "@/lib/legal/gate";
+import { expectRead, settle, valueOrThrow } from "@/lib/auth/settled";
 import { safeAfterConsentPath } from "@/lib/legal/safe-path";
 import {
   isMissingFunctionError,
@@ -202,9 +203,30 @@ export const middleware = clerkMiddleware(async (auth, request) => {
     { accessToken: async () => token }
   );
 
-  const { data: profile, error: profileError } = token
-    ? await supabase.from("profiles").select("user_id, role, status").maybeSingle()
-    : { data: null, error: null };
+  // As quatro leituras de proteção não dependem umas das outras: são disparadas JUNTAS (antes eram quatro idas ao banco
+  // em fila, e o middleware roda longe do banco). As DECISÕES abaixo continuam na mesma ordem de antes:
+  // perfil (conta inativa) -> vaga de sessão -> 2FA -> admin -> consentimento -> assinatura.
+  // Só se usa o resultado de vaga/2FA/consentimento quando existe perfil (como antes); sem token nada é consultado.
+  const readsSlot = Boolean(token && sessionId && isConsentGatedPath(pathname));
+  const readsTwoFactor = Boolean(token && sessionId && needsTwoFactorGate);
+  const readsConsent = Boolean(token && needsConsentGate);
+
+  const [profileResult, slotResult, gateResult, consentResult] = await Promise.all([
+    settle(
+      Promise.resolve(
+        token
+          ? supabase.from("profiles").select("user_id, role, status").maybeSingle()
+          : { data: null, error: null }
+      )
+    ),
+    readsSlot && sessionId
+      ? settle((supabase as unknown as SessionSlotRpcClient).rpc("session_slot_status", { p_session_id: sessionId }))
+      : null,
+    readsTwoFactor && sessionId ? settle(supabase.rpc("two_factor_gate_status", { p_session_id: sessionId })) : null,
+    readsConsent ? settle((supabase as unknown as ConsentRpcClient).rpc("get_my_legal_consent_status")) : null,
+  ]);
+
+  const { data: profile, error: profileError } = valueOrThrow(profileResult);
 
   // Erro do Supabase (401/5xx...) não é "sem perfil": não segue para o onboarding.
   if (profileError) {
@@ -226,9 +248,7 @@ export const middleware = clerkMiddleware(async (auth, request) => {
   // Aqui só se LÊ o estado da vaga (barato); a verificação completa com o Clerk acontece no layout. Sem perfil = primeiro
   // acesso (o layout cria o perfil e verifica). Falha ao ler o estado = mesma resposta 503 do restante da autenticação.
   if (profile && sessionId && isConsentGatedPath(pathname)) {
-    const { data: slotRaw, error: slotError } = await (supabase as unknown as SessionSlotRpcClient).rpc("session_slot_status", {
-      p_session_id: sessionId,
-    });
+    const { data: slotRaw, error: slotError } = valueOrThrow(expectRead(slotResult, "session_slot_status"));
     if (slotError && !isMissingFunctionError(slotError)) {
       console.error("[middleware] leitura da vaga de sessão falhou:", slotError.message);
       return authBackendUnavailable("AUTH_RPC_FAILED");
@@ -250,7 +270,7 @@ export const middleware = clerkMiddleware(async (auth, request) => {
   // Verificação em duas etapas própria: quem ativou precisa cumpri-la uma vez por sessão do Clerk. Aqui só se LÊ o estado
   // (com o token do próprio usuário); quem grava a verificação é a Server Action, com a chave de serviço.
   if (profile && sessionId && needsTwoFactorGate) {
-    const { data: gateRaw, error: gateError } = await supabase.rpc("two_factor_gate_status", { p_session_id: sessionId });
+    const { data: gateRaw, error: gateError } = valueOrThrow(expectRead(gateResult, "two_factor_gate_status"));
     if (gateError && !isMissingFunctionError(gateError)) {
       console.error("[middleware] leitura da segunda etapa falhou:", gateError.message);
       return authBackendUnavailable("AUTH_RPC_FAILED");
@@ -293,9 +313,7 @@ export const middleware = clerkMiddleware(async (auth, request) => {
 
   // Consentimento legal vigente: sem ele nenhuma ação do produto passa, por nenhum caminho HTTP.
   if (needsConsentGate && profile) {
-    const { data: consent, error: consentError } = await (supabase as unknown as ConsentRpcClient).rpc(
-      "get_my_legal_consent_status"
-    );
+    const { data: consent, error: consentError } = valueOrThrow(expectRead(consentResult, "get_my_legal_consent_status"));
     if (consentError) {
       console.error("[middleware] verificação de consentimento falhou:", consentError.message);
       return authBackendUnavailable("AUTH_RPC_FAILED");
