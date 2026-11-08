@@ -73,6 +73,10 @@ export function CashMovementsTable({ movements }: { movements: CashMovementWithN
                     <>
                       <ShoppingCart className="h-3.5 w-3.5" /> Pagamento de venda
                     </>
+                  ) : movement.description.startsWith("Estorno de pagamento de venda") ? (
+                    <>
+                      <ShoppingCart className="h-3.5 w-3.5" /> Estorno de venda
+                    </>
                   ) : (
                     <>
                       <PenLine className="h-3.5 w-3.5" /> Lançamento manual
