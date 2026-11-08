@@ -6,6 +6,8 @@ import { cn } from "@/lib/utils";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getCurrentCompany } from "@/lib/companies/queries";
+import { getCurrentUser } from "@/lib/auth/session";
+import type { TeamMember } from "@/types/team";
 import { getSeatUsage, listCompanyTeam } from "@/lib/team/queries";
 import {
   AddMemberForm,
@@ -23,6 +25,10 @@ export default async function TeamPage() {
   const [team, seats] = await Promise.all([listCompanyTeam(), getSeatUsage()]);
   const canManage = current.role === "owner" || current.role === "admin";
   const isOwner = can(current.role, "team.manage_admins");
+  const currentUser = await getCurrentUser();
+  // Ninguém altera a própria função nem se remove por esta tela (evita o dono se tirar da empresa por engano).
+  const canManageThis = (member: TeamMember) =>
+    canManageMember(current.role, member.role) && member.user_id !== currentUser?.id;
 
   const admins = team.filter((member) => member.role === "admin" || member.role === "owner").length;
   const professionals = team.filter((member) => member.professional_active).length;
@@ -106,7 +112,7 @@ export default async function TeamPage() {
               <TeamMemberCard
                 key={member.member_id}
                 member={member}
-                canManage={canManageMember(current.role, member.role)}
+                canManage={canManageThis(member)}
                 isOwner={isOwner}
               />
             ))}
@@ -133,7 +139,7 @@ export default async function TeamPage() {
                   <div className="text-xs text-muted-foreground">{member.email ?? "—"}</div>
                 </TableCell>
                 <TableCell className="p-3">
-                  {canManageMember(current.role, member.role) ? (
+                  {canManageThis(member) ? (
                     <MemberRoleForm member={member} isOwner={isOwner} />
                   ) : (
                     <span className="rounded-full border px-2 py-1 text-xs">{member.role}</span>
@@ -157,7 +163,7 @@ export default async function TeamPage() {
                   )}
                 </TableCell>
                 <TableCell className="p-3">
-                  {canManageMember(current.role, member.role) ? <RemoveMemberForm memberId={member.member_id} /> : <span className="text-xs text-muted-foreground">Somente leitura</span>}
+                  {canManageThis(member) ? <RemoveMemberForm memberId={member.member_id} /> : <span className="text-xs text-muted-foreground">Somente leitura</span>}
                 </TableCell>
               </TableRow>
             ))}

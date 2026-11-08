@@ -71,6 +71,37 @@ export function startOfDaySaoPauloFromDateString(dateStr: string): Date | null {
   return new Date(Date.UTC(parts.year, parts.month, parts.day, 0, 0, 0, 0) + SAO_PAULO_OFFSET_MS);
 }
 
+/**
+ * Instante real (UTC) de um horário digitado pelo usuário num `<input type="datetime-local">`
+ * ("YYYY-MM-DDTHH:mm" ou com segundos), interpretado como horário de São Paulo.
+ *
+ * `new Date("2026-11-09T18:00")` interpreta o texto no fuso do processo; no servidor (Vercel = UTC)
+ * isso grava 18:00 UTC, que é 15:00 em São Paulo — a agenda mostrava todo horário 3h adiantado e
+ * recusava horários válidos como "fora da disponibilidade". Retorna `null` se o texto for inválido.
+ */
+export function parseLocalDateTimeSaoPaulo(value: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?$/.exec(value.trim());
+  if (!match) return null;
+  const [, y, mo, d, h, mi, s] = match;
+  const month = Number(mo);
+  const day = Number(d);
+  const hour = Number(h);
+  const minute = Number(mi);
+  const second = s ? Number(s) : 0;
+  if (month < 1 || month > 12 || day < 1 || day > 31 || hour > 23 || minute > 59 || second > 59) return null;
+  const utc = new Date(Date.UTC(Number(y), month - 1, day, hour, minute, second) + SAO_PAULO_OFFSET_MS);
+  // Rejeita datas que o calendário "corrige" (ex.: 31/02 vira 03/03).
+  const back = new Date(utc.getTime() - SAO_PAULO_OFFSET_MS);
+  if (back.getUTCMonth() !== month - 1 || back.getUTCDate() !== day) return null;
+  return utc;
+}
+
+/** Data-calendário de hoje em São Paulo ("YYYY-MM-DD"), para usar como padrão de campos de data. */
+export function todayDateSaoPaulo(reference: Date = new Date()): string {
+  const { year, month, day } = saoPauloDateParts(reference);
+  return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
 /** Como acima, mas para o instante de 23:59:59.999 em São Paulo. */
 export function endOfDaySaoPauloFromDateString(dateStr: string): Date | null {
   const parts = parseDateOnlyString(dateStr);

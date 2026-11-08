@@ -9,6 +9,8 @@ const ACTION_META: Record<string, { label: string; icon: LucideIcon }> = {
   "product.activated": { label: "Produto reativado", icon: PackageCheck },
   "product.deactivated": { label: "Produto desativado", icon: PackageX },
   "product.stock_adjusted": { label: "Estoque ajustado", icon: ArrowRightLeft },
+  // O banco grava este ajuste como "product_stock_adjusted" (com sublinhado).
+  product_stock_adjusted: { label: "Estoque ajustado", icon: ArrowRightLeft },
 };
 
 const dateTimeFormatter = new Intl.DateTimeFormat("pt-BR", {
@@ -18,7 +20,7 @@ const dateTimeFormatter = new Intl.DateTimeFormat("pt-BR", {
 });
 
 function describeMetadata(log: AuditLog): string | null {
-  if (log.action === "product.stock_adjusted") {
+  if (log.action === "product.stock_adjusted" || log.action === "product_stock_adjusted") {
     const { previousStock, newStock, reason } = log.metadata as {
       previousStock?: number;
       newStock?: number;

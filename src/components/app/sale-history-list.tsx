@@ -20,6 +20,14 @@ const ACTION_META: Record<string, { label: string; icon: LucideIcon }> = {
   "sale.stock_adjusted": { label: "Estoque ajustado", icon: ArrowRightLeft },
 };
 
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  cash: "Dinheiro",
+  pix: "PIX",
+  debit: "Débito",
+  credit: "Crédito",
+  other: "Outro",
+};
+
 const dateTimeFormatter = new Intl.DateTimeFormat("pt-BR", {
   dateStyle: "short",
   timeStyle: "short",
@@ -33,7 +41,12 @@ function describeMetadata(log: AuditLog): string | null {
     return `${metadata.stock_before} → ${metadata.stock_after}`;
   }
   if (log.action === "sale.payment_added" && "amount" in metadata) {
-    return `${metadata.method} · R$ ${metadata.amount}`;
+    const method = String(metadata.method ?? "");
+    const amount = Number(metadata.amount);
+    const money = Number.isFinite(amount)
+      ? amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+      : `R$ ${metadata.amount}`;
+    return `${PAYMENT_METHOD_LABELS[method] ?? method} · ${money}`;
   }
   if (log.action === "sale.cancelled" && metadata.reason) {
     return String(metadata.reason);

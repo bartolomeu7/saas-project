@@ -1,7 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { createSessionClient } from "@/lib/supabase/server";
-import { startOfDaySaoPaulo, endOfDaySaoPaulo, startOfMonthSaoPaulo, startOfYearSaoPaulo } from "@/lib/timezone";
+import { startOfDaySaoPaulo, endOfDaySaoPaulo, startOfMonthSaoPaulo, startOfYearSaoPaulo, todayDateSaoPaulo } from "@/lib/timezone";
 import { getStockLevel } from "@/types/product";
 import { NON_OPERATING_EXPENSE_SOURCES } from "@/lib/finance/queries";
 import type { ReportPeriod, ReportRange, ReportTrendPoint, ReportTopItem, ReportPaymentMethod, ReportsWorkspace } from "@/types/report";
@@ -112,17 +112,17 @@ async function getFinanceLayer(companyId: string, range: ReportRange) {
     const { data: payments } = await supabase.from("sale_payments").select("sale_id, amount").eq("company_id", companyId).eq("status", "paid").in("sale_id", receivableSales.map((row) => row.id));
     const paidBySale = new Map<string, number>();
     for (const payment of payments ?? []) paidBySale.set(payment.sale_id, (paidBySale.get(payment.sale_id) ?? 0) + money(payment.amount));
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayDateSaoPaulo();
     for (const sale of receivableSales) {
       const outstanding = Math.max(0, money(sale.total_amount) - (paidBySale.get(sale.id) ?? 0));
       accountsReceivable += outstanding;
-      if (sale.sold_at.slice(0, 10) < today && outstanding > 0) overdueReceivables += 1;
+      if (dayKey(sale.sold_at) < today && outstanding > 0) overdueReceivables += 1;
     }
   }
 
   let accountsPayable = 0;
   let overduePayables = 0;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayDateSaoPaulo();
   for (const row of payableResult.data ?? []) {
     const outstanding = Math.max(0, money(row.amount) - money(row.paid_amount));
     accountsPayable += outstanding;

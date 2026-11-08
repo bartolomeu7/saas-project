@@ -1,4 +1,5 @@
 import { MetricCard } from "@/components/app/metric-card";
+import { formatDateTime } from "@/lib/format";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getCurrentCompany } from "@/lib/companies/queries";
@@ -154,7 +155,7 @@ export default async function PurchaseOrderPage({
                       : "Recebimento cancelado"}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    {new Date(receipt.received_at).toLocaleString("pt-BR")} ·{" "}
+                    {formatDateTime(receipt.received_at)} ·{" "}
                     {money(receipt.total_amount)}
                   </p>
                 </div>

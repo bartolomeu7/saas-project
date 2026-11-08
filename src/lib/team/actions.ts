@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createSessionClient } from "@/lib/supabase/server";
+import { parseLocalDateTimeSaoPaulo } from "@/lib/timezone";
 import type { ActionResult } from "@/lib/auth/actions";
 import type { Database } from "@/types/supabase";
 
@@ -180,11 +181,15 @@ export async function createProfessionalBlockAction(
     return { error: "Informe profissional, início e fim do bloqueio." };
   }
 
+  const startsAtDate = parseLocalDateTimeSaoPaulo(startsAt);
+  const endsAtDate = parseLocalDateTimeSaoPaulo(endsAt);
+  if (!startsAtDate || !endsAtDate) return { error: "Início ou fim do bloqueio inválido." };
+
   const supabase = await createSessionClient();
   const { error } = await supabase.rpc("create_professional_block", {
     p_professional_id: professionalId,
-    p_starts_at: new Date(startsAt).toISOString(),
-    p_ends_at: new Date(endsAt).toISOString(),
+    p_starts_at: startsAtDate.toISOString(),
+    p_ends_at: endsAtDate.toISOString(),
     p_reason: reason,
   });
 

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { formatDateTime } from "@/lib/format";
 import { redirect } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 import { MonitorSmartphone, RefreshCw } from "lucide-react";
@@ -87,7 +88,7 @@ export default async function SessionLimitPage() {
                 <span className="min-w-0 text-sm">
                   <span className="block truncate font-medium text-foreground">{device}</span>
                   <span className="block truncate text-xs text-muted-foreground">
-                    {place ? `${place} · ` : ""}último uso {new Date(s.lastActiveAt).toLocaleString("pt-BR")}
+                    {place ? `${place} · ` : ""}último uso {formatDateTime(new Date(s.lastActiveAt).toISOString())}
                   </span>
                 </span>
                 <RevokeSessionButton sessionId={s.id} />

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createSessionClient } from "@/lib/supabase/server";
+import { parseLocalDateTimeSaoPaulo } from "@/lib/timezone";
 import type { ActionResult } from "@/lib/auth/actions";
 import type { Database } from "@/types/supabase";
 
@@ -39,13 +40,15 @@ export async function createAppointmentAction(
   if (!serviceId || !startsAt) {
     return { error: "Informe serviço e horário." };
   }
+  const startsAtDate = parseLocalDateTimeSaoPaulo(startsAt);
+  if (!startsAtDate) return { error: "Horário inválido." };
 
   const supabase = await createSessionClient();
   const { error } = await supabase.rpc("create_appointment", {
     p_customer_id: customerId,
     p_service_id: serviceId,
     p_professional_id: professionalId,
-    p_starts_at: new Date(startsAt).toISOString(),
+    p_starts_at: startsAtDate.toISOString(),
     p_duration_minutes: duration,
     p_price: price,
     p_notes: notes,
@@ -65,11 +68,13 @@ export async function rescheduleAppointmentAction(
   const startsAt = textValue(formData.get("startsAt"));
 
   if (!appointmentId || !startsAt) return { error: "Agendamento ou horário inválido." };
+  const startsAtDate = parseLocalDateTimeSaoPaulo(startsAt);
+  if (!startsAtDate) return { error: "Horário inválido." };
 
   const supabase = await createSessionClient();
   const { error } = await supabase.rpc("reschedule_appointment", {
     p_appointment_id: appointmentId,
-    p_starts_at: new Date(startsAt).toISOString(),
+    p_starts_at: startsAtDate.toISOString(),
   });
 
   if (error) return { error: error.message || "Não foi possível reagendar." };

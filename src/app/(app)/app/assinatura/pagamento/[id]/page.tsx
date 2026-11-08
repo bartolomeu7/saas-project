@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { formatDateTime } from "@/lib/format";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { buttonVariants } from "@/components/ui/button";
@@ -63,7 +64,7 @@ export default async function PaymentPage({ params: paramsPromise }: { params: P
         <PaymentStatusPoller paymentId={payment.id} initialStatus={payment.status} />
 
         <p className="text-xs text-muted-foreground">
-          Criado em {new Date(payment.created_at).toLocaleString("pt-BR")}
+          Criado em {formatDateTime(payment.created_at)}
         </p>
 
         {(payment.status === "failed" ||
