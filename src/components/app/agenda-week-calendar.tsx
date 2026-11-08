@@ -9,7 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { AppointmentStatusForm, RescheduleForm } from "@/components/app/agenda-action-forms";
+import { AppointmentStatusForm, CompleteAppointmentForm, RescheduleForm } from "@/components/app/agenda-action-forms";
 import {
   AGENDA_VISUAL_LABELS,
   appointmentVisualState,
@@ -294,12 +294,25 @@ function AppointmentDetails({ appointment, now }: { appointment: Appointment; no
         <div><dt className="text-xs text-muted-foreground">Valor</dt><dd>{formatMoney(Number(appointment.price ?? 0))}</dd></div>
         {appointment.notes ? <div><dt className="text-xs text-muted-foreground">Observações</dt><dd>{appointment.notes}</dd></div> : null}
         {appointment.cancellation_reason ? <div><dt className="text-xs text-muted-foreground">Motivo do cancelamento</dt><dd>{appointment.cancellation_reason}</dd></div> : null}
+        {appointment.sale_id ? (
+          <div>
+            <dt className="text-xs text-muted-foreground">Venda</dt>
+            <dd>
+              <Link href={`/app/vendas/${appointment.sale_id}`} className="text-primary underline-offset-2 hover:underline">
+                Ver a venda deste atendimento
+              </Link>
+            </dd>
+          </div>
+        ) : null}
       </dl>
 
       {open ? (
         <div className="flex flex-col gap-3 border-t pt-4">
+          <div className="rounded-lg border bg-muted/30 p-3">
+            <p className="mb-2 text-sm font-medium">Concluir e cobrar</p>
+            <CompleteAppointmentForm appointment={appointment} />
+          </div>
           <div className="flex flex-wrap gap-2">
-            <AppointmentStatusForm appointmentId={appointment.id} status="completed" label="Concluir serviço" />
             {appointment.status === "scheduled" ? (
               <AppointmentStatusForm appointmentId={appointment.id} status="confirmed" label="Confirmar" />
             ) : null}

@@ -83,6 +83,54 @@ export async function rescheduleAppointmentAction(
   return { success: "Agendamento reagendado." };
 }
 
+const PAYMENT_METHODS = ["cash", "pix", "debit", "credit", "other"] as const;
+type PaymentMethod = (typeof PAYMENT_METHODS)[number];
+
+/**
+ * Conclui o atendimento e gera a venda (e o pagamento, se informado) numa única operação no banco
+ * (`complete_appointment`: tudo ou nada). Sem forma de pagamento, a venda fica "a receber".
+ */
+export async function completeAppointmentAction(
+  _prev: ActionResult,
+  formData: FormData
+): Promise<ActionResult> {
+  const appointmentId = textValue(formData.get("appointmentId"));
+  const rawMethod = textValue(formData.get("method"));
+  const amount = parseMoney(formData.get("amount"));
+
+  if (!appointmentId) return { error: "Agendamento inválido." };
+  if (rawMethod && !PAYMENT_METHODS.includes(rawMethod as PaymentMethod)) {
+    return { error: "Forma de pagamento inválida." };
+  }
+  const method = (rawMethod || undefined) as PaymentMethod | undefined;
+  if (!method && textValue(formData.get("amount"))) {
+    return { error: "Informe a forma de pagamento." };
+  }
+  if (method && textValue(formData.get("amount")) && amount === undefined) {
+    return { error: "Valor inválido." };
+  }
+
+  const supabase = await createSessionClient();
+  const { error } = await supabase.rpc("complete_appointment", {
+    p_appointment_id: appointmentId,
+    p_method: method,
+    p_amount: method ? amount : undefined,
+  });
+
+  if (error) return { error: error.message || "Não foi possível concluir o atendimento." };
+
+  revalidatePath("/app/agenda");
+  revalidatePath("/app/vendas");
+  revalidatePath("/app/caixa");
+  revalidatePath("/app/financeiro");
+  revalidatePath("/app");
+  return {
+    success: method
+      ? "Atendimento concluído e pagamento registrado."
+      : "Atendimento concluído. A venda ficou a receber.",
+  };
+}
+
 export async function setAppointmentStatusAction(
   _prev: ActionResult,
   formData: FormData
@@ -102,6 +150,11 @@ export async function setAppointmentStatusAction(
   ];
 
   if (!allowed.includes(status)) return { error: "Status inválido." };
+
+  // Concluir sempre passa por complete_appointment: o atendimento nunca fica "concluído" sem a venda ligada a ele.
+  if (status === "completed") {
+    return completeAppointmentAction({}, formData);
+  }
 
   const supabase = await createSessionClient();
   const { error } = await supabase.rpc("set_appointment_status", {
