@@ -91,5 +91,5 @@ test("a página usa a agenda em 3 semanas com consulta por período e cores pedi
   assert.ok(page.includes('semana'));
   const calendar = read("src/components/app/agenda-week-calendar.tsx");
   assert.ok(calendar.includes("bg-emerald") && calendar.includes("bg-white") && calendar.includes("bg-sky"));
-  assert.ok(calendar.includes('status="completed"'));
+  assert.ok(calendar.includes("CompleteAppointmentForm"), "concluir passa pelo formulário que gera a venda");
 });

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useFormState } from "react-dom";
 import type { ActionResult } from "@/lib/auth/actions";
 import {
+  completeAppointmentAction,
   createAppointmentAction,
   rescheduleAppointmentAction,
   setAppointmentStatusAction,
@@ -120,6 +121,95 @@ export function AppointmentStatusForm({
         {label}
       </SubmitButton>
       {state.error || state.success ? <div className="mt-2 max-w-xs"><FormMessage state={state} /></div> : null}
+    </form>
+  );
+}
+
+const COMPLETE_METHOD_KEY = "prime-ges:agenda:forma-de-recebimento";
+
+const COMPLETE_METHOD_OPTIONS = [
+  { value: "", label: "Cobrar depois (fica a receber)" },
+  { value: "pix", label: "Recebi no Pix" },
+  { value: "cash", label: "Recebi em dinheiro" },
+  { value: "debit", label: "Recebi no débito" },
+  { value: "credit", label: "Recebi no crédito" },
+  { value: "other", label: "Recebi de outra forma" },
+] as const;
+
+function formatMoney(value: number): string {
+  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+/**
+ * Concluir o atendimento já gera a venda (e o pagamento, se você marcar que recebeu), tudo de uma vez.
+ * Sem forma de pagamento a venda fica "a receber". A última forma escolhida é lembrada neste aparelho.
+ */
+export function CompleteAppointmentForm({ appointment }: { appointment: Appointment }) {
+  const [state, formAction] = useFormState(completeAppointmentAction, initialState);
+  const keepInput = useKeepInputOnError(state);
+  const [method, setMethod] = useState("");
+  const [amount, setAmount] = useState(String(appointment.price ?? 0));
+  const price = Number(appointment.price ?? 0);
+
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(COMPLETE_METHOD_KEY);
+      if (saved && COMPLETE_METHOD_OPTIONS.some((option) => option.value === saved)) setMethod(saved);
+    } catch {
+      // sem armazenamento disponível: segue com o padrão (cobrar depois)
+    }
+  }, []);
+
+  function chooseMethod(value: string) {
+    setMethod(value);
+    try {
+      window.localStorage.setItem(COMPLETE_METHOD_KEY, value);
+    } catch {
+      // ignorar: só uma conveniência
+    }
+  }
+
+  return (
+    <form action={formAction} onReset={keepInput} className="grid gap-2">
+      <input type="hidden" name="appointmentId" value={appointment.id} />
+      <div className="grid gap-2 sm:grid-cols-[1fr_120px]">
+        <label className="grid gap-1 text-xs text-muted-foreground">
+          Recebimento
+          <NativeSelect
+            name="method"
+            value={method}
+            onChange={(event) => chooseMethod(event.target.value)}
+            className="h-9 rounded-md border bg-background px-2 text-sm text-foreground"
+          >
+            {COMPLETE_METHOD_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </NativeSelect>
+        </label>
+        <label className="grid gap-1 text-xs text-muted-foreground">
+          Valor recebido
+          <input
+            name="amount"
+            type="number"
+            step="0.01"
+            min="0"
+            inputMode="decimal"
+            value={method ? amount : ""}
+            disabled={!method}
+            onChange={(event) => setAmount(event.target.value)}
+            placeholder={method ? "" : "—"}
+            className="h-9 rounded-md border bg-background px-2 text-sm text-foreground disabled:opacity-50"
+          />
+        </label>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Gera a venda de {formatMoney(price)}
+        {method ? " e registra o recebimento (entra no caixa aberto e no financeiro)." : " e deixa a receber (aparece em Contas a receber)."}
+      </p>
+      <SubmitButton state={state} pendingLabel="Concluindo..." successLabel="Concluído" size="sm" className="w-auto">
+        Concluir serviço
+      </SubmitButton>
+      {state.error || state.success ? <FormMessage state={state} /> : null}
     </form>
   );
 }

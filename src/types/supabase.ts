@@ -3713,6 +3713,37 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      complete_appointment: {
+        Args: {
+          p_amount?: number
+          p_appointment_id: string
+          p_method?: Database["public"]["Enums"]["sale_payment_method"]
+        }
+        Returns: {
+          cancellation_reason: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          customer_id: string | null
+          duration_minutes: number
+          ends_at: string
+          id: string
+          notes: string | null
+          price: number
+          professional_id: string | null
+          sale_id: string | null
+          service_id: string
+          starts_at: string
+          status: Database["public"]["Enums"]["appointment_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "appointments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       complete_sale: {
         Args: { p_sale_id: string }
         Returns: {

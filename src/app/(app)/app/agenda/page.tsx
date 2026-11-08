@@ -16,6 +16,7 @@ import {
 import {
   AppointmentForm,
   AppointmentStatusForm,
+  CompleteAppointmentForm,
   RescheduleForm,
 } from "@/components/app/agenda-action-forms";
 import { AgendaWeekCalendar } from "@/components/app/agenda-week-calendar";
@@ -234,7 +235,17 @@ export default async function AgendaPage({
 
                   <div className="flex flex-wrap gap-2 lg:justify-end">
                     {appointment.status === "scheduled" ? <AppointmentStatusForm appointmentId={appointment.id} status="confirmed" label="Confirmar" /> : null}
-                    {appointment.status === "scheduled" || appointment.status === "confirmed" ? <AppointmentStatusForm appointmentId={appointment.id} status="completed" label="Concluir" /> : null}
+                    {appointment.status === "scheduled" || appointment.status === "confirmed" ? (
+                      <details className="w-full lg:w-auto">
+                        <summary className="cursor-pointer rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground">Concluir</summary>
+                        <div className="mt-2 min-w-[280px] rounded-lg border bg-card p-3">
+                          <CompleteAppointmentForm appointment={appointment} />
+                        </div>
+                      </details>
+                    ) : null}
+                    {appointment.sale_id ? (
+                      <Link href={`/app/vendas/${appointment.sale_id}`} className="rounded-md border px-3 py-2 text-sm font-medium">Ver venda</Link>
+                    ) : null}
                     {appointment.status === "scheduled" || appointment.status === "confirmed" ? (
                       <AppointmentStatusForm appointmentId={appointment.id} status="cancelled" label="Cancelar" destructive />
                     ) : null}
