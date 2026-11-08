@@ -18,6 +18,7 @@ import { EmptyState } from "@/components/app/empty-state";
 import { ConfirmDialog } from "@/components/app/confirm-dialog";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { NativeSelect } from "@/components/ui/native-select";
+import { useKeepInputOnError } from "@/hooks/use-keep-input-on-error";
 
 const initialState: ActionResult = {};
 
@@ -48,6 +49,7 @@ function CampaignForm({
     ? updateLoyaltyCampaignAction.bind(null, campaign.id)
     : createLoyaltyCampaignAction;
   const [state, formAction] = useFormState(action, initialState);
+  const keepInput = useKeepInputOnError(state);
 
   useEffect(() => {
     if (state.success) onSaved();
@@ -55,7 +57,7 @@ function CampaignForm({
   }, [state]);
 
   return (
-    <form action={formAction} className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4">
+    <form action={formAction} onReset={keepInput} className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4">
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5 sm:col-span-2">
           <Label htmlFor="campaign-name">Nome</Label>

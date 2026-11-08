@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SubmitButton } from "@/components/shared/auth/submit-button";
 import { FormMessage } from "@/components/shared/auth/form-message";
+import { useKeepInputOnError } from "@/hooks/use-keep-input-on-error";
 
 const initialState: ActionResult = {};
 
@@ -21,9 +22,10 @@ export function StockAdjustForm({
 }) {
   const action = adjustStockAction.bind(null, productId);
   const [state, formAction] = useFormState(action, initialState);
+  const keepInput = useKeepInputOnError(state);
 
   return (
-    <form action={formAction} className="flex flex-col gap-4">
+    <form action={formAction} onReset={keepInput} className="flex flex-col gap-4">
       <FormMessage state={state} />
       <p className="text-xs text-muted-foreground">
         Estoque atual: {currentStock} {unit}

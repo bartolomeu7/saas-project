@@ -7,14 +7,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SubmitButton } from "@/components/shared/auth/submit-button";
 import { FormMessage } from "@/components/shared/auth/form-message";
+import { useKeepInputOnError } from "@/hooks/use-keep-input-on-error";
 
 const initialState: ActionResult = {};
 
 export function CashRegisterOpenForm() {
   const [state, formAction] = useFormState(openCashRegisterAction, initialState);
+  const keepInput = useKeepInputOnError(state);
 
   return (
-    <form action={formAction} className="flex flex-col gap-4">
+    <form action={formAction} onReset={keepInput} className="flex flex-col gap-4">
       <FormMessage state={state} />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">

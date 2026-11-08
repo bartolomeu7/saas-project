@@ -11,6 +11,7 @@ import { FormField, fieldError } from "@/components/shared/form-field";
 import { SubmitButton } from "@/components/shared/auth/submit-button";
 import { FormMessage } from "@/components/shared/auth/form-message";
 import { NativeSelect } from "@/components/ui/native-select";
+import { useKeepInputOnError } from "@/hooks/use-keep-input-on-error";
 
 const initialState: ActionResult = {};
 
@@ -46,6 +47,7 @@ export function LoyaltySettingsForm({
 }) {
   const initial = settings ?? FALLBACK_SETTINGS;
   const [state, formAction] = useFormState(upsertLoyaltySettingsAction, initialState);
+  const keepInput = useKeepInputOnError(state);
 
   const [enabled, setEnabled] = useState(initial.enabled);
   const [pointsExpire, setPointsExpire] = useState(initial.pointsExpire);
@@ -80,7 +82,7 @@ export function LoyaltySettingsForm({
   const fieldsetProps = { disabled: !canEdit };
 
   return (
-    <form action={formAction} className="flex flex-col gap-8">
+    <form action={formAction} onReset={keepInput} className="flex flex-col gap-8">
       {!canEdit && (
         <p className="rounded-md border border-border bg-secondary/50 p-3 text-xs text-muted-foreground">
           Você pode visualizar as configurações de fidelidade, mas só owner/admin podem alterá-las.

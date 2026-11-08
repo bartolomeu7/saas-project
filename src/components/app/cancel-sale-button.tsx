@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useKeepInputOnError } from "@/hooks/use-keep-input-on-error";
 
 const initialState: ActionResult = {};
 
@@ -29,6 +30,7 @@ const initialState: ActionResult = {};
 export function CancelSaleButton({ saleId }: { saleId: string }) {
   const action = cancelSaleAction.bind(null, saleId);
   const [state, formAction] = useFormState(action, initialState);
+  const keepInput = useKeepInputOnError(state);
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -52,7 +54,7 @@ export function CancelSaleButton({ saleId }: { saleId: string }) {
             Informe o motivo do cancelamento. O estoque de produtos será restaurado.
           </DialogDescription>
         </DialogHeader>
-        <form action={formAction} className="flex flex-col gap-4">
+        <form action={formAction} onReset={keepInput} className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
             <Label htmlFor={`cancel-reason-${saleId}`}>Motivo do cancelamento</Label>
             <Textarea

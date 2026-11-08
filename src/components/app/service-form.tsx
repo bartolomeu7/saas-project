@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { SubmitButton } from "@/components/shared/auth/submit-button";
 import { FormMessage } from "@/components/shared/auth/form-message";
 import { NativeSelect } from "@/components/ui/native-select";
+import { useKeepInputOnError } from "@/hooks/use-keep-input-on-error";
 
 const initialState: ActionResult = {};
 
@@ -44,6 +45,7 @@ export function ServiceForm({
     !categories.some((category) => category.id === defaultValues.category_id);
 
   const [state, formAction] = useFormState(action, initialState);
+  const keepInput = useKeepInputOnError(state);
   const [costPrice, setCostPrice] = useState(String(defaultValues?.cost_price ?? ""));
   const [salePrice, setSalePrice] = useState(String(defaultValues?.sale_price ?? ""));
 
@@ -64,7 +66,7 @@ export function ServiceForm({
   }, [hours, minutes]);
 
   return (
-    <form action={formAction} className="flex flex-col gap-6">
+    <form action={formAction} onReset={keepInput} className="flex flex-col gap-6">
       <FormMessage state={state} />
 
       <section className="flex flex-col gap-4">

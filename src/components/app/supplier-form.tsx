@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { SubmitButton } from "@/components/shared/auth/submit-button";
 import { FormMessage } from "@/components/shared/auth/form-message";
 import { NativeSelect } from "@/components/ui/native-select";
+import { useKeepInputOnError } from "@/hooks/use-keep-input-on-error";
 
 const initialState: ActionResult = {};
 
@@ -17,9 +18,10 @@ export function SupplierForm({ action, defaultValues, submitLabel }: {
   submitLabel: string;
 }) {
   const [state, formAction] = useFormState(action, initialState);
+  const keepInput = useKeepInputOnError(state);
   const field = (key: keyof SupplierFormFields) => defaultValues?.[key] ?? "";
   return (
-    <form action={formAction} className="flex flex-col gap-6">
+    <form action={formAction} onReset={keepInput} className="flex flex-col gap-6">
       <FormMessage state={state} />
       <section className="grid grid-cols-1 gap-4 rounded-lg border p-4 sm:grid-cols-2">
         <div className="flex flex-col gap-2 sm:col-span-2"><Label htmlFor="name">Nome *</Label><Input id="name" name="name" defaultValue={field("name")} required /></div>

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SubmitButton } from "@/components/shared/auth/submit-button";
 import { FormMessage } from "@/components/shared/auth/form-message";
+import { useKeepInputOnError } from "@/hooks/use-keep-input-on-error";
 
 const initialState: ActionResult = {};
 
@@ -32,6 +33,7 @@ export function CashRegisterCloseForm({
 }) {
   const action = closeCashRegisterAction.bind(null, cashRegisterId);
   const [state, formAction] = useFormState(action, initialState);
+  const keepInput = useKeepInputOnError(state);
   const [informedRaw, setInformedRaw] = useState("");
 
   const difference = useMemo(() => {
@@ -41,7 +43,7 @@ export function CashRegisterCloseForm({
   }, [informedRaw, expectedCashBalance]);
 
   return (
-    <form action={formAction} className="flex flex-col gap-4">
+    <form action={formAction} onReset={keepInput} className="flex flex-col gap-4">
       <FormMessage state={state} />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

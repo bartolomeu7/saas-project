@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { SubmitButton } from "@/components/shared/auth/submit-button";
 import { FormMessage } from "@/components/shared/auth/form-message";
 import { NativeSelect } from "@/components/ui/native-select";
+import { useKeepInputOnError } from "@/hooks/use-keep-input-on-error";
 
 const initialState: ActionResult = {};
 const MAX_PREFERENCES = 10;
@@ -27,6 +28,7 @@ export function CustomerForm({
   submitLabel,
 }: CustomerFormProps) {
   const [state, formAction] = useFormState(action, initialState);
+  const keepInput = useKeepInputOnError(state);
   const [preferences, setPreferences] = useState<{ key: string; value: string }[]>(() =>
     Object.entries(defaultValues?.preferences ?? {}).map(([key, value]) => ({
       key,
@@ -43,7 +45,7 @@ export function CustomerForm({
   );
 
   return (
-    <form action={formAction} className="flex flex-col gap-6">
+    <form action={formAction} onReset={keepInput} className="flex flex-col gap-6">
       <FormMessage state={state} />
 
       <section className="flex flex-col gap-4">

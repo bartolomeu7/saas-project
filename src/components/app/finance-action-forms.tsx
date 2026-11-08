@@ -16,6 +16,7 @@ import { FormMessage } from "@/components/shared/auth/form-message";
 import { SubmitButton } from "@/components/shared/auth/submit-button";
 import { NativeSelect } from "@/components/ui/native-select";
 import { todayDateSaoPaulo } from "@/lib/timezone";
+import { useKeepInputOnError } from "@/hooks/use-keep-input-on-error";
 
 const initialState: ActionResult = {};
 
@@ -39,9 +40,10 @@ export function AccountsPayablePaymentForm({
   balance: number;
 }) {
   const [state, formAction] = useFormState(payAccountsPayableAction, initialState);
+  const keepInput = useKeepInputOnError(state);
 
   return (
-    <form action={formAction} className="grid gap-2 sm:grid-cols-[120px_130px_110px_auto]">
+    <form action={formAction} onReset={keepInput} className="grid gap-2 sm:grid-cols-[120px_130px_110px_auto]">
       <input type="hidden" name="payableId" value={payableId} />
       <input
         name="amount"
@@ -83,9 +85,10 @@ export function SalePaymentForm({
   balance: number;
 }) {
   const [state, formAction] = useFormState(receiveSalePaymentAction, initialState);
+  const keepInput = useKeepInputOnError(state);
 
   return (
-    <form action={formAction} className="grid gap-2 sm:grid-cols-[120px_120px_auto]">
+    <form action={formAction} onReset={keepInput} className="grid gap-2 sm:grid-cols-[120px_120px_auto]">
       <input type="hidden" name="saleId" value={saleId} />
       <input
         name="amount"
@@ -120,12 +123,13 @@ export function FinancialEntryForm({
   costCenters: CostCenter[];
 }) {
   const [state, formAction] = useFormState(createFinancialEntryAction, initialState);
+  const keepInput = useKeepInputOnError(state);
   const [direction, setDirection] = useState<"income" | "expense">("expense");
 
   const availableCategories = categories.filter((category) => category.kind === direction);
 
   return (
-    <form action={formAction} className="mt-5 grid gap-4">
+    <form action={formAction} onReset={keepInput} className="mt-5 grid gap-4">
       <FormMessage state={state} />
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="grid gap-1 text-sm">
@@ -213,9 +217,10 @@ export function FinancialEntryForm({
 
 export function FinancialCategoryForm() {
   const [state, formAction] = useFormState(createFinancialCategoryAction, initialState);
+  const keepInput = useKeepInputOnError(state);
 
   return (
-    <form action={formAction} className="mt-5 grid gap-3 sm:grid-cols-[1fr_150px_auto]">
+    <form action={formAction} onReset={keepInput} className="mt-5 grid gap-3 sm:grid-cols-[1fr_150px_auto]">
       <input
         name="name"
         placeholder="Nova categoria"
@@ -236,9 +241,10 @@ export function FinancialCategoryForm() {
 
 export function CostCenterForm() {
   const [state, formAction] = useFormState(createCostCenterAction, initialState);
+  const keepInput = useKeepInputOnError(state);
 
   return (
-    <form action={formAction} className="mt-5 grid gap-2 sm:flex">
+    <form action={formAction} onReset={keepInput} className="mt-5 grid gap-2 sm:flex">
       <input
         name="name"
         placeholder="Novo centro de custo"

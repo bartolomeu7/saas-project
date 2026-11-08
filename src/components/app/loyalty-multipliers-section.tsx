@@ -20,6 +20,7 @@ import { ProductPicker } from "@/components/app/product-picker";
 import { ServicePicker } from "@/components/app/service-picker";
 import { ConfirmDialog } from "@/components/app/confirm-dialog";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { useKeepInputOnError } from "@/hooks/use-keep-input-on-error";
 
 const initialState: ActionResult = {};
 
@@ -36,6 +37,7 @@ function MultiplierEditForm({
 }) {
   const action = updateLoyaltyMultiplierAction.bind(null, multiplierId);
   const [state, formAction] = useFormState(action, initialState);
+  const keepInput = useKeepInputOnError(state);
 
   useEffect(() => {
     if (state.success) onSaved();
@@ -43,7 +45,7 @@ function MultiplierEditForm({
   }, [state]);
 
   return (
-    <form action={formAction} className="flex flex-col gap-2">
+    <form action={formAction} onReset={keepInput} className="flex flex-col gap-2">
       <div className="flex items-end gap-2">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor={`multiplier-${multiplierId}`}>Multiplicador</Label>
@@ -172,6 +174,7 @@ function NewMultiplierForm({
   const [targetType, setTargetType] = useState<"product" | "service">("product");
   const [selectedItem, setSelectedItem] = useState<{ id: string; name: string } | null>(null);
   const [state, formAction] = useFormState(createLoyaltyMultiplierAction, initialState);
+  const keepInput = useKeepInputOnError(state);
 
   useEffect(() => {
     if (state.success) onSaved();
@@ -238,7 +241,7 @@ function NewMultiplierForm({
           </button>
         </div>
       ) : (
-        <form action={formAction} className="flex flex-col gap-3">
+        <form action={formAction} onReset={keepInput} className="flex flex-col gap-3">
           <input type="hidden" name="targetType" value={targetType} />
           <input type="hidden" name="targetId" value={selectedItem.id} />
           <div className="flex flex-wrap items-end gap-2">

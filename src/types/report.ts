@@ -12,6 +12,8 @@ export interface ReportSummary {
   costOfGoods: number;
   completedSales: number;
   averageTicket: number | null;
+  /** Receitas lançadas à mão no Financeiro (fora o recebimento de vendas). */
+  otherIncome: number;
   operatingExpenses: number;
   netResult: number;
   accountsReceivable: number;

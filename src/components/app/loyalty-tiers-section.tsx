@@ -16,6 +16,7 @@ import { SubmitButton } from "@/components/shared/auth/submit-button";
 import { FormMessage } from "@/components/shared/auth/form-message";
 import { ConfirmDialog } from "@/components/app/confirm-dialog";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { useKeepInputOnError } from "@/hooks/use-keep-input-on-error";
 
 const initialState: ActionResult = {};
 
@@ -33,6 +34,7 @@ function TierEditForm({
     ? updateLoyaltyTierThresholdAction.bind(null, threshold.id!)
     : createLoyaltyTierThresholdAction;
   const [state, formAction] = useFormState(action, initialState);
+  const keepInput = useKeepInputOnError(state);
 
   useEffect(() => {
     if (state.success) {
@@ -44,7 +46,7 @@ function TierEditForm({
   const fieldId = threshold.id ?? "new";
 
   return (
-    <form action={formAction} className="flex flex-col gap-3">
+    <form action={formAction} onReset={keepInput} className="flex flex-col gap-3">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor={`name-${fieldId}`}>Nome</Label>
