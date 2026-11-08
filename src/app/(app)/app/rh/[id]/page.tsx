@@ -239,7 +239,7 @@ async function AttendanceTab({ employeeId, month, today, base }: { employeeId: s
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-1">
           <Link href={`${base}?aba=presenca&mes=${shiftMonth(month, -1)}`} aria-label="Mês anterior" className={cn(buttonVariants({ variant: "outline", size: "icon" }))}><ChevronLeft className="h-4 w-4" /></Link>
-          <h2 className="min-w-40 text-center text-sm font-semibold capitalize">{MONTH_NAMES[monthNumber - 1]} de {year}</h2>
+          <h2 className="min-w-40 text-center text-sm font-semibold first-letter:uppercase">{MONTH_NAMES[monthNumber - 1]} de {year}</h2>
           <Link href={`${base}?aba=presenca&mes=${shiftMonth(month, 1)}`} aria-label="Próximo mês" className={cn(buttonVariants({ variant: "outline", size: "icon" }))}><ChevronRight className="h-4 w-4" /></Link>
         </div>
         <p className="text-sm text-muted-foreground">{formatDays(worked)} dia(s) trabalhado(s) · {absences} falta(s)</p>
