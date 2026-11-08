@@ -29,6 +29,8 @@ const EXPECTED = {
   "cash.manual_movement": { owner: true, admin: true, employee: false },
   "team.manage_staff": { owner: true, admin: true, employee: false },
   "team.manage_admins": { owner: true, admin: false, employee: false },
+  "hr.view": { owner: true, admin: true, employee: false },
+  "hr.manage": { owner: true, admin: true, employee: false },
 };
 
 test("a tabela cobre exatamente as permissões esperadas", () => {

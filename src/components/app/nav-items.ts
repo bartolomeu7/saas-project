@@ -15,6 +15,7 @@ import {
   Gift,
   CalendarDays,
   UserCog,
+  BriefcaseBusiness,
 } from "lucide-react";
 
 export interface NavItem {
@@ -46,6 +47,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: "Serviços", href: "/app/servicos", icon: Wrench, enabled: true },
       { label: "Vendas", href: "/app/vendas", icon: ShoppingCart, enabled: true },
       { label: "Fidelidade", href: "/app/fidelidade", icon: Gift, enabled: true },
+      { label: "RH", href: "/app/rh", icon: BriefcaseBusiness, enabled: true },
     ],
   },
   {
