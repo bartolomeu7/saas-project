@@ -17,6 +17,7 @@ export function appSettingsNav(role: CompanyRole): SettingsNavItem[] {
     { href: "/app/configuracoes/perfil", label: "Perfil" },
     { href: "/app/configuracoes/seguranca", label: "Segurança" },
     { href: "/app/configuracoes/aparencia", label: "Aparência" },
+    { href: "/app/configuracoes/aplicativo", label: "Aplicativo" },
     ...(canEditCompany(role) ? [{ href: "/app/configuracoes/empresa", label: "Empresa" }] : []),
   ];
 }

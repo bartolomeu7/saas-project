@@ -9,6 +9,7 @@ import {
   KeyRound,
   Palette,
   ShieldCheck,
+  Smartphone,
   Tags,
   UserCircle,
   UserCog,
@@ -57,6 +58,7 @@ const GROUPS: SettingsGroup[] = [
       { label: "Perfil", description: "Nome, foto, e-mail e telefone.", href: "/app/configuracoes/perfil", icon: UserCircle },
       { label: "Segurança", description: "Senha, verificação em duas etapas e aparelhos conectados.", href: "/app/configuracoes/seguranca", icon: KeyRound },
       { label: "Aparência", description: "Tema escuro, claro ou automático.", href: "/app/configuracoes/aparencia", icon: Palette },
+      { label: "Aplicativo", description: "Instale o Prime Ges na tela inicial do celular.", href: "/app/configuracoes/aplicativo", icon: Smartphone },
     ],
   },
   {

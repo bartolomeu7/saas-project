@@ -561,6 +561,7 @@ describe("Configurações: a visão geral é somente leitura (as alterações vi
       "/app/configuracoes/perfil": "src/app/(app)/app/configuracoes/perfil/page.tsx",
       "/app/configuracoes/seguranca": "src/app/(app)/app/configuracoes/seguranca/page.tsx",
       "/app/configuracoes/aparencia": "src/app/(app)/app/configuracoes/aparencia/page.tsx",
+      "/app/configuracoes/aplicativo": "src/app/(app)/app/configuracoes/aplicativo/page.tsx",
       "/conta": "src/app/conta/page.tsx",
       "/termos-de-uso": "src/app/(public)/termos-de-uso/page.tsx",
       "/politica-de-privacidade": "src/app/(public)/politica-de-privacidade/page.tsx",
