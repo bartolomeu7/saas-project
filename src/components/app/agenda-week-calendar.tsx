@@ -14,27 +14,15 @@ import {
   AGENDA_VISUAL_LABELS,
   appointmentVisualState,
   dayKeyOf,
-  hourOf,
-  hourRangeFor,
   shortDateLabel,
   timeLabel,
   weekdayShort,
   type AgendaVisualState,
 } from "@/lib/agenda/week-view";
+import { professionalDotClass, STATE_STYLES } from "@/components/app/agenda-visual";
+import { TimeGrid, type TimeGridColumn } from "@/components/app/agenda-time-grid";
 import type { Appointment } from "@/types/appointment";
 import { cn } from "@/lib/utils";
-
-/**
- * Cores pedidas pelo dono: verde = concluído, branco = pendente (horário passou e não foi concluído),
- * azul = agendado por vir. Cancelado fica cinza apagado e "não compareceu" vermelho suave.
- */
-const STATE_STYLES: Record<AgendaVisualState, string> = {
-  done: "border-emerald-500/60 bg-emerald-500/25 text-emerald-950 dark:text-emerald-50",
-  pending: "border-zinc-300 bg-white text-zinc-900",
-  upcoming: "border-sky-500/60 bg-sky-500/25 text-sky-950 dark:text-sky-50",
-  cancelled: "border-border bg-muted/40 text-muted-foreground line-through opacity-70",
-  no_show: "border-rose-500/50 bg-rose-500/15 text-rose-950 dark:text-rose-100",
-};
 
 const LEGEND_ORDER: AgendaVisualState[] = ["done", "pending", "upcoming", "cancelled"];
 
@@ -51,15 +39,29 @@ function formatMoney(value: number): string {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
+export interface AgendaProfessional {
+  id: string;
+  display_name: string;
+  color: string;
+}
+
 interface AgendaWeekCalendarProps {
-  /** "hours": grade por hora (semana atual). "days": lista por dia (semana passada e próxima). */
-  mode: "hours" | "days";
+  /**
+   * "hours": semana em grade de horas, atendimentos do tamanho da duração (semana atual).
+   * "days": lista por dia (semana passada e próxima).
+   * "day": um dia só, em grade de horas, uma coluna por profissional.
+   */
+  mode: "hours" | "days" | "day";
   days: string[];
   appointments: Appointment[];
   todayDate: string;
   nowIso: string;
   weekKey: string;
   professionalId?: string;
+  /** Profissionais ativos (colunas da visão "Dia"). */
+  professionals?: AgendaProfessional[];
+  /** Dia mostrado na visão "Dia" (YYYY-MM-DD). */
+  dayDate?: string;
 }
 
 export function AgendaWeekCalendar({
@@ -70,6 +72,8 @@ export function AgendaWeekCalendar({
   nowIso,
   weekKey,
   professionalId,
+  professionals = [],
+  dayDate,
 }: AgendaWeekCalendarProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const now = useMemo(() => new Date(nowIso), [nowIso]);
@@ -85,6 +89,40 @@ export function AgendaWeekCalendar({
   }, [appointments, days]);
 
   const selected = appointments.find((row) => row.id === selectedId) ?? null;
+
+  const weekColumns = useMemo<TimeGridColumn[]>(
+    () =>
+      days.map((day) => ({
+        key: day,
+        date: day,
+        title: weekdayShort(day),
+        subtitle: shortDateLabel(day),
+        href: dayHref(day),
+        items: byDay.get(day) ?? [],
+      })),
+    // dayHref depende só de weekKey e professionalId
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [days, byDay, weekKey, professionalId]
+  );
+
+  const professionalColumns = useMemo<TimeGridColumn[]>(() => {
+    const date = dayDate ?? todayDate;
+    const visible = professionalId ? professionals.filter((person) => person.id === professionalId) : professionals;
+    const known = new Set(visible.map((person) => person.id));
+    const columns: TimeGridColumn[] = visible.map((person) => ({
+      key: person.id,
+      date,
+      title: person.display_name,
+      dotClass: professionalDotClass(person.color),
+      items: appointments.filter((row) => row.professional_id === person.id),
+    }));
+    const unassigned = appointments.filter((row) => !row.professional_id || !known.has(row.professional_id));
+    // "Sem profissional" aparece quando há atendimento sem profissional (ou de profissional que não está na lista) ou quando não há nenhum profissional.
+    if (unassigned.length || columns.length === 0) {
+      columns.push({ key: "sem-profissional", date, title: columns.length === 0 ? "Atendimentos" : "Sem profissional", items: unassigned });
+    }
+    return columns;
+  }, [appointments, professionals, professionalId, dayDate, todayDate]);
 
   function dayHref(day: string) {
     const params = new URLSearchParams({ date: day, semana: weekKey });
@@ -103,17 +141,12 @@ export function AgendaWeekCalendar({
         ))}
       </ul>
 
-      {mode === "hours" ? (
+      {mode === "day" ? (
+        <TimeGrid columns={professionalColumns} todayDate={todayDate} now={now} onSelect={setSelectedId} minColumnWidth={170} hideTodayBadge />
+      ) : mode === "hours" ? (
         <>
           <div className="hidden md:block">
-            <HourGrid
-              days={days}
-              byDay={byDay}
-              todayDate={todayDate}
-              now={now}
-              dayHref={dayHref}
-              onSelect={setSelectedId}
-            />
+            <TimeGrid columns={weekColumns} todayDate={todayDate} now={now} onSelect={setSelectedId} minColumnWidth={118} showProfessional />
           </div>
           <div className="md:hidden">
             <DayList days={days} byDay={byDay} todayDate={todayDate} now={now} dayHref={dayHref} onSelect={setSelectedId} />
@@ -167,75 +200,6 @@ function AppointmentChip({
       <span>{appointment.service_name ?? "Serviço"}</span>
       {appointment.customer_name ? <span className="block opacity-80">{appointment.customer_name}</span> : null}
     </button>
-  );
-}
-
-function HourGrid({ days, byDay, todayDate, now, dayHref, onSelect }: ViewProps) {
-  const all = days.flatMap((day) => byDay.get(day) ?? []);
-  const { first, last } = hourRangeFor(all.map((row) => row.starts_at));
-  const hours = Array.from({ length: last - first + 1 }, (_, index) => first + index);
-
-  return (
-    <div className="overflow-x-auto rounded-lg border">
-      <div className="grid min-w-[880px] grid-cols-[56px_repeat(7,minmax(0,1fr))]">
-        <div className="border-b bg-muted/30" />
-        {days.map((day) => (
-          <Link
-            key={day}
-            href={dayHref(day)}
-            className={cn(
-              "border-b border-l bg-muted/30 px-2 py-2 text-center text-xs hover:bg-muted/60",
-              day === todayDate && "bg-primary/15 font-semibold"
-            )}
-          >
-            <span className="block uppercase">{weekdayShort(day)}</span>
-            <span className="block text-sm">{shortDateLabel(day)}</span>
-            {day === todayDate ? <span className="block text-[10px] uppercase text-primary">Hoje</span> : null}
-          </Link>
-        ))}
-
-        {hours.map((hour) => (
-          <HourRow key={hour} hour={hour} days={days} byDay={byDay} todayDate={todayDate} now={now} onSelect={onSelect} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function HourRow({
-  hour,
-  days,
-  byDay,
-  todayDate,
-  now,
-  onSelect,
-}: {
-  hour: number;
-  days: string[];
-  byDay: Map<string, Appointment[]>;
-  todayDate: string;
-  now: Date;
-  onSelect: (id: string) => void;
-}) {
-  return (
-    <>
-      <div className="border-b px-2 py-2 text-right text-xs text-muted-foreground">
-        {String(hour).padStart(2, "0")}h
-      </div>
-      {days.map((day) => {
-        const items = (byDay.get(day) ?? []).filter((row) => hourOf(row.starts_at) === hour);
-        return (
-          <div
-            key={day}
-            className={cn("flex min-h-[52px] flex-col gap-1 border-b border-l p-1", day === todayDate && "bg-primary/5")}
-          >
-            {items.map((appointment) => (
-              <AppointmentChip key={appointment.id} appointment={appointment} now={now} onSelect={onSelect} />
-            ))}
-          </div>
-        );
-      })}
-    </>
   );
 }
 

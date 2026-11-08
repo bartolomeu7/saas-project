@@ -146,3 +146,104 @@ export function hourRangeFor(startsAt: string[]): { first: number; last: number 
   }
   return { first, last };
 }
+
+/* ------------------------------------------------------------------------------------------------------------------
+ * Linha do tempo: cada atendimento ocupa uma altura proporcional à duração e, quando dois se sobrepõem no mesmo dia
+ * (ou na mesma coluna de profissional), ficam lado a lado em vez de um por cima do outro.
+ * ---------------------------------------------------------------------------------------------------------------- */
+
+/** Minutos desde 00:00 (horário de São Paulo) do instante informado. */
+export function minutesOfDay(iso: string): number {
+  const clock = saoPauloClock(new Date(iso));
+  return clock.getUTCHours() * 60 + clock.getUTCMinutes();
+}
+
+/** Altura (em minutos) de um atendimento; nunca menos de 15 para o bloco continuar clicável e legível. */
+export function durationMinutes(item: { starts_at: string; ends_at: string }): number {
+  const minutes = Math.round((new Date(item.ends_at).getTime() - new Date(item.starts_at).getTime()) / 60000);
+  return Math.max(15, minutes);
+}
+
+export interface TimelineBlock<T> {
+  item: T;
+  /** Início em minutos desde 00:00. */
+  startMin: number;
+  /** Fim em minutos desde 00:00 (limitado a 24h: atendimento que passa da meia-noite é cortado no fim do dia). */
+  endMin: number;
+  /** Faixa (0, 1, 2…) em que o bloco fica quando há sobreposição. */
+  lane: number;
+  /** Quantas faixas o grupo de atendimentos sobrepostos tem (o bloco ocupa 1/lanes da largura). */
+  lanes: number;
+}
+
+/**
+ * Posiciona os atendimentos de UM dia/coluna. Quem se sobrepõe forma um grupo; dentro do grupo, cada atendimento vai
+ * para a primeira faixa livre (ordem de início; empate: o mais longo primeiro). Atendimentos que apenas se tocam
+ * (um termina exatamente quando o outro começa) NÃO se sobrepõem.
+ */
+export function layoutTimeline<T extends { starts_at: string; ends_at: string }>(items: readonly T[]): TimelineBlock<T>[] {
+  const sorted = items
+    .map((item) => {
+      const startMin = minutesOfDay(item.starts_at);
+      return { item, startMin, endMin: Math.min(1440, startMin + durationMinutes(item)) };
+    })
+    .sort((a, b) => a.startMin - b.startMin || b.endMin - a.endMin);
+
+  const result: TimelineBlock<T>[] = [];
+  let group: TimelineBlock<T>[] = [];
+  let groupEnd = -1;
+  let laneEnds: number[] = [];
+
+  const closeGroup = () => {
+    const lanes = Math.max(1, laneEnds.length);
+    for (const block of group) block.lanes = lanes;
+    result.push(...group);
+    group = [];
+    laneEnds = [];
+    groupEnd = -1;
+  };
+
+  for (const entry of sorted) {
+    if (group.length && entry.startMin >= groupEnd) closeGroup();
+    let lane = laneEnds.findIndex((end) => end <= entry.startMin);
+    if (lane === -1) {
+      lane = laneEnds.length;
+      laneEnds.push(entry.endMin);
+    } else {
+      laneEnds[lane] = entry.endMin;
+    }
+    group.push({ ...entry, lane, lanes: 1 });
+    groupEnd = Math.max(groupEnd, entry.endMin);
+  }
+  if (group.length) closeGroup();
+  return result;
+}
+
+/**
+ * Faixa de horas da grade (inteiras): de 8h a 18h no mínimo, ampliada para caber qualquer atendimento
+ * (do começo da primeira hora ao fim da última, arredondado para cima).
+ */
+export function timelineHourRange(items: readonly { starts_at: string; ends_at: string }[]): { first: number; last: number } {
+  let first = 8;
+  let last = 18;
+  for (const item of items) {
+    const startMin = minutesOfDay(item.starts_at);
+    const endMin = Math.min(1440, startMin + durationMinutes(item));
+    first = Math.min(first, Math.floor(startMin / 60));
+    last = Math.max(last, Math.ceil(endMin / 60));
+  }
+  return { first: Math.max(0, first), last: Math.min(24, last) };
+}
+
+/** Posição vertical (0–100% da altura da grade) do instante, ou null se ficar fora da faixa exibida. */
+export function timelinePercent(minutes: number, range: { first: number; last: number }): number | null {
+  const start = range.first * 60;
+  const end = range.last * 60;
+  if (minutes < start || minutes > end) return null;
+  return ((minutes - start) / (end - start)) * 100;
+}
+
+/** Dia e minuto de "agora" em São Paulo. */
+export function nowInSaoPaulo(now: Date): { date: string; minutes: number } {
+  return { date: dateKeyOf(now), minutes: minutesOfDay(now.toISOString()) };
+}

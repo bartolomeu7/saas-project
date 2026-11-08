@@ -77,26 +77,31 @@ function statusBadge(status: string) {
 export default async function AgendaPage({
   searchParams: searchParamsPromise,
 }: {
-  searchParams: Promise<{ date?: string | string[]; professional?: string | string[]; semana?: string | string[] }>;
+  searchParams: Promise<{ date?: string | string[]; professional?: string | string[]; semana?: string | string[]; visao?: string | string[] }>;
 }) {
   const searchParams = await searchParamsPromise;
   const current = (await getCurrentCompany())!;
   const rawDate = searchParams?.date;
   const rawProfessional = searchParams?.professional;
   const rawWeek = searchParams?.semana;
+  const rawView = searchParams?.visao;
   const requestedDate = Array.isArray(rawDate) ? rawDate[0] : rawDate;
   const professional = Array.isArray(rawProfessional) ? rawProfessional[0] : rawProfessional;
   const date = requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate) ? requestedDate : isoTodaySaoPaulo();
   const weekKey = resolveWeekKey(Array.isArray(rawWeek) ? rawWeek[0] : rawWeek);
+  // "Dia": o dia escolhido em grade de horas, uma coluna por profissional. "Semana" (padrão): as 3 semanas.
+  const view: "semana" | "dia" = (Array.isArray(rawView) ? rawView[0] : rawView) === "dia" ? "dia" : "semana";
   const today = isoTodaySaoPaulo();
   const week = getWeekBounds(weekKey, today);
 
   // Mantém semana, dia e profissional escolhidos ao navegar.
-  function agendaHref(next: { date?: string; semana?: AgendaWeekKey; professional?: string | null }) {
+  function agendaHref(next: { date?: string; semana?: AgendaWeekKey; professional?: string | null; visao?: "semana" | "dia" }) {
     const params = new URLSearchParams();
     params.set("date", next.date ?? date);
     const semana = next.semana ?? weekKey;
     if (semana !== "atual") params.set("semana", semana);
+    const visao = next.visao ?? view;
+    if (visao === "dia") params.set("visao", "dia");
     const person = next.professional === undefined ? professional : next.professional;
     if (person) params.set("professional", person);
     return "/app/agenda?" + params.toString();
@@ -104,7 +109,8 @@ export default async function AgendaPage({
 
   const [appointments, calendarAppointments, professionals, customers, services, stats] = await Promise.all([
     listAppointments(current.company.id, date, professional),
-    listAppointmentsBetween(current.company.id, week.fromIso, week.toIso, professional),
+    // A visão "Dia" usa a lista do próprio dia; só a visão "Semana" precisa dos atendimentos da semana inteira.
+    view === "semana" ? listAppointmentsBetween(current.company.id, week.fromIso, week.toIso, professional) : Promise.resolve([]),
     listAgendaProfessionals(current.company.id),
     listAgendaCustomers(current.company.id),
     listAgendaServices(current.company.id),
@@ -130,29 +136,48 @@ export default async function AgendaPage({
       <section aria-labelledby="agenda-semanas" className="rounded-xl border border-border bg-card/40">
         <div className="flex flex-col gap-3 border-b px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h2 id="agenda-semanas" className="font-semibold">Agenda da semana</h2>
+            <h2 id="agenda-semanas" className="font-semibold">{view === "dia" ? "Agenda do dia" : "Agenda da semana"}</h2>
             <p className="text-sm text-muted-foreground">
-              {shortDateLabel(week.start)} a {shortDateLabel(week.end)} · clique em um serviço para concluir, reagendar ou cancelar.
+              {view === "dia" ? <span className="capitalize">{dateLabel(date)}</span> : <>{shortDateLabel(week.start)} a {shortDateLabel(week.end)}</>}
+              {" "}· clique em um serviço para concluir, reagendar ou cancelar.
             </p>
           </div>
-          <nav aria-label="Escolher a semana" className="flex flex-wrap gap-2">
-            {AGENDA_WEEK_KEYS.map((key) => (
-              <Link
-                key={key}
-                href={agendaHref({ semana: key })}
-                aria-current={key === weekKey ? "true" : undefined}
-                className={cn("rounded-full border px-3 py-1.5 text-xs", key === weekKey && "bg-primary text-primary-foreground")}
-              >
-                {AGENDA_WEEK_LABELS[key]}
-              </Link>
-            ))}
-          </nav>
+          <div className="flex flex-wrap items-center gap-2">
+            <nav aria-label="Escolher a visão" className="flex gap-1 rounded-full border p-0.5">
+              {(["semana", "dia"] as const).map((option) => (
+                <Link
+                  key={option}
+                  href={agendaHref({ visao: option })}
+                  aria-current={option === view ? "true" : undefined}
+                  className={cn("rounded-full px-3 py-1 text-xs", option === view && "bg-primary text-primary-foreground")}
+                >
+                  {option === "semana" ? "Semana" : "Dia"}
+                </Link>
+              ))}
+            </nav>
+            {view === "semana" ? (
+              <nav aria-label="Escolher a semana" className="flex flex-wrap gap-2">
+                {AGENDA_WEEK_KEYS.map((key) => (
+                  <Link
+                    key={key}
+                    href={agendaHref({ semana: key })}
+                    aria-current={key === weekKey ? "true" : undefined}
+                    className={cn("rounded-full border px-3 py-1.5 text-xs", key === weekKey && "bg-primary text-primary-foreground")}
+                  >
+                    {AGENDA_WEEK_LABELS[key]}
+                  </Link>
+                ))}
+              </nav>
+            ) : null}
+          </div>
         </div>
         <div className="p-4 sm:p-5">
           <AgendaWeekCalendar
-            mode={weekKey === "atual" ? "hours" : "days"}
+            mode={view === "dia" ? "day" : weekKey === "atual" ? "hours" : "days"}
             days={week.days}
-            appointments={calendarAppointments}
+            appointments={view === "dia" ? appointments : calendarAppointments}
+            professionals={professionals as { id: string; display_name: string; color: string }[]}
+            dayDate={date}
             todayDate={today}
             nowIso={new Date().toISOString()}
             weekKey={weekKey}

@@ -90,6 +90,7 @@ test("a página usa a agenda em 3 semanas com consulta por período e cores pedi
   assert.ok(page.includes("AgendaWeekCalendar") && page.includes("listAppointmentsBetween"));
   assert.ok(page.includes('semana'));
   const calendar = read("src/components/app/agenda-week-calendar.tsx");
-  assert.ok(calendar.includes("bg-emerald") && calendar.includes("bg-white") && calendar.includes("bg-sky"));
+  const visual = read("src/components/app/agenda-visual.ts");
+  assert.ok(visual.includes("bg-emerald") && visual.includes("bg-white") && visual.includes("bg-sky"));
   assert.ok(calendar.includes("CompleteAppointmentForm"), "concluir passa pelo formulário que gera a venda");
 });
