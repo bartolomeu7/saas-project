@@ -25,6 +25,22 @@ export default async function HrPaymentPage({ params: paramsPromise }: { params:
   const today = todayDateSaoPaulo();
   const canManage = can(current.role, "hr.manage");
   const state = payment.status === "pending" ? dueState(payment.due_on, today) : null;
+  const payroll = payment.kind === "payroll" && payment.calc?.db;
+  const n = (value: unknown) => Number(value ?? 0);
+  const db = payroll
+    ? {
+        salary: n(payment.calc?.db.salary),
+        overtime50: n(payment.calc?.db.overtime50),
+        overtime100: n(payment.calc?.db.overtime100),
+        bonus: n(payment.calc?.db.bonus),
+        absences: n(payment.calc?.db.absences),
+        inss: n(payment.calc?.db.inss),
+        irrf: n(payment.calc?.db.irrf),
+        vt: n(payment.calc?.db.vt),
+        other_deductions: n(payment.calc?.db.other_deductions),
+      }
+    : { salary: 0, overtime50: 0, overtime100: 0, bonus: 0, absences: 0, inss: 0, irrf: 0, vt: 0, other_deductions: 0 };
+  const employer = payroll ? payment.calc?.result?.employer : null;
 
   return (
     <div className="flex flex-col gap-6 px-4 py-6 sm:px-6">
@@ -62,8 +78,34 @@ export default async function HrPaymentPage({ params: paramsPromise }: { params:
       <article className="hr-receipt max-w-2xl rounded-lg border bg-card p-6" aria-labelledby="recibo-titulo">
         <header className="mb-4 border-b pb-3">
           <p className="text-xs uppercase tracking-wide text-muted-foreground">{current.company.name}</p>
-          <h2 id="recibo-titulo" className="text-lg font-semibold">Recibo de pagamento</h2>
+          <h2 id="recibo-titulo" className="text-lg font-semibold">{payroll ? "Holerite estimado" : "Recibo de pagamento"}</h2>
         </header>
+        {payroll ? (
+          <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
+            <dt className="text-muted-foreground">Funcionário</dt><dd className="font-medium">{payment.employee?.full_name ?? "—"}</dd>
+            <dt className="text-muted-foreground">Mês de referência</dt><dd>{formatPeriod(payment.period_start, payment.period_end)}</dd>
+            <dt className="text-muted-foreground">Salário</dt><dd>{formatCurrency(db.salary)}</dd>
+            <dt className="text-muted-foreground">Horas extras 50%</dt><dd>{formatCurrency(db.overtime50)}</dd>
+            <dt className="text-muted-foreground">Horas extras 100%</dt><dd>{formatCurrency(db.overtime100)}</dd>
+            <dt className="text-muted-foreground">Bônus</dt><dd>{formatCurrency(db.bonus)}</dd>
+            <dt className="text-muted-foreground">Faltas</dt><dd>− {formatCurrency(db.absences)}</dd>
+            <dt className="font-semibold">Total bruto</dt><dd className="font-semibold">{formatCurrency(payment.gross_amount)}</dd>
+            <dt className="text-muted-foreground">INSS</dt><dd>− {formatCurrency(db.inss)}</dd>
+            <dt className="text-muted-foreground">Imposto de Renda (IRRF)</dt><dd>− {formatCurrency(db.irrf)}</dd>
+            <dt className="text-muted-foreground">Vale-transporte</dt><dd>− {formatCurrency(db.vt)}</dd>
+            <dt className="text-muted-foreground">Outros descontos</dt><dd>− {formatCurrency(db.other_deductions)}</dd>
+            <dt className="text-muted-foreground">Vales já pagos</dt><dd>− {formatCurrency(payment.advances_amount)}</dd>
+            <dt className="border-t pt-2 font-semibold">Líquido</dt><dd className="border-t pt-2 text-lg font-semibold">{formatCurrency(payment.net_amount)}</dd>
+            <dt className="text-muted-foreground">Situação</dt>
+            <dd>
+              {payment.status === "paid" && payment.paid_on
+                ? `Pago em ${formatDate(payment.paid_on)}${payment.paid_method ? ` (${PAY_METHOD_LABELS[payment.paid_method]})` : ""}`
+                : payment.status === "pending"
+                  ? `A pagar até ${formatDate(payment.due_on)}`
+                  : "Cancelado"}
+            </dd>
+          </dl>
+        ) : (
         <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
           <dt className="text-muted-foreground">Funcionário</dt><dd className="font-medium">{payment.employee?.full_name ?? "—"}</dd>
           <dt className="text-muted-foreground">Período</dt><dd>{formatPeriod(payment.period_start, payment.period_end)}</dd>
@@ -82,11 +124,17 @@ export default async function HrPaymentPage({ params: paramsPromise }: { params:
                 : "Cancelado"}
           </dd>
         </dl>
+        )}
         {payment.notes ? <p className="mt-3 whitespace-pre-line text-sm text-muted-foreground">{payment.notes}</p> : null}
         <div className="mt-10 grid grid-cols-2 gap-8 text-center text-xs text-muted-foreground">
           <div className="border-t pt-2">Assinatura do funcionário</div>
           <div className="border-t pt-2">Assinatura da empresa</div>
         </div>
+        {employer ? (
+          <p className="mt-4 text-xs text-muted-foreground">
+            Custo estimado para a empresa neste mês: FGTS {formatCurrency(n(employer.fgts))} + INSS patronal {formatCurrency(n(employer.inss))} = {formatCurrency(n(employer.totalCost))} no total (com o bruto).
+          </p>
+        ) : null}
         <p className="mt-6 text-[11px] text-muted-foreground">Controle interno de pagamento. Este recibo não substitui holerite nem documentos trabalhistas oficiais.</p>
       </article>
     </div>

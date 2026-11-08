@@ -127,3 +127,9 @@ Em cada fase: testes unitários + bateria SQL + rollback provado + teste no site
 - `src/app/(app)/app/rh/**` (páginas) · `src/lib/hr/**` (queries, actions, cálculo puro testável) · `src/types/supabase.ts`.
 - `supabase/migrations/*_hr_*.sql` + `supabase/rollback/*` + `tests/sql/hr_*.sql`.
 - Documentos: política de privacidade (item de dados de funcionários).
+
+## 12. Status (atualizado em 08/11/2026)
+
+- **RH-1 (Informal):** pronta, em Produção (PR #82 e #83).
+- **RH-2 (CLT base):** pronta no PR #84 — cadastro CLT (salário, jornada, contrato, dependentes, VT), tabelas de INSS/IRRF/parâmetros 2026 versionadas no banco, folha mensal estimada (INSS progressivo, IRRF com desconto simplificado x legal e redução da Lei 15.270, FGTS, VT, horas extras, faltas, bônus, vales), holerite estimado, custo da empresa (regime Simples, MEI ou outro) e configurações do RH. O DSR sobre horas extras/faltas, adicional noturno, insalubridade e periculosidade **não** entram (avisado na tela).
+- **Próximas:** RH-3 (férias, 13º, documentos e vencimentos de ASO, rescisão estimada) e RH-4 (exportação para o contador, comissão da agenda, limites por plano).

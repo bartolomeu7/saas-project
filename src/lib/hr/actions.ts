@@ -9,14 +9,18 @@ import { can } from "@/lib/permissions/matrix";
 import { parseMoneyInput } from "@/lib/parse-money";
 import { todayDateSaoPaulo } from "@/lib/timezone";
 import { addDays, diffDays } from "@/lib/hr/schedule";
+import { getEmployee, getEmployeeClt, getHrSettings } from "@/lib/hr/queries";
+import { buildPayroll, MONTH_PATTERN } from "@/lib/hr/payroll-service";
 import type { ActionResult } from "@/lib/auth/actions";
-import type { HrAdjustmentKind, HrPayFrequency, HrPayMethod, HrRateKind } from "@/types/hr";
+import type { HrAdjustmentKind, HrContractType, HrEmployerRegime, HrPayFrequency, HrPayMethod, HrRateKind } from "@/types/hr";
 
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 const FREQUENCIES: HrPayFrequency[] = ["daily", "weekly", "biweekly", "monthly"];
 const RATE_KINDS: HrRateKind[] = ["per_day", "fixed"];
 const ADJUSTMENT_KINDS: HrAdjustmentKind[] = ["advance", "deduction", "bonus"];
 const PAY_METHODS: HrPayMethod[] = ["cash", "pix", "other"];
+const CONTRACT_TYPES: HrContractType[] = ["indefinite", "experience", "fixed_term"];
+const REGIMES: HrEmployerRegime[] = ["simples", "mei", "other"];
 
 const text = (value: FormDataEntryValue | null) => String(value ?? "").trim();
 const isDate = (value: string) => DATE_ONLY.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00Z`));
@@ -42,22 +46,25 @@ function revalidateMoney() {
   revalidatePath("/app");
 }
 
-interface ParsedEmployee {
+interface ParsedCommon {
   full_name: string;
   birth_date: string | null;
   phone: string | null;
   role_title: string | null;
   pix_key: string | null;
+  started_on: string | null;
+  notes: string | null;
+}
+
+interface ParsedInformal extends ParsedCommon {
   rate_kind: HrRateKind;
   base_amount: number;
   pay_frequency: HrPayFrequency;
   pay_weekday: number | null;
   pay_day_of_month: number | null;
-  started_on: string | null;
-  notes: string | null;
 }
 
-function parseEmployee(formData: FormData): ParsedEmployee | { error: string } {
+function parseCommon(formData: FormData): ParsedCommon | { error: string } {
   const full_name = text(formData.get("full_name"));
   if (full_name.length < 3) return { error: "Informe o nome completo do funcionário." };
   if (full_name.length > 160) return { error: "O nome é longo demais (máximo 160 letras)." };
@@ -69,6 +76,22 @@ function parseEmployee(formData: FormData): ParsedEmployee | { error: string } {
   }
   const started = text(formData.get("started_on"));
   if (started && !isDate(started)) return { error: "Data de início inválida." };
+
+  const phone = text(formData.get("phone"));
+  const roleTitle = text(formData.get("role_title"));
+  const pix = text(formData.get("pix_key"));
+  const notes = text(formData.get("notes"));
+  if (phone.length > 40) return { error: "Telefone longo demais." };
+  if (roleTitle.length > 80) return { error: "Função longa demais (máximo 80)." };
+  if (pix.length > 140) return { error: "Chave Pix longa demais." };
+  if (notes.length > 2000) return { error: "Observações longas demais (máximo 2000)." };
+
+  return { full_name, birth_date: birth || null, phone: phone || null, role_title: roleTitle || null, pix_key: pix || null, started_on: started || null, notes: notes || null };
+}
+
+function parseEmployee(formData: FormData): ParsedInformal | { error: string } {
+  const common = parseCommon(formData);
+  if ("error" in common) return common;
 
   const rateKind = text(formData.get("rate_kind")) as HrRateKind;
   if (!RATE_KINDS.includes(rateKind)) return { error: "Escolha se o pagamento é por diária ou valor fixo." };
@@ -92,38 +115,99 @@ function parseEmployee(formData: FormData): ParsedEmployee | { error: string } {
     }
   }
 
-  const phone = text(formData.get("phone"));
-  const roleTitle = text(formData.get("role_title"));
-  const pix = text(formData.get("pix_key"));
-  const notes = text(formData.get("notes"));
-  if (phone.length > 40) return { error: "Telefone longo demais." };
-  if (roleTitle.length > 80) return { error: "Função longa demais (máximo 80)." };
-  if (pix.length > 140) return { error: "Chave Pix longa demais." };
-  if (notes.length > 2000) return { error: "Observações longas demais (máximo 2000)." };
+  return { ...common, rate_kind: rateKind, base_amount: amount, pay_frequency: frequency, pay_weekday: weekday, pay_day_of_month: monthDay };
+}
 
+interface ParsedClt extends ParsedCommon {
+  salary: number;
+  pay_day: number;
+  weekly_hours: number;
+  contract_type: HrContractType;
+  experience_days: number | null;
+  contract_end_on: string | null;
+  dependents: number;
+  vt_enabled: boolean;
+  vt_monthly_cost: number | null;
+}
+
+function parseClt(formData: FormData): ParsedClt | { error: string } {
+  const common = parseCommon(formData);
+  if ("error" in common) return common;
+
+  const salary = parseMoneyInput(text(formData.get("base_amount")));
+  if (salary === null || salary <= 0) return { error: "Informe o salário (maior que zero)." };
+  if (salary >= 10_000_000) return { error: "Salário alto demais." };
+  const payDay = Number(text(formData.get("pay_day_of_month")));
+  if (!Number.isInteger(payDay) || payDay < 1 || payDay > 31) return { error: "Informe o dia do mês do pagamento (1 a 31)." };
+
+  const hours = Number(text(formData.get("clt_weekly_hours")).replace(",", "."));
+  if (!Number.isFinite(hours) || hours < 1 || hours > 44) return { error: "A jornada semanal deve ficar entre 1 e 44 horas." };
+
+  const contractType = text(formData.get("clt_contract_type")) as HrContractType;
+  if (!CONTRACT_TYPES.includes(contractType)) return { error: "Escolha o tipo de contrato." };
+  let experienceDays: number | null = null;
+  if (contractType === "experience") {
+    experienceDays = Number(text(formData.get("clt_experience_days")));
+    if (!Number.isInteger(experienceDays) || experienceDays < 1 || experienceDays > 90) return { error: "Contrato de experiência: informe de 1 a 90 dias." };
+  }
+  const contractEnd = text(formData.get("clt_contract_end_on"));
+  if (contractEnd && !isDate(contractEnd)) return { error: "Data de fim do contrato inválida." };
+
+  const dependents = Number(text(formData.get("clt_dependents")) || "0");
+  if (!Number.isInteger(dependents) || dependents < 0 || dependents > 20) return { error: "Número de dependentes inválido (0 a 20)." };
+
+  const vtEnabled = text(formData.get("clt_vt_enabled")) === "on";
+  const vtCostText = text(formData.get("clt_vt_monthly_cost"));
+  let vtCost: number | null = null;
+  if (vtEnabled && vtCostText) {
+    vtCost = parseMoneyInput(vtCostText);
+    if (vtCost === null || vtCost >= 100_000) return { error: "Custo do vale-transporte inválido." };
+  }
+
+  return { ...common, salary, pay_day: payDay, weekly_hours: hours, contract_type: contractType, experience_days: experienceDays, contract_end_on: contractEnd || null, dependents, vt_enabled: vtEnabled, vt_monthly_cost: vtCost };
+}
+
+function saveCltRpcArgs(employeeId: string | null, parsed: ParsedClt) {
   return {
-    full_name,
-    birth_date: birth || null,
-    phone: phone || null,
-    role_title: roleTitle || null,
-    pix_key: pix || null,
-    rate_kind: rateKind,
-    base_amount: amount,
-    pay_frequency: frequency,
-    pay_weekday: weekday,
-    pay_day_of_month: monthDay,
-    started_on: started || null,
-    notes: notes || null,
+    p_employee_id: employeeId,
+    p_full_name: parsed.full_name,
+    p_birth_date: parsed.birth_date,
+    p_phone: parsed.phone,
+    p_role_title: parsed.role_title,
+    p_pix_key: parsed.pix_key,
+    p_salary: parsed.salary,
+    p_pay_day: parsed.pay_day,
+    p_started_on: parsed.started_on,
+    p_notes: parsed.notes,
+    p_weekly_hours: parsed.weekly_hours,
+    p_contract_type: parsed.contract_type,
+    p_experience_days: parsed.experience_days,
+    p_contract_end_on: parsed.contract_end_on,
+    p_dependents: parsed.dependents,
+    p_vt_enabled: parsed.vt_enabled,
+    p_vt_monthly_cost: parsed.vt_monthly_cost,
   };
 }
 
 export async function createEmployeeAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
-  const parsed = parseEmployee(formData);
-  if ("error" in parsed) return parsed;
+  const mode = text(formData.get("mode")) === "clt" ? "clt" : "informal";
   const guard = await manager();
   if ("error" in guard) return guard;
-  const user = await getCurrentUser();
   const supabase = (await createSessionClient()) as any;
+
+  if (mode === "clt") {
+    const parsed = parseClt(formData);
+    if ("error" in parsed) return parsed;
+    const { data, error } = await supabase.rpc("hr_save_clt_employee", saveCltRpcArgs(null, parsed));
+    const id = (Array.isArray(data) ? data[0] : data)?.id as string | undefined;
+    if (error || !id) return { error: error?.message || "Não foi possível salvar o funcionário." };
+    revalidateHr();
+    redirect(`/app/rh/${id}`);
+  }
+
+  const parsed = parseEmployee(formData);
+  if ("error" in parsed) return parsed;
+  const user = await getCurrentUser();
   const { data, error } = await supabase
     .from("hr_employees")
     .insert({ company_id: guard.companyId, created_by: user?.id ?? null, mode: "informal", ...parsed })
@@ -135,11 +219,25 @@ export async function createEmployeeAction(_prev: ActionResult, formData: FormDa
 }
 
 export async function updateEmployeeAction(id: string, _prev: ActionResult, formData: FormData): Promise<ActionResult> {
-  const parsed = parseEmployee(formData);
-  if ("error" in parsed) return parsed;
   const guard = await manager();
   if ("error" in guard) return guard;
   const supabase = (await createSessionClient()) as any;
+
+  // O modo vem do cadastro (não do formulário): CLT e informal têm regras diferentes e não se trocam depois.
+  const { data: current } = await supabase.from("hr_employees").select("mode").eq("id", id).eq("company_id", guard.companyId).maybeSingle();
+  if (!current) return { error: "Funcionário não encontrado." };
+
+  if (current.mode === "clt") {
+    const parsed = parseClt(formData);
+    if ("error" in parsed) return parsed;
+    const { error } = await supabase.rpc("hr_save_clt_employee", saveCltRpcArgs(id, parsed));
+    if (error) return { error: error.message || "Não foi possível salvar as alterações." };
+    revalidateHr(id);
+    redirect(`/app/rh/${id}`);
+  }
+
+  const parsed = parseEmployee(formData);
+  if ("error" in parsed) return parsed;
   const { error } = await supabase.from("hr_employees").update(parsed).eq("id", id).eq("company_id", guard.companyId);
   if (error) return { error: "Não foi possível salvar as alterações." };
   revalidateHr(id);
@@ -313,4 +411,74 @@ export async function cancelPaymentAction(_prev: ActionResult, formData: FormDat
   revalidateHr(employeeId);
   revalidatePath(`/app/rh/pagamentos/${paymentId}`);
   return { success: "Pagamento cancelado. Os dias e lançamentos ficaram livres para um novo fechamento." };
+}
+
+export async function saveHrSettingsAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
+  const regime = text(formData.get("employer_regime")) as HrEmployerRegime;
+  if (!REGIMES.includes(regime)) return { error: "Escolha o regime da empresa." };
+  let rate = 0;
+  if (regime === "other") {
+    const percent = parseMoneyInput(text(formData.get("employer_inss_percent")));
+    if (percent === null || percent > 50) return { error: "Informe o percentual de INSS patronal (de 0% a 50%)." };
+    rate = percent / 100;
+  }
+  const guard = await manager();
+  if ("error" in guard) return guard;
+  const supabase = (await createSessionClient()) as any;
+  const { error } = await supabase.rpc("hr_save_settings", { p_regime: regime, p_inss_rate: regime === "other" ? rate : null });
+  if (error) return { error: error.message || "Não foi possível salvar." };
+  revalidatePath("/app/rh/configuracoes");
+  revalidateHr();
+  return { success: "Configurações salvas." };
+}
+
+/** Fecha a folha do mês de um funcionário CLT: o app calcula INSS/IRRF/VT com as tabelas; o banco confere e grava. */
+export async function closePayrollAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
+  const employeeId = text(formData.get("employeeId"));
+  const month = text(formData.get("month"));
+  const overtime50 = parseMoneyInput(text(formData.get("overtime50")) || "0");
+  const overtime100 = parseMoneyInput(text(formData.get("overtime100")) || "0");
+  const absences = parseMoneyInput(text(formData.get("absences")) || "0");
+  const dueOn = text(formData.get("due_on"));
+  const notes = text(formData.get("notes"));
+  if (!employeeId) return { error: "Funcionário inválido." };
+  if (!MONTH_PATTERN.test(month)) return { error: "Mês inválido." };
+  if (overtime50 === null || overtime100 === null || absences === null) return { error: "Horas extras e faltas devem ser números." };
+  if (dueOn && !isDate(dueOn)) return { error: "Data de pagamento inválida." };
+  const guard = await manager();
+  if ("error" in guard) return guard;
+
+  const employee = await getEmployee(guard.companyId, employeeId);
+  if (!employee || employee.mode !== "clt") return { error: "Funcionário CLT não encontrado." };
+  const [clt, settings] = await Promise.all([getEmployeeClt(employeeId), getHrSettings(guard.companyId)]);
+  if (!clt) return { error: "Complete o cadastro CLT do funcionário (jornada e contrato)." };
+
+  const built = await buildPayroll({ employee, clt, settings, month, overtime50, overtime100, absenceDays: absences });
+  if (!built.ok) return { error: built.error };
+  const { result, versions } = built;
+
+  const supabase = (await createSessionClient()) as any;
+  const { data, error } = await supabase.rpc("hr_close_payroll", {
+    p_employee_id: employeeId,
+    p_month: built.monthStart,
+    p_overtime50_hours: overtime50,
+    p_overtime100_hours: overtime100,
+    p_absence_days: absences,
+    p_inss: result.inss,
+    p_irrf: result.irrf,
+    p_vt: result.vt,
+    p_due_on: dueOn || null,
+    p_notes: notes || null,
+    p_calc: {
+      estimate: true,
+      tables: versions,
+      regime: settings.employer_regime,
+      inputs: { overtime50, overtime100, absences, dependents: clt.dependents, weekly_hours: clt.weekly_hours },
+      result,
+    },
+  });
+  if (error) return { error: error.message || "Não foi possível fechar a folha." };
+  revalidateHr(employeeId);
+  const paymentId = (Array.isArray(data) ? data[0] : data)?.id as string | undefined;
+  redirect(paymentId ? `/app/rh/pagamentos/${paymentId}` : `/app/rh/${employeeId}?aba=pagamentos`);
 }

@@ -31,3 +31,15 @@ export function formatPeriod(start: string, end: string): string {
   if (start === end) return `${ed}/${em}/${ey}`;
   return sy === ey ? `${sd}/${sm} a ${ed}/${em}/${ey}` : `${sd}/${sm}/${sy} a ${ed}/${em}/${ey}`;
 }
+
+export const CONTRACT_TYPE_LABELS = {
+  indefinite: "Prazo indeterminado",
+  experience: "Contrato de experiência",
+  fixed_term: "Prazo determinado",
+} as const;
+
+export const REGIME_LABELS = {
+  simples: "Simples Nacional (sem INSS patronal separado: vai dentro do DAS)",
+  mei: "MEI (3% de INSS sobre o salário)",
+  other: "Outro regime (informe o percentual de INSS patronal)",
+} as const;
