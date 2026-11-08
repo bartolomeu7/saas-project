@@ -98,9 +98,12 @@ async function getSalesLayer(companyId: string, range: ReportRange) {
 
 async function getFinanceLayer(companyId: string, range: ReportRange) {
   const supabase = await createSessionClient();
+  // `occurred_on` é data-calendário de São Paulo: os limites também (não o dia UTC do instante).
+  const fromDate = todayDateSaoPaulo(new Date(range.from));
+  const toDate = todayDateSaoPaulo(new Date(range.to));
   const [expenseResult, incomeResult, receivableSalesResult, payableResult] = await Promise.all([
-    supabase.from("financial_entries").select("amount, source_type").eq("company_id", companyId).eq("direction", "expense").eq("status", "posted").gte("occurred_on", range.from.slice(0, 10)).lte("occurred_on", range.to.slice(0, 10)),
-    supabase.from("financial_entries").select("amount, source_type").eq("company_id", companyId).eq("direction", "income").eq("status", "posted").gte("occurred_on", range.from.slice(0, 10)).lte("occurred_on", range.to.slice(0, 10)),
+    supabase.from("financial_entries").select("amount, source_type").eq("company_id", companyId).eq("direction", "expense").eq("status", "posted").gte("occurred_on", fromDate).lte("occurred_on", toDate),
+    supabase.from("financial_entries").select("amount, source_type").eq("company_id", companyId).eq("direction", "income").eq("status", "posted").gte("occurred_on", fromDate).lte("occurred_on", toDate),
     supabase.from("sales").select("id, total_amount, sold_at").eq("company_id", companyId).eq("status", "completed").eq("payment_status", "pending"),
     supabase.from("accounts_payable").select("amount, paid_amount, due_date, status").eq("company_id", companyId).in("status", ["open", "partial"]),
   ]);
