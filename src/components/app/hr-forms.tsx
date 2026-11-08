@@ -44,7 +44,6 @@ export function AttendanceDays({ employeeId, days }: { employeeId: string; days:
   return (
     <form action={formAction} className="flex flex-col gap-2">
       <input type="hidden" name="employeeId" value={employeeId} />
-      <FormMessage state={state} />
       <ul className="divide-y rounded-lg border" aria-label="Presença por dia">
         {days.map((day) => (
           <li key={day.date} className={cn("flex flex-wrap items-center justify-between gap-2 px-3 py-2", day.weekend && "bg-muted/30")}>
@@ -84,6 +83,8 @@ export function AttendanceDays({ employeeId, days }: { employeeId: string; days:
           </li>
         ))}
       </ul>
+      {/* Abaixo da lista (e não acima): o aviso não empurra os botões e ninguém marca o dia errado. */}
+      <FormMessage state={state} />
     </form>
   );
 }
