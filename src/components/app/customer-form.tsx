@@ -12,6 +12,7 @@ import { SubmitButton } from "@/components/shared/auth/submit-button";
 import { FormMessage } from "@/components/shared/auth/form-message";
 import { NativeSelect } from "@/components/ui/native-select";
 import { useKeepInputOnError } from "@/hooks/use-keep-input-on-error";
+import { todayDateSaoPaulo } from "@/lib/timezone";
 
 const initialState: ActionResult = {};
 const MAX_PREFERENCES = 10;
@@ -76,7 +77,7 @@ export function CustomerForm({
               id="birthDate"
               name="birthDate"
               type="date"
-              max={new Date().toISOString().slice(0, 10)}
+              max={todayDateSaoPaulo()}
               defaultValue={defaultValues?.birth_date ?? ""}
             />
           </div>

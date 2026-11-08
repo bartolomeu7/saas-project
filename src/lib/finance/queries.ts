@@ -108,7 +108,7 @@ export async function listAccountsReceivable(companyId: string): Promise<Account
       const paidAmount = paidBySale.get(row.id) ?? 0;
       const outstandingAmount = Math.max(0, money(row.total_amount) - paidAmount);
       const customer = row.customers as { name: string } | null;
-      const dueDate = row.sold_at.slice(0, 10);
+      const dueDate = todayDateSaoPaulo(new Date(row.sold_at));
 
       return {
         sale_id: row.id,
@@ -147,6 +147,9 @@ export const getFinanceDashboard = cache(async function getFinanceDashboard(
 ): Promise<FinanceDashboard> {
   const supabase = await createSessionClient();
   const { from, to } = resolveFinanceMonthRange();
+  // `occurred_on` é data-calendário de São Paulo: os limites também (não o dia UTC do instante).
+  const fromDate = todayDateSaoPaulo(new Date(from));
+  const toDate = todayDateSaoPaulo(new Date(to));
 
   const [salesResult, expensesResult, cashResult, payableResult, receivables] = await Promise.all([
     supabase
@@ -162,15 +165,15 @@ export const getFinanceDashboard = cache(async function getFinanceDashboard(
       .eq("company_id", companyId)
       .eq("direction", "expense")
       .eq("status", "posted")
-      .gte("occurred_on", from.slice(0, 10))
-      .lte("occurred_on", to.slice(0, 10)),
+      .gte("occurred_on", fromDate)
+      .lte("occurred_on", toDate),
     supabase
       .from("financial_entries")
       .select("direction, amount, source_type")
       .eq("company_id", companyId)
       .eq("status", "posted")
-      .gte("occurred_on", from.slice(0, 10))
-      .lte("occurred_on", to.slice(0, 10)),
+      .gte("occurred_on", fromDate)
+      .lte("occurred_on", toDate),
     supabase
       .from("accounts_payable")
       .select("amount, paid_amount, due_date, status")
