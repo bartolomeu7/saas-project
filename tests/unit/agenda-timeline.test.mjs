@@ -111,8 +111,88 @@ test("a semana atual e a visão Dia usam a grade de horas proporcional (a antiga
 test("página: seletor Semana/Dia, a visão Dia usa a lista do dia e só a Semana busca a semana inteira", () => {
   const page = read("src/app/(app)/app/agenda/page.tsx");
   assert.ok(page.includes('"dia"') && page.includes("visao"));
-  assert.ok(page.includes('view === "semana" ? listAppointmentsBetween('));
+  assert.match(page, /view === "semana"\s*\?\s*listAppointmentsBetween\(current\.company\.id, week\.fromIso, week\.toIso/);
   assert.ok(page.includes('appointments={view === "dia" ? appointments : calendarAppointments}'));
   // navegar entre dias/semanas/profissionais mantém a visão escolhida
-  assert.ok(page.includes('if (visao === "dia") params.set("visao", "dia")'));
+  assert.ok(page.includes('if (visao !== "semana") params.set("visao", visao)'));
+});
+
+import {
+  addMonthsToDateString,
+  dateRangeIso,
+  matchesSearch,
+  monthGrid,
+  monthLabel,
+  normalizeSearch,
+} from "../../src/lib/agenda/week-view.ts";
+
+test("rótulo do mês em português", () => {
+  assert.equal(monthLabel("2026-11-08"), "Novembro de 2026");
+  assert.equal(monthLabel("2027-03-01"), "Março de 2027");
+});
+
+test("somar meses mantém o dia e nunca estoura o mês (31/01 + 1 = 28/02)", () => {
+  assert.equal(addMonthsToDateString("2026-11-08", 1), "2026-12-08");
+  assert.equal(addMonthsToDateString("2026-12-15", 1), "2027-01-15");
+  assert.equal(addMonthsToDateString("2026-01-31", 1), "2026-02-28");
+  assert.equal(addMonthsToDateString("2028-01-31", 1), "2028-02-29", "ano bissexto");
+  assert.equal(addMonthsToDateString("2026-01-10", -1), "2025-12-10");
+});
+
+test("grade do mês: semanas inteiras de domingo a sábado (28, 35 ou 42 dias)", () => {
+  // novembro/2026: dia 1 é domingo e dia 30 é segunda → 5 semanas
+  const nov = monthGrid("2026-11-18");
+  assert.deepEqual([nov.monthStart, nov.monthEnd, nov.gridStart, nov.gridEnd], ["2026-11-01", "2026-11-30", "2026-11-01", "2026-12-05"]);
+  assert.equal(nov.days.length, 35);
+  // fevereiro/2026: começa no domingo e termina no sábado → exatamente 4 semanas
+  assert.equal(monthGrid("2026-02-10").days.length, 28);
+  // agosto/2026: dia 1 é sábado e dia 31 é segunda → 6 semanas
+  const ago = monthGrid("2026-08-15");
+  assert.equal(ago.days.length, 42);
+  assert.equal(ago.gridStart, "2026-07-26");
+  assert.equal(ago.gridEnd, "2026-09-05");
+  for (const grid of [nov, ago]) {
+    assert.equal(grid.days.length % 7, 0);
+    assert.equal(grid.days[0], grid.gridStart);
+    assert.equal(grid.days.at(-1), grid.gridEnd);
+  }
+});
+
+test("limites da consulta do mês: do começo do primeiro dia ao fim do último, em São Paulo", () => {
+  const { gridStart, gridEnd } = monthGrid("2026-11-18");
+  assert.deepEqual(dateRangeIso(gridStart, gridEnd), { fromIso: "2026-11-01T03:00:00.000Z", toIso: "2026-12-06T02:59:59.999Z" });
+});
+
+test("busca sem acento, sem diferença de maiúscula, e todas as palavras precisam aparecer", () => {
+  const item = { customer_name: "João da Silva", service_name: "Escova Progressiva", professional_name: "Larissa", notes: "alergia a amônia" };
+  assert.equal(normalizeSearch("  JOÃO  "), "joao");
+  assert.equal(matchesSearch(item, "joao"), true);
+  assert.equal(matchesSearch(item, "escova silva"), true);
+  assert.equal(matchesSearch(item, "larissa"), true);
+  assert.equal(matchesSearch(item, "amonia"), true, "acha na observação");
+  assert.equal(matchesSearch(item, "joao pedro"), false, "uma palavra faltando");
+  assert.equal(matchesSearch(item, "   "), true, "busca vazia mostra tudo");
+  assert.equal(matchesSearch({ service_name: "Corte" }, "maria"), false);
+});
+
+test("visão de mês, busca e impressão do dia estão ligadas na agenda", () => {
+  const page = read("src/app/(app)/app/agenda/page.tsx");
+  assert.ok(page.includes('"mes"') && page.includes("Mês anterior") && page.includes("Próximo mês"));
+  assert.ok(page.includes("monthGrid(date)") && page.includes("monthRange"), "consulta o mês inteiro (semanas completas)");
+  assert.ok(page.includes("/app/agenda/imprimir?date="), "link Imprimir o dia");
+  const calendar = read("src/components/app/agenda-week-calendar.tsx");
+  assert.ok(calendar.includes("<MonthGrid") && calendar.includes("matchesSearch("));
+  // a busca só filtra o que se vê: o painel do atendimento continua achando pelo conjunto completo
+  assert.ok(calendar.includes("appointments.find((row) => row.id === selectedId)"));
+  const month = read("src/components/app/agenda-month-grid.tsx");
+  assert.ok(month.includes("+{hidden} mais") && month.includes("md:hidden"), "no celular o mês vira bolinhas");
+});
+
+test("impressão: folha própria que é a única coisa visível ao imprimir, com totais e sem cancelados no valor previsto", () => {
+  const print = read("src/app/(app)/app/agenda/imprimir/page.tsx");
+  assert.ok(print.includes("@media print") && print.includes("body * { visibility: hidden"), "esconde o resto do sistema ao imprimir");
+  assert.ok(print.includes("no-print") && print.includes('row.status !== "cancelled" && row.status !== "no_show"'));
+  assert.ok(print.includes("getCurrentCompany()"), "continua dentro da área logada, com a empresa do usuário");
+  assert.ok(read("src/components/app/agenda-print-actions.tsx").includes("window.print()"));
+  assert.ok(read("src/lib/agenda/queries.ts").includes("customers(name,phone)"), "telefone do cliente na folha");
 });

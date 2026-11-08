@@ -21,9 +21,13 @@ import {
 } from "@/components/app/agenda-action-forms";
 import { AgendaWeekCalendar } from "@/components/app/agenda-week-calendar";
 import {
+  addMonthsToDateString,
   AGENDA_WEEK_KEYS,
   AGENDA_WEEK_LABELS,
+  dateRangeIso,
   getWeekBounds,
+  monthGrid,
+  monthLabel,
   resolveWeekKey,
   shortDateLabel,
   type AgendaWeekKey,
@@ -89,19 +93,23 @@ export default async function AgendaPage({
   const professional = Array.isArray(rawProfessional) ? rawProfessional[0] : rawProfessional;
   const date = requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate) ? requestedDate : isoTodaySaoPaulo();
   const weekKey = resolveWeekKey(Array.isArray(rawWeek) ? rawWeek[0] : rawWeek);
-  // "Dia": o dia escolhido em grade de horas, uma coluna por profissional. "Semana" (padrão): as 3 semanas.
-  const view: "semana" | "dia" = (Array.isArray(rawView) ? rawView[0] : rawView) === "dia" ? "dia" : "semana";
+  // "Dia": o dia escolhido em grade de horas, uma coluna por profissional. "Mês": o mês do dia escolhido.
+  // "Semana" (padrão): as 3 semanas.
+  const requestedView = Array.isArray(rawView) ? rawView[0] : rawView;
+  const view: "semana" | "dia" | "mes" = requestedView === "dia" ? "dia" : requestedView === "mes" ? "mes" : "semana";
+  const month = monthGrid(date);
+  const monthRange = dateRangeIso(month.gridStart, month.gridEnd);
   const today = isoTodaySaoPaulo();
   const week = getWeekBounds(weekKey, today);
 
   // Mantém semana, dia e profissional escolhidos ao navegar.
-  function agendaHref(next: { date?: string; semana?: AgendaWeekKey; professional?: string | null; visao?: "semana" | "dia" }) {
+  function agendaHref(next: { date?: string; semana?: AgendaWeekKey; professional?: string | null; visao?: "semana" | "dia" | "mes" }) {
     const params = new URLSearchParams();
     params.set("date", next.date ?? date);
     const semana = next.semana ?? weekKey;
     if (semana !== "atual") params.set("semana", semana);
     const visao = next.visao ?? view;
-    if (visao === "dia") params.set("visao", "dia");
+    if (visao !== "semana") params.set("visao", visao);
     const person = next.professional === undefined ? professional : next.professional;
     if (person) params.set("professional", person);
     return "/app/agenda?" + params.toString();
@@ -110,7 +118,11 @@ export default async function AgendaPage({
   const [appointments, calendarAppointments, professionals, customers, services, stats] = await Promise.all([
     listAppointments(current.company.id, date, professional),
     // A visão "Dia" usa a lista do próprio dia; só a visão "Semana" precisa dos atendimentos da semana inteira.
-    view === "semana" ? listAppointmentsBetween(current.company.id, week.fromIso, week.toIso, professional) : Promise.resolve([]),
+    view === "semana"
+      ? listAppointmentsBetween(current.company.id, week.fromIso, week.toIso, professional)
+      : view === "mes"
+        ? listAppointmentsBetween(current.company.id, monthRange.fromIso, monthRange.toIso, professional)
+        : Promise.resolve([]),
     listAgendaProfessionals(current.company.id),
     listAgendaCustomers(current.company.id),
     listAgendaServices(current.company.id),
@@ -126,9 +138,19 @@ export default async function AgendaPage({
         className="xl:items-end"
         actions={
           <nav aria-label="Navegar entre os dias" className="flex flex-wrap gap-2">
-            <Link href={agendaHref({ date: shiftDate(date, -1) })} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>← Dia anterior</Link>
-            <Link href="/app/agenda" className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>Hoje</Link>
-            <Link href={agendaHref({ date: shiftDate(date, 1) })} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>Próximo dia →</Link>
+            <Link
+              href={view === "mes" ? agendaHref({ date: addMonthsToDateString(date, -1) }) : agendaHref({ date: shiftDate(date, -1) })}
+              className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+            >
+              {view === "mes" ? "← Mês anterior" : "← Dia anterior"}
+            </Link>
+            <Link href={view === "semana" ? "/app/agenda" : `/app/agenda?visao=${view}`} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>Hoje</Link>
+            <Link
+              href={view === "mes" ? agendaHref({ date: addMonthsToDateString(date, 1) }) : agendaHref({ date: shiftDate(date, 1) })}
+              className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+            >
+              {view === "mes" ? "Próximo mês →" : "Próximo dia →"}
+            </Link>
           </nav>
         }
       />
@@ -136,22 +158,28 @@ export default async function AgendaPage({
       <section aria-labelledby="agenda-semanas" className="rounded-xl border border-border bg-card/40">
         <div className="flex flex-col gap-3 border-b px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h2 id="agenda-semanas" className="font-semibold">{view === "dia" ? "Agenda do dia" : "Agenda da semana"}</h2>
+            <h2 id="agenda-semanas" className="font-semibold">{view === "dia" ? "Agenda do dia" : view === "mes" ? "Agenda do mês" : "Agenda da semana"}</h2>
             <p className="text-sm text-muted-foreground">
-              {view === "dia" ? <span className="capitalize">{dateLabel(date)}</span> : <>{shortDateLabel(week.start)} a {shortDateLabel(week.end)}</>}
+              {view === "dia" ? (
+                <span className="capitalize">{dateLabel(date)}</span>
+              ) : view === "mes" ? (
+                <span>{monthLabel(date)}</span>
+              ) : (
+                <>{shortDateLabel(week.start)} a {shortDateLabel(week.end)}</>
+              )}
               {" "}· clique em um serviço para concluir, reagendar ou cancelar.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <nav aria-label="Escolher a visão" className="flex gap-1 rounded-full border p-0.5">
-              {(["semana", "dia"] as const).map((option) => (
+              {(["semana", "dia", "mes"] as const).map((option) => (
                 <Link
                   key={option}
                   href={agendaHref({ visao: option })}
                   aria-current={option === view ? "true" : undefined}
                   className={cn("rounded-full px-3 py-1 text-xs", option === view && "bg-primary text-primary-foreground")}
                 >
-                  {option === "semana" ? "Semana" : "Dia"}
+                  {option === "semana" ? "Semana" : option === "dia" ? "Dia" : "Mês"}
                 </Link>
               ))}
             </nav>
@@ -173,8 +201,8 @@ export default async function AgendaPage({
         </div>
         <div className="p-4 sm:p-5">
           <AgendaWeekCalendar
-            mode={view === "dia" ? "day" : weekKey === "atual" ? "hours" : "days"}
-            days={week.days}
+            mode={view === "dia" ? "day" : view === "mes" ? "month" : weekKey === "atual" ? "hours" : "days"}
+            days={view === "mes" ? month.days : week.days}
             appointments={view === "dia" ? appointments : calendarAppointments}
             professionals={professionals as { id: string; display_name: string; color: string }[]}
             dayDate={date}
@@ -222,6 +250,14 @@ export default async function AgendaPage({
               <p className="text-sm text-muted-foreground">Selecione um profissional para focar a agenda.</p>
             </div>
             <div className="flex flex-wrap gap-2">
+              <Link
+                href={"/app/agenda/imprimir?date=" + date + (professional ? "&professional=" + professional : "")}
+                target="_blank"
+                rel="noopener"
+                className="rounded-full border px-3 py-1.5 text-xs font-medium"
+              >
+                Imprimir o dia
+              </Link>
               <Link href={agendaHref({ professional: null })} aria-current={!professional ? "true" : undefined} className={cn("rounded-full border px-3 py-1.5 text-xs", !professional && "bg-primary text-primary-foreground")}>Todos</Link>
               {professionals.map((person) => (
                 <Link

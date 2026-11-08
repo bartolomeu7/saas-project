@@ -20,6 +20,7 @@ export interface Appointment {
   created_at: string;
   updated_at: string;
   customer_name?: string | null;
+  customer_phone?: string | null;
   service_name?: string | null;
   professional_name?: string | null;
   professional_color?: string | null;

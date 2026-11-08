@@ -247,3 +247,74 @@ export function timelinePercent(minutes: number, range: { first: number; last: n
 export function nowInSaoPaulo(now: Date): { date: string; minutes: number } {
   return { date: dateKeyOf(now), minutes: minutesOfDay(now.toISOString()) };
 }
+
+/* ------------------------------------------------------------------------------------------------------------------
+ * Visão de mês e busca
+ * ---------------------------------------------------------------------------------------------------------------- */
+
+const MONTH_NAMES = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+] as const;
+
+/** "Novembro de 2026" */
+export function monthLabel(dateValue: string): string {
+  const [year = 1970, month = 1] = dateValue.split("-").map(Number);
+  return `${MONTH_NAMES[month - 1] ?? ""} de ${year}`;
+}
+
+/** Soma meses mantendo o dia (31/01 + 1 mês = 28/02, nunca 03/03). */
+export function addMonthsToDateString(dateValue: string, amount: number): string {
+  const [year = 1970, month = 1, day = 1] = dateValue.split("-").map(Number);
+  const target = new Date(Date.UTC(year, month - 1 + amount, 1));
+  const lastDay = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
+  const clamped = Math.min(day, lastDay);
+  return `${target.getUTCFullYear()}-${String(target.getUTCMonth() + 1).padStart(2, "0")}-${String(clamped).padStart(2, "0")}`;
+}
+
+export interface MonthGrid {
+  /** Primeiro e último dia do mês. */
+  monthStart: string;
+  monthEnd: string;
+  /** Domingo da primeira semana e sábado da última (a grade mostra semanas inteiras). */
+  gridStart: string;
+  gridEnd: string;
+  /** Todos os dias da grade, em ordem (múltiplo de 7: 28, 35 ou 42). */
+  days: string[];
+}
+
+export function monthGrid(dateValue: string): MonthGrid {
+  const [year = 1970, month = 1] = dateValue.split("-").map(Number);
+  const monthStart = `${year}-${String(month).padStart(2, "0")}-01`;
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const monthEnd = `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+  const gridStart = weekStartSunday(monthStart);
+  const gridEnd = addDaysToDateString(weekStartSunday(monthEnd), 6);
+  const days: string[] = [];
+  for (let day = gridStart; day <= gridEnd; day = addDaysToDateString(day, 1)) days.push(day);
+  return { monthStart, monthEnd, gridStart, gridEnd, days };
+}
+
+/** Limites reais (UTC) de um intervalo de dias de São Paulo, ambos inclusive, para consultar o banco. */
+export function dateRangeIso(start: string, end: string): { fromIso: string; toIso: string } {
+  return { fromIso: startOfDayFromDateString(start).toISOString(), toIso: endOfDayFromDateString(end).toISOString() };
+}
+
+/** Minúsculas e sem acento: "João" encontra "joao". */
+export function normalizeSearch(text: string): string {
+  // \p{M} = marcas combinantes (acentos) depois de separar as letras acentuadas (NFD)
+  return text.normalize("NFD").replace(/\p{M}+/gu, "").toLowerCase().trim();
+}
+
+/** O atendimento combina com a busca? (cliente, serviço, profissional ou observação; todas as palavras precisam aparecer) */
+export function matchesSearch(
+  appointment: { service_name?: string | null; customer_name?: string | null; professional_name?: string | null; notes?: string | null },
+  query: string
+): boolean {
+  const terms = normalizeSearch(query).split(/\s+/).filter(Boolean);
+  if (!terms.length) return true;
+  const haystack = normalizeSearch(
+    [appointment.customer_name, appointment.service_name, appointment.professional_name, appointment.notes].filter(Boolean).join(" ")
+  );
+  return terms.every((term) => haystack.includes(term));
+}

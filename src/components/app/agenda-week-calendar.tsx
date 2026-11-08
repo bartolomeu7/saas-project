@@ -14,6 +14,7 @@ import {
   AGENDA_VISUAL_LABELS,
   appointmentVisualState,
   dayKeyOf,
+  matchesSearch,
   shortDateLabel,
   timeLabel,
   weekdayShort,
@@ -21,6 +22,7 @@ import {
 } from "@/lib/agenda/week-view";
 import { professionalDotClass, STATE_STYLES } from "@/components/app/agenda-visual";
 import { TimeGrid, type TimeGridColumn } from "@/components/app/agenda-time-grid";
+import { MonthGrid } from "@/components/app/agenda-month-grid";
 import type { Appointment } from "@/types/appointment";
 import { cn } from "@/lib/utils";
 
@@ -50,8 +52,9 @@ interface AgendaWeekCalendarProps {
    * "hours": semana em grade de horas, atendimentos do tamanho da duração (semana atual).
    * "days": lista por dia (semana passada e próxima).
    * "day": um dia só, em grade de horas, uma coluna por profissional.
+   * "month": o mês inteiro, semanas de domingo a sábado.
    */
-  mode: "hours" | "days" | "day";
+  mode: "hours" | "days" | "day" | "month";
   days: string[];
   appointments: Appointment[];
   todayDate: string;
@@ -60,7 +63,7 @@ interface AgendaWeekCalendarProps {
   professionalId?: string;
   /** Profissionais ativos (colunas da visão "Dia"). */
   professionals?: AgendaProfessional[];
-  /** Dia mostrado na visão "Dia" (YYYY-MM-DD). */
+  /** Dia mostrado na visão "Dia" (YYYY-MM-DD) ou qualquer dia do mês na visão "Mês". */
   dayDate?: string;
 }
 
@@ -76,17 +79,21 @@ export function AgendaWeekCalendar({
   dayDate,
 }: AgendaWeekCalendarProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
   const now = useMemo(() => new Date(nowIso), [nowIso]);
+
+  // A busca filtra o que já está na tela (semana, dia ou mês escolhido): cliente, serviço, profissional e observação.
+  const visible = useMemo(() => (query.trim() ? appointments.filter((row) => matchesSearch(row, query)) : appointments), [appointments, query]);
 
   const byDay = useMemo(() => {
     const map = new Map<string, Appointment[]>();
     for (const day of days) map.set(day, []);
-    for (const appointment of appointments) {
+    for (const appointment of visible) {
       const list = map.get(dayKeyOf(appointment.starts_at));
       if (list) list.push(appointment);
     }
     return map;
-  }, [appointments, days]);
+  }, [visible, days]);
 
   const selected = appointments.find((row) => row.id === selectedId) ?? null;
 
@@ -107,22 +114,22 @@ export function AgendaWeekCalendar({
 
   const professionalColumns = useMemo<TimeGridColumn[]>(() => {
     const date = dayDate ?? todayDate;
-    const visible = professionalId ? professionals.filter((person) => person.id === professionalId) : professionals;
-    const known = new Set(visible.map((person) => person.id));
-    const columns: TimeGridColumn[] = visible.map((person) => ({
+    const shownProfessionals = professionalId ? professionals.filter((person) => person.id === professionalId) : professionals;
+    const known = new Set(shownProfessionals.map((person) => person.id));
+    const columns: TimeGridColumn[] = shownProfessionals.map((person) => ({
       key: person.id,
       date,
       title: person.display_name,
       dotClass: professionalDotClass(person.color),
-      items: appointments.filter((row) => row.professional_id === person.id),
+      items: visible.filter((row) => row.professional_id === person.id),
     }));
-    const unassigned = appointments.filter((row) => !row.professional_id || !known.has(row.professional_id));
+    const unassigned = visible.filter((row) => !row.professional_id || !known.has(row.professional_id));
     // "Sem profissional" aparece quando há atendimento sem profissional (ou de profissional que não está na lista) ou quando não há nenhum profissional.
     if (unassigned.length || columns.length === 0) {
       columns.push({ key: "sem-profissional", date, title: columns.length === 0 ? "Atendimentos" : "Sem profissional", items: unassigned });
     }
     return columns;
-  }, [appointments, professionals, professionalId, dayDate, todayDate]);
+  }, [visible, professionals, professionalId, dayDate, todayDate]);
 
   function dayHref(day: string) {
     const params = new URLSearchParams({ date: day, semana: weekKey });
@@ -130,8 +137,33 @@ export function AgendaWeekCalendar({
     return `/app/agenda?${params.toString()}#atendimentos-do-dia`;
   }
 
+  /** Abre aquele dia na visão Dia (usado pelo mês). */
+  function dayViewHref(day: string) {
+    const params = new URLSearchParams({ date: day, visao: "dia" });
+    if (professionalId) params.set("professional", professionalId);
+    return `/app/agenda?${params.toString()}`;
+  }
+
   return (
     <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <label className="relative block min-w-[220px] flex-1 sm:max-w-sm">
+          <span className="sr-only">Buscar nesta visão</span>
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Buscar cliente, serviço ou profissional…"
+            className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+          />
+        </label>
+        {query.trim() ? (
+          <p className="text-xs text-muted-foreground" role="status">
+            {visible.length} de {appointments.length} atendimento{appointments.length === 1 ? "" : "s"} nesta visão
+          </p>
+        ) : null}
+      </div>
+
       <ul aria-label="Legenda de cores" className="flex flex-wrap gap-2 text-xs">
         {LEGEND_ORDER.map((state) => (
           <li key={state} className="flex items-center gap-2 rounded-full border px-3 py-1">
@@ -141,7 +173,9 @@ export function AgendaWeekCalendar({
         ))}
       </ul>
 
-      {mode === "day" ? (
+      {mode === "month" ? (
+        <MonthGrid days={days} monthDate={dayDate ?? todayDate} todayDate={todayDate} byDay={byDay} now={now} dayHref={dayViewHref} onSelect={setSelectedId} />
+      ) : mode === "day" ? (
         <TimeGrid columns={professionalColumns} todayDate={todayDate} now={now} onSelect={setSelectedId} minColumnWidth={170} hideTodayBadge />
       ) : mode === "hours" ? (
         <>
