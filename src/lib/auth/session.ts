@@ -1,7 +1,8 @@
 import "server-only";
 
+import { cache } from "react";
 import { createSessionClient } from "@/lib/supabase/server";
-import { getClerkCurrentUser } from "@/lib/auth/clerk-session";
+import { getClerkCurrentUser, getClerkInternalUserId } from "@/lib/auth/clerk-session";
 import type { Profile } from "@/types/profile";
 
 /**
@@ -32,8 +33,9 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
  * Protegido por RLS (profiles_select_own) — só é possível ler o próprio
  * perfil.
  */
-export async function getCurrentProfile(): Promise<Profile | null> {
-  const userId = (await getClerkCurrentUser())?.id;
+export const getCurrentProfile = cache(async function getCurrentProfile(): Promise<Profile | null> {
+  // Só o id interno: não precisa esperar a API do Clerk (e-mail) para ler o perfil.
+  const userId = await getClerkInternalUserId();
 
   if (!userId) return null;
 
@@ -49,4 +51,4 @@ export async function getCurrentProfile(): Promise<Profile | null> {
   }
 
   return data as Profile;
-}
+});

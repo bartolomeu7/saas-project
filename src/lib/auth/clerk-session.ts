@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { createClerkSupabaseClient } from "@/lib/supabase/clerk-client";
 import { AccountInactiveError } from "@/lib/auth/account-status";
@@ -20,6 +21,9 @@ async function failAuthBackend(step: string, message: string): Promise<never> {
   throw new AuthBackendError(code, `${step}: ${message}`);
 }
 
+/** Usuário do Clerk (chamada à API do Clerk), no máximo uma vez por requisição. */
+const loadClerkUser = cache(async () => currentUser());
+
 /**
  * Camada de sessão do lado Clerk.
  *
@@ -29,9 +33,11 @@ async function failAuthBackend(step: string, message: string): Promise<never> {
  * ensure_profile() (idempotente) e usa o UUID retornado — "lazy creation",
  * sem depender de webhook.
  */
-export async function getClerkInternalUserId(): Promise<string | null> {
-  const clerkUser = await currentUser();
-  if (!clerkUser) return null;
+export const getClerkInternalUserId = cache(async function getClerkInternalUserId(): Promise<string | null> {
+  // `auth()` valida o token da sessão localmente (sem rede). `currentUser()` é uma chamada à API do Clerk: só entra
+  // quando realmente se precisa dos dados do Clerk (primeiro acesso, abaixo) ou do e-mail (getClerkCurrentUser).
+  const { userId: clerkUserId } = await auth();
+  if (!clerkUserId) return null;
 
   // current_profile_user_id()/ensure_profile() (Fase 4/5, migrations
   // clerk_phase4_b/c) ainda não existem no types/supabase.ts gerado —
@@ -53,6 +59,10 @@ export async function getClerkInternalUserId(): Promise<string | null> {
   }
   if (existingId) return existingId;
 
+  // Primeiro acesso: só aqui o perfil ainda não existe e precisamos do nome e do e-mail vindos do Clerk.
+  const clerkUser = await loadClerkUser();
+  if (!clerkUser) return null;
+
   const fullName =
     [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(" ").trim() || null;
   const email = clerkUser.primaryEmailAddress?.emailAddress ?? null;
@@ -72,18 +82,23 @@ export async function getClerkInternalUserId(): Promise<string | null> {
   }
 
   return createdId;
-}
+});
 
-/** Usuário Clerk atual, já com o UUID interno resolvido (ou null sem sessão). */
-export async function getClerkCurrentUser(): Promise<{ id: string; email: string | null } | null> {
-  const clerkUser = await currentUser();
-  if (!clerkUser) return null;
-
-  const internalId = await getClerkInternalUserId();
-  if (!internalId) return null;
+/**
+ * Usuário Clerk atual, já com o UUID interno resolvido (ou null sem sessão).
+ * Resolvido uma vez por requisição: layout, página e ações compartilham o mesmo resultado (antes cada chamada
+ * repetia a consulta ao Clerk e ao banco).
+ */
+export const getClerkCurrentUser = cache(async function getClerkCurrentUser(): Promise<{
+  id: string;
+  email: string | null;
+} | null> {
+  // A busca do e-mail (API do Clerk) e a do id interno (banco) não dependem uma da outra: andam juntas.
+  const [clerkUser, internalId] = await Promise.all([loadClerkUser(), getClerkInternalUserId()]);
+  if (!clerkUser || !internalId) return null;
 
   return {
     id: internalId,
     email: clerkUser.primaryEmailAddress?.emailAddress ?? null,
   };
-}
+});

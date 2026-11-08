@@ -1,7 +1,8 @@
 import "server-only";
 
+import { cache } from "react";
 import { createSessionClient } from "@/lib/supabase/server";
-import { getClerkCurrentUser } from "@/lib/auth/clerk-session";
+import { getClerkInternalUserId } from "@/lib/auth/clerk-session";
 import type { Company, CompanyRole, CurrentCompany } from "@/types/company";
 
 /**
@@ -13,10 +14,11 @@ import type { Company, CompanyRole, CurrentCompany } from "@/types/company";
  * Protegido por RLS: só é possível ler os próprios vínculos
  * (company_members) e empresas às quais o usuário pertence.
  */
-export async function getCurrentCompany(): Promise<CurrentCompany | null> {
+export const getCurrentCompany = cache(async function getCurrentCompany(): Promise<CurrentCompany | null> {
   const supabase = await createSessionClient();
 
-  const userId = (await getClerkCurrentUser())?.id;
+  // Só o id interno: não precisa esperar a API do Clerk (e-mail) para achar a empresa.
+  const userId = await getClerkInternalUserId();
 
   if (!userId) {
     return null;
@@ -51,4 +53,4 @@ export async function getCurrentCompany(): Promise<CurrentCompany | null> {
     company: company as Company,
     role: membership.role as CompanyRole,
   };
-}
+});

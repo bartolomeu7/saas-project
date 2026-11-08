@@ -38,11 +38,17 @@ describe("guardas e rotas fora do escopo visual (regra fixa 2)", () => {
 
   it("o layout do app mantém a ordem de proteção (sessão, consentimento, empresa)", () => {
     const layout = read("src/app/(app)/layout.tsx");
-    // posição das chamadas (não dos imports, que vêm em outra ordem)
-    const gateCall = layout.indexOf("await evaluateSessionGate(");
-    const consentCall = layout.indexOf("await requireLegalConsent(");
-    assert.ok(gateCall > -1 && consentCall > gateCall, "evaluateSessionGate deve rodar antes de requireLegalConsent");
-    assert.match(layout, /\/onboarding/);
+    // As leituras (vaga de sessão e consentimento) agora andam juntas, em paralelo; o que importa é a ORDEM DAS DECISÕES:
+    // sessão bloqueada/não verificada, depois consentimento, depois onboarding (posição dos redirects, não dos imports).
+    assert.match(layout, /evaluateSessionGate\(/);
+    assert.match(layout, /getMyConsentStatus\(\)/);
+    const blocked = layout.indexOf('gate === "blocked"');
+    const unverified = layout.indexOf('gate === "unverified"');
+    const consent = layout.indexOf("!consent.complete");
+    const onboarding = layout.indexOf('redirect("/onboarding")');
+    assert.ok(blocked > -1 && unverified > blocked, "sessão bloqueada antes de não verificada");
+    assert.ok(consent > unverified, "a decisão de sessão vem antes da do consentimento");
+    assert.ok(onboarding > consent, "o consentimento vem antes do onboarding");
   });
 
   it("páginas públicas não importam o Clerk", () => {
