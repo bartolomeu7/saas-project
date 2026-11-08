@@ -23,6 +23,8 @@ export interface FinanceDashboard {
   revenue: number;
   costOfGoods: number;
   grossProfit: number;
+  /** Receitas lançadas à mão no Financeiro (fora o recebimento de vendas). */
+  otherIncome: number;
   operatingExpenses: number;
   netResult: number;
   cashIn: number;

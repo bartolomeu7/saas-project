@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { SubmitButton } from "@/components/shared/auth/submit-button";
 import { FormMessage } from "@/components/shared/auth/form-message";
 import { NativeSelect } from "@/components/ui/native-select";
+import { useKeepInputOnError } from "@/hooks/use-keep-input-on-error";
 
 type DraftItem = { productId: string; quantity: string; unitCost: string };
 const initialState: ActionResult = {};
@@ -27,6 +28,7 @@ export function PurchaseOrderForm({
   products: Product[];
 }) {
   const [state, formAction] = useFormState(action, initialState);
+  const keepInput = useKeepInputOnError(state);
   const [items, setItems] = useState<DraftItem[]>([
     { productId: "", quantity: "1", unitCost: "" },
   ]);
@@ -76,7 +78,7 @@ export function PurchaseOrderForm({
   }
 
   return (
-    <form action={formAction} className="flex flex-col gap-6">
+    <form action={formAction} onReset={keepInput} className="flex flex-col gap-6">
       <FormMessage state={state} />
       <input type="hidden" name="items" value={payload} />
 

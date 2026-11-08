@@ -13,6 +13,7 @@ import { SubmitButton } from "@/components/shared/auth/submit-button";
 import { FormMessage } from "@/components/shared/auth/form-message";
 import { cn } from "@/lib/utils";
 import { NativeSelect } from "@/components/ui/native-select";
+import { useKeepInputOnError } from "@/hooks/use-keep-input-on-error";
 
 const initialState: ActionResult = {};
 
@@ -26,6 +27,7 @@ const METHODS = Object.keys(SALE_PAYMENT_METHOD_LABELS) as SalePaymentMethod[];
  */
 export function CashMovementForm() {
   const [state, formAction] = useFormState(createCashMovementAction, initialState);
+  const keepInput = useKeepInputOnError(state);
   const [direction, setDirection] = useState<CashMovementDirection>("in");
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -41,7 +43,7 @@ export function CashMovementForm() {
   }, [state]);
 
   return (
-    <form ref={formRef} action={formAction} className="flex flex-col gap-4">
+    <form ref={formRef} action={formAction} onReset={keepInput} className="flex flex-col gap-4">
       <FormMessage state={state} />
 
       <div className="flex flex-col gap-1.5">

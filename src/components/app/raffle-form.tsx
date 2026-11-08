@@ -7,15 +7,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SubmitButton } from "@/components/shared/auth/submit-button";
 import { FormMessage } from "@/components/shared/auth/form-message";
+import { useKeepInputOnError } from "@/hooks/use-keep-input-on-error";
 
 const initialState: ActionResult = {};
 
 export function RaffleForm({ hasAnySales }: { hasAnySales: boolean }) {
   const [state, formAction] = useFormState(runRaffleAction, initialState);
+  const keepInput = useKeepInputOnError(state);
 
   return (
     <form
-      action={formAction}
+      action={formAction} onReset={keepInput}
       className="flex flex-col gap-5 rounded-lg border border-border bg-card p-6"
     >
       <FormMessage state={state} />

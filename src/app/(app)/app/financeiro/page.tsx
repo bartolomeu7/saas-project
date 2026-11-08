@@ -306,7 +306,7 @@ export default async function FinancePage({
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <Kpi label="Faturamento" value={money(dashboard.revenue)} detail="vendas concluídas no mês" icon={CircleDollarSign} />
         <Kpi label="Custo dos produtos" value={money(dashboard.costOfGoods)} detail="CMV estimado pelas vendas" icon={Package} />
-        <Kpi label="Resultado" value={money(dashboard.netResult)} detail="após despesas operacionais" icon={TrendingUp} />
+        <Kpi label="Resultado" value={money(dashboard.netResult)} detail="inclui outras receitas, após despesas" icon={TrendingUp} />
         <Kpi icon={Wallet} label="Caixa do período" value={money(dashboard.cashNet)} detail={money(dashboard.cashIn) + " entrada • " + money(dashboard.cashOut) + " saída"} />
         <Kpi label="Saldo financeiro" value={money(dashboard.accountsReceivable - dashboard.accountsPayable)} detail="a receber − a pagar" icon={Scale} />
       </div>
@@ -320,9 +320,10 @@ export default async function FinancePage({
             </div>
             <span className="rounded-full border px-2.5 py-1 text-xs text-muted-foreground">Mês atual</span>
           </div>
-          <dl className="mt-6 grid gap-4 sm:grid-cols-3">
+          <dl className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <div className="rounded-lg bg-muted/40 p-4"><dt className="text-xs text-muted-foreground">Receita</dt><dd className="mt-1 text-lg font-semibold">{money(dashboard.revenue)}</dd></div>
             <div className="rounded-lg bg-muted/40 p-4"><dt className="text-xs text-muted-foreground">Custos</dt><dd className="mt-1 text-lg font-semibold">{money(dashboard.costOfGoods)}</dd></div>
+            <div className="rounded-lg bg-muted/40 p-4"><dt className="text-xs text-muted-foreground">Outras receitas</dt><dd className="mt-1 text-lg font-semibold">{money(dashboard.otherIncome)}</dd></div>
             <div className="rounded-lg bg-muted/40 p-4"><dt className="text-xs text-muted-foreground">Despesas operacionais</dt><dd className="mt-1 text-lg font-semibold">{money(dashboard.operatingExpenses)}</dd></div>
           </dl>
           <div className="mt-5 flex items-center justify-between border-t pt-4">

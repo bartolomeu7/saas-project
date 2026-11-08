@@ -12,6 +12,7 @@ import type { Appointment } from "@/types/appointment";
 import { FormMessage } from "@/components/shared/auth/form-message";
 import { SubmitButton } from "@/components/shared/auth/submit-button";
 import { NativeSelect } from "@/components/ui/native-select";
+import { useKeepInputOnError } from "@/hooks/use-keep-input-on-error";
 
 const initialState: ActionResult = {};
 
@@ -27,6 +28,7 @@ export function AppointmentForm({
   professionals: { id: string; display_name: string; color: string }[];
 }) {
   const [state, formAction] = useFormState(createAppointmentAction, initialState);
+  const keepInput = useKeepInputOnError(state);
   const [serviceId, setServiceId] = useState(services[0]?.id ?? "");
   const [price, setPrice] = useState(services[0] ? String(services[0].sale_price) : "");
   const [startsAt, setStartsAt] = useState(date + "T08:00");
@@ -41,7 +43,7 @@ export function AppointmentForm({
   }, [service?.id, service?.sale_price]);
 
   return (
-    <form action={formAction} className="grid gap-4">
+    <form action={formAction} onReset={keepInput} className="grid gap-4">
       <input type="hidden" name="durationMinutes" value={service?.duration_minutes ?? ""} />
       <input type="hidden" name="price" value={price} />
       <label className="grid gap-1 text-sm">
@@ -130,9 +132,10 @@ export function RescheduleForm({
   defaultValue: string;
 }) {
   const [state, formAction] = useFormState(rescheduleAppointmentAction, initialState);
+  const keepInput = useKeepInputOnError(state);
 
   return (
-    <form action={formAction} className="grid gap-2 sm:grid-cols-[1fr_auto]">
+    <form action={formAction} onReset={keepInput} className="grid gap-2 sm:grid-cols-[1fr_auto]">
       <input type="hidden" name="appointmentId" value={appointment.id} />
       <input name="startsAt" type="datetime-local" defaultValue={defaultValue} className="h-9 rounded-md border bg-background px-2 text-sm" />
       <SubmitButton state={state} pendingLabel="..." size="sm" className="w-auto">Reagendar</SubmitButton>

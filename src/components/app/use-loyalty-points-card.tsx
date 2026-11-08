@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { SubmitButton } from "@/components/shared/auth/submit-button";
 import { FormMessage } from "@/components/shared/auth/form-message";
 import { ConfirmDialog } from "@/components/app/confirm-dialog";
+import { useKeepInputOnError } from "@/hooks/use-keep-input-on-error";
 
 const initialState: ActionResult = {};
 
@@ -124,6 +125,7 @@ function RedeemForm({
 }) {
   const action = redeemLoyaltyPointsAction.bind(null, saleId);
   const [state, formAction] = useFormState(action, initialState);
+  const keepInput = useKeepInputOnError(state);
   const [pointsInput, setPointsInput] = useState("");
 
   const trimmed = pointsInput.trim();
@@ -165,7 +167,7 @@ function RedeemForm({
         </div>
       </dl>
 
-      <form action={formAction} className="flex flex-col gap-2">
+      <form action={formAction} onReset={keepInput} className="flex flex-col gap-2">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="loyalty-points">Pontos a utilizar</Label>
           <Input

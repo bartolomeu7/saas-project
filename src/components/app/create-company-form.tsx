@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { SubmitButton } from "@/components/shared/auth/submit-button";
 import { FormMessage } from "@/components/shared/auth/form-message";
 import { NativeSelect } from "@/components/ui/native-select";
+import { useKeepInputOnError } from "@/hooks/use-keep-input-on-error";
 
 const initialState: ActionResult = {};
 
@@ -19,9 +20,10 @@ const BUSINESS_TYPE_OPTIONS = Object.entries(BUSINESS_TYPE_LABELS) as [
 
 export function CreateCompanyForm() {
   const [state, formAction] = useFormState(createCompanyAction, initialState);
+  const keepInput = useKeepInputOnError(state);
 
   return (
-    <form action={formAction} className="flex flex-col gap-4">
+    <form action={formAction} onReset={keepInput} className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
         <Label htmlFor="name">Nome da empresa</Label>
         <Input

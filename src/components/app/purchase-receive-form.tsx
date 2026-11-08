@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { SubmitButton } from "@/components/shared/auth/submit-button";
 import { FormMessage } from "@/components/shared/auth/form-message";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { useKeepInputOnError } from "@/hooks/use-keep-input-on-error";
 
 const initialState: ActionResult = {};
 
@@ -20,6 +21,7 @@ export function PurchaseReceiveForm({
   order: PurchaseOrderDetail;
 }) {
   const [state, formAction] = useFormState(action, initialState);
+  const keepInput = useKeepInputOnError(state);
   const receivableItems = order.purchase_order_items.filter(
     (item) => item.received_quantity < item.quantity
   );
@@ -45,7 +47,7 @@ export function PurchaseReceiveForm({
   if (!receivableItems.length) return null;
 
   return (
-    <form action={formAction} className="flex flex-col gap-4">
+    <form action={formAction} onReset={keepInput} className="flex flex-col gap-4">
       <FormMessage state={state} />
       <input type="hidden" name="items" value={payload} />
 

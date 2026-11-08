@@ -13,6 +13,7 @@ import { SubmitButton } from "@/components/shared/auth/submit-button";
 import { FormMessage } from "@/components/shared/auth/form-message";
 import { cn } from "@/lib/utils";
 import { NativeSelect } from "@/components/ui/native-select";
+import { useKeepInputOnError } from "@/hooks/use-keep-input-on-error";
 
 const initialState: ActionResult = {};
 
@@ -54,6 +55,7 @@ export function ProductForm({
   canEditPrice = true,
 }: ProductFormProps) {
   const [state, formAction] = useFormState(action, initialState);
+  const keepInput = useKeepInputOnError(state);
   const [costPrice, setCostPrice] = useState(String(defaultValues?.cost_price ?? ""));
   const [salePrice, setSalePrice] = useState(String(defaultValues?.sale_price ?? ""));
   // Edição (defaultValues presente) nunca deve poder sobrescrever o
@@ -78,7 +80,7 @@ export function ProductForm({
   const stockEmphasis = segmentHints.emphasize === "unit_stock";
 
   return (
-    <form action={formAction} className="flex flex-col gap-6">
+    <form action={formAction} onReset={keepInput} className="flex flex-col gap-6">
       <FormMessage state={state} />
 
       <section className="flex flex-col gap-4">

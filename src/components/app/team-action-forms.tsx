@@ -20,6 +20,7 @@ import { FormField, fieldError } from "@/components/shared/form-field";
 import { Input } from "@/components/ui/input";
 import { parseMoneyInput } from "@/lib/parse-money";
 import { NativeSelect } from "@/components/ui/native-select";
+import { useKeepInputOnError } from "@/hooks/use-keep-input-on-error";
 
 const initialState: ActionResult = {};
 
@@ -45,9 +46,10 @@ const colors = [
 /** `canAddAdmin`: só o dono adiciona administradores; o admin adiciona apenas funcionários (o banco também exige). */
 export function AddMemberForm({ canAddAdmin = false }: { canAddAdmin?: boolean }) {
   const [state, formAction] = useFormState(addExistingMemberAction, initialState);
+  const keepInput = useKeepInputOnError(state);
 
   return (
-    <form action={formAction} className="grid gap-3 sm:grid-cols-[1fr_150px_auto] sm:items-start">
+    <form action={formAction} onReset={keepInput} className="grid gap-3 sm:grid-cols-[1fr_150px_auto] sm:items-start">
       <FormField label="E-mail do colaborador" error={fieldError(state, "email")}>
         <Input name="email" type="email" required placeholder="email@exemplo.com" />
       </FormField>
@@ -68,9 +70,10 @@ export function AddMemberForm({ canAddAdmin = false }: { canAddAdmin?: boolean }
 /** `isOwner`: só o dono promove/rebaixa administradores e owners; para o admin a lista mostra apenas "Funcionário". */
 export function MemberRoleForm({ member, isOwner = false }: { member: TeamMember; isOwner?: boolean }) {
   const [state, formAction] = useFormState(updateMemberRoleAction, initialState);
+  const keepInput = useKeepInputOnError(state);
 
   return (
-    <form action={formAction} className="grid gap-2 sm:grid-cols-[130px_auto]">
+    <form action={formAction} onReset={keepInput} className="grid gap-2 sm:grid-cols-[130px_auto]">
       <input type="hidden" name="memberId" value={member.member_id} />
       <FormField
         label={`Função de ${member.full_name ?? member.email ?? "colaborador"}`}
@@ -106,9 +109,10 @@ export function RemoveMemberForm({ memberId }: { memberId: string }) {
 
 export function ProfessionalForm({ member }: { member: TeamMember }) {
   const [state, formAction] = useFormState(saveProfessionalAction, initialState);
+  const keepInput = useKeepInputOnError(state);
 
   return (
-    <form action={formAction} className="grid gap-4 rounded-xl border bg-card p-5">
+    <form action={formAction} onReset={keepInput} className="grid gap-4 rounded-xl border bg-card p-5">
       <input type="hidden" name="companyMemberId" value={member.member_id} />
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="grid gap-1 text-sm">
@@ -170,6 +174,7 @@ export function ProfessionalServicesForm({
   }[];
 }) {
   const [state, formAction] = useFormState(saveProfessionalServicesAction, initialState);
+  const keepInput = useKeepInputOnError(state);
   const [checked, setChecked] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(selected.map((row) => [row.service_id, true]))
   );
@@ -200,7 +205,7 @@ export function ProfessionalServicesForm({
   );
 
   return (
-    <form action={formAction} className="grid gap-3">
+    <form action={formAction} onReset={keepInput} className="grid gap-3">
       <input type="hidden" name="professionalId" value={professionalId} />
       <input type="hidden" name="services" value={payload} />
       {services.map((service) => (
@@ -260,6 +265,7 @@ export function ProfessionalAvailabilityForm({
   availability: { weekday: number; start_time: string; end_time: string; active: boolean }[];
 }) {
   const [state, formAction] = useFormState(saveProfessionalAvailabilityAction, initialState);
+  const keepInput = useKeepInputOnError(state);
   const [rows, setRows] = useState(() =>
     weekdays.map(([weekday]) => {
       const match = availability.find((item) => item.weekday === Number(weekday) && item.active);
@@ -282,7 +288,7 @@ export function ProfessionalAvailabilityForm({
   );
 
   return (
-    <form action={formAction} className="grid gap-3">
+    <form action={formAction} onReset={keepInput} className="grid gap-3">
       <input type="hidden" name="professionalId" value={professionalId} />
       <input type="hidden" name="schedule" value={payload} />
       {rows.map((row, index) => (
@@ -323,9 +329,10 @@ export function ProfessionalAvailabilityForm({
 
 export function ProfessionalBlockForm({ professionalId }: { professionalId: string }) {
   const [state, formAction] = useFormState(createProfessionalBlockAction, initialState);
+  const keepInput = useKeepInputOnError(state);
 
   return (
-    <form action={formAction} className="grid gap-3 sm:grid-cols-2">
+    <form action={formAction} onReset={keepInput} className="grid gap-3 sm:grid-cols-2">
       <input type="hidden" name="professionalId" value={professionalId} />
       <label className="grid gap-1 text-sm">
         Início

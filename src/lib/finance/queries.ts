@@ -3,6 +3,12 @@ import "server-only";
 import { cache } from "react";
 import { createSessionClient } from "@/lib/supabase/server";
 import { endOfDaySaoPaulo, startOfMonthSaoPaulo, todayDateSaoPaulo } from "@/lib/timezone";
+import {
+  computeNetResult,
+  NON_OPERATING_EXPENSE_SOURCES,
+  sumOperatingExpenses,
+  sumOtherIncome,
+} from "@/lib/finance/dre";
 import type {
   AccountReceivable,
   AccountsPayable,
@@ -14,17 +20,8 @@ import type {
 
 const money = (value: unknown) => Number(value ?? 0);
 
-/**
- * `financial_entries.source_type` de despesas que movimentam caixa mas não são
- * despesa operacional do DRE: compra de estoque (conta a pagar e o pagamento
- * dela, `accounts_payable_payment`, gravado por pay_accounts_payable) e
- * estorno de pagamento de venda cancelada (`sale_payment_refund`).
- */
-export const NON_OPERATING_EXPENSE_SOURCES: ReadonlySet<string> = new Set([
-  "accounts_payable",
-  "accounts_payable_payment",
-  "sale_payment_refund",
-]);
+// As regras do resultado (DRE) ficam em `./dre` (puras, compartilhadas com os Relatórios).
+export { NON_OPERATING_EXPENSE_SOURCES };
 
 export function resolveFinanceMonthRange(now = new Date()): { from: string; to: string } {
   return {
@@ -169,7 +166,7 @@ export const getFinanceDashboard = cache(async function getFinanceDashboard(
       .lte("occurred_on", to.slice(0, 10)),
     supabase
       .from("financial_entries")
-      .select("direction, amount")
+      .select("direction, amount, source_type")
       .eq("company_id", companyId)
       .eq("status", "posted")
       .gte("occurred_on", from.slice(0, 10))
@@ -187,18 +184,17 @@ export const getFinanceDashboard = cache(async function getFinanceDashboard(
   const costOfGoods = sales.reduce((sum, row) => sum + money(row.total_cost), 0);
   const grossProfit = revenue - costOfGoods;
 
-  const operatingExpenses = (expensesResult.data ?? []).reduce((sum, row) => {
-    // Compra de estoque é caixa/contas a pagar, mas não é despesa de DRE:
-    // o custo entra no resultado quando o produto é vendido. Estorno de
-    // pagamento de venda cancelada também fica fora: a venda cancelada já
-    // não entra na receita, então o estorno não pode virar despesa.
-    if (NON_OPERATING_EXPENSE_SOURCES.has(row.source_type ?? "")) return sum;
-    return sum + money(row.amount);
-  }, 0);
+  // Compra de estoque é caixa/contas a pagar, mas não é despesa de DRE: o custo entra no resultado
+  // quando o produto é vendido. Estorno de venda cancelada também fica fora: a venda cancelada já
+  // não entra na receita, então o estorno não pode virar despesa (ver ./dre).
+  const operatingExpenses = sumOperatingExpenses(expensesResult.data ?? []);
 
-  const cashIn = (cashResult.data ?? [])
-    .filter((row) => row.direction === "income")
-    .reduce((sum, row) => sum + money(row.amount), 0);
+  // Receita lançada à mão no Financeiro (sem venda): entra no resultado como "Outras receitas".
+  // O recebimento de vendas fica de fora porque o faturamento já vem das próprias vendas.
+  const incomeRows = (cashResult.data ?? []).filter((row) => row.direction === "income");
+  const otherIncome = sumOtherIncome(incomeRows);
+
+  const cashIn = incomeRows.reduce((sum, row) => sum + money(row.amount), 0);
   const cashOut = (cashResult.data ?? [])
     .filter((row) => row.direction === "expense")
     .reduce((sum, row) => sum + money(row.amount), 0);
@@ -223,8 +219,9 @@ export const getFinanceDashboard = cache(async function getFinanceDashboard(
     revenue,
     costOfGoods,
     grossProfit,
+    otherIncome,
     operatingExpenses,
-    netResult: grossProfit - operatingExpenses,
+    netResult: computeNetResult({ revenue, costOfGoods, otherIncome, operatingExpenses }),
     cashIn,
     cashOut,
     cashNet: cashIn - cashOut,

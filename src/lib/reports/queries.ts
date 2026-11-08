@@ -3,7 +3,7 @@ import { cache } from "react";
 import { createSessionClient } from "@/lib/supabase/server";
 import { startOfDaySaoPaulo, endOfDaySaoPaulo, startOfMonthSaoPaulo, startOfYearSaoPaulo, todayDateSaoPaulo } from "@/lib/timezone";
 import { getStockLevel } from "@/types/product";
-import { NON_OPERATING_EXPENSE_SOURCES } from "@/lib/finance/queries";
+import { computeNetResult, sumOperatingExpenses, sumOtherIncome } from "@/lib/finance/dre";
 import type { ReportPeriod, ReportRange, ReportTrendPoint, ReportTopItem, ReportPaymentMethod, ReportsWorkspace } from "@/types/report";
 
 const PERIOD_LABELS: Record<ReportPeriod, string> = {
@@ -98,13 +98,15 @@ async function getSalesLayer(companyId: string, range: ReportRange) {
 
 async function getFinanceLayer(companyId: string, range: ReportRange) {
   const supabase = await createSessionClient();
-  const [expenseResult, receivableSalesResult, payableResult] = await Promise.all([
+  const [expenseResult, incomeResult, receivableSalesResult, payableResult] = await Promise.all([
     supabase.from("financial_entries").select("amount, source_type").eq("company_id", companyId).eq("direction", "expense").eq("status", "posted").gte("occurred_on", range.from.slice(0, 10)).lte("occurred_on", range.to.slice(0, 10)),
+    supabase.from("financial_entries").select("amount, source_type").eq("company_id", companyId).eq("direction", "income").eq("status", "posted").gte("occurred_on", range.from.slice(0, 10)).lte("occurred_on", range.to.slice(0, 10)),
     supabase.from("sales").select("id, total_amount, sold_at").eq("company_id", companyId).eq("status", "completed").eq("payment_status", "pending"),
     supabase.from("accounts_payable").select("amount, paid_amount, due_date, status").eq("company_id", companyId).in("status", ["open", "partial"]),
   ]);
 
-  const operatingExpenses = (expenseResult.data ?? []).reduce((sum, row) => NON_OPERATING_EXPENSE_SOURCES.has(row.source_type ?? "") ? sum : sum + money(row.amount), 0);
+  const operatingExpenses = sumOperatingExpenses(expenseResult.data ?? []);
+  const otherIncome = sumOtherIncome(incomeResult.data ?? []);
   const receivableSales = receivableSalesResult.data ?? [];
   let accountsReceivable = 0;
   let overdueReceivables = 0;
@@ -128,7 +130,7 @@ async function getFinanceLayer(companyId: string, range: ReportRange) {
     accountsPayable += outstanding;
     if (row.due_date && row.due_date < today && outstanding > 0) overduePayables += 1;
   }
-  return { operatingExpenses, accountsReceivable, accountsPayable, overdueReceivables, overduePayables };
+  return { operatingExpenses, otherIncome, accountsReceivable, accountsPayable, overdueReceivables, overduePayables };
 }
 
 async function getAppointmentsLayer(companyId: string, range: ReportRange) {
@@ -157,7 +159,7 @@ export const getReportsWorkspace = cache(async function getReportsWorkspace(comp
   const [sales, finance, appointments, inventory] = await Promise.all([getSalesLayer(companyId, range), getFinanceLayer(companyId, range), getAppointmentsLayer(companyId, range), getInventoryLayer(companyId)]);
   return {
     range,
-    summary: { revenue: sales.revenue, costOfGoods: sales.costOfGoods, completedSales: sales.completedSales, averageTicket: sales.averageTicket, operatingExpenses: finance.operatingExpenses, netResult: sales.revenue - sales.costOfGoods - finance.operatingExpenses, accountsReceivable: finance.accountsReceivable, accountsPayable: finance.accountsPayable, overdueReceivables: finance.overdueReceivables, overduePayables: finance.overduePayables },
+    summary: { revenue: sales.revenue, costOfGoods: sales.costOfGoods, completedSales: sales.completedSales, averageTicket: sales.averageTicket, otherIncome: finance.otherIncome, operatingExpenses: finance.operatingExpenses, netResult: computeNetResult({ revenue: sales.revenue, costOfGoods: sales.costOfGoods, otherIncome: finance.otherIncome, operatingExpenses: finance.operatingExpenses }), accountsReceivable: finance.accountsReceivable, accountsPayable: finance.accountsPayable, overdueReceivables: finance.overdueReceivables, overduePayables: finance.overduePayables },
     salesTrend: sales.salesTrend,
     topItems: sales.topItems,
     paymentMethods: sales.paymentMethods,
