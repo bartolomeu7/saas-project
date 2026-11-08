@@ -20,7 +20,9 @@ export type Permission =
   | "cash.close_any" // Fechar o caixa aberto por outra pessoa
   | "cash.manual_movement" // Sangria, suprimento, despesa avulsa
   | "team.manage_staff" // Adicionar/remover/trocar papel de FUNCIONÁRIO
-  | "team.manage_admins"; // Adicionar/promover/rebaixar/remover ADMIN (e mexer no dono)
+  | "team.manage_admins" // Adicionar/promover/rebaixar/remover ADMIN (e mexer no dono)
+  | "hr.view" // RH: ver funcionários, pagamentos, vales e presença (só dono e administrador)
+  | "hr.manage"; // RH: cadastrar, marcar presença, lançar vales, fechar e pagar períodos
 
 const MANAGERS: readonly CompanyRole[] = ["owner", "admin"];
 const EVERYONE: readonly CompanyRole[] = ["owner", "admin", "employee"];
@@ -38,6 +40,8 @@ export const PERMISSION_ROLES: Record<Permission, readonly CompanyRole[]> = {
   "cash.manual_movement": MANAGERS,
   "team.manage_staff": MANAGERS,
   "team.manage_admins": ["owner"],
+  "hr.view": MANAGERS,
+  "hr.manage": MANAGERS,
 };
 
 export function can(role: CompanyRole | null | undefined, permission: Permission): boolean {
@@ -51,6 +55,7 @@ export const MODULE_PERMISSIONS: Record<string, Permission> = {
   "/app/relatorios": "reports.view",
   "/app/fornecedores": "suppliers.view",
   "/app/compras": "purchases.view",
+  "/app/rh": "hr.view",
 };
 
 /** Permissão exigida por um caminho (o prefixo mais específico vence); `null` = liberado a qualquer membro. */
