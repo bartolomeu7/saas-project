@@ -4,12 +4,13 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { ACCOUNT_BLOCKED_PATH, AccountInactiveError } from "@/lib/auth/account-status";
 import { getCurrentUser, getCurrentProfile } from "@/lib/auth/session";
+import { getClerkInternalUserId } from "@/lib/auth/clerk-session";
 import { getCurrentCompany } from "@/lib/companies/queries";
 import { AppShell } from "@/components/app/app-shell";
 import { ClerkAppProvider } from "@/components/clerk/clerk-app-provider";
 import { ThemeSync } from "@/components/settings/theme-sync";
 import { THEME_INIT_SCRIPT } from "@/lib/settings/theme";
-import { requireLegalConsent } from "@/lib/legal/consent";
+import { getMyConsentStatus } from "@/lib/legal/consent";
 import { evaluateSessionGate, SESSION_LIMIT_PATH } from "@/lib/auth/session-gate";
 
 // Toda a área autenticada depende da sessão: nunca é pré-renderizada no build. Sem isto o Next tentava gerar
@@ -36,12 +37,16 @@ export default async function AppLayout({
 }: {
   children: ReactNode;
 }) {
-  let user, profile, current;
+  // Tudo o que o layout precisa saber é lido de uma vez só (são consultas independentes): identidade, perfil, empresa,
+  // vaga de sessão e consentimento. As decisões abaixo continuam na mesma ordem de antes.
+  let shell;
   try {
-    [user, profile, current] = await Promise.all([
+    shell = await Promise.all([
       getCurrentUser(),
       getCurrentProfile(),
       getCurrentCompany(),
+      getClerkInternalUserId().then((id) => (id ? evaluateSessionGate(id) : ("allowed" as const))),
+      getMyConsentStatus(),
     ]);
   } catch (error) {
     // Segunda camada (o middleware já barra): conta inativa/suspensa não vê o app.
@@ -50,17 +55,15 @@ export default async function AppLayout({
     }
     throw error;
   }
+  const [user, profile, current, gate, consent] = shell;
 
   // Limite de sessões simultâneas da conta: sessão nova acima do limite vai para /acesso-sessoes (as já aceitas seguem).
-  if (user) {
-    const gate = await evaluateSessionGate(user.id);
-    if (gate === "blocked") redirect(SESSION_LIMIT_PATH);
-    // sessão ainda não validada (Clerk/serviço indisponível): negada só a esta sessão, de forma temporária
-    if (gate === "unverified") redirect(`${SESSION_LIMIT_PATH}?motivo=verificacao`);
-  }
+  if (gate === "blocked") redirect(SESSION_LIMIT_PATH);
+  // sessão ainda não validada (Clerk/serviço indisponível): negada só a esta sessão, de forma temporária
+  if (gate === "unverified") redirect(`${SESSION_LIMIT_PATH}?motivo=verificacao`);
 
   // Consentimento legal vigente (Termos + Política) antes de qualquer outra regra: sem ele, /aceite-termos.
-  await requireLegalConsent();
+  if (!consent.complete) redirect("/aceite-termos");
 
   if (!current) {
     redirect("/onboarding");
