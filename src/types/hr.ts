@@ -41,6 +41,33 @@ export interface HrEmployeeFormFields {
   pay_day_of_month: string;
   started_on: string;
   notes: string;
+  clt_weekly_hours: string;
+  clt_contract_type: string;
+  clt_experience_days: string;
+  clt_contract_end_on: string;
+  clt_dependents: string;
+  clt_vt_enabled: string;
+  clt_vt_monthly_cost: string;
+}
+
+export type HrContractType = "indefinite" | "experience" | "fixed_term";
+export type HrEmployerRegime = "simples" | "mei" | "other";
+
+export interface HrEmployeeClt {
+  employee_id: string;
+  weekly_hours: number;
+  contract_type: HrContractType;
+  experience_days: number | null;
+  contract_end_on: string | null;
+  dependents: number;
+  vt_enabled: boolean;
+  vt_monthly_cost: number | null;
+}
+
+export interface HrSettings {
+  employer_regime: HrEmployerRegime;
+  /** Fração (0,208 = 20,8%). Só vale para employer_regime = "other". */
+  employer_inss_rate: number;
 }
 
 export interface HrTimeEntry {
@@ -80,6 +107,10 @@ export interface HrPayment {
   paid_method: HrPayMethod | null;
   notes: string | null;
   created_at: string;
+  kind: "period" | "payroll";
+  reference_month: string | null;
+  /** Retrato da folha (kind = payroll): tabelas usadas, entradas, resultado do app e números do banco. */
+  calc: Record<string, any> | null;
 }
 
 export interface HrPaymentWithEmployee extends HrPayment {

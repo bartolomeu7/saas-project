@@ -66,6 +66,7 @@ export const APP_ROUTE_PATTERNS: readonly string[] = [
   "/app/rh",
   "/app/rh/[id]",
   "/app/rh/[id]/editar",
+  "/app/rh/configuracoes",
   "/app/rh/novo",
   "/app/rh/pagamentos",
   "/app/rh/pagamentos/[id]",
@@ -98,6 +99,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   imprimir: "Imprimir",
   empresa: "Empresa",
   pagamentos: "Pagamentos",
+  configuracoes: "Configurações",
 };
 
 const DYNAMIC_LABEL = "Detalhes";

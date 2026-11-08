@@ -5,7 +5,7 @@ import { HrEmployeeForm } from "@/components/app/hr-employee-form";
 import { NoAccess } from "@/components/app/no-access";
 import { getCurrentCompany } from "@/lib/companies/queries";
 import { updateEmployeeAction } from "@/lib/hr/actions";
-import { getEmployee } from "@/lib/hr/queries";
+import { getEmployee, getEmployeeClt } from "@/lib/hr/queries";
 import { can } from "@/lib/permissions/matrix";
 
 export const metadata: Metadata = { title: "Editar funcionário" };
@@ -16,6 +16,7 @@ export default async function EditEmployeePage({ params: paramsPromise }: { para
   if (!can(current.role, "hr.manage")) return <NoAccess area="o RH" />;
   const employee = await getEmployee(current.company.id, id);
   if (!employee) notFound();
+  const clt = employee.mode === "clt" ? await getEmployeeClt(employee.id) : null;
 
   return (
     <div className="flex flex-col gap-6 px-4 py-6 sm:px-6">
@@ -28,6 +29,8 @@ export default async function EditEmployeePage({ params: paramsPromise }: { para
         <HrEmployeeForm
           action={updateEmployeeAction.bind(null, employee.id)}
           submitLabel="Salvar alterações"
+          mode={employee.mode}
+          modeLocked
           defaultValues={{
             full_name: employee.full_name,
             birth_date: employee.birth_date ?? "",
@@ -41,6 +44,13 @@ export default async function EditEmployeePage({ params: paramsPromise }: { para
             pay_weekday: employee.pay_weekday === null ? "" : String(employee.pay_weekday),
             pay_day_of_month: employee.pay_day_of_month === null ? "" : String(employee.pay_day_of_month),
             notes: employee.notes ?? "",
+            clt_weekly_hours: clt ? String(clt.weekly_hours) : "",
+            clt_contract_type: clt?.contract_type ?? "indefinite",
+            clt_experience_days: clt?.experience_days ? String(clt.experience_days) : "",
+            clt_contract_end_on: clt?.contract_end_on ?? "",
+            clt_dependents: clt ? String(clt.dependents) : "0",
+            clt_vt_enabled: clt?.vt_enabled ? "on" : "",
+            clt_vt_monthly_cost: clt?.vt_monthly_cost ? clt.vt_monthly_cost.toFixed(2).replace(".", ",") : "",
           }}
         />
       </div>

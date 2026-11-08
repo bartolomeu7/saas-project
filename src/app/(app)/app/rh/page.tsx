@@ -48,6 +48,7 @@ export default async function HrPage({ searchParams: searchParamsPromise }: { se
         description="Funcionários, presença, vales e pagamentos. Controle simples para a sua equipe."
         actions={
           <div className="flex flex-wrap gap-2">
+            <Link href="/app/rh/configuracoes" className={cn(buttonVariants({ variant: "outline" }))}>Configurações</Link>
             <Link href="/app/rh/pagamentos" className={cn(buttonVariants({ variant: "outline" }))}>Pagamentos</Link>
             <Link href="/app/rh/novo" className={cn(buttonVariants())}>+ Novo funcionário</Link>
           </div>
@@ -173,9 +174,13 @@ export default async function HrPage({ searchParams: searchParamsPromise }: { se
                     </div>
                     <p className="text-sm">
                       {formatCurrency(employee.base_amount)}{" "}
-                      <span className="text-muted-foreground">{employee.rate_kind === "per_day" ? "por dia" : `por período (${FREQUENCY_LABELS[employee.pay_frequency].toLowerCase()})`}</span>
+                      <span className="text-muted-foreground">
+                        {employee.mode === "clt" ? "de salário" : employee.rate_kind === "per_day" ? "por dia" : `por período (${FREQUENCY_LABELS[employee.pay_frequency].toLowerCase()})`}
+                      </span>
                     </p>
-                    <p className="text-xs text-muted-foreground">{FREQUENCY_LABELS[employee.pay_frequency]} · {paydayLabel(employee)}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {employee.mode === "clt" ? `CLT · paga todo dia ${employee.pay_day_of_month}` : `Informal · ${FREQUENCY_LABELS[employee.pay_frequency]} · ${paydayLabel(employee)}`}
+                    </p>
                   </Link>
                 </li>
               ))}

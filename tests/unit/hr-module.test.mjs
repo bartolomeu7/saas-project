@@ -71,19 +71,20 @@ test("ações: toda mutação confere o papel e usa as funções do banco para d
   const actions = [...src.matchAll(/export async function (\w+Action)/g)].map((m) => m[1]);
   assert.deepEqual(
     actions.sort(),
-    ["addAdjustmentAction", "cancelPaymentAction", "closePeriodAction", "createEmployeeAction", "deleteAdjustmentAction", "payPaymentAction", "setAttendanceAction", "setEmployeeStatusAction", "updateEmployeeAction"].sort()
+    ["addAdjustmentAction", "cancelPaymentAction", "closePayrollAction", "closePeriodAction", "createEmployeeAction", "deleteAdjustmentAction", "payPaymentAction", "saveHrSettingsAction", "setAttendanceAction", "setEmployeeStatusAction", "updateEmployeeAction"].sort()
   );
   // cada ação confere o papel antes de gravar
   assert.equal((src.match(/await manager\(\)/g) ?? []).length, actions.length);
   assert.ok(src.includes('can(current.role, "hr.manage")'));
-  for (const rpc of ["hr_set_attendance", "hr_add_adjustment", "hr_delete_adjustment", "hr_close_period", "hr_pay_payment", "hr_cancel_payment"]) {
+  for (const rpc of ["hr_set_attendance", "hr_add_adjustment", "hr_delete_adjustment", "hr_close_period", "hr_pay_payment", "hr_cancel_payment", "hr_save_clt_employee", "hr_save_settings", "hr_close_payroll"]) {
     assert.ok(src.includes(`rpc("${rpc}"`), rpc);
   }
   // pagamento, presença e ajustes nunca são gravados direto, e o app não escreve no financeiro por conta própria
   assert.ok(!/from\("hr_(payments|time_entries|adjustments)"\)\s*\.(insert|update|delete|upsert)/.test(src));
   assert.ok(!src.includes('from("financial_entries")') && !src.includes('from("cash_movements")'));
-  // cadastro sempre informal nesta fase
+  // cadastro informal grava direto; CLT só pela função atômica (funcionário + contrato)
   assert.ok(src.includes('mode: "informal"'));
+  assert.ok(src.includes('rpc("hr_save_clt_employee"'));
   // os caminhos de dinheiro atualizam Caixa e Financeiro
   assert.ok(src.includes('revalidatePath("/app/caixa")') && src.includes('revalidatePath("/app/financeiro")'));
 });
@@ -116,4 +117,50 @@ test("período por extenso", () => {
   assert.equal(formatPeriod("2026-11-02", "2026-11-08"), "02/11 a 08/11/2026");
   assert.equal(formatPeriod("2026-12-28", "2027-01-03"), "28/12/2026 a 03/01/2027");
   assert.equal(formatPeriod("2026-11-08", "2026-11-08"), "08/11/2026");
+});
+
+test("fase 2 (CLT): migração, tabelas de imposto versionadas e folha com limites de sanidade", () => {
+  const sql = read("supabase/migrations/20261108170000_hr_clt.sql");
+  // modo CLT liberado, mas sempre mensal e de valor fixo
+  assert.ok(sql.includes("drop constraint if exists hr_employees_phase1_informal_only"));
+  assert.ok(sql.includes("check (mode <> 'clt' or (rate_kind = 'fixed' and pay_frequency = 'monthly'))"));
+  // tabelas novas: RLS, só leitura para o app, sem anon
+  for (const table of ["hr_employee_clt", "hr_settings", "hr_tax_tables"]) {
+    assert.ok(sql.includes(`alter table public.${table} enable row level security`), table);
+    assert.match(sql, new RegExp(`revoke insert, update, delete, truncate on table public\\.${table} from authenticated`), table);
+    assert.match(sql, new RegExp(`revoke all on table public\\.${table} from anon`), table);
+  }
+  // seed 2026 com fonte e versionado por vigência
+  assert.ok(sql.includes("valid_from") && sql.includes("unique (kind, valid_from)"));
+  assert.ok(sql.includes("Portaria MPS/MF nº 13") && sql.includes("Lei 15.270/2025"));
+  assert.ok(sql.includes('"upto":8475.55') && sql.includes('"zero_until":5000.00') && sql.includes('"minimum_wage":1621.00'));
+  // a folha: base e lançamentos do banco; INSS/IRRF/VT do app só com limites de sanidade
+  assert.ok(sql.includes("create or replace function public.hr_close_payroll("));
+  assert.ok(sql.includes("INSS acima do limite esperado") && sql.includes("IRRF acima do limite esperado"));
+  assert.ok(sql.includes("Já existe um pagamento para este funcionário neste mês"));
+  assert.ok(sql.includes("if v_net < 0 then raise exception"));
+  assert.ok(sql.includes("Funcionário CLT: feche a folha do mês"), "período por dias recusa CLT");
+  // funções novas sem execução anônima
+  for (const name of ["hr_close_payroll", "hr_save_settings", "hr_save_clt_employee"]) {
+    assert.match(sql, new RegExp(`revoke all on function public\\.${name}\\([^)]*\\) from public, anon;`), name);
+  }
+  assert.ok(sql.includes("revoke all on function public.hr_employees_guard() from public, anon, authenticated"));
+  assert.ok(existsSync("supabase/rollback/20261108170000_hr_clt.down.sql"));
+  assert.ok(existsSync("tests/sql/hr_clt.sql"));
+  // o rollback não apaga CLT em silêncio
+  assert.ok(read("supabase/rollback/20261108170000_hr_clt.down.sql").includes("Rollback interrompido"));
+});
+
+test("fase 2 (CLT): a folha usa as tabelas do banco e o app calcula a mesma conta na tela e ao fechar", () => {
+  const service = read("src/lib/hr/payroll-service.ts");
+  assert.ok(service.includes("getPayrollTables(") && service.includes("estimatePayroll("));
+  const actions = read("src/lib/hr/actions.ts");
+  assert.ok(actions.includes("buildPayroll("), "ao fechar, recalcula no servidor (não aceita número do navegador)");
+  const close = actions.slice(actions.indexOf("export async function closePayrollAction"));
+  assert.ok(close.includes("p_inss: result.inss") && close.includes("p_irrf: result.irrf") && close.includes("p_vt: result.vt"));
+  assert.ok(!/formData\.get\("(inss|irrf|vt)"\)/.test(close), "INSS/IRRF/VT nunca vêm do formulário");
+  // a tela avisa que é estimativa
+  assert.ok(read("src/app/(app)/app/rh/[id]/page.tsx").includes("Estimativa para controle interno"));
+  const queries = read("src/lib/hr/queries.ts");
+  assert.ok(queries.includes('.from("hr_tax_tables")') && queries.includes(".lte(\"valid_from\", monthStart)"));
 });

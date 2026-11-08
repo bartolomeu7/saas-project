@@ -14,15 +14,20 @@ import {
   AdjustmentForm,
   AttendanceDays,
   AttendanceRangeForm,
+  ClosePayrollForm,
   ClosePeriodForm,
   DeleteAdjustmentButton,
   type AttendanceDay,
 } from "@/components/app/hr-forms";
 import { getCurrentCompany } from "@/lib/companies/queries";
+import { parseMoneyInput } from "@/lib/parse-money";
 import { can } from "@/lib/permissions/matrix";
 import {
   getEarliestUnsettledDay,
   getEmployee,
+  getEmployeeClt,
+  getHrSettings,
+  hasPaymentInMonth,
   getLastClosedPeriodEnd,
   getPeriodPreview,
   listAdjustments,
@@ -30,7 +35,8 @@ import {
   listTimeEntries,
 } from "@/lib/hr/queries";
 import { setEmployeeStatusAction } from "@/lib/hr/actions";
-import { ADJUSTMENT_LABELS, formatPeriod, PAYMENT_STATUS_LABELS } from "@/lib/hr/labels";
+import { buildPayroll, MONTH_PATTERN } from "@/lib/hr/payroll-service";
+import { ADJUSTMENT_LABELS, CONTRACT_TYPE_LABELS, formatPeriod, PAYMENT_STATUS_LABELS } from "@/lib/hr/labels";
 import { addDays, daysInMonth, dueState, formatDays, FREQUENCY_LABELS, nextPayday, paydayLabel, suggestPeriod, weekdayOf } from "@/lib/hr/schedule";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { todayDateSaoPaulo } from "@/lib/timezone";
@@ -38,13 +44,22 @@ import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Funcionário" };
 
-const TABS = [
+const INFORMAL_TABS = [
   ["resumo", "Resumo"],
   ["presenca", "Presença"],
   ["vales", "Vales e descontos"],
   ["fechar", "Fechar período"],
   ["pagamentos", "Pagamentos"],
 ] as const;
+
+const CLT_TABS = [
+  ["resumo", "Resumo"],
+  ["folha", "Folha do mês"],
+  ["vales", "Vales, descontos e bônus"],
+  ["pagamentos", "Pagamentos"],
+] as const;
+
+type TabKey = (typeof INFORMAL_TABS)[number][0] | (typeof CLT_TABS)[number][0];
 
 const SHORT_WEEKDAYS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
 const MONTH_NAMES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
@@ -57,7 +72,7 @@ function shiftMonth(month: string, delta: number): string {
   return `${Math.floor(index / 12)}-${String((index % 12) + 1).padStart(2, "0")}`;
 }
 
-type Params = { aba?: string; mes?: string; de?: string; ate?: string };
+type Params = { aba?: string; mes?: string; de?: string; ate?: string; he50?: string; he100?: string; faltas?: string };
 
 export default async function HrEmployeePage({
   params: paramsPromise,
@@ -74,7 +89,9 @@ export default async function HrEmployeePage({
   if (!employee) notFound();
 
   const today = todayDateSaoPaulo();
-  const tab = TABS.some(([key]) => key === searchParams?.aba) ? (searchParams.aba as (typeof TABS)[number][0]) : "resumo";
+  const isClt = employee.mode === "clt";
+  const tabs: readonly (readonly [TabKey, string])[] = isClt ? CLT_TABS : INFORMAL_TABS;
+  const tab: TabKey = tabs.some(([key]) => key === searchParams?.aba) ? (searchParams.aba as TabKey) : "resumo";
   const base = `/app/rh/${employee.id}`;
   const deactivate = setEmployeeStatusAction.bind(null, employee.id, employee.status === "active" ? "inactive" : "active");
 
@@ -90,7 +107,11 @@ export default async function HrEmployeePage({
             <Badge variant={employee.status === "active" ? "success" : "muted"}>{employee.status === "active" ? "Ativo" : "Inativo"}</Badge>
           </span>
         }
-        description={`${employee.role_title || "Sem função informada"} · ${FREQUENCY_LABELS[employee.pay_frequency]} (${paydayLabel(employee)}) · ${formatCurrency(employee.base_amount)} ${employee.rate_kind === "per_day" ? "por dia" : "por período"}`}
+        description={
+          isClt
+            ? `${employee.role_title || "Sem função informada"} · CLT · salário ${formatCurrency(employee.base_amount)} · paga todo dia ${employee.pay_day_of_month}`
+            : `${employee.role_title || "Sem função informada"} · ${FREQUENCY_LABELS[employee.pay_frequency]} (${paydayLabel(employee)}) · ${formatCurrency(employee.base_amount)} ${employee.rate_kind === "per_day" ? "por dia" : "por período"}`
+        }
         actions={
           <div className="flex flex-wrap gap-2">
             <Link href={`${base}/editar`} className={cn(buttonVariants({ variant: "outline" }), "gap-2")}><Pencil className="h-4 w-4" aria-hidden /> Editar</Link>
@@ -102,7 +123,7 @@ export default async function HrEmployeePage({
       />
 
       <nav aria-label="Seções do funcionário" className="-mx-1 flex gap-1 overflow-x-auto border-b px-1">
-        {TABS.map(([key, label]) => (
+        {tabs.map(([key, label]) => (
           <Link
             key={key}
             href={key === "resumo" ? base : `${base}?aba=${key}`}
@@ -118,6 +139,18 @@ export default async function HrEmployeePage({
       </nav>
 
       {tab === "resumo" ? <SummaryTab employeeId={employee.id} companyId={current.company.id} employee={employee} today={today} base={base} /> : null}
+      {tab === "folha" && isClt ? (
+        <PayrollTab
+          employee={employee}
+          companyId={current.company.id}
+          today={today}
+          base={base}
+          month={MONTH_PATTERN.test(searchParams?.mes ?? "") ? (searchParams.mes as string) : today.slice(0, 7)}
+          overtime50={searchParams?.he50 ?? ""}
+          overtime100={searchParams?.he100 ?? ""}
+          absences={searchParams?.faltas ?? ""}
+        />
+      ) : null}
       {tab === "presenca" ? <AttendanceTab employeeId={employee.id} month={isMonth(searchParams?.mes) ? searchParams.mes : today.slice(0, 7)} today={today} base={base} /> : null}
       {tab === "vales" ? <AdjustmentsTab employeeId={employee.id} today={today} /> : null}
       {tab === "fechar" ? (
@@ -144,6 +177,7 @@ async function SummaryTab({ employeeId, companyId, employee, today, base }: { em
   const sum = (kind: string) => open.filter((row) => row.kind === kind).reduce((total, row) => total + row.amount, 0);
   const pending = payments.filter((payment) => payment.status === "pending");
   const payday = nextPayday(employee, today);
+  const clt = employee.mode === "clt" ? await getEmployeeClt(employeeId) : null;
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -156,6 +190,17 @@ async function SummaryTab({ employeeId, companyId, employee, today, base }: { em
           <dt className="text-muted-foreground">Chave Pix</dt><dd className="break-all">{employee.pix_key || "—"}</dd>
           <dt className="text-muted-foreground">Próximo pagamento</dt><dd>{employee.status === "active" ? (payday === today ? "hoje" : formatDate(payday)) : "—"}</dd>
         </dl>
+        {clt ? (
+          <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 border-t pt-3 text-sm">
+            <dt className="text-muted-foreground">Contrato</dt>
+            <dd>{CONTRACT_TYPE_LABELS[clt.contract_type]}{clt.experience_days ? ` (${clt.experience_days} dias)` : ""}</dd>
+            <dt className="text-muted-foreground">Jornada</dt><dd>{clt.weekly_hours} h por semana</dd>
+            <dt className="text-muted-foreground">Dependentes (IR)</dt><dd>{clt.dependents}</dd>
+            <dt className="text-muted-foreground">Vale-transporte</dt>
+            <dd>{clt.vt_enabled ? (clt.vt_monthly_cost ? `Sim (custo ${formatCurrency(clt.vt_monthly_cost)})` : "Sim") : "Não"}</dd>
+            {clt.contract_end_on ? (<><dt className="text-muted-foreground">Fim do contrato</dt><dd>{formatDate(clt.contract_end_on)}</dd></>) : null}
+          </dl>
+        ) : null}
         {employee.notes ? <p className="mt-3 whitespace-pre-line border-t pt-3 text-sm text-muted-foreground">{employee.notes}</p> : null}
       </section>
 
@@ -166,7 +211,9 @@ async function SummaryTab({ employeeId, companyId, employee, today, base }: { em
           <dt className="text-muted-foreground">Descontos</dt><dd>{formatCurrency(sum("deduction"))}</dd>
           <dt className="text-muted-foreground">Bônus</dt><dd>{formatCurrency(sum("bonus"))}</dd>
         </dl>
-        <Link href={`${base}?aba=fechar`} className={cn(buttonVariants({ size: "sm" }), "mt-4")}>Fechar período</Link>
+        <Link href={employee.mode === "clt" ? `${base}?aba=folha` : `${base}?aba=fechar`} className={cn(buttonVariants({ size: "sm" }), "mt-4")}>
+          {employee.mode === "clt" ? "Ver folha do mês" : "Fechar período"}
+        </Link>
       </section>
 
       <section className="rounded-lg border lg:col-span-2" aria-labelledby="resumo-pagamentos">
@@ -345,5 +392,146 @@ async function PaymentsTab({ companyId, employeeId, today }: { companyId: string
       <h2 id="pag-historico" className="border-b px-4 py-3 text-sm font-semibold">Pagamentos deste funcionário</h2>
       {payments.length === 0 ? <p className="px-4 py-6 text-sm text-muted-foreground">Nenhum pagamento ainda.</p> : <PaymentList payments={payments} today={today} />}
     </section>
+  );
+}
+
+const num = (value: string): number | null => (value.trim() === "" ? 0 : parseMoneyInput(value));
+
+function Line({ label, value, muted, strong, negative }: { label: string; value: number; muted?: boolean; strong?: boolean; negative?: boolean }) {
+  return (
+    <>
+      <dt className={cn(muted && "text-muted-foreground", strong && "border-t pt-2 font-semibold")}>{label}</dt>
+      <dd className={cn("text-right", strong && "border-t pt-2 text-lg font-semibold")}>{negative ? "− " : ""}{formatCurrency(value)}</dd>
+    </>
+  );
+}
+
+async function PayrollTab({
+  employee,
+  companyId,
+  today,
+  base,
+  month,
+  overtime50,
+  overtime100,
+  absences,
+}: {
+  employee: NonNullable<Awaited<ReturnType<typeof getEmployee>>>;
+  companyId: string;
+  today: string;
+  base: string;
+  month: string;
+  overtime50: string;
+  overtime100: string;
+  absences: string;
+}) {
+  const [clt, settings] = await Promise.all([getEmployeeClt(employee.id), getHrSettings(companyId)]);
+  if (!clt) {
+    return (
+      <Alert variant="destructive">
+        Faltam os dados do contrato (jornada e tipo). <Link href={`${base}/editar`} className="underline underline-offset-4">Complete o cadastro</Link>.
+      </Alert>
+    );
+  }
+
+  const he50 = num(overtime50);
+  const he100 = num(overtime100);
+  const abs = num(absences);
+  const inputsValid = he50 !== null && he100 !== null && abs !== null && he50 <= 200 && he100 <= 200 && abs <= 31;
+  const built = inputsValid
+    ? await buildPayroll({ employee, clt, settings, month, overtime50: he50, overtime100: he100, absenceDays: abs })
+    : null;
+  const monthStart = `${month}-01`;
+  const [yearText = "1970", monthText = "01"] = month.split("-");
+  const monthEnd = `${month}-${String(daysInMonth(Number(yearText), Number(monthText))).padStart(2, "0")}`;
+  const futureMonth = monthStart > today;
+  const alreadyClosed = await hasPaymentInMonth(employee.id, monthStart, monthEnd);
+  const due = nextPayday(employee, monthEnd);
+
+  return (
+    <div className="flex flex-col gap-4">
+      <form method="get" className="grid gap-3 rounded-lg border p-4 sm:grid-cols-5 sm:items-end">
+        <input type="hidden" name="aba" value="folha" />
+        <div className="flex flex-col gap-2 sm:col-span-2">
+          <Label htmlFor="mes">Mês da folha</Label>
+          <Input id="mes" name="mes" type="month" defaultValue={month} required />
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="he50">Horas extras 50%</Label>
+          <Input id="he50" name="he50" inputMode="decimal" defaultValue={overtime50} placeholder="0" />
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="he100">Horas extras 100%</Label>
+          <Input id="he100" name="he100" inputMode="decimal" defaultValue={overtime100} placeholder="0" />
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="faltas">Faltas (dias)</Label>
+          <Input id="faltas" name="faltas" inputMode="decimal" defaultValue={absences} placeholder="0" />
+        </div>
+        <Button type="submit" variant="outline" className="sm:col-span-5 sm:w-fit">Calcular</Button>
+      </form>
+
+      <Alert variant="warning">
+        <strong>Estimativa para controle interno.</strong> Não substitui o holerite oficial, o eSocial nem o seu contador. Não considera DSR sobre horas extras e faltas, adicional noturno, insalubridade ou periculosidade.
+      </Alert>
+
+      {!inputsValid ? (
+        <Alert variant="destructive">Horas extras (até 200) e faltas (até 31) devem ser números.</Alert>
+      ) : !built ? null : !built.ok ? (
+        <Alert variant="destructive">{built.error}</Alert>
+      ) : (
+        <>
+          {employee.base_amount < built.input.tables.params.minimum_wage ? (
+            <Alert variant="warning">O salário está abaixo do salário mínimo ({formatCurrency(built.input.tables.params.minimum_wage)}).</Alert>
+          ) : null}
+          <section className="rounded-lg border p-4" aria-labelledby="folha-conta">
+            <h2 id="folha-conta" className="mb-3 text-sm font-semibold">Holerite estimado — {MONTH_NAMES[Number(monthText) - 1]} de {yearText}</h2>
+            <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-2 text-sm">
+              <Line label="Salário" value={built.result.salary} />
+              <Line label={`Horas extras 50% (${formatDays(he50 ?? 0)} h)`} value={built.result.overtime50} muted />
+              <Line label={`Horas extras 100% (${formatDays(he100 ?? 0)} h)`} value={built.result.overtime100} muted />
+              <Line label="Bônus em aberto" value={built.result.bonus} muted />
+              <Line label={`Faltas (${formatDays(abs ?? 0)} dia(s))`} value={built.result.absences} muted negative />
+              <Line label="Total bruto" value={built.result.gross} strong />
+              <Line label="INSS" value={built.result.inss} muted negative />
+              <Line label="Imposto de Renda (IRRF)" value={built.result.irrf} muted negative />
+              <Line label="Vale-transporte" value={built.result.vt} muted negative />
+              <Line label="Outros descontos em aberto" value={built.result.otherDeductions} muted negative />
+              <Line label="Vales já pagos" value={built.result.advances} muted negative />
+              <Line label="Líquido a pagar" value={built.result.net} strong />
+            </dl>
+            <p className="mt-3 text-xs text-muted-foreground">
+              IRRF: base {formatCurrency(built.result.irrfDetail.base)} ({built.result.irrfDetail.usedSimplified ? "desconto simplificado" : "INSS e dependentes"}); imposto da tabela {formatCurrency(built.result.irrfDetail.tableTax)}; redução da Lei 15.270 de {formatCurrency(built.result.irrfDetail.reduction)}. Tabelas vigentes desde {formatDate(built.versions.inss)} (INSS) e {formatDate(built.versions.irrf)} (IRRF).
+            </p>
+          </section>
+
+          <section className="rounded-lg border p-4" aria-labelledby="folha-empresa">
+            <h2 id="folha-empresa" className="mb-3 text-sm font-semibold">Custo para a empresa (estimativa)</h2>
+            <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-2 text-sm">
+              <Line label="Total bruto" value={built.result.gross} muted />
+              <Line label="FGTS (8%)" value={built.result.employer.fgts} muted />
+              <Line label="INSS patronal" value={built.result.employer.inss} muted />
+              <Line label="Custo total do mês" value={built.result.employer.totalCost} strong />
+            </dl>
+            <p className="mt-3 text-xs text-muted-foreground">
+              {built.result.employer.inssNote}{" "}
+              <Link href="/app/rh/configuracoes" className="underline underline-offset-4">Mudar o regime da empresa</Link>. FGTS, INSS e IRRF são recolhidos por você nas guias oficiais; o Prime Ges não lança esses recolhimentos no Financeiro.
+            </p>
+          </section>
+
+          {futureMonth ? (
+            <Alert variant="destructive">Este mês ainda não começou: dá para ver a estimativa, mas não fechar a folha.</Alert>
+          ) : alreadyClosed ? (
+            <Alert variant="warning">Este mês já tem um pagamento fechado. Veja em <Link href={`${base}?aba=pagamentos`} className="underline underline-offset-4">Pagamentos</Link>.</Alert>
+          ) : built.result.net < 0 ? (
+            <Alert variant="destructive">Descontos e vales passam do valor a pagar. Revise os lançamentos.</Alert>
+          ) : built.result.gross <= 0 ? (
+            <EmptyState title="Nada a pagar neste mês." description="O total bruto está zerado." />
+          ) : (
+            <ClosePayrollForm employeeId={employee.id} month={month} overtime50={overtime50} overtime100={overtime100} absences={absences} dueOn={due} />
+          )}
+        </>
+      )}
+    </div>
   );
 }

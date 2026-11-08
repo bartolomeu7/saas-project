@@ -5,9 +5,11 @@ import type { ActionResult } from "@/lib/auth/actions";
 import {
   addAdjustmentAction,
   cancelPaymentAction,
+  closePayrollAction,
   closePeriodAction,
   deleteAdjustmentAction,
   payPaymentAction,
+  saveHrSettingsAction,
   setAttendanceAction,
 } from "@/lib/hr/actions";
 import { FormMessage } from "@/components/shared/auth/form-message";
@@ -237,6 +239,77 @@ export function CancelPaymentButton({ paymentId }: { paymentId: string }) {
       <input type="hidden" name="paymentId" value={paymentId} />
       <FormMessage state={state} />
       <Button type="submit" variant="outline" size="sm">Cancelar este pagamento</Button>
+    </form>
+  );
+}
+
+export function ClosePayrollForm({
+  employeeId,
+  month,
+  overtime50,
+  overtime100,
+  absences,
+  dueOn,
+}: {
+  employeeId: string;
+  month: string;
+  overtime50: string;
+  overtime100: string;
+  absences: string;
+  dueOn: string;
+}) {
+  const [state, formAction] = useFormState(closePayrollAction, initialState);
+  const keepInput = useKeepInputOnError(state);
+  return (
+    <form action={formAction} onReset={keepInput} className="grid gap-3 rounded-lg border p-4 sm:grid-cols-2">
+      <input type="hidden" name="employeeId" value={employeeId} />
+      <input type="hidden" name="month" value={month} />
+      <input type="hidden" name="overtime50" value={overtime50} />
+      <input type="hidden" name="overtime100" value={overtime100} />
+      <input type="hidden" name="absences" value={absences} />
+      <div className="sm:col-span-2"><FormMessage state={state} /></div>
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="payroll_due">Data prevista do pagamento</Label>
+        <Input id="payroll_due" name="due_on" type="date" defaultValue={dueOn} />
+      </div>
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="payroll_notes">Observação (sai no recibo)</Label>
+        <Input id="payroll_notes" name="notes" maxLength={1000} />
+      </div>
+      <SubmitButton state={state} pendingLabel="Fechando..." successLabel="Fechado" className="w-full sm:w-fit">Fechar folha e gerar pagamento</SubmitButton>
+    </form>
+  );
+}
+
+export function HrSettingsForm({ regime, inssPercent }: { regime: "simples" | "mei" | "other"; inssPercent: string }) {
+  const [state, formAction] = useFormState(saveHrSettingsAction, initialState);
+  const keepInput = useKeepInputOnError(state);
+  return (
+    <form action={formAction} onReset={keepInput} className="grid gap-4 rounded-lg border p-4">
+      <FormMessage state={state} />
+      <fieldset className="flex flex-col gap-2">
+        <legend className="mb-1 text-sm font-semibold">Regime da empresa</legend>
+        {(
+          [
+            ["simples", "Simples Nacional", "O INSS patronal já está dentro do DAS. A folha estimada não soma INSS patronal separado."],
+            ["mei", "MEI", "Paga 3% de INSS sobre o salário e 8% de FGTS. Só pode ter 1 empregado, com salário de até 1 mínimo (ou o piso da categoria)."],
+            ["other", "Outro regime", "Informe o percentual de INSS patronal que o seu contador indicou."],
+          ] as const
+        ).map(([key, title, description]) => (
+          <label key={key} className="flex cursor-pointer items-start gap-3 rounded-md border p-3 text-sm hover:bg-accent">
+            <input type="radio" name="employer_regime" value={key} defaultChecked={regime === key} className="mt-1" />
+            <span>
+              <span className="font-medium">{title}</span>
+              <span className="block text-xs text-muted-foreground">{description}</span>
+            </span>
+          </label>
+        ))}
+      </fieldset>
+      <div className="flex flex-col gap-2 sm:max-w-xs">
+        <Label htmlFor="employer_inss_percent">Percentual de INSS patronal (só para “Outro regime”)</Label>
+        <Input id="employer_inss_percent" name="employer_inss_percent" inputMode="decimal" defaultValue={inssPercent} placeholder="20,00" />
+      </div>
+      <SubmitButton state={state} pendingLabel="Salvando..." className="w-full sm:w-fit">Salvar configurações</SubmitButton>
     </form>
   );
 }

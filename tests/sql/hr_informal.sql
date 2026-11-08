@@ -70,9 +70,11 @@ select pg_temp.chk('cadastro', 'valor zero é recusado',
 select pg_temp.chk('cadastro', 'nome curto demais é recusado',
   $q$insert into public.hr_employees (company_id, full_name, rate_kind, base_amount, pay_frequency, pay_weekday)
      values ('ffffffff-1000-0000-0000-0000000000e1', 'Al', 'fixed', 50, 'weekly', 1)$q$, 'ERR=hr_employees_name_length');
-select pg_temp.chk('cadastro', 'modo CLT ainda não é aceito (fase 1)',
-  $q$insert into public.hr_employees (company_id, full_name, mode, rate_kind, base_amount, pay_frequency, pay_day_of_month)
-     values ('ffffffff-1000-0000-0000-0000000000e1', 'Teste Clt', 'clt', 'fixed', 2000, 'monthly', 5)$q$, 'ERR=hr_employees_phase1_informal_only');
+-- Fase 1: só informal (hr_employees_phase1_informal_only). Fase 2: CLT só mensal e fixo (hr_employees_clt_shape).
+-- Em qualquer das duas, um CLT semanal é recusado por uma trava do cadastro.
+select pg_temp.chk('cadastro', 'CLT semanal é recusado (trava de cadastro)',
+  $q$insert into public.hr_employees (company_id, full_name, mode, rate_kind, base_amount, pay_frequency, pay_weekday)
+     values ('ffffffff-1000-0000-0000-0000000000e1', 'Teste Clt', 'clt', 'fixed', 2000, 'weekly', 5)$q$, 'ERR=hr_employees_');
 select pg_temp.chk('cadastro', 'dono não cria funcionário em outra empresa',
   $q$insert into public.hr_employees (company_id, full_name, rate_kind, base_amount, pay_frequency, pay_weekday)
      values ('ffffffff-1000-0000-0000-0000000000e4', 'Invasor Teste', 'fixed', 50, 'weekly', 1)$q$, 'ERR=row-level security');
