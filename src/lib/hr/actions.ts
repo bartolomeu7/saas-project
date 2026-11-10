@@ -9,7 +9,8 @@ import { can } from "@/lib/permissions/matrix";
 import { parseMoneyInput } from "@/lib/parse-money";
 import { todayDateSaoPaulo } from "@/lib/timezone";
 import { addDays, diffDays } from "@/lib/hr/schedule";
-import { getEmployee, getEmployeeClt, getHrSettings } from "@/lib/hr/queries";
+import { getEmployee, getEmployeeClt, getHrSettings, getPayrollTables, listVacations } from "@/lib/hr/queries";
+import { calcThirteenth, calcVacationPay, thirteenthAvos } from "@/lib/hr/payroll";
 import { buildPayroll, MONTH_PATTERN } from "@/lib/hr/payroll-service";
 import type { ActionResult } from "@/lib/auth/actions";
 import type { HrAdjustmentKind, HrContractType, HrEmployerRegime, HrPayFrequency, HrPayMethod, HrRateKind } from "@/types/hr";
@@ -439,11 +440,13 @@ export async function closePayrollAction(_prev: ActionResult, formData: FormData
   const overtime50 = parseMoneyInput(text(formData.get("overtime50")) || "0");
   const overtime100 = parseMoneyInput(text(formData.get("overtime100")) || "0");
   const absences = parseMoneyInput(text(formData.get("absences")) || "0");
+  const vacationDays = parseMoneyInput(text(formData.get("vacation_days")) || "0");
   const dueOn = text(formData.get("due_on"));
   const notes = text(formData.get("notes"));
   if (!employeeId) return { error: "Funcionário inválido." };
   if (!MONTH_PATTERN.test(month)) return { error: "Mês inválido." };
-  if (overtime50 === null || overtime100 === null || absences === null) return { error: "Horas extras e faltas devem ser números." };
+  if (overtime50 === null || overtime100 === null || absences === null || vacationDays === null) return { error: "Horas extras, faltas e dias de férias devem ser números." };
+  if (absences + vacationDays > 31) return { error: "Faltas mais dias de férias não podem passar de 31 dias." };
   if (dueOn && !isDate(dueOn)) return { error: "Data de pagamento inválida." };
   const guard = await manager();
   if ("error" in guard) return guard;
@@ -453,7 +456,7 @@ export async function closePayrollAction(_prev: ActionResult, formData: FormData
   const [clt, settings] = await Promise.all([getEmployeeClt(employeeId), getHrSettings(guard.companyId)]);
   if (!clt) return { error: "Complete o cadastro CLT do funcionário (jornada e contrato)." };
 
-  const built = await buildPayroll({ employee, clt, settings, month, overtime50, overtime100, absenceDays: absences });
+  const built = await buildPayroll({ employee, clt, settings, month, overtime50, overtime100, absenceDays: absences, vacationDays });
   if (!built.ok) return { error: built.error };
   const { result, versions } = built;
 
@@ -463,7 +466,7 @@ export async function closePayrollAction(_prev: ActionResult, formData: FormData
     p_month: built.monthStart,
     p_overtime50_hours: overtime50,
     p_overtime100_hours: overtime100,
-    p_absence_days: absences,
+    p_absence_days: absences + vacationDays,
     p_inss: result.inss,
     p_irrf: result.irrf,
     p_vt: result.vt,
@@ -473,7 +476,7 @@ export async function closePayrollAction(_prev: ActionResult, formData: FormData
       estimate: true,
       tables: versions,
       regime: settings.employer_regime,
-      inputs: { overtime50, overtime100, absences, dependents: clt.dependents, weekly_hours: clt.weekly_hours },
+      inputs: { overtime50, overtime100, absences, vacationDays, dependents: clt.dependents, weekly_hours: clt.weekly_hours },
       result,
     },
   });
@@ -481,4 +484,133 @@ export async function closePayrollAction(_prev: ActionResult, formData: FormData
   revalidateHr(employeeId);
   const paymentId = (Array.isArray(data) ? data[0] : data)?.id as string | undefined;
   redirect(paymentId ? `/app/rh/pagamentos/${paymentId}` : `/app/rh/${employeeId}?aba=pagamentos`);
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Férias e 13º (CLT)
+// ---------------------------------------------------------------------------------------------------------------------
+
+function revalidateVacations(employeeId: string) {
+  revalidateHr(employeeId);
+  revalidatePath("/app/rh");
+}
+
+export async function scheduleVacationAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
+  const employeeId = text(formData.get("employeeId"));
+  const acquisitionStart = text(formData.get("acquisition_start"));
+  const startOn = text(formData.get("start_on"));
+  const days = Number(text(formData.get("days")));
+  const absences = Number(text(formData.get("absences")) || "0");
+  const notes = text(formData.get("notes"));
+  if (!employeeId) return { error: "Funcionário inválido." };
+  if (!isDate(acquisitionStart)) return { error: "Escolha o período aquisitivo." };
+  if (!isDate(startOn)) return { error: "Informe o primeiro dia das férias." };
+  if (!Number.isInteger(days) || days < 5 || days > 30) return { error: "Informe de 5 a 30 dias de férias." };
+  if (!Number.isInteger(absences) || absences < 0 || absences > 365) return { error: "Faltas inválidas." };
+  if (notes.length > 500) return { error: "Observação longa demais (máximo 500)." };
+  const guard = await manager();
+  if ("error" in guard) return guard;
+
+  const supabase = (await createSessionClient()) as any;
+  const { error } = await supabase.rpc("hr_schedule_vacation", {
+    p_employee_id: employeeId,
+    p_acquisition_start: acquisitionStart,
+    p_start_on: startOn,
+    p_days: days,
+    p_absences: absences,
+    p_notes: notes || null,
+  });
+  if (error) return { error: error.message || "Não foi possível programar as férias." };
+  revalidateVacations(employeeId);
+  return { success: "Férias programadas." };
+}
+
+export async function cancelVacationAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
+  const vacationId = text(formData.get("vacationId"));
+  const employeeId = text(formData.get("employeeId"));
+  if (!vacationId) return { error: "Férias inválidas." };
+  const guard = await manager();
+  if ("error" in guard) return guard;
+  const supabase = (await createSessionClient()) as any;
+  const { error } = await supabase.rpc("hr_cancel_vacation", { p_vacation_id: vacationId });
+  if (error) return { error: error.message || "Não foi possível cancelar." };
+  revalidateVacations(employeeId);
+  return { success: "Férias canceladas." };
+}
+
+/** Gera o pagamento das férias: o app calcula INSS/IRRF com as tabelas; o banco confere e grava. */
+export async function closeVacationPayAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
+  const vacationId = text(formData.get("vacationId"));
+  const employeeId = text(formData.get("employeeId"));
+  if (!vacationId || !employeeId) return { error: "Férias inválidas." };
+  const guard = await manager();
+  if ("error" in guard) return guard;
+
+  const employee = await getEmployee(guard.companyId, employeeId);
+  if (!employee || employee.mode !== "clt") return { error: "Funcionário CLT não encontrado." };
+  const [clt, vacations] = await Promise.all([getEmployeeClt(employeeId), listVacations(employeeId)]);
+  const vacation = vacations.find((row) => row.id === vacationId);
+  if (!vacation) return { error: "Férias não encontradas." };
+  if (!clt) return { error: "Complete o cadastro CLT do funcionário (jornada e contrato)." };
+
+  const loaded = await getPayrollTables(`${vacation.start_on.slice(0, 7)}-01`);
+  if (!loaded) return { error: "Não há tabela de INSS/IRRF cadastrada para este mês. Fale com o suporte." };
+  const result = calcVacationPay({ salary: employee.base_amount, days: vacation.days, dependents: clt.dependents, tables: loaded.tables });
+
+  const supabase = (await createSessionClient()) as any;
+  const { data, error } = await supabase.rpc("hr_close_vacation_pay", {
+    p_vacation_id: vacationId,
+    p_inss: result.inss,
+    p_irrf: result.irrf,
+    p_due_on: null,
+    p_notes: null,
+    p_calc: { estimate: true, tables: loaded.versions, days: vacation.days, result },
+  });
+  if (error) return { error: error.message || "Não foi possível gerar o pagamento das férias." };
+  revalidateVacations(employeeId);
+  const paymentId = (Array.isArray(data) ? data[0] : data)?.id as string | undefined;
+  redirect(paymentId ? `/app/rh/pagamentos/${paymentId}` : `/app/rh/${employeeId}?aba=ferias`);
+}
+
+/** Gera uma parcela do 13º (1ª: metade sem descontos; 2ª: complemento com INSS e IRRF do total). */
+export async function closeThirteenthAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
+  const employeeId = text(formData.get("employeeId"));
+  const year = Number(text(formData.get("year")));
+  const installment = Number(text(formData.get("installment")));
+  const firstElsewhere = text(formData.get("first_elsewhere")) === "on";
+  if (!employeeId) return { error: "Funcionário inválido." };
+  if (!Number.isInteger(year) || year < 2000 || year > Number(todayDateSaoPaulo().slice(0, 4))) return { error: "Ano inválido." };
+  if (installment !== 1 && installment !== 2) return { error: "Parcela inválida." };
+  const guard = await manager();
+  if ("error" in guard) return guard;
+
+  const employee = await getEmployee(guard.companyId, employeeId);
+  if (!employee || employee.mode !== "clt") return { error: "Funcionário CLT não encontrado." };
+  if (!employee.started_on) return { error: "Informe a data de admissão no cadastro do funcionário." };
+  const clt = await getEmployeeClt(employeeId);
+  if (!clt) return { error: "Complete o cadastro CLT do funcionário (jornada e contrato)." };
+
+  const avos = thirteenthAvos(employee.started_on, year, employee.status === "inactive" ? employee.ended_on : null);
+  if (avos < 1) return { error: "Sem avos de 13º neste ano para este funcionário." };
+  const loaded = await getPayrollTables(`${year}-12-01`);
+  if (!loaded) return { error: "Não há tabela de INSS/IRRF cadastrada para este ano. Fale com o suporte." };
+  const result = calcThirteenth({ salary: employee.base_amount, avos, dependents: clt.dependents, tables: loaded.tables });
+
+  const supabase = (await createSessionClient()) as any;
+  const { data, error } = await supabase.rpc("hr_close_thirteenth", {
+    p_employee_id: employeeId,
+    p_year: year,
+    p_installment: installment,
+    p_avos: avos,
+    p_inss: installment === 2 ? result.inss : 0,
+    p_irrf: installment === 2 ? result.irrf : 0,
+    p_due_on: null,
+    p_first_paid_elsewhere: firstElsewhere,
+    p_notes: null,
+    p_calc: { estimate: true, tables: loaded.versions, result },
+  });
+  if (error) return { error: error.message || "Não foi possível gerar a parcela do 13º." };
+  revalidateVacations(employeeId);
+  const paymentId = (Array.isArray(data) ? data[0] : data)?.id as string | undefined;
+  redirect(paymentId ? `/app/rh/pagamentos/${paymentId}` : `/app/rh/${employeeId}?aba=ferias`);
 }

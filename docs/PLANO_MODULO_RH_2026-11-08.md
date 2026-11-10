@@ -132,4 +132,5 @@ Em cada fase: testes unitários + bateria SQL + rollback provado + teste no site
 
 - **RH-1 (Informal):** pronta, em Produção (PR #82 e #83).
 - **RH-2 (CLT base):** pronta no PR #84 — cadastro CLT (salário, jornada, contrato, dependentes, VT), tabelas de INSS/IRRF/parâmetros 2026 versionadas no banco, folha mensal estimada (INSS progressivo, IRRF com desconto simplificado x legal e redução da Lei 15.270, FGTS, VT, horas extras, faltas, bônus, vales), holerite estimado, custo da empresa (regime Simples, MEI ou outro) e configurações do RH. O DSR sobre horas extras/faltas, adicional noturno, insalubridade e periculosidade **não** entram (avisado na tela).
-- **Próximas:** RH-3 (férias, 13º, documentos e vencimentos de ASO, rescisão estimada) e RH-4 (exportação para o contador, comissão da agenda, limites por plano).
+- **RH-3 (férias e 13º):** pronta no PR #85 — períodos aquisitivos com aviso de vencimento, programação de férias (até 3 períodos, regras da CLT), recibo de férias (salário/30 × dias + 1/3), 13º em 2 parcelas (1ª até 30/11 sem descontos; 2ª até 20/12 com INSS e IRRF do total), dias de férias abatidos da folha do mês e avisos no painel do RH.
+- **Próximas:** RH-3b (documentos e vencimentos de ASO, rescisão estimada) e RH-4 (exportação para o contador, comissão da agenda, limites por plano).

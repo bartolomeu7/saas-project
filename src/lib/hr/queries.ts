@@ -3,7 +3,7 @@ import "server-only";
 import { createSessionClient } from "@/lib/supabase/server";
 import { todayDateSaoPaulo } from "@/lib/timezone";
 import { addDays, hasBirthdayInMonth, nextPayday } from "@/lib/hr/schedule";
-import type { PayrollTables } from "@/lib/hr/payroll";
+import { acquisitionPeriods, type PayrollTables } from "@/lib/hr/payroll";
 import type {
   HrAdjustment,
   HrEmployee,
@@ -15,6 +15,7 @@ import type {
   HrPayment,
   HrPeriodPreview,
   HrTimeEntry,
+  HrVacation,
 } from "@/types/hr";
 
 // As tabelas de RH ainda não estão nos tipos gerados do Supabase; o banco (RLS) é a barreira real.
@@ -282,4 +283,74 @@ export async function hasPaymentInMonth(employeeId: string, monthStart: string, 
     .gte("period_end", monthStart)
     .limit(1);
   return Boolean(data && data.length > 0);
+}
+
+
+export async function listVacations(employeeId: string): Promise<HrVacation[]> {
+  const supabase = db(await createSessionClient());
+  const { data, error } = await supabase
+    .from("hr_vacations")
+    .select("id, employee_id, acquisition_start, acquisition_end, entitled_days, start_on, days, payment_id, canceled_at, notes")
+    .eq("employee_id", employeeId)
+    .is("canceled_at", null)
+    .order("start_on", { ascending: true });
+  return error ? [] : ((data ?? []) as any[]).map((row) => ({ ...row, entitled_days: num(row.entitled_days), days: num(row.days) }) as HrVacation);
+}
+
+export interface HrAlert {
+  employeeId: string;
+  employeeName: string;
+  level: "danger" | "warning" | "info";
+  text: string;
+  href: string;
+}
+
+/** Avisos do RH: férias vencidas ou vencendo e prazos do 13º (só funcionários CLT ativos com data de admissão). */
+export async function getHrAlerts(companyId: string, today: string): Promise<HrAlert[]> {
+  const supabase = db(await createSessionClient());
+  const { data: employees } = await supabase
+    .from("hr_employees")
+    .select("id, full_name, started_on")
+    .eq("company_id", companyId)
+    .eq("mode", "clt")
+    .eq("status", "active");
+  const list = (employees ?? []) as { id: string; full_name: string; started_on: string | null }[];
+  if (list.length === 0) return [];
+
+  const ids = list.map((row) => row.id);
+  const [{ data: vacations }, { data: thirteenth }] = await Promise.all([
+    supabase.from("hr_vacations").select("employee_id, acquisition_start, days").in("employee_id", ids).is("canceled_at", null),
+    supabase.from("hr_payments").select("employee_id, calc").in("employee_id", ids).eq("kind", "thirteenth").neq("status", "canceled"),
+  ]);
+
+  const alerts: HrAlert[] = [];
+  const year = Number(today.slice(0, 4));
+  const month = Number(today.slice(5, 7));
+  for (const employee of list) {
+    const href = `/app/rh/${employee.id}?aba=ferias`;
+    if (employee.started_on) {
+      for (const period of acquisitionPeriods(employee.started_on, today)) {
+        if (period.state === "acquiring") continue;
+        const scheduledDays = ((vacations ?? []) as { employee_id: string; acquisition_start: string; days: number }[])
+          .filter((row) => row.employee_id === employee.id && row.acquisition_start === period.start)
+          .reduce((sum, row) => sum + num(row.days), 0);
+        if (scheduledDays >= 30) continue;
+        if (period.state === "overdue") {
+          alerts.push({ employeeId: employee.id, employeeName: employee.full_name, level: "danger", href, text: `Férias vencidas (prazo acabou em ${period.concessiveEnd.split("-").reverse().join("/")}): risco de pagar em dobro. Programe agora.` });
+        } else if (period.state === "expiring") {
+          alerts.push({ employeeId: employee.id, employeeName: employee.full_name, level: "warning", href, text: `Férias vencem em ${period.daysToExpire} dia(s) (${period.concessiveEnd.split("-").reverse().join("/")}).` });
+        }
+      }
+    }
+    // 13º: lembra a partir de outubro se ainda não gerou a parcela do ano
+    const done = ((thirteenth ?? []) as { employee_id: string; calc: any }[]).filter((row) => row.employee_id === employee.id && Number(row.calc?.year) === year);
+    const hasInstallment = (n: number) => done.some((row) => Number(row.calc?.installment) === n);
+    if (month >= 10 && !hasInstallment(1) && today <= `${year}-11-30`) {
+      alerts.push({ employeeId: employee.id, employeeName: employee.full_name, level: "info", href, text: `13º: 1ª parcela até 30/11.` });
+    } else if (month >= 11 && !hasInstallment(2) && today <= `${year}-12-20`) {
+      alerts.push({ employeeId: employee.id, employeeName: employee.full_name, level: "info", href, text: `13º: 2ª parcela até 20/12.` });
+    }
+  }
+  const order = { danger: 0, warning: 1, info: 2 } as const;
+  return alerts.sort((a, b) => order[a.level] - order[b.level]);
 }

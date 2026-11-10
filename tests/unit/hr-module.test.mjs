@@ -71,7 +71,7 @@ test("ações: toda mutação confere o papel e usa as funções do banco para d
   const actions = [...src.matchAll(/export async function (\w+Action)/g)].map((m) => m[1]);
   assert.deepEqual(
     actions.sort(),
-    ["addAdjustmentAction", "cancelPaymentAction", "closePayrollAction", "closePeriodAction", "createEmployeeAction", "deleteAdjustmentAction", "payPaymentAction", "saveHrSettingsAction", "setAttendanceAction", "setEmployeeStatusAction", "updateEmployeeAction"].sort()
+    ["addAdjustmentAction", "cancelPaymentAction", "cancelVacationAction", "closePayrollAction", "closePeriodAction", "closeThirteenthAction", "closeVacationPayAction", "createEmployeeAction", "deleteAdjustmentAction", "payPaymentAction", "saveHrSettingsAction", "scheduleVacationAction", "setAttendanceAction", "setEmployeeStatusAction", "updateEmployeeAction"].sort()
   );
   // cada ação confere o papel antes de gravar
   assert.equal((src.match(/await manager\(\)/g) ?? []).length, actions.length);
@@ -163,4 +163,52 @@ test("fase 2 (CLT): a folha usa as tabelas do banco e o app calcula a mesma cont
   assert.ok(read("src/app/(app)/app/rh/[id]/page.tsx").includes("Estimativa para controle interno"));
   const queries = read("src/lib/hr/queries.ts");
   assert.ok(queries.includes('.from("hr_tax_tables")') && queries.includes(".lte(\"valid_from\", monthStart)"));
+});
+
+test("fase 3 (férias e 13º): migração com regras da CLT, rollback que não apaga em silêncio", () => {
+  const sql = read("supabase/migrations/20261108180000_hr_vacation_13th.sql");
+  // tipos novos de pagamento, sem quebrar os antigos
+  assert.ok(sql.includes("kind = 'vacation'") && sql.includes("kind = 'thirteenth'"));
+  // férias e 13º não entram na checagem de sobreposição da folha/período
+  assert.equal((sql.match(/p\.kind in \('period', 'payroll'\)/g) ?? []).length, 3);
+  // tabela de férias: RLS, sem escrita direta, sem anon
+  assert.ok(sql.includes("alter table public.hr_vacations enable row level security"));
+  assert.match(sql, /revoke insert, update, delete, truncate on table public\.hr_vacations from authenticated/);
+  assert.match(sql, /revoke all on table public\.hr_vacations from anon/);
+  // regras da CLT no banco
+  assert.ok(sql.includes("no máximo 3 períodos"));
+  assert.ok(sql.includes("pelo menos 14 dias"));
+  assert.ok(sql.includes("pelo menos 5 dias"));
+  assert.ok(sql.includes("Sem direito a férias"));
+  assert.ok(sql.includes("se sobrepõem a outro período"));
+  // 13º: uma parcela por ano, 1ª sem descontos, prazos oficiais
+  assert.ok(sql.includes("hr_payments_thirteenth_unique"));
+  assert.ok(sql.includes("A 1ª parcela não tem descontos"));
+  assert.ok(sql.includes("make_date(p_year, 11, 30)") && sql.includes("make_date(p_year, 12, 20)"));
+  // limites de sanidade também aqui
+  assert.ok((sql.match(/INSS acima do limite esperado/g) ?? []).length >= 3);
+  // funções novas sem execução anônima
+  for (const name of ["hr_schedule_vacation", "hr_cancel_vacation", "hr_close_vacation_pay", "hr_close_thirteenth"]) {
+    const at = sql.indexOf(`revoke all on function public.${name}(`);
+    assert.ok(at > 0, `${name} sem revoke`);
+    assert.ok(sql.slice(at, at + 300).includes(") from public, anon;"), `${name} sem revoke de anon`);
+  }
+  assert.ok(existsSync("supabase/rollback/20261108180000_hr_vacation_13th.down.sql"));
+  assert.ok(existsSync("tests/sql/hr_vacation_13th.sql"));
+  const down = read("supabase/rollback/20261108180000_hr_vacation_13th.down.sql");
+  assert.ok(down.includes("Rollback interrompido"));
+});
+
+test("fase 3: o app recalcula férias e 13º no servidor e nunca aceita imposto do formulário", () => {
+  const src = read("src/lib/hr/actions.ts");
+  for (const rpc of ["hr_schedule_vacation", "hr_cancel_vacation", "hr_close_vacation_pay", "hr_close_thirteenth"]) {
+    assert.ok(src.includes(`rpc("${rpc}"`), rpc);
+  }
+  const vacation = src.slice(src.indexOf("export async function closeVacationPayAction"), src.indexOf("export async function closeThirteenthAction"));
+  assert.ok(vacation.includes("calcVacationPay(") && vacation.includes("p_inss: result.inss") && vacation.includes("p_irrf: result.irrf"));
+  const thirteenth = src.slice(src.indexOf("export async function closeThirteenthAction"));
+  assert.ok(thirteenth.includes("thirteenthAvos(") && thirteenth.includes("calcThirteenth("));
+  assert.ok(!/formData\.get\("(inss|irrf|avos|total)"\)/.test(vacation + thirteenth), "impostos e avos nunca vêm do formulário");
+  // a tela avisa que é estimativa
+  assert.ok(read("src/app/(app)/app/rh/[id]/page.tsx").includes("Estimativas para controle interno"));
 });

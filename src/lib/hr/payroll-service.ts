@@ -16,6 +16,8 @@ export interface PayrollRequest {
   overtime50: number;
   overtime100: number;
   absenceDays: number;
+  /** Dias de férias gozados no mês (o salário deles é pago no recibo de férias). */
+  vacationDays?: number;
 }
 
 export type PayrollBuild =
@@ -53,6 +55,7 @@ export async function buildPayroll(req: PayrollRequest): Promise<PayrollBuild> {
     overtime50Hours: req.overtime50,
     overtime100Hours: req.overtime100,
     absenceDays: req.absenceDays,
+    vacationDays: req.vacationDays ?? 0,
     bonus: openAdjustments.bonus,
     otherDeductions: openAdjustments.deduction,
     advances: openAdjustments.advance,

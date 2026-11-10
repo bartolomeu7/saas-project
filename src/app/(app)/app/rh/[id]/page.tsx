@@ -14,8 +14,12 @@ import {
   AdjustmentForm,
   AttendanceDays,
   AttendanceRangeForm,
+  CancelVacationButton,
   ClosePayrollForm,
   ClosePeriodForm,
+  GenerateVacationPayButton,
+  ScheduleVacationForm,
+  ThirteenthButton,
   DeleteAdjustmentButton,
   type AttendanceDay,
 } from "@/components/app/hr-forms";
@@ -27,16 +31,19 @@ import {
   getEmployee,
   getEmployeeClt,
   getHrSettings,
+  getPayrollTables,
   hasPaymentInMonth,
   getLastClosedPeriodEnd,
   getPeriodPreview,
   listAdjustments,
   listPayments,
   listTimeEntries,
+  listVacations,
 } from "@/lib/hr/queries";
 import { setEmployeeStatusAction } from "@/lib/hr/actions";
 import { buildPayroll, MONTH_PATTERN } from "@/lib/hr/payroll-service";
-import { ADJUSTMENT_LABELS, CONTRACT_TYPE_LABELS, formatPeriod, PAYMENT_STATUS_LABELS } from "@/lib/hr/labels";
+import { ADJUSTMENT_LABELS, CONTRACT_TYPE_LABELS, formatPeriod, paymentTitle, PAYMENT_STATUS_LABELS } from "@/lib/hr/labels";
+import { acquisitionPeriods, calcThirteenth, thirteenthAvos, thirteenthDeadlines } from "@/lib/hr/payroll";
 import { addDays, daysInMonth, dueState, formatDays, FREQUENCY_LABELS, nextPayday, paydayLabel, suggestPeriod, weekdayOf } from "@/lib/hr/schedule";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { todayDateSaoPaulo } from "@/lib/timezone";
@@ -55,6 +62,7 @@ const INFORMAL_TABS = [
 const CLT_TABS = [
   ["resumo", "Resumo"],
   ["folha", "Folha do mês"],
+  ["ferias", "Férias e 13º"],
   ["vales", "Vales, descontos e bônus"],
   ["pagamentos", "Pagamentos"],
 ] as const;
@@ -72,7 +80,7 @@ function shiftMonth(month: string, delta: number): string {
   return `${Math.floor(index / 12)}-${String((index % 12) + 1).padStart(2, "0")}`;
 }
 
-type Params = { aba?: string; mes?: string; de?: string; ate?: string; he50?: string; he100?: string; faltas?: string };
+type Params = { aba?: string; mes?: string; de?: string; ate?: string; he50?: string; he100?: string; faltas?: string; ferias?: string; ano?: string };
 
 export default async function HrEmployeePage({
   params: paramsPromise,
@@ -139,6 +147,15 @@ export default async function HrEmployeePage({
       </nav>
 
       {tab === "resumo" ? <SummaryTab employeeId={employee.id} companyId={current.company.id} employee={employee} today={today} base={base} /> : null}
+      {tab === "ferias" && isClt ? (
+        <VacationTab
+          employee={employee}
+          companyId={current.company.id}
+          today={today}
+          base={base}
+          year={/^\d{4}$/.test(searchParams?.ano ?? "") && Number(searchParams.ano) <= Number(today.slice(0, 4)) && Number(searchParams.ano) >= 2000 ? Number(searchParams.ano) : Number(today.slice(0, 4))}
+        />
+      ) : null}
       {tab === "folha" && isClt ? (
         <PayrollTab
           employee={employee}
@@ -149,6 +166,7 @@ export default async function HrEmployeePage({
           overtime50={searchParams?.he50 ?? ""}
           overtime100={searchParams?.he100 ?? ""}
           absences={searchParams?.faltas ?? ""}
+          vacationDays={searchParams?.ferias ?? ""}
         />
       ) : null}
       {tab === "presenca" ? <AttendanceTab employeeId={employee.id} month={isMonth(searchParams?.mes) ? searchParams.mes : today.slice(0, 7)} today={today} base={base} /> : null}
@@ -237,7 +255,7 @@ function PaymentList({ payments, today }: { payments: Awaited<ReturnType<typeof 
         return (
           <li key={payment.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
             <div className="min-w-0">
-              <Link href={`/app/rh/pagamentos/${payment.id}`} className="font-medium underline-offset-4 hover:underline">{formatPeriod(payment.period_start, payment.period_end)}</Link>
+              <Link href={`/app/rh/pagamentos/${payment.id}`} className="font-medium underline-offset-4 hover:underline">{paymentTitle(payment)}</Link>
               <p className="text-xs text-muted-foreground">
                 {payment.status === "paid" && payment.paid_on ? `Pago em ${formatDate(payment.paid_on)}` : `Vence em ${formatDate(payment.due_on)}`}
               </p>
@@ -415,6 +433,7 @@ async function PayrollTab({
   overtime50,
   overtime100,
   absences,
+  vacationDays,
 }: {
   employee: NonNullable<Awaited<ReturnType<typeof getEmployee>>>;
   companyId: string;
@@ -424,6 +443,7 @@ async function PayrollTab({
   overtime50: string;
   overtime100: string;
   absences: string;
+  vacationDays: string;
 }) {
   const [clt, settings] = await Promise.all([getEmployeeClt(employee.id), getHrSettings(companyId)]);
   if (!clt) {
@@ -437,9 +457,10 @@ async function PayrollTab({
   const he50 = num(overtime50);
   const he100 = num(overtime100);
   const abs = num(absences);
-  const inputsValid = he50 !== null && he100 !== null && abs !== null && he50 <= 200 && he100 <= 200 && abs <= 31;
+  const vac = num(vacationDays);
+  const inputsValid = he50 !== null && he100 !== null && abs !== null && vac !== null && he50 <= 200 && he100 <= 200 && abs + vac <= 31;
   const built = inputsValid
-    ? await buildPayroll({ employee, clt, settings, month, overtime50: he50, overtime100: he100, absenceDays: abs })
+    ? await buildPayroll({ employee, clt, settings, month, overtime50: he50, overtime100: he100, absenceDays: abs, vacationDays: vac })
     : null;
   const monthStart = `${month}-01`;
   const [yearText = "1970", monthText = "01"] = month.split("-");
@@ -468,7 +489,11 @@ async function PayrollTab({
           <Label htmlFor="faltas">Faltas (dias)</Label>
           <Input id="faltas" name="faltas" inputMode="decimal" defaultValue={absences} placeholder="0" />
         </div>
-        <Button type="submit" variant="outline" className="sm:col-span-5 sm:w-fit">Calcular</Button>
+        <div className="flex flex-col gap-2 sm:col-span-2">
+          <Label htmlFor="ferias">Dias de férias gozados no mês</Label>
+          <Input id="ferias" name="ferias" inputMode="decimal" defaultValue={vacationDays} placeholder="0" />
+        </div>
+        <Button type="submit" variant="outline" className="sm:col-span-3 sm:w-fit">Calcular</Button>
       </form>
 
       <Alert variant="warning">
@@ -476,7 +501,7 @@ async function PayrollTab({
       </Alert>
 
       {!inputsValid ? (
-        <Alert variant="destructive">Horas extras (até 200) e faltas (até 31) devem ser números.</Alert>
+        <Alert variant="destructive">Horas extras (até 200), faltas e dias de férias (juntos até 31) devem ser números.</Alert>
       ) : !built ? null : !built.ok ? (
         <Alert variant="destructive">{built.error}</Alert>
       ) : (
@@ -492,6 +517,7 @@ async function PayrollTab({
               <Line label={`Horas extras 100% (${formatDays(he100 ?? 0)} h)`} value={built.result.overtime100} muted />
               <Line label="Bônus em aberto" value={built.result.bonus} muted />
               <Line label={`Faltas (${formatDays(abs ?? 0)} dia(s))`} value={built.result.absences} muted negative />
+              <Line label={`Dias de férias no mês (${formatDays(vac ?? 0)}) — pagos no recibo de férias`} value={built.result.vacation} muted negative />
               <Line label="Total bruto" value={built.result.gross} strong />
               <Line label="INSS" value={built.result.inss} muted negative />
               <Line label="Imposto de Renda (IRRF)" value={built.result.irrf} muted negative />
@@ -528,10 +554,208 @@ async function PayrollTab({
           ) : built.result.gross <= 0 ? (
             <EmptyState title="Nada a pagar neste mês." description="O total bruto está zerado." />
           ) : (
-            <ClosePayrollForm employeeId={employee.id} month={month} overtime50={overtime50} overtime100={overtime100} absences={absences} dueOn={due} />
+            <ClosePayrollForm employeeId={employee.id} month={month} overtime50={overtime50} overtime100={overtime100} absences={absences} vacationDays={vacationDays} dueOn={due} />
           )}
         </>
       )}
+    </div>
+  );
+}
+
+const STATE_BADGES = {
+  acquiring: { label: "Em aquisição", variant: "muted" },
+  available: { label: "Pode tirar férias", variant: "success" },
+  expiring: { label: "Vencendo", variant: "warning" },
+  overdue: { label: "Vencidas", variant: "danger" },
+} as const;
+
+const dmy = (iso: string) => iso.split("-").reverse().join("/");
+
+async function VacationTab({
+  employee,
+  companyId,
+  today,
+  base,
+  year,
+}: {
+  employee: NonNullable<Awaited<ReturnType<typeof getEmployee>>>;
+  companyId: string;
+  today: string;
+  base: string;
+  year: number;
+}) {
+  if (!employee.started_on) {
+    return (
+      <Alert variant="warning">
+        Informe a <strong>data de admissão</strong> para controlar férias e 13º. <Link href={`${base}/editar`} className="underline underline-offset-4">Editar cadastro</Link>.
+      </Alert>
+    );
+  }
+  const [vacations, payments, clt] = await Promise.all([
+    listVacations(employee.id),
+    listPayments(companyId, { employeeId: employee.id, limit: 200 }),
+    getEmployeeClt(employee.id),
+  ]);
+  const paymentById = new Map(payments.map((payment) => [payment.id, payment]));
+  const periods = acquisitionPeriods(employee.started_on, today);
+
+  const periodRows = periods.map((period) => {
+    const rows = vacations.filter((row) => row.acquisition_start === period.start);
+    const entitled = rows[0]?.entitled_days ?? 30;
+    const scheduled = rows.reduce((sum, row) => sum + row.days, 0);
+    return { period, entitled, scheduled, remaining: entitled - scheduled };
+  });
+  const schedulable = periodRows.filter((row) => row.period.state !== "acquiring" && row.remaining >= 5);
+
+  // 13º
+  const avos = thirteenthAvos(employee.started_on, year, employee.status === "inactive" ? employee.ended_on : null);
+  const loaded = await getPayrollTables(`${year}-12-01`);
+  const thirteenth = loaded && clt && avos > 0 ? calcThirteenth({ salary: employee.base_amount, avos, dependents: clt.dependents, tables: loaded.tables }) : null;
+  const deadlines = thirteenthDeadlines(year);
+  const thirteenthPayments = payments.filter((payment) => payment.kind === "thirteenth" && Number(payment.calc?.year) === year);
+  const installment = (n: number) => thirteenthPayments.find((payment) => Number(payment.calc?.installment) === n);
+  const currentYear = Number(today.slice(0, 4));
+
+  return (
+    <div className="flex flex-col gap-6">
+      <Alert variant="warning">
+        <strong>Estimativas para controle interno.</strong> Não substituem o recibo oficial nem o contador. Não há venda de dias (abono pecuniário) nem média de variáveis. INSS e IRRF das férias são calculados isoladamente do salário.
+      </Alert>
+
+      <section className="rounded-lg border" aria-labelledby="ferias-periodos">
+        <h2 id="ferias-periodos" className="border-b px-4 py-3 text-sm font-semibold">Períodos aquisitivos</h2>
+        <ul className="divide-y">
+          {[...periodRows].reverse().map(({ period, entitled, scheduled }) => {
+            const badge = STATE_BADGES[period.state];
+            return (
+              <li key={period.start} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm">
+                <div>
+                  <p className="font-medium">{dmy(period.start)} a {dmy(period.end)}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {period.state === "acquiring"
+                      ? "Ainda não completou 12 meses."
+                      : period.state === "overdue"
+                        ? `Prazo para gozar venceu em ${dmy(period.concessiveEnd)}. Férias vencidas podem ser pagas em dobro.`
+                        : `Pode gozar até ${dmy(period.concessiveEnd)}${period.daysToExpire !== null ? ` (${period.daysToExpire} dia(s))` : ""}.`}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">{scheduled} de {entitled} dias programados</span>
+                  <Badge variant={badge.variant}>{badge.label}</Badge>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+
+      <section className="rounded-lg border" aria-labelledby="ferias-programadas">
+        <h2 id="ferias-programadas" className="border-b px-4 py-3 text-sm font-semibold">Férias programadas</h2>
+        {vacations.length === 0 ? (
+          <p className="px-4 py-6 text-sm text-muted-foreground">Nenhuma férias programada.</p>
+        ) : (
+          <ul className="divide-y">
+            {vacations.map((vacation) => {
+              const payment = vacation.payment_id ? paymentById.get(vacation.payment_id) : undefined;
+              const end = addDays(vacation.start_on, vacation.days - 1);
+              return (
+                <li key={vacation.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm">
+                  <div>
+                    <p className="font-medium">{dmy(vacation.start_on)} a {dmy(end)} · {vacation.days} dias</p>
+                    {vacation.notes ? <p className="text-xs text-muted-foreground">{vacation.notes}</p> : null}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {payment ? (
+                      <>
+                        <Badge variant={payment.status === "paid" ? "success" : "warning"}>{PAYMENT_STATUS_LABELS[payment.status]}</Badge>
+                        <span className="font-semibold">{formatCurrency(payment.net_amount)}</span>
+                        <Link href={`/app/rh/pagamentos/${payment.id}`} className="text-xs underline underline-offset-4">Ver pagamento</Link>
+                      </>
+                    ) : (
+                      <>
+                        <Badge variant="muted">Sem pagamento</Badge>
+                        <GenerateVacationPayButton vacationId={vacation.id} employeeId={employee.id} />
+                        <CancelVacationButton vacationId={vacation.id} employeeId={employee.id} />
+                      </>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+
+      {schedulable.length > 0 ? (
+        <section aria-labelledby="ferias-programar" className="flex flex-col gap-3">
+          <h2 id="ferias-programar" className="text-sm font-semibold">Programar férias</h2>
+          <ScheduleVacationForm
+            employeeId={employee.id}
+            minStart={addDays(schedulable[0]?.period.end ?? today, 1)}
+            periods={schedulable.map((row) => ({
+              start: row.period.start,
+              label: `${dmy(row.period.start)} a ${dmy(row.period.end)}`,
+              remaining: row.remaining,
+              hasEntitlement: row.entitled > 0,
+            }))}
+          />
+        </section>
+      ) : null}
+
+      <section className="rounded-lg border" aria-labelledby="decimo-terceiro">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
+          <h2 id="decimo-terceiro" className="text-sm font-semibold">13º salário de {year}</h2>
+          <nav className="flex gap-2 text-xs" aria-label="Ano do 13º">
+            <Link href={`${base}?aba=ferias&ano=${year - 1}`} className="underline underline-offset-4">{year - 1}</Link>
+            {year < currentYear ? <Link href={`${base}?aba=ferias&ano=${year + 1}`} className="underline underline-offset-4">{year + 1}</Link> : null}
+          </nav>
+        </div>
+        {!thirteenth ? (
+          <p className="px-4 py-6 text-sm text-muted-foreground">
+            {avos === 0 ? "Sem avos de 13º neste ano." : !clt ? "Complete o cadastro CLT do funcionário." : "Tabelas de INSS/IRRF indisponíveis para este ano."}
+          </p>
+        ) : (
+          <div className="flex flex-col gap-4 p-4 text-sm">
+            <p>
+              <strong>{avos}/12 avos</strong> sobre o salário de {formatCurrency(employee.base_amount)} = <strong>{formatCurrency(thirteenth.total)}</strong>. Mês trabalhado com 15 dias ou mais conta como mês inteiro.
+            </p>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="flex flex-col gap-2 rounded-md border p-3">
+                <p className="font-medium">1ª parcela — até {dmy(deadlines.first)}</p>
+                <p>{formatCurrency(thirteenth.firstInstallment)} <span className="text-xs text-muted-foreground">(metade, sem descontos)</span></p>
+                {installment(1) ? (
+                  <p className="text-xs">
+                    <Badge variant={installment(1)?.status === "paid" ? "success" : "warning"}>{PAYMENT_STATUS_LABELS[installment(1)!.status]}</Badge>{" "}
+                    <Link href={`/app/rh/pagamentos/${installment(1)!.id}`} className="underline underline-offset-4">Ver pagamento</Link>
+                  </p>
+                ) : (
+                  <ThirteenthButton employeeId={employee.id} year={year} installment={1} label="Gerar 1ª parcela" />
+                )}
+              </div>
+              <div className="flex flex-col gap-2 rounded-md border p-3">
+                <p className="font-medium">2ª parcela — até {dmy(deadlines.second)}</p>
+                <dl className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1">
+                  <dt className="text-muted-foreground">Complemento (bruto)</dt><dd>{formatCurrency(thirteenth.secondGross)}</dd>
+                  <dt className="text-muted-foreground">INSS do 13º</dt><dd>− {formatCurrency(thirteenth.inss)}</dd>
+                  <dt className="text-muted-foreground">IRRF do 13º</dt><dd>− {formatCurrency(thirteenth.irrf)}</dd>
+                  <dt className="font-medium">Líquido</dt><dd className="font-medium">{formatCurrency(thirteenth.secondNet)}</dd>
+                </dl>
+                {installment(2) ? (
+                  <p className="text-xs">
+                    <Badge variant={installment(2)?.status === "paid" ? "success" : "warning"}>{PAYMENT_STATUS_LABELS[installment(2)!.status]}</Badge>{" "}
+                    <Link href={`/app/rh/pagamentos/${installment(2)!.id}`} className="underline underline-offset-4">Ver pagamento</Link>
+                  </p>
+                ) : (
+                  <ThirteenthButton employeeId={employee.id} year={year} installment={2} askFirstElsewhere={!installment(1)} label="Gerar 2ª parcela" />
+                )}
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Salário fixo (sem média de horas extras/comissões). IRRF do 13º calculado só com INSS e dependentes e a redução da Lei 15.270. FGTS de 8% sobre o 13º (custo da empresa): {formatCurrency(thirteenth.fgts)}.
+            </p>
+          </div>
+        )}
+      </section>
     </div>
   );
 }
