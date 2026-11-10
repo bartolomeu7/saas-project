@@ -26,6 +26,8 @@ export default async function HrPaymentPage({ params: paramsPromise }: { params:
   const canManage = can(current.role, "hr.manage");
   const state = payment.status === "pending" ? dueState(payment.due_on, today) : null;
   const payroll = payment.kind === "payroll" && payment.calc?.db;
+  const vacation = payment.kind === "vacation" ? payment.calc?.db : null;
+  const thirteenth = payment.kind === "thirteenth" ? payment.calc?.db : null;
   const n = (value: unknown) => Number(value ?? 0);
   const db = payroll
     ? {
@@ -34,12 +36,15 @@ export default async function HrPaymentPage({ params: paramsPromise }: { params:
         overtime100: n(payment.calc?.db.overtime100),
         bonus: n(payment.calc?.db.bonus),
         absences: n(payment.calc?.db.absences),
+        absence_days: n(payment.calc?.db.absence_days),
+        vacation: n(payment.calc?.db.vacation),
+        vacation_days: n(payment.calc?.db.vacation_days),
         inss: n(payment.calc?.db.inss),
         irrf: n(payment.calc?.db.irrf),
         vt: n(payment.calc?.db.vt),
         other_deductions: n(payment.calc?.db.other_deductions),
       }
-    : { salary: 0, overtime50: 0, overtime100: 0, bonus: 0, absences: 0, inss: 0, irrf: 0, vt: 0, other_deductions: 0 };
+    : { salary: 0, overtime50: 0, overtime100: 0, bonus: 0, absences: 0, absence_days: 0, vacation: 0, vacation_days: 0, inss: 0, irrf: 0, vt: 0, other_deductions: 0 };
   const employer = payroll ? payment.calc?.result?.employer : null;
 
   return (
@@ -78,9 +83,56 @@ export default async function HrPaymentPage({ params: paramsPromise }: { params:
       <article className="hr-receipt max-w-2xl rounded-lg border bg-card p-6" aria-labelledby="recibo-titulo">
         <header className="mb-4 border-b pb-3">
           <p className="text-xs uppercase tracking-wide text-muted-foreground">{current.company.name}</p>
-          <h2 id="recibo-titulo" className="text-lg font-semibold">{payroll ? "Holerite estimado" : "Recibo de pagamento"}</h2>
+          <h2 id="recibo-titulo" className="text-lg font-semibold">
+            {payroll ? "Holerite estimado" : vacation ? "Recibo de férias" : thirteenth ? `13º salário — ${payment.calc?.installment}ª parcela` : "Recibo de pagamento"}
+          </h2>
         </header>
-        {payroll ? (
+        {vacation ? (
+          <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
+            <dt className="text-muted-foreground">Funcionário</dt><dd className="font-medium">{payment.employee?.full_name ?? "—"}</dd>
+            <dt className="text-muted-foreground">Período de gozo</dt><dd>{formatPeriod(payment.period_start, payment.period_end)} ({formatDays(n(vacation.days))} dias)</dd>
+            <dt className="text-muted-foreground">Férias ({formatDays(n(vacation.days))} dias)</dt><dd>{formatCurrency(n(vacation.days_amount))}</dd>
+            <dt className="text-muted-foreground">Adicional de 1/3 (Constituição, art. 7º, XVII)</dt><dd>{formatCurrency(n(vacation.one_third))}</dd>
+            <dt className="font-semibold">Total bruto</dt><dd className="font-semibold">{formatCurrency(payment.gross_amount)}</dd>
+            <dt className="text-muted-foreground">INSS</dt><dd>− {formatCurrency(n(vacation.inss))}</dd>
+            <dt className="text-muted-foreground">Imposto de Renda (IRRF)</dt><dd>− {formatCurrency(n(vacation.irrf))}</dd>
+            <dt className="border-t pt-2 font-semibold">Líquido</dt><dd className="border-t pt-2 text-lg font-semibold">{formatCurrency(payment.net_amount)}</dd>
+            <dt className="text-muted-foreground">Situação</dt>
+            <dd>
+              {payment.status === "paid" && payment.paid_on
+                ? `Pago em ${formatDate(payment.paid_on)}${payment.paid_method ? ` (${PAY_METHOD_LABELS[payment.paid_method]})` : ""}`
+                : payment.status === "pending"
+                  ? `A pagar até ${formatDate(payment.due_on)} (a lei manda pagar até 2 dias antes do início)`
+                  : "Cancelado"}
+            </dd>
+          </dl>
+        ) : thirteenth ? (
+          <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
+            <dt className="text-muted-foreground">Funcionário</dt><dd className="font-medium">{payment.employee?.full_name ?? "—"}</dd>
+            <dt className="text-muted-foreground">Ano</dt><dd>{payment.calc?.year}</dd>
+            <dt className="text-muted-foreground">Parcela</dt><dd>{payment.calc?.installment}ª de 2</dd>
+            <dt className="text-muted-foreground">Avos</dt><dd>{payment.calc?.avos}/12 (mês com 15 dias ou mais conta inteiro)</dd>
+            <dt className="text-muted-foreground">13º do ano (total)</dt><dd>{formatCurrency(n(thirteenth.total))}</dd>
+            <dt className="font-semibold">Valor desta parcela</dt><dd className="font-semibold">{formatCurrency(payment.gross_amount)}</dd>
+            {Number(payment.calc?.installment) === 2 ? (
+              <>
+                <dt className="text-muted-foreground">INSS (sobre o 13º inteiro)</dt><dd>− {formatCurrency(n(thirteenth.inss))}</dd>
+                <dt className="text-muted-foreground">Imposto de Renda (IRRF)</dt><dd>− {formatCurrency(n(thirteenth.irrf))}</dd>
+              </>
+            ) : (
+              <><dt className="text-muted-foreground">Descontos</dt><dd>nenhum (a 1ª parcela é paga sem descontos)</dd></>
+            )}
+            <dt className="border-t pt-2 font-semibold">Líquido</dt><dd className="border-t pt-2 text-lg font-semibold">{formatCurrency(payment.net_amount)}</dd>
+            <dt className="text-muted-foreground">Situação</dt>
+            <dd>
+              {payment.status === "paid" && payment.paid_on
+                ? `Pago em ${formatDate(payment.paid_on)}${payment.paid_method ? ` (${PAY_METHOD_LABELS[payment.paid_method]})` : ""}`
+                : payment.status === "pending"
+                  ? `A pagar até ${formatDate(payment.due_on)}`
+                  : "Cancelado"}
+            </dd>
+          </dl>
+        ) : payroll ? (
           <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
             <dt className="text-muted-foreground">Funcionário</dt><dd className="font-medium">{payment.employee?.full_name ?? "—"}</dd>
             <dt className="text-muted-foreground">Mês de referência</dt><dd>{formatPeriod(payment.period_start, payment.period_end)}</dd>
@@ -88,7 +140,13 @@ export default async function HrPaymentPage({ params: paramsPromise }: { params:
             <dt className="text-muted-foreground">Horas extras 50%</dt><dd>{formatCurrency(db.overtime50)}</dd>
             <dt className="text-muted-foreground">Horas extras 100%</dt><dd>{formatCurrency(db.overtime100)}</dd>
             <dt className="text-muted-foreground">Bônus</dt><dd>{formatCurrency(db.bonus)}</dd>
-            <dt className="text-muted-foreground">Faltas</dt><dd>− {formatCurrency(db.absences)}</dd>
+            <dt className="text-muted-foreground">Faltas{db.absence_days ? ` (${formatDays(db.absence_days)} dia(s))` : ""}</dt><dd>− {formatCurrency(db.absences)}</dd>
+            {db.vacation > 0 ? (
+              <>
+                <dt className="text-muted-foreground">Dias de férias ({formatDays(db.vacation_days)}) — pagos no recibo de férias</dt>
+                <dd>− {formatCurrency(db.vacation)}</dd>
+              </>
+            ) : null}
             <dt className="font-semibold">Total bruto</dt><dd className="font-semibold">{formatCurrency(payment.gross_amount)}</dd>
             <dt className="text-muted-foreground">INSS</dt><dd>− {formatCurrency(db.inss)}</dd>
             <dt className="text-muted-foreground">Imposto de Renda (IRRF)</dt><dd>− {formatCurrency(db.irrf)}</dd>

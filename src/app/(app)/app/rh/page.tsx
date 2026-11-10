@@ -11,6 +11,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { getCurrentCompany } from "@/lib/companies/queries";
 import { can } from "@/lib/permissions/matrix";
 import { getHrDashboard, listEmployees } from "@/lib/hr/queries";
+import { paymentTitle } from "@/lib/hr/labels";
 import { dueState, FREQUENCY_LABELS, paydayLabel } from "@/lib/hr/schedule";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -84,7 +85,7 @@ export default async function HrPage({ searchParams: searchParamsPromise }: { se
                         <Link href={`/app/rh/pagamentos/${payment.id}`} className="font-medium underline-offset-4 hover:underline">
                           {payment.employee?.full_name ?? "Funcionário"}
                         </Link>
-                        <p className="text-xs text-muted-foreground">Vence em {formatDate(payment.due_on)}</p>
+                        <p className="text-xs text-muted-foreground">{paymentTitle(payment)} · vence em {formatDate(payment.due_on)}</p>
                       </div>
                       <div className="flex items-center gap-2">
                         {state === "overdue" ? <Badge variant="danger">Atrasado</Badge> : state === "today" ? <Badge variant="warning">Hoje</Badge> : null}

@@ -145,7 +145,7 @@ select set_config('request.jwt.claims', '{"sub":"hc_other","role":"authenticated
 select pg_temp.chk('config', 'outra empresa não enxerga a configuração alheia',
   $q$select count(*)::text from public.hr_settings$q$, 'OK=0');
 select pg_temp.chk('isolamento', 'outra empresa não fecha folha de funcionário alheio',
-  $q$select (public.hr_close_payroll((select v::uuid from ctx where k = 'clt1'), date '2026-11-01', 0, 0, 0, 0, 0, 0, null, null, '{}'::jsonb)).id::text$q$, 'ERR=Funcionário não encontrado');
+  $q$select (public.hr_close_payroll((select v::uuid from ctx where k = 'clt1'), date '2026-11-01', 0, 0, 0, 0, 0, 0, 0, null, null, '{}'::jsonb)).id::text$q$, 'ERR=Funcionário não encontrado');
 reset role;
 select set_config('request.jwt.claims', '{"role":"service_role"}', true);
 
@@ -156,13 +156,13 @@ select set_config('request.jwt.claims', '{"sub":"hc_owner","role":"authenticated
 select pg_temp.chk('folha', 'período por dias não serve para CLT',
   $q$select (public.hr_close_period((select v::uuid from ctx where k = 'clt1'), public.today_sao_paulo() - 3, public.today_sao_paulo())).id::text$q$, 'ERR=feche a folha do mês');
 select pg_temp.chk('folha', 'folha mensal não serve para informal',
-  $q$select (public.hr_close_payroll('ffffffff-8000-0000-0000-0000000000f5', date_trunc('month', public.today_sao_paulo())::date, 0, 0, 0, 0, 0, 0, null, null, '{}'::jsonb)).id::text$q$, 'ERR=só para funcionário CLT');
+  $q$select (public.hr_close_payroll('ffffffff-8000-0000-0000-0000000000f5', date_trunc('month', public.today_sao_paulo())::date, 0, 0, 0, 0, 0, 0, 0, null, null, '{}'::jsonb)).id::text$q$, 'ERR=só para funcionário CLT');
 select pg_temp.chk('folha', 'mês futuro é recusado',
-  $q$select (public.hr_close_payroll((select v::uuid from ctx where k = 'clt1'), (date_trunc('month', public.today_sao_paulo()) + interval '2 months')::date, 0, 0, 0, 0, 0, 0, null, null, '{}'::jsonb)).id::text$q$, 'ERR=ainda não começou');
+  $q$select (public.hr_close_payroll((select v::uuid from ctx where k = 'clt1'), (date_trunc('month', public.today_sao_paulo()) + interval '2 months')::date, 0, 0, 0, 0, 0, 0, 0, null, null, '{}'::jsonb)).id::text$q$, 'ERR=ainda não começou');
 select pg_temp.chk('folha', 'horas extras absurdas são recusadas',
-  $q$select (public.hr_close_payroll((select v::uuid from ctx where k = 'clt1'), date_trunc('month', public.today_sao_paulo())::date, 500, 0, 0, 0, 0, 0, null, null, '{}'::jsonb)).id::text$q$, 'ERR=Horas extras inválidas');
+  $q$select (public.hr_close_payroll((select v::uuid from ctx where k = 'clt1'), date_trunc('month', public.today_sao_paulo())::date, 500, 0, 0, 0, 0, 0, 0, null, null, '{}'::jsonb)).id::text$q$, 'ERR=Horas extras inválidas');
 select pg_temp.chk('folha', 'cálculo vazio (nulo) é recusado',
-  $q$select (public.hr_close_payroll((select v::uuid from ctx where k = 'clt1'), date_trunc('month', public.today_sao_paulo())::date, 0, 0, 0, 0, 0, 0, null, null, null)).id::text$q$, 'ERR=Cálculo inválido');
+  $q$select (public.hr_close_payroll((select v::uuid from ctx where k = 'clt1'), date_trunc('month', public.today_sao_paulo())::date, 0, 0, 0, 0, 0, 0, 0, null, null, null)).id::text$q$, 'ERR=Cálculo inválido');
 
 -- lançamentos em aberto do mês: bônus 50, desconto 20, vale 200 (Pix)
 select pg_temp.chk('folha', 'bônus de 50 em aberto',
@@ -176,13 +176,13 @@ select pg_temp.chk('folha', 'vale de 200 em Pix',
 -- bruto = 3000 + 225 + 120 + 50 − 100 = 3295,00 ; descontos = INSS 270,00 + IRRF 0 + VT 120,00 + desconto 20 = 410,00
 -- líquido = 3295 − 410 − vale 200 = 2685,00
 select pg_temp.chk('folha', 'sanidade: INSS acima de 20% do bruto é recusado',
-  $q$select (public.hr_close_payroll((select v::uuid from ctx where k = 'clt1'), date_trunc('month', public.today_sao_paulo())::date, 10, 4, 1, 900, 0, 120, null, null, '{}'::jsonb)).id::text$q$, 'ERR=INSS acima');
+  $q$select (public.hr_close_payroll((select v::uuid from ctx where k = 'clt1'), date_trunc('month', public.today_sao_paulo())::date, 10, 4, 1, 0, 900, 0, 120, null, null, '{}'::jsonb)).id::text$q$, 'ERR=INSS acima');
 select pg_temp.chk('folha', 'sanidade: IRRF acima de 30% do bruto é recusado',
-  $q$select (public.hr_close_payroll((select v::uuid from ctx where k = 'clt1'), date_trunc('month', public.today_sao_paulo())::date, 10, 4, 1, 270, 1500, 120, null, null, '{}'::jsonb)).id::text$q$, 'ERR=IRRF acima');
+  $q$select (public.hr_close_payroll((select v::uuid from ctx where k = 'clt1'), date_trunc('month', public.today_sao_paulo())::date, 10, 4, 1, 0, 270, 1500, 120, null, null, '{}'::jsonb)).id::text$q$, 'ERR=IRRF acima');
 select pg_temp.chk('folha', 'sanidade: VT acima de 10% do salário é recusado',
-  $q$select (public.hr_close_payroll((select v::uuid from ctx where k = 'clt1'), date_trunc('month', public.today_sao_paulo())::date, 10, 4, 1, 270, 0, 400, null, null, '{}'::jsonb)).id::text$q$, 'ERR=vale-transporte acima');
+  $q$select (public.hr_close_payroll((select v::uuid from ctx where k = 'clt1'), date_trunc('month', public.today_sao_paulo())::date, 10, 4, 1, 0, 270, 0, 400, null, null, '{}'::jsonb)).id::text$q$, 'ERR=vale-transporte acima');
 select pg_temp.chk('folha', 'fecha a folha do mês',
-  $q$insert into ctx values ('pr1', (public.hr_close_payroll((select v::uuid from ctx where k = 'clt1'), date_trunc('month', public.today_sao_paulo())::date, 10, 4, 1, 270, 0, 120, null, 'Folha teste', '{"tables":{"inss":"2026-01-01"}}'::jsonb)).id::text) returning 'ok'$q$, 'OK=ok');
+  $q$insert into ctx values ('pr1', (public.hr_close_payroll((select v::uuid from ctx where k = 'clt1'), date_trunc('month', public.today_sao_paulo())::date, 10, 4, 1, 0, 270, 0, 120, null, 'Folha teste', '{"tables":{"inss":"2026-01-01"}}'::jsonb)).id::text) returning 'ok'$q$, 'OK=ok');
 select pg_temp.chk('folha', 'bruto 3295,00; descontos 410,00; vales 200,00; líquido 2685,00',
   $q$select gross_amount::text || '|' || deductions_amount::text || '|' || advances_amount::text || '|' || net_amount::text || '|' || kind || '|' || status::text
        from public.hr_payments where id = (select v::uuid from ctx where k = 'pr1')$q$, 'OK=3295.00|410.00|200.00|2685.00|payroll|pending');
@@ -195,7 +195,7 @@ select pg_temp.chk('folha', 'retrato guarda o cálculo do app e os números do b
 select pg_temp.chk('folha', 'bônus, desconto e vale ficaram presos à folha',
   $q$select count(*)::text from public.hr_adjustments where payment_id = (select v::uuid from ctx where k = 'pr1')$q$, 'OK=3');
 select pg_temp.chk('folha', 'não fecha o mesmo mês duas vezes',
-  $q$select (public.hr_close_payroll((select v::uuid from ctx where k = 'clt1'), date_trunc('month', public.today_sao_paulo())::date, 0, 0, 0, 0, 0, 0, null, null, '{}'::jsonb)).id::text$q$, 'ERR=neste mês');
+  $q$select (public.hr_close_payroll((select v::uuid from ctx where k = 'clt1'), date_trunc('month', public.today_sao_paulo())::date, 0, 0, 0, 0, 0, 0, 0, null, null, '{}'::jsonb)).id::text$q$, 'ERR=neste mês');
 select pg_temp.chk('folha', 'auditoria da folha',
   $q$select count(*)::text from public.audit_logs where action = 'hr.payroll_created'$q$, 'OK=1');
 
@@ -212,7 +212,7 @@ select pg_temp.chk('cancelar', 'cadastra outro CLT para o teste de cancelamento'
 select pg_temp.chk('cancelar', 'bônus de 100 para o segundo funcionário',
   $q$select (public.hr_add_adjustment((select v::uuid from ctx where k = 'clt2'), 'bonus', 100)).amount::text$q$, 'OK=100.00');
 select pg_temp.chk('cancelar', 'fecha a folha do segundo',
-  $q$insert into ctx values ('pr2', (public.hr_close_payroll((select v::uuid from ctx where k = 'clt2'), date_trunc('month', public.today_sao_paulo())::date, 0, 0, 0, 0, 0, 0, null, null, '{}'::jsonb)).id::text) returning 'ok'$q$, 'OK=ok');
+  $q$insert into ctx values ('pr2', (public.hr_close_payroll((select v::uuid from ctx where k = 'clt2'), date_trunc('month', public.today_sao_paulo())::date, 0, 0, 0, 0, 0, 0, 0, null, null, '{}'::jsonb)).id::text) returning 'ok'$q$, 'OK=ok');
 select pg_temp.chk('cancelar', 'líquido 2100,00 (2000 + 100 de bônus, sem descontos informados)',
   $q$select net_amount::text from public.hr_payments where id = (select v::uuid from ctx where k = 'pr2')$q$, 'OK=2100.00');
 select pg_temp.chk('cancelar', 'cancelar a folha pendente libera o bônus',
@@ -220,21 +220,21 @@ select pg_temp.chk('cancelar', 'cancelar a folha pendente libera o bônus',
 select pg_temp.chk('cancelar', 'bônus voltou a ficar em aberto',
   $q$select count(*)::text from public.hr_adjustments where employee_id = (select v::uuid from ctx where k = 'clt2') and payment_id is null$q$, 'OK=1');
 select pg_temp.chk('cancelar', 'e dá para fechar o mês de novo',
-  $q$select (public.hr_close_payroll((select v::uuid from ctx where k = 'clt2'), date_trunc('month', public.today_sao_paulo())::date, 0, 0, 0, 0, 0, 0, null, null, '{}'::jsonb)).net_amount::text$q$, 'OK=2100.00');
+  $q$select (public.hr_close_payroll((select v::uuid from ctx where k = 'clt2'), date_trunc('month', public.today_sao_paulo())::date, 0, 0, 0, 0, 0, 0, 0, null, null, '{}'::jsonb)).net_amount::text$q$, 'OK=2100.00');
 
 -- VT desligado não aceita desconto de VT
 select pg_temp.chk('folha', 'sem VT cadastrado não aceita desconto de VT',
-  $q$select (public.hr_close_payroll((select v::uuid from ctx where k = 'clt2'), (date_trunc('month', public.today_sao_paulo()) - interval '1 month')::date, 0, 0, 0, 0, 0, 50, null, null, '{}'::jsonb)).id::text$q$, 'ERR=não usa vale-transporte');
+  $q$select (public.hr_close_payroll((select v::uuid from ctx where k = 'clt2'), (date_trunc('month', public.today_sao_paulo()) - interval '1 month')::date, 0, 0, 0, 0, 0, 0, 50, null, null, '{}'::jsonb)).id::text$q$, 'ERR=não usa vale-transporte');
 select pg_temp.chk('folha', 'líquido negativo é recusado (vale maior que o bruto)',
   $q$select (public.hr_add_adjustment((select v::uuid from ctx where k = 'clt2'), 'advance', 9000, (date_trunc('month', public.today_sao_paulo()) - interval '1 month')::date, null, 'pix')).amount::text$q$, 'OK=9000.00');
 select pg_temp.chk('folha', 'mês anterior com vale gigante: não fecha',
-  $q$select (public.hr_close_payroll((select v::uuid from ctx where k = 'clt2'), (date_trunc('month', public.today_sao_paulo()) - interval '1 month')::date, 0, 0, 0, 0, 0, 0, null, null, '{}'::jsonb)).id::text$q$, 'ERR=passam do valor');
+  $q$select (public.hr_close_payroll((select v::uuid from ctx where k = 'clt2'), (date_trunc('month', public.today_sao_paulo()) - interval '1 month')::date, 0, 0, 0, 0, 0, 0, 0, null, null, '{}'::jsonb)).id::text$q$, 'ERR=passam do valor');
 reset role;
 select set_config('request.jwt.claims', '{"role":"service_role"}', true);
 
 -- ================================================= segurança
 select pg_temp.chk('seguranca', 'anon não executa as funções novas',
-  $q$select (has_function_privilege('anon', 'public.hr_close_payroll(uuid, date, numeric, numeric, numeric, numeric, numeric, numeric, date, text, jsonb)', 'execute')
+  $q$select (has_function_privilege('anon', 'public.hr_close_payroll(uuid, date, numeric, numeric, numeric, numeric, numeric, numeric, numeric, date, text, jsonb)', 'execute')
           or has_function_privilege('anon', 'public.hr_save_settings(text, numeric)', 'execute')
           or has_function_privilege('anon', 'public.hr_save_clt_employee(uuid, text, date, text, text, text, numeric, smallint, date, text, numeric, text, smallint, date, smallint, boolean, numeric)', 'execute'))::text$q$, 'OK=false');
 select pg_temp.chk('seguranca', 'anon não lê as tabelas novas',

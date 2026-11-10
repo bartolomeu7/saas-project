@@ -26,6 +26,8 @@ export type PayrollBuild =
       result: PayrollResult;
       input: PayrollInput;
       versions: { inss: string; irrf: string; params: string };
+      /** true quando a tabela de imposto mais nova é de ano anterior ao da folha. */
+      outdated: boolean;
       monthStart: string;
       monthEnd: string;
       openAdjustments: { bonus: number; deduction: number; advance: number };
@@ -63,5 +65,5 @@ export async function buildPayroll(req: PayrollRequest): Promise<PayrollBuild> {
     employerInssRate: req.settings.employer_inss_rate,
     tables: loaded.tables,
   };
-  return { ok: true, result: estimatePayroll(input), input, versions: loaded.versions, monthStart, monthEnd, openAdjustments };
+  return { ok: true, result: estimatePayroll(input), input, versions: loaded.versions, outdated: loaded.outdated, monthStart, monthEnd, openAdjustments };
 }

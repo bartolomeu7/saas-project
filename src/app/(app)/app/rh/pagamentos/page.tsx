@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { getCurrentCompany } from "@/lib/companies/queries";
 import { can } from "@/lib/permissions/matrix";
 import { listPayments } from "@/lib/hr/queries";
-import { formatPeriod, PAYMENT_STATUS_LABELS } from "@/lib/hr/labels";
+import { PAYMENT_KIND_LABELS, paymentTitle, PAYMENT_STATUS_LABELS } from "@/lib/hr/labels";
 import { dueState } from "@/lib/hr/schedule";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { todayDateSaoPaulo } from "@/lib/timezone";
@@ -72,12 +72,13 @@ export default async function HrPaymentsPage({ searchParams: searchParamsPromise
                       {payment.employee?.full_name ?? "Funcionário"}
                     </Link>
                     <p className="text-xs text-muted-foreground">
-                      {formatPeriod(payment.period_start, payment.period_end)} ·{" "}
+                      {paymentTitle(payment)} ·{" "}
                       {payment.status === "paid" && payment.paid_on ? `pago em ${formatDate(payment.paid_on)}` : `vence em ${formatDate(payment.due_on)}`}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
                     {state === "overdue" ? <Badge variant="danger">Atrasado</Badge> : state === "today" ? <Badge variant="warning">Hoje</Badge> : null}
+                    <Badge variant="muted">{PAYMENT_KIND_LABELS[payment.kind]}</Badge>
                     <Badge variant={payment.status === "paid" ? "success" : payment.status === "pending" ? "warning" : "muted"}>{PAYMENT_STATUS_LABELS[payment.status]}</Badge>
                     <span className="font-semibold">{formatCurrency(payment.net_amount)}</span>
                   </div>

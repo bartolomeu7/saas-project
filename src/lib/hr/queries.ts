@@ -105,6 +105,9 @@ export async function listTimeEntries(employeeId: string, from: string, to: stri
 }
 
 /** Primeiro dia com presença marcada que ainda não entrou em nenhum pagamento (para sugerir o início do período). */
+/** Tipos de pagamento que ocupam um período de trabalho (os únicos que impedem fechar outro pelo mesmo período). */
+const PAYROLL_KINDS = ["period", "payroll"] as const;
+
 export async function getEarliestUnsettledDay(employeeId: string): Promise<string | null> {
   const supabase = db(await createSessionClient());
   const { data } = await supabase
@@ -124,6 +127,7 @@ export async function getLastClosedPeriodEnd(employeeId: string): Promise<string
     .select("period_end")
     .eq("employee_id", employeeId)
     .neq("status", "canceled")
+    .in("kind", PAYROLL_KINDS)
     .order("period_end", { ascending: false })
     .limit(1);
   return (data?.[0]?.period_end as string | undefined) ?? null;
@@ -236,6 +240,8 @@ export interface HrTaxTablesLoaded {
   tables: PayrollTables;
   /** Vigência (valid_from) de cada tabela usada, para o retrato da folha. */
   versions: { inss: string; irrf: string; params: string };
+  /** true quando a tabela mais nova é de um ano anterior ao da folha: os valores podem estar defasados. */
+  outdated: boolean;
 }
 
 /** Tabelas de impostos vigentes no mês (maior valid_from <= primeiro dia do mês). null se faltar alguma. */
@@ -253,9 +259,11 @@ export async function getPayrollTables(monthStart: string): Promise<HrTaxTablesL
   const params = pick("params");
   if (!inss || !irrf || !params) return null;
   const numberize = (value: any): any => (Array.isArray(value) ? value.map(numberize) : value && typeof value === "object" ? Object.fromEntries(Object.entries(value).map(([k, v]) => [k, numberize(v)])) : typeof value === "string" && value !== "" && !Number.isNaN(Number(value)) ? Number(value) : value);
+  const newest = [inss.valid_from, irrf.valid_from, params.valid_from].sort().reverse()[0] as string;
   return {
     tables: { inss: numberize(inss.data), irrf: numberize(irrf.data), params: numberize(params.data) },
     versions: { inss: inss.valid_from, irrf: irrf.valid_from, params: params.valid_from },
+    outdated: newest.slice(0, 4) < monthStart.slice(0, 4),
   };
 }
 
@@ -279,6 +287,9 @@ export async function hasPaymentInMonth(employeeId: string, monthStart: string, 
     .select("id")
     .eq("employee_id", employeeId)
     .neq("status", "canceled")
+    // Só folha e período ocupam o mês. Férias e 13º têm período próprio (o 13º cobre o ano inteiro) e não
+    // impedem fechar a folha — é exatamente o filtro que `hr_close_payroll` faz no banco.
+    .in("kind", PAYROLL_KINDS)
     .lte("period_start", monthEnd)
     .gte("period_end", monthStart)
     .limit(1);
@@ -319,7 +330,7 @@ export async function getHrAlerts(companyId: string, today: string): Promise<HrA
 
   const ids = list.map((row) => row.id);
   const [{ data: vacations }, { data: thirteenth }] = await Promise.all([
-    supabase.from("hr_vacations").select("employee_id, acquisition_start, days").in("employee_id", ids).is("canceled_at", null),
+    supabase.from("hr_vacations").select("employee_id, acquisition_start, days, entitled_days").in("employee_id", ids).is("canceled_at", null),
     supabase.from("hr_payments").select("employee_id, calc").in("employee_id", ids).eq("kind", "thirteenth").neq("status", "canceled"),
   ]);
 
@@ -331,10 +342,12 @@ export async function getHrAlerts(companyId: string, today: string): Promise<HrA
     if (employee.started_on) {
       for (const period of acquisitionPeriods(employee.started_on, today)) {
         if (period.state === "acquiring") continue;
-        const scheduledDays = ((vacations ?? []) as { employee_id: string; acquisition_start: string; days: number }[])
-          .filter((row) => row.employee_id === employee.id && row.acquisition_start === period.start)
-          .reduce((sum, row) => sum + num(row.days), 0);
-        if (scheduledDays >= 30) continue;
+        const rows = ((vacations ?? []) as { employee_id: string; acquisition_start: string; days: number; entitled_days: number }[])
+          .filter((row) => row.employee_id === employee.id && row.acquisition_start === period.start);
+        const scheduledDays = rows.reduce((sum, row) => sum + num(row.days), 0);
+        // O direito cai com as faltas (30, 24, 18 ou 12 dias). Programado tudo a que tem direito, não há o que avisar.
+        const entitled = rows[0] ? num(rows[0].entitled_days) : 30;
+        if (scheduledDays >= entitled) continue;
         if (period.state === "overdue") {
           alerts.push({ employeeId: employee.id, employeeName: employee.full_name, level: "danger", href, text: `Férias vencidas (prazo acabou em ${period.concessiveEnd.split("-").reverse().join("/")}): risco de pagar em dobro. Programe agora.` });
         } else if (period.state === "expiring") {
