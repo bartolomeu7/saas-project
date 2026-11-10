@@ -98,6 +98,8 @@ function parseCommon(formData: FormData): ParsedCommon | { error: string } {
   const pix = text(formData.get("pix_key"));
   const notes = text(formData.get("notes"));
   if (phone.length > 40) return { error: "Telefone longo demais." };
+  if (phone && phone.replace(/\D/g, "").length < 8) return { error: "Telefone inválido. Informe o número com DDD." };
+  if (phone && /[A-Za-zÀ-ÿ]/.test(phone)) return { error: "Telefone inválido. Use só números, parênteses, espaço e hífen." };
   if (roleTitle.length > 80) return { error: "Função longa demais (máximo 80)." };
   if (pix.length > 140) return { error: "Chave Pix longa demais." };
   if (notes.length > 2000) return { error: "Observações longas demais (máximo 2000)." };
@@ -264,14 +266,21 @@ export async function setEmployeeStatusAction(id: string, status: "active" | "in
   const guard = await manager();
   if ("error" in guard) return;
   const supabase = (await createSessionClient()) as any;
+  // A data de saída nunca pode ser anterior ao início (regra do banco): quem tem admissão futura sai na própria data de início.
+  const { data: current } = await supabase.from("hr_employees").select("started_on").eq("id", id).eq("company_id", guard.companyId).maybeSingle();
+  const today = todayDateSaoPaulo();
+  const startedOn = (current as { started_on?: string | null } | null)?.started_on ?? null;
+  const endedOn = status === "inactive" ? (startedOn && startedOn > today ? startedOn : today) : null;
   const { error } = await supabase
     .from("hr_employees")
-    .update({ status, ended_on: status === "inactive" ? todayDateSaoPaulo() : null })
+    .update({ status, ended_on: endedOn })
     .eq("id", id)
     .eq("company_id", guard.companyId);
-  if (!error) {
-    }
   revalidateHr(id);
+  if (error) {
+    console.error("[rh] não foi possível alterar o status", error);
+    redirect(`/app/rh/${id}?erro=status`);
+  }
   redirect(`/app/rh/${id}`);
 }
 
@@ -311,6 +320,13 @@ export async function setAttendanceAction(_prev: ActionResult, formData: FormDat
   if ("error" in guard) return guard;
 
   const supabase = (await createSessionClient()) as any;
+  if (quantity !== null) {
+    const { data: emp } = await supabase.from("hr_employees").select("started_on").eq("id", employeeId).eq("company_id", guard.companyId).maybeSingle();
+    const startedOn = (emp as { started_on?: string | null } | null)?.started_on;
+    if (startedOn && dates.some((d) => d < startedOn)) {
+      return { error: `Esse funcionário começou em ${startedOn.split("-").reverse().join("/")}. Não dá para marcar presença antes disso.` };
+    }
+  }
   const { error } = await supabase.rpc("hr_set_attendance", { p_employee_id: employeeId, p_work_dates: dates, p_quantity: quantity });
   if (error) return { error: friendly(error, "Não foi possível marcar a presença.") };
   revalidateHr(employeeId);

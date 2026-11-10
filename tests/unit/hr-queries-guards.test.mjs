@@ -104,3 +104,22 @@ test("o formulário de férias avisa antes de enviar (regra que estava só no ba
   assert.ok(forms.includes("validateVacationSplit("), "usa a regra pura no navegador");
   assert.ok(forms.includes("disabled={Boolean(localError)}"), "não deixa enviar o que o banco vai recusar");
 });
+
+// ---- Rodada de testes reais (10/11/2026): guardas do RH e da Agenda ----
+import { readFileSync as _read } from "node:fs";
+{
+  const hr = _read(new URL("../../src/lib/hr/actions.ts", import.meta.url), "utf8");
+  const ag = _read(new URL("../../src/lib/agenda/actions.ts", import.meta.url), "utf8");
+  test("RH: inativar não engole o erro e respeita a data de início", () => {
+    assert.ok(!/if \(!error\) \{\s*\}/.test(hr), "bloco vazio que descarta erro");
+    assert.ok(hr.includes('erro=status'));
+    assert.ok(hr.includes("startedOn > today ? startedOn : today"));
+  });
+  test("RH: presença antes da admissão e telefone inválido são recusados", () => {
+    assert.ok(hr.includes("Não dá para marcar presença antes disso"));
+    assert.ok(hr.includes("Telefone inválido"));
+  });
+  test("Agenda: não conclui atendimento de dia futuro", () => {
+    assert.ok(ag.includes("é de um dia futuro"));
+  });
+}

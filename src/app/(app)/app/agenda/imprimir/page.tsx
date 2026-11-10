@@ -108,7 +108,7 @@ export default async function AgendaPrintPage({
 
       <footer className="mt-4 flex flex-wrap justify-between gap-2 border-t border-zinc-300 pt-3 text-sm">
         <span>
-          {appointments.length} atendimento{appointments.length === 1 ? "" : "s"} · {completed} concluído{completed === 1 ? "" : "s"}
+          {active.length} atendimento{active.length === 1 ? "" : "s"} · {completed} concluído{completed === 1 ? "" : "s"}
         </span>
         <span>Valor previsto (sem cancelados e faltas): <strong>{money(expected)}</strong></span>
       </footer>

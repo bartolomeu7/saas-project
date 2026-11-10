@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useFormState } from "react-dom";
 import type { ActionResult } from "@/lib/auth/actions";
 import {
@@ -18,6 +18,7 @@ import {
   setAttendanceAction,
 } from "@/lib/hr/actions";
 import { FormMessage } from "@/components/shared/auth/form-message";
+import { ConfirmDialog } from "@/components/app/confirm-dialog";
 import { SubmitButton } from "@/components/shared/auth/submit-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -130,13 +131,14 @@ export function AttendanceRangeForm({ employeeId, today }: { employeeId: string;
 export function AdjustmentForm({ employeeId, today }: { employeeId: string; today: string }) {
   const [state, formAction] = useFormState(addAdjustmentAction, initialState);
   const keepInput = useKeepInputOnError(state);
+  const [kind, setKind] = useState("advance");
   return (
     <form action={formAction} onReset={keepInput} className="grid gap-3 rounded-lg border p-4 sm:grid-cols-2">
       <input type="hidden" name="employeeId" value={employeeId} />
       <div className="sm:col-span-2"><FormMessage state={state} /></div>
       <div className="flex flex-col gap-2">
         <Label htmlFor="adj_kind">Tipo</Label>
-        <NativeSelect id="adj_kind" name="kind" defaultValue="advance" className={selectClass}>
+        <NativeSelect id="adj_kind" name="kind" value={kind} onChange={(event) => setKind(event.target.value)} className={selectClass}>
           <option value="advance">Vale (adiantamento já pago)</option>
           <option value="deduction">Desconto</option>
           <option value="bonus">Bônus / gorjeta</option>
@@ -150,7 +152,7 @@ export function AdjustmentForm({ employeeId, today }: { employeeId: string; toda
         <Label htmlFor="adj_date">Data</Label>
         <Input id="adj_date" name="occurred_on" type="date" defaultValue={today} max={today} />
       </div>
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2" hidden={kind !== "advance"}>
         <Label htmlFor="adj_method">Se for vale: como foi pago?</Label>
         <NativeSelect id="adj_method" name="method" defaultValue="cash" className={selectClass}>
           <option value="cash">Dinheiro (sai do caixa aberto)</option>
@@ -172,11 +174,20 @@ export function AdjustmentForm({ employeeId, today }: { employeeId: string; toda
 
 export function DeleteAdjustmentButton({ adjustmentId, employeeId }: { adjustmentId: string; employeeId: string }) {
   const [state, formAction] = useFormState(deleteAdjustmentAction, initialState);
+  const formRef = useRef<HTMLFormElement>(null);
   return (
-    <form action={formAction} className="inline">
+    <form action={formAction} className="inline" ref={formRef}>
       <input type="hidden" name="adjustmentId" value={adjustmentId} />
       <input type="hidden" name="employeeId" value={employeeId} />
-      <Button type="submit" variant="ghost" size="sm" className="h-8 px-2 text-destructive hover:text-destructive">Apagar</Button>
+      <ConfirmDialog
+        trigger={<Button type="button" variant="ghost" size="sm" className="h-8 px-2 text-destructive hover:text-destructive">Apagar</Button>}
+        title="Apagar este lançamento?"
+        description="Ele deixa de entrar no próximo fechamento. Vales já pagos continuam no Financeiro."
+        confirmLabel="Apagar"
+        cancelLabel="Voltar"
+        destructive
+        onConfirm={() => formRef.current?.requestSubmit()}
+      />
       <FormMessage state={state} />
     </form>
   );
@@ -240,11 +251,20 @@ export function PayPaymentForm({ paymentId, today, defaultMethod }: { paymentId:
 
 export function CancelPaymentButton({ paymentId }: { paymentId: string }) {
   const [state, formAction] = useFormState(cancelPaymentAction, initialState);
+  const formRef = useRef<HTMLFormElement>(null);
   return (
-    <form action={formAction}>
+    <form action={formAction} ref={formRef}>
       <input type="hidden" name="paymentId" value={paymentId} />
       <FormMessage state={state} />
-      <Button type="submit" variant="outline" size="sm">Cancelar este pagamento</Button>
+      <ConfirmDialog
+        trigger={<Button type="button" variant="outline" size="sm">Cancelar este pagamento</Button>}
+        title="Cancelar este pagamento?"
+        description="Os dias e lançamentos voltam a ficar em aberto para fechar o período de novo."
+        confirmLabel="Cancelar pagamento"
+        cancelLabel="Voltar"
+        destructive
+        onConfirm={() => formRef.current?.requestSubmit()}
+      />
     </form>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFormState } from "react-dom";
 import type { ActionResult } from "@/lib/auth/actions";
 import {
@@ -12,6 +12,8 @@ import {
 import type { Appointment } from "@/types/appointment";
 import { FormMessage } from "@/components/shared/auth/form-message";
 import { SubmitButton } from "@/components/shared/auth/submit-button";
+import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/app/confirm-dialog";
 import { NativeSelect } from "@/components/ui/native-select";
 import { useKeepInputOnError } from "@/hooks/use-keep-input-on-error";
 
@@ -107,19 +109,32 @@ export function AppointmentStatusForm({
   destructive?: boolean;
 }) {
   const [state, formAction] = useFormState(setAppointmentStatusAction, initialState);
+  const formRef = useRef<HTMLFormElement>(null);
 
   return (
-    <form action={formAction}>
+    <form action={formAction} ref={formRef}>
       <input type="hidden" name="appointmentId" value={appointmentId} />
       <input type="hidden" name="status" value={status} />
-      <SubmitButton state={state}
-        pendingLabel="..."
-        variant={destructive ? "outline" : "default"}
-        className={destructive ? "w-auto text-destructive" : "w-auto"}
-        size="sm"
-      >
-        {label}
-      </SubmitButton>
+      {status === "cancelled" ? (
+        <ConfirmDialog
+          trigger={<Button type="button" variant="outline" size="sm" className="w-auto text-destructive">{label}</Button>}
+          title="Cancelar este agendamento?"
+          description="O horário fica livre. Para voltar a atender, será preciso criar um novo agendamento."
+          confirmLabel="Cancelar agendamento"
+          cancelLabel="Voltar"
+          destructive
+          onConfirm={() => formRef.current?.requestSubmit()}
+        />
+      ) : (
+        <SubmitButton state={state}
+          pendingLabel="..."
+          variant={destructive ? "outline" : "default"}
+          className={destructive ? "w-auto text-destructive" : "w-auto"}
+          size="sm"
+        >
+          {label}
+        </SubmitButton>
+      )}
       {state.error || state.success ? <div className="mt-2 max-w-xs"><FormMessage state={state} /></div> : null}
     </form>
   );
