@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useFormState } from "react-dom";
 import type { ActionResult } from "@/lib/auth/actions";
 import {
@@ -24,6 +25,7 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { Button } from "@/components/ui/button";
 import { useKeepInputOnError } from "@/hooks/use-keep-input-on-error";
 import { cn } from "@/lib/utils";
+import { validateVacationSplit } from "@/lib/hr/payroll";
 
 const initialState: ActionResult = {};
 const selectClass = "h-10 rounded-md border border-input bg-background px-3 text-sm";
@@ -328,19 +330,24 @@ export function ScheduleVacationForm({
 }: {
   employeeId: string;
   /** Períodos aquisitivos que já terminaram (podem ter férias programadas). */
-  periods: { start: string; label: string; remaining: number; hasEntitlement: boolean }[];
+  periods: { start: string; label: string; remaining: number; entitled: number; scheduled: number[]; minStart: string }[];
   minStart: string;
 }) {
   const [state, formAction] = useFormState(scheduleVacationAction, initialState);
   const keepInput = useKeepInputOnError(state);
   const firstWithRoom = periods.find((period) => period.remaining > 0) ?? periods[0];
+  const [periodStart, setPeriodStart] = useState(firstWithRoom?.start ?? "");
+  const [days, setDays] = useState(30);
+  const period = periods.find((row) => row.start === periodStart) ?? firstWithRoom;
+  // Mesma regra do banco, conferida enquanto a pessoa digita: ela vê o problema antes de enviar.
+  const localError = period ? validateVacationSplit({ entitled: period.entitled, existingDays: period.scheduled, days }) : null;
   return (
     <form action={formAction} onReset={keepInput} className="grid gap-3 rounded-lg border p-4 sm:grid-cols-2">
       <input type="hidden" name="employeeId" value={employeeId} />
       <div className="sm:col-span-2"><FormMessage state={state} /></div>
       <div className="flex flex-col gap-2 sm:col-span-2">
         <Label htmlFor="vac_period">Período aquisitivo</Label>
-        <NativeSelect id="vac_period" name="acquisition_start" defaultValue={firstWithRoom?.start} className={selectClass}>
+        <NativeSelect id="vac_period" name="acquisition_start" value={periodStart} onChange={(event) => setPeriodStart(event.target.value)} className={selectClass}>
           {periods.map((period) => (
             <option key={period.start} value={period.start}>{period.label} — restam {period.remaining} dia(s)</option>
           ))}
@@ -348,11 +355,11 @@ export function ScheduleVacationForm({
       </div>
       <div className="flex flex-col gap-2">
         <Label htmlFor="vac_start">Primeiro dia das férias</Label>
-        <Input id="vac_start" name="start_on" type="date" min={minStart} required />
+        <Input id="vac_start" name="start_on" type="date" min={period?.minStart ?? minStart} required />
       </div>
       <div className="flex flex-col gap-2">
         <Label htmlFor="vac_days">Dias (5 a 30)</Label>
-        <Input id="vac_days" name="days" type="number" min={5} max={30} defaultValue={30} required />
+        <Input id="vac_days" name="days" type="number" min={5} max={30} value={days} onChange={(event) => setDays(Number(event.target.value))} required />
       </div>
       <div className="flex flex-col gap-2">
         <Label htmlFor="vac_absences">Faltas injustificadas no período (só no 1º lançamento)</Label>
@@ -362,10 +369,14 @@ export function ScheduleVacationForm({
         <Label htmlFor="vac_notes">Observação</Label>
         <Input id="vac_notes" name="notes" maxLength={500} />
       </div>
-      <p className="text-xs text-muted-foreground sm:col-span-2">
-        Regras: até 3 períodos, nenhum com menos de 5 dias e um com pelo menos 14. Até 5 faltas = 30 dias; 6 a 14 = 24; 15 a 23 = 18; 24 a 32 = 12.
-      </p>
-      <SubmitButton state={state} pendingLabel="Programando..." successLabel="Programado" className="w-full sm:w-fit">Programar férias</SubmitButton>
+      {localError ? (
+        <p className="text-sm text-destructive sm:col-span-2" role="alert">{localError}</p>
+      ) : (
+        <p className="text-xs text-muted-foreground sm:col-span-2">
+          Regras: até 3 períodos, nenhum com menos de 5 dias e um com pelo menos 14. Até 5 faltas = 30 dias; 6 a 14 = 24; 15 a 23 = 18; 24 a 32 = 12.
+        </p>
+      )}
+      <SubmitButton state={state} pendingLabel="Programando..." successLabel="Programado" disabled={Boolean(localError)} className="w-full sm:w-fit">Programar férias</SubmitButton>
     </form>
   );
 }

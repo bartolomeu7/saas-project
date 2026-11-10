@@ -134,7 +134,7 @@ select pg_temp.chk('pagamento', 'não gera o pagamento duas vezes',
 select pg_temp.chk('pagamento', 'férias com pagamento não podem ser canceladas',
   $q$select (public.hr_cancel_vacation((select v::uuid from ctx where k = 'v1'))).id::text$q$, 'ERR=já têm pagamento');
 select pg_temp.chk('pagamento', 'pagamento de férias não bloqueia a folha de março/2025 (outro tipo)',
-  $q$select (public.hr_close_payroll((select v::uuid from ctx where k = 'c1'), date '2025-03-01', 0, 0, 14, 0, 0, 0, null, null, '{}'::jsonb)).net_amount::text$q$, 'OK=1600.00');
+  $q$select (public.hr_close_payroll((select v::uuid from ctx where k = 'c1'), date '2025-03-01', 0, 0, 14, 0, 0, 0, 0, null, null, '{}'::jsonb)).net_amount::text$q$, 'OK=1600.00');
 select pg_temp.chk('pagamento', 'paga as férias em Pix: despesa em Pessoal com descrição de férias',
   $q$select (public.hr_pay_payment((select v::uuid from ctx where k = 'pv1'), 'pix')).status::text$q$, 'OK=paid');
 select pg_temp.chk('pagamento', 'despesa de 1726,67 em Pessoal, descrição "Férias — ..."',
@@ -183,7 +183,7 @@ select pg_temp.chk('13o', 'descrição e valor no Financeiro',
   $q$select fe.amount::text || '|' || fc.name || '|' || (fe.description like '13º salário (1ª parcela) — Vera Ferias Teste Souza (%')::text
        from public.financial_entries fe join public.financial_categories fc on fc.id = fe.category_id where fe.description like '13º salário%'$q$, 'OK=1500.00|Pessoal|true');
 select pg_temp.chk('13o', '13º não bloqueia a folha do mês corrente (outro tipo)',
-  $q$select (public.hr_close_payroll((select v::uuid from ctx where k = 'c1'), date_trunc('month', public.today_sao_paulo())::date, 0, 0, 0, 0, 0, 0, null, null, '{}'::jsonb)).net_amount::text$q$, 'OK=3000.00');
+  $q$select (public.hr_close_payroll((select v::uuid from ctx where k = 'c1'), date_trunc('month', public.today_sao_paulo())::date, 0, 0, 0, 0, 0, 0, 0, null, null, '{}'::jsonb)).net_amount::text$q$, 'OK=3000.00');
 select pg_temp.chk('13o', 'o período por dias recusa CLT mesmo com 13º',
   $q$select (public.hr_close_period((select v::uuid from ctx where k = 'c1'), public.today_sao_paulo() - 3, public.today_sao_paulo())).id::text$q$, 'ERR=feche a folha do mês');
 reset role;

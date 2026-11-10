@@ -506,6 +506,11 @@ async function PayrollTab({
         <Alert variant="destructive">{built.error}</Alert>
       ) : (
         <>
+          {built.outdated ? (
+            <Alert variant="destructive">
+              As tabelas de INSS e Imposto de Renda cadastradas são de {built.versions.inss.slice(0, 4)} e esta folha é de {yearText}. Os valores podem estar defasados — peça a atualização das tabelas antes de usar este cálculo.
+            </Alert>
+          ) : null}
           {employee.base_amount < built.input.tables.params.minimum_wage ? (
             <Alert variant="warning">O salário está abaixo do salário mínimo ({formatCurrency(built.input.tables.params.minimum_wage)}).</Alert>
           ) : null}
@@ -696,7 +701,9 @@ async function VacationTab({
               start: row.period.start,
               label: `${dmy(row.period.start)} a ${dmy(row.period.end)}`,
               remaining: row.remaining,
-              hasEntitlement: row.entitled > 0,
+              entitled: row.entitled,
+              scheduled: vacations.filter((item) => item.acquisition_start === row.period.start).map((item) => item.days),
+              minStart: addDays(row.period.end, 1),
             }))}
           />
         </section>
@@ -750,6 +757,11 @@ async function VacationTab({
                 )}
               </div>
             </div>
+            {loaded?.outdated ? (
+              <Alert variant="destructive">
+                As tabelas de INSS e Imposto de Renda cadastradas são de {loaded.versions.inss.slice(0, 4)} e este 13º é de {year}. Os valores podem estar defasados — peça a atualização das tabelas.
+              </Alert>
+            ) : null}
             <p className="text-xs text-muted-foreground">
               Salário fixo (sem média de horas extras/comissões). IRRF do 13º calculado só com INSS e dependentes e a redução da Lei 15.270. FGTS de 8% sobre o 13º (custo da empresa): {formatCurrency(thirteenth.fgts)}.
             </p>

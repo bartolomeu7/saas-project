@@ -24,6 +24,21 @@ const CONTRACT_TYPES: HrContractType[] = ["indefinite", "experience", "fixed_ter
 const REGIMES: HrEmployerRegime[] = ["simples", "mei", "other"];
 
 const text = (value: FormDataEntryValue | null) => String(value ?? "").trim();
+
+/**
+ * Mensagem para a pessoa. As funções do RH recusam com texto em português escrito para leigo (code P0001);
+ * qualquer outro erro é técnico (tabela ausente, violação de restrição, falha de conexão) e vira um aviso
+ * genérico — jargão de banco de dados nunca aparece na tela.
+ */
+function friendly(error: { message?: string; code?: string } | null, fallback: string): string {
+  if (!error) return fallback;
+  if (error.code === "P0001" && error.message) return error.message;
+  if (error.code === undefined && error.message && !/\b(relation|function|column|syntax|permission denied|does not exist)\b/i.test(error.message)) {
+    return error.message;
+  }
+  console.error("[rh] erro técnico", error);
+  return fallback;
+}
 const isDate = (value: string) => DATE_ONLY.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00Z`));
 
 // O banco é a barreira real (RLS e funções recusam quem não é dono/administrador); isto só devolve uma mensagem clara.
@@ -201,7 +216,7 @@ export async function createEmployeeAction(_prev: ActionResult, formData: FormDa
     if ("error" in parsed) return parsed;
     const { data, error } = await supabase.rpc("hr_save_clt_employee", saveCltRpcArgs(null, parsed));
     const id = (Array.isArray(data) ? data[0] : data)?.id as string | undefined;
-    if (error || !id) return { error: error?.message || "Não foi possível salvar o funcionário." };
+    if (error || !id) return { error: friendly(error, "Não foi possível salvar o funcionário.") };
     revalidateHr();
     redirect(`/app/rh/${id}`);
   }
@@ -232,7 +247,7 @@ export async function updateEmployeeAction(id: string, _prev: ActionResult, form
     const parsed = parseClt(formData);
     if ("error" in parsed) return parsed;
     const { error } = await supabase.rpc("hr_save_clt_employee", saveCltRpcArgs(id, parsed));
-    if (error) return { error: error.message || "Não foi possível salvar as alterações." };
+    if (error) return { error: friendly(error, "Não foi possível salvar as alterações.") };
     revalidateHr(id);
     redirect(`/app/rh/${id}`);
   }
@@ -297,7 +312,7 @@ export async function setAttendanceAction(_prev: ActionResult, formData: FormDat
 
   const supabase = (await createSessionClient()) as any;
   const { error } = await supabase.rpc("hr_set_attendance", { p_employee_id: employeeId, p_work_dates: dates, p_quantity: quantity });
-  if (error) return { error: error.message || "Não foi possível marcar a presença." };
+  if (error) return { error: friendly(error, "Não foi possível marcar a presença.") };
   revalidateHr(employeeId);
   return { success: quantity === null ? "Marcação apagada." : "Presença registrada." };
 }
@@ -327,7 +342,7 @@ export async function addAdjustmentAction(_prev: ActionResult, formData: FormDat
     p_description: description || null,
     p_method: kind === "advance" ? method : null,
   });
-  if (error) return { error: error.message || "Não foi possível registrar." };
+  if (error) return { error: friendly(error, "Não foi possível registrar.") };
   revalidateHr(employeeId);
   if (kind === "advance") revalidateMoney();
   return {
@@ -348,7 +363,7 @@ export async function deleteAdjustmentAction(_prev: ActionResult, formData: Form
   if ("error" in guard) return guard;
   const supabase = (await createSessionClient()) as any;
   const { error } = await supabase.rpc("hr_delete_adjustment", { p_adjustment_id: adjustmentId });
-  if (error) return { error: error.message || "Não foi possível apagar." };
+  if (error) return { error: friendly(error, "Não foi possível apagar.") };
   revalidateHr(employeeId || undefined);
   return { success: "Lançamento apagado." };
 }
@@ -374,7 +389,7 @@ export async function closePeriodAction(_prev: ActionResult, formData: FormData)
     p_due_on: dueOn || null,
     p_notes: notes || null,
   });
-  if (error) return { error: error.message || "Não foi possível fechar o período." };
+  if (error) return { error: friendly(error, "Não foi possível fechar o período.") };
   revalidateHr(employeeId);
   const paymentId = (Array.isArray(data) ? data[0] : data)?.id as string | undefined;
   redirect(paymentId ? `/app/rh/pagamentos/${paymentId}` : `/app/rh/${employeeId}?aba=pagamentos`);
@@ -392,7 +407,7 @@ export async function payPaymentAction(_prev: ActionResult, formData: FormData):
 
   const supabase = (await createSessionClient()) as any;
   const { data, error } = await supabase.rpc("hr_pay_payment", { p_payment_id: paymentId, p_method: method, p_paid_on: paidOn || null });
-  if (error) return { error: error.message || "Não foi possível registrar o pagamento." };
+  if (error) return { error: friendly(error, "Não foi possível registrar o pagamento.") };
   const employeeId = (Array.isArray(data) ? data[0] : data)?.employee_id as string | undefined;
   revalidateHr(employeeId);
   revalidatePath(`/app/rh/pagamentos/${paymentId}`);
@@ -407,7 +422,7 @@ export async function cancelPaymentAction(_prev: ActionResult, formData: FormDat
   if ("error" in guard) return guard;
   const supabase = (await createSessionClient()) as any;
   const { data, error } = await supabase.rpc("hr_cancel_payment", { p_payment_id: paymentId });
-  if (error) return { error: error.message || "Não foi possível cancelar." };
+  if (error) return { error: friendly(error, "Não foi possível cancelar.") };
   const employeeId = (Array.isArray(data) ? data[0] : data)?.employee_id as string | undefined;
   revalidateHr(employeeId);
   revalidatePath(`/app/rh/pagamentos/${paymentId}`);
@@ -427,7 +442,7 @@ export async function saveHrSettingsAction(_prev: ActionResult, formData: FormDa
   if ("error" in guard) return guard;
   const supabase = (await createSessionClient()) as any;
   const { error } = await supabase.rpc("hr_save_settings", { p_regime: regime, p_inss_rate: regime === "other" ? rate : null });
-  if (error) return { error: error.message || "Não foi possível salvar." };
+  if (error) return { error: friendly(error, "Não foi possível salvar.") };
   revalidatePath("/app/rh/configuracoes");
   revalidateHr();
   return { success: "Configurações salvas." };
@@ -466,7 +481,8 @@ export async function closePayrollAction(_prev: ActionResult, formData: FormData
     p_month: built.monthStart,
     p_overtime50_hours: overtime50,
     p_overtime100_hours: overtime100,
-    p_absence_days: absences + vacationDays,
+    p_absence_days: absences,
+    p_vacation_days: vacationDays,
     p_inss: result.inss,
     p_irrf: result.irrf,
     p_vt: result.vt,
@@ -480,7 +496,7 @@ export async function closePayrollAction(_prev: ActionResult, formData: FormData
       result,
     },
   });
-  if (error) return { error: error.message || "Não foi possível fechar a folha." };
+  if (error) return { error: friendly(error, "Não foi possível fechar a folha.") };
   revalidateHr(employeeId);
   const paymentId = (Array.isArray(data) ? data[0] : data)?.id as string | undefined;
   redirect(paymentId ? `/app/rh/pagamentos/${paymentId}` : `/app/rh/${employeeId}?aba=pagamentos`);
@@ -520,7 +536,7 @@ export async function scheduleVacationAction(_prev: ActionResult, formData: Form
     p_absences: absences,
     p_notes: notes || null,
   });
-  if (error) return { error: error.message || "Não foi possível programar as férias." };
+  if (error) return { error: friendly(error, "Não foi possível programar as férias.") };
   revalidateVacations(employeeId);
   return { success: "Férias programadas." };
 }
@@ -533,7 +549,7 @@ export async function cancelVacationAction(_prev: ActionResult, formData: FormDa
   if ("error" in guard) return guard;
   const supabase = (await createSessionClient()) as any;
   const { error } = await supabase.rpc("hr_cancel_vacation", { p_vacation_id: vacationId });
-  if (error) return { error: error.message || "Não foi possível cancelar." };
+  if (error) return { error: friendly(error, "Não foi possível cancelar.") };
   revalidateVacations(employeeId);
   return { success: "Férias canceladas." };
 }
@@ -566,7 +582,7 @@ export async function closeVacationPayAction(_prev: ActionResult, formData: Form
     p_notes: null,
     p_calc: { estimate: true, tables: loaded.versions, days: vacation.days, result },
   });
-  if (error) return { error: error.message || "Não foi possível gerar o pagamento das férias." };
+  if (error) return { error: friendly(error, "Não foi possível gerar o pagamento das férias.") };
   revalidateVacations(employeeId);
   const paymentId = (Array.isArray(data) ? data[0] : data)?.id as string | undefined;
   redirect(paymentId ? `/app/rh/pagamentos/${paymentId}` : `/app/rh/${employeeId}?aba=ferias`);
@@ -609,7 +625,7 @@ export async function closeThirteenthAction(_prev: ActionResult, formData: FormD
     p_notes: null,
     p_calc: { estimate: true, tables: loaded.versions, result },
   });
-  if (error) return { error: error.message || "Não foi possível gerar a parcela do 13º." };
+  if (error) return { error: friendly(error, "Não foi possível gerar a parcela do 13º.") };
   revalidateVacations(employeeId);
   const paymentId = (Array.isArray(data) ? data[0] : data)?.id as string | undefined;
   redirect(paymentId ? `/app/rh/pagamentos/${paymentId}` : `/app/rh/${employeeId}?aba=ferias`);
