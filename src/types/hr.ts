@@ -107,7 +107,7 @@ export interface HrPayment {
   paid_method: HrPayMethod | null;
   notes: string | null;
   created_at: string;
-  kind: "period" | "payroll";
+  kind: "period" | "payroll" | "vacation" | "thirteenth";
   reference_month: string | null;
   /** Retrato da folha (kind = payroll): tabelas usadas, entradas, resultado do app e números do banco. */
   calc: Record<string, any> | null;
@@ -125,4 +125,17 @@ export interface HrPeriodPreview {
   advances: number;
   net: number;
   has_overlap: boolean;
+}
+
+export interface HrVacation {
+  id: string;
+  employee_id: string;
+  acquisition_start: string;
+  acquisition_end: string;
+  entitled_days: number;
+  start_on: string;
+  days: number;
+  payment_id: string | null;
+  canceled_at: string | null;
+  notes: string | null;
 }

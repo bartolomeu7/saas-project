@@ -43,3 +43,27 @@ export const REGIME_LABELS = {
   mei: "MEI (3% de INSS sobre o salário)",
   other: "Outro regime (informe o percentual de INSS patronal)",
 } as const;
+
+export const PAYMENT_KIND_LABELS = {
+  period: "Período",
+  payroll: "Folha do mês",
+  vacation: "Férias",
+  thirteenth: "13º salário",
+} as const;
+
+/** Título curto de um pagamento para listas: "Folha 11/2026", "Férias 10/03 a 23/03/2025", "13º — 1ª parcela (2026)". */
+export function paymentTitle(payment: {
+  kind: "period" | "payroll" | "vacation" | "thirteenth";
+  period_start: string;
+  period_end: string;
+  reference_month: string | null;
+  calc: Record<string, any> | null;
+}): string {
+  if (payment.kind === "payroll" && payment.reference_month) {
+    const [year = "", month = ""] = payment.reference_month.split("-");
+    return `Folha ${month}/${year}`;
+  }
+  if (payment.kind === "vacation") return `Férias ${formatPeriod(payment.period_start, payment.period_end)}`;
+  if (payment.kind === "thirteenth") return `13º salário — ${payment.calc?.installment ?? "?"}ª parcela (${payment.calc?.year ?? ""})`;
+  return formatPeriod(payment.period_start, payment.period_end);
+}

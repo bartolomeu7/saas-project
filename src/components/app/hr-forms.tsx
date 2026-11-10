@@ -5,11 +5,15 @@ import type { ActionResult } from "@/lib/auth/actions";
 import {
   addAdjustmentAction,
   cancelPaymentAction,
+  cancelVacationAction,
   closePayrollAction,
+  closeThirteenthAction,
+  closeVacationPayAction,
   closePeriodAction,
   deleteAdjustmentAction,
   payPaymentAction,
   saveHrSettingsAction,
+  scheduleVacationAction,
   setAttendanceAction,
 } from "@/lib/hr/actions";
 import { FormMessage } from "@/components/shared/auth/form-message";
@@ -249,6 +253,7 @@ export function ClosePayrollForm({
   overtime50,
   overtime100,
   absences,
+  vacationDays,
   dueOn,
 }: {
   employeeId: string;
@@ -256,6 +261,7 @@ export function ClosePayrollForm({
   overtime50: string;
   overtime100: string;
   absences: string;
+  vacationDays: string;
   dueOn: string;
 }) {
   const [state, formAction] = useFormState(closePayrollAction, initialState);
@@ -267,6 +273,7 @@ export function ClosePayrollForm({
       <input type="hidden" name="overtime50" value={overtime50} />
       <input type="hidden" name="overtime100" value={overtime100} />
       <input type="hidden" name="absences" value={absences} />
+      <input type="hidden" name="vacation_days" value={vacationDays} />
       <div className="sm:col-span-2"><FormMessage state={state} /></div>
       <div className="flex flex-col gap-2">
         <Label htmlFor="payroll_due">Data prevista do pagamento</Label>
@@ -310,6 +317,110 @@ export function HrSettingsForm({ regime, inssPercent }: { regime: "simples" | "m
         <Input id="employer_inss_percent" name="employer_inss_percent" inputMode="decimal" defaultValue={inssPercent} placeholder="20,00" />
       </div>
       <SubmitButton state={state} pendingLabel="Salvando..." className="w-full sm:w-fit">Salvar configurações</SubmitButton>
+    </form>
+  );
+}
+
+export function ScheduleVacationForm({
+  employeeId,
+  periods,
+  minStart,
+}: {
+  employeeId: string;
+  /** Períodos aquisitivos que já terminaram (podem ter férias programadas). */
+  periods: { start: string; label: string; remaining: number; hasEntitlement: boolean }[];
+  minStart: string;
+}) {
+  const [state, formAction] = useFormState(scheduleVacationAction, initialState);
+  const keepInput = useKeepInputOnError(state);
+  const firstWithRoom = periods.find((period) => period.remaining > 0) ?? periods[0];
+  return (
+    <form action={formAction} onReset={keepInput} className="grid gap-3 rounded-lg border p-4 sm:grid-cols-2">
+      <input type="hidden" name="employeeId" value={employeeId} />
+      <div className="sm:col-span-2"><FormMessage state={state} /></div>
+      <div className="flex flex-col gap-2 sm:col-span-2">
+        <Label htmlFor="vac_period">Período aquisitivo</Label>
+        <NativeSelect id="vac_period" name="acquisition_start" defaultValue={firstWithRoom?.start} className={selectClass}>
+          {periods.map((period) => (
+            <option key={period.start} value={period.start}>{period.label} — restam {period.remaining} dia(s)</option>
+          ))}
+        </NativeSelect>
+      </div>
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="vac_start">Primeiro dia das férias</Label>
+        <Input id="vac_start" name="start_on" type="date" min={minStart} required />
+      </div>
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="vac_days">Dias (5 a 30)</Label>
+        <Input id="vac_days" name="days" type="number" min={5} max={30} defaultValue={30} required />
+      </div>
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="vac_absences">Faltas injustificadas no período (só no 1º lançamento)</Label>
+        <Input id="vac_absences" name="absences" type="number" min={0} max={365} defaultValue={0} />
+      </div>
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="vac_notes">Observação</Label>
+        <Input id="vac_notes" name="notes" maxLength={500} />
+      </div>
+      <p className="text-xs text-muted-foreground sm:col-span-2">
+        Regras: até 3 períodos, nenhum com menos de 5 dias e um com pelo menos 14. Até 5 faltas = 30 dias; 6 a 14 = 24; 15 a 23 = 18; 24 a 32 = 12.
+      </p>
+      <SubmitButton state={state} pendingLabel="Programando..." successLabel="Programado" className="w-full sm:w-fit">Programar férias</SubmitButton>
+    </form>
+  );
+}
+
+export function CancelVacationButton({ vacationId, employeeId }: { vacationId: string; employeeId: string }) {
+  const [state, formAction] = useFormState(cancelVacationAction, initialState);
+  return (
+    <form action={formAction} className="inline">
+      <input type="hidden" name="vacationId" value={vacationId} />
+      <input type="hidden" name="employeeId" value={employeeId} />
+      <Button type="submit" variant="ghost" size="sm" className="h-8 px-2 text-destructive hover:text-destructive">Cancelar</Button>
+      <FormMessage state={state} />
+    </form>
+  );
+}
+
+export function GenerateVacationPayButton({ vacationId, employeeId }: { vacationId: string; employeeId: string }) {
+  const [state, formAction] = useFormState(closeVacationPayAction, initialState);
+  return (
+    <form action={formAction} className="inline">
+      <input type="hidden" name="vacationId" value={vacationId} />
+      <input type="hidden" name="employeeId" value={employeeId} />
+      <Button type="submit" size="sm" className="h-8">Gerar pagamento</Button>
+      <FormMessage state={state} />
+    </form>
+  );
+}
+
+export function ThirteenthButton({
+  employeeId,
+  year,
+  installment,
+  askFirstElsewhere,
+  label,
+}: {
+  employeeId: string;
+  year: number;
+  installment: 1 | 2;
+  /** Na 2ª parcela, deixa marcar que a 1ª foi paga fora do sistema. */
+  askFirstElsewhere?: boolean;
+  label: string;
+}) {
+  const [state, formAction] = useFormState(closeThirteenthAction, initialState);
+  return (
+    <form action={formAction} className="flex flex-col items-start gap-2">
+      <input type="hidden" name="employeeId" value={employeeId} />
+      <input type="hidden" name="year" value={year} />
+      <input type="hidden" name="installment" value={installment} />
+      {askFirstElsewhere ? (
+        <label className="flex items-center gap-2 text-xs text-muted-foreground">
+          <input type="checkbox" name="first_elsewhere" /> A 1ª parcela foi paga fora do sistema
+        </label>
+      ) : null}
+      <Button type="submit" size="sm">{label}</Button>
+      <FormMessage state={state} />
     </form>
   );
 }
