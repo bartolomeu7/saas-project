@@ -221,8 +221,15 @@ export default async function AgendaPage({
         <MetricCard label="Concluídos" value={stats.completed} icon={CheckCircle2} />
       </div>
 
+      <Link
+        href="#novo-agendamento"
+        className={cn(buttonVariants(), "fixed bottom-4 right-4 z-40 rounded-full px-5 shadow-lg hover:no-underline xl:hidden")}
+      >
+        + Novo agendamento
+      </Link>
+
       <div className="grid gap-6 xl:grid-cols-[360px_1fr]">
-        <section className="rounded-xl border border-border bg-card/40 p-5">
+        <section id="novo-agendamento" className="scroll-mt-20 rounded-xl border border-border bg-card/40 p-5">
           <div className="mb-5">
             <h2 className="font-semibold">Novo agendamento</h2>
             <p className="mt-1 text-sm text-muted-foreground">O sistema bloqueia conflito de profissional, bloqueios e disponibilidade configurada.</p>
