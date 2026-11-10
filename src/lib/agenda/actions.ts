@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createSessionClient } from "@/lib/supabase/server";
-import { parseLocalDateTimeSaoPaulo } from "@/lib/timezone";
+import { parseLocalDateTimeSaoPaulo, todayDateSaoPaulo } from "@/lib/timezone";
 import type { ActionResult } from "@/lib/auth/actions";
 import type { Database } from "@/types/supabase";
 
@@ -111,6 +111,12 @@ export async function completeAppointmentAction(
   }
 
   const supabase = await createSessionClient();
+  // Não gera receita de um serviço que ainda não aconteceu: só conclui até o fim do dia do atendimento.
+  const { data: found } = await supabase.from("appointments").select("starts_at").eq("id", appointmentId).maybeSingle();
+  const storedStart = (found as { starts_at?: string } | null)?.starts_at;
+  if (storedStart && todayDateSaoPaulo(new Date(storedStart)) > todayDateSaoPaulo()) {
+    return { error: "Este atendimento é de um dia futuro. Conclua no dia do atendimento (ou reagende)." };
+  }
   const { error } = await supabase.rpc("complete_appointment", {
     p_appointment_id: appointmentId,
     p_method: method,

@@ -134,7 +134,7 @@ export default async function AgendaPage({
       <PageHeader
         eyebrow="Operação"
         title="Agenda"
-        description={<span className="capitalize">{dateLabel(date)}</span>}
+        description={<span className="first-letter:uppercase">{dateLabel(date)}</span>}
         className="xl:items-end"
         actions={
           <nav aria-label="Navegar entre os dias" className="flex flex-wrap gap-2">
@@ -161,7 +161,7 @@ export default async function AgendaPage({
             <h2 id="agenda-semanas" className="font-semibold">{view === "dia" ? "Agenda do dia" : view === "mes" ? "Agenda do mês" : "Agenda da semana"}</h2>
             <p className="text-sm text-muted-foreground">
               {view === "dia" ? (
-                <span className="capitalize">{dateLabel(date)}</span>
+                <span className="first-letter:uppercase">{dateLabel(date)}</span>
               ) : view === "mes" ? (
                 <span>{monthLabel(date)}</span>
               ) : (

@@ -80,7 +80,7 @@ function shiftMonth(month: string, delta: number): string {
   return `${Math.floor(index / 12)}-${String((index % 12) + 1).padStart(2, "0")}`;
 }
 
-type Params = { aba?: string; mes?: string; de?: string; ate?: string; he50?: string; he100?: string; faltas?: string; ferias?: string; ano?: string };
+type Params = { aba?: string; mes?: string; de?: string; ate?: string; he50?: string; he100?: string; faltas?: string; ferias?: string; ano?: string; erro?: string };
 
 export default async function HrEmployeePage({
   params: paramsPromise,
@@ -129,6 +129,10 @@ export default async function HrEmployeePage({
           </div>
         }
       />
+
+      {searchParams?.erro === "status" ? (
+        <Alert variant="destructive">Não foi possível alterar a situação do funcionário. Confira as datas de início e tente de novo.</Alert>
+      ) : null}
 
       <nav aria-label="Seções do funcionário" className="-mx-1 flex gap-1 overflow-x-auto border-b px-1">
         {tabs.map(([key, label]) => (
