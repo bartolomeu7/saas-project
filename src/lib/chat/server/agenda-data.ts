@@ -48,11 +48,11 @@ export async function loadAgendaCatalog(companyId: string): Promise<AgendaCatalo
 }
 
 /** Clientes ativos cujo nome contém todas as palavras do texto (sem acento). Até 5, com o telefone para distinguir. */
-export async function findCustomers(companyId: string, text: string): Promise<Candidate[]> {
+export async function findCustomers(companyId: string, text: string, status: "active" | "inactive" = "active"): Promise<Candidate[]> {
   const wanted = tokens(text);
   if (wanted.length === 0) return [];
   const supabase: Db = await createSessionClient();
-  const { data } = await supabase.from("customers").select("id,name,phone").eq("company_id", companyId).eq("status", "active").order("name").limit(500);
+  const { data } = await supabase.from("customers").select("id,name,phone").eq("company_id", companyId).eq("status", status).order("name").limit(500);
   const rows = (data ?? []) as { id: string; name: string; phone: string | null }[];
   return rows
     .filter((c) => {
@@ -63,6 +63,9 @@ export async function findCustomers(companyId: string, text: string): Promise<Ca
     .slice(0, 5)
     .map((c) => ({ id: c.id, name: c.name, detail: c.phone ? `final ${c.phone.replace(/\D/g, "").slice(-4)}` : undefined }));
 }
+
+/** Clientes inativos com esse nome (só para avisar; nunca entram no agendamento). */
+export const findInactiveCustomers = (companyId: string, text: string) => findCustomers(companyId, text, "inactive");
 
 /** Expediente, bloqueios e agendamentos do profissional no dia (horário local de São Paulo). */
 export async function loadSchedule(companyId: string, professionalId: string, date: string): Promise<ProfessionalSchedule | null> {

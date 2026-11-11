@@ -74,13 +74,17 @@ export interface AgendarUnderstanding {
 
 /** A frase parece um pedido de agendamento? */
 export function detectAgendar(text: string): boolean {
+  return detectAgendarVerb(text);
+}
+
+function detectAgendarVerb(text: string): boolean {
   const t = norm(text);
   // pedidos de apagar/cancelar/consultar não são "agendar" (mesmo citando "agendamentos")
   if (/\b(cancel\w*|apag\w*|exclu\w*|delet\w*|remov\w*|desmarc\w*|quant\w*|quais|list\w*|mostr\w*|ignor\w*)\b/.test(t) && !/\b(agendar|marcar|reservar)\b/.test(t)) return false;
   return (
     /\b(agend(ar|e|ei|ando|a)|marc(ar|a|ando)|reserv(ar|a|e|ando))\b/.test(t) ||
     /\b(coloc\w*|bot\w*|poe|pon\w*|encaix\w*) (isso |ela |ele )?(na|a) agenda\b/.test(t) ||
-    /\bhorario (pro|pra|para|do|da)\b/.test(t) ||
+    /\bhorario (pro|pra|para|do|da|de)\b/.test(t) ||
     /\bpreciso de (um|o) horario\b/.test(t) ||
     /^\s*(novo )?agendamento\b/.test(t) ||
     /\b(um|novo) agendamento\b/.test(t) ||
@@ -95,6 +99,7 @@ export function plausibleName(name: string): boolean {
   const n = name.trim();
   if (n.length < 2 || n.length > 80) return false;
   if (!/^[\p{L}][\p{L}'’.\- ]*$/u.test(n)) return false;
+  if (/\b(e|com)\b/.test(norm(n))) return false; // "Juliana e Marcos": mais de uma pessoa
   const words = n.split(/\s+/);
   if (words.length > 5) return false;
   return !/^(nao|sim|talvez|tanto faz|qualquer|nenhum|ninguem|nada|sei la|nao sei|esquece|aquele|aquela)\b/.test(norm(n));
@@ -128,15 +133,39 @@ export function originalCustomerName(original: string, normalized: string): stri
   return wanted.map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
 }
 
+/** Palavra do nome que só existe em UM serviço e foi dita ("polimento" → "Polimento Técnico Completo"). */
+function distinctiveHit(text: string, service: CatalogService, all: CatalogService[]): boolean {
+  const said = new Set(tokens(text));
+  const saidList = [...said];
+  return tokens(service.name).some(
+    (t) => t.length >= 5 && !/^\d+$/.test(t) && all.filter((o) => tokens(o.name).includes(t)).length === 1 && (said.has(t) || saidList.some((x) => x.length >= 5 && t.startsWith(x)))
+  );
+}
+
 export function matchServices(text: string, services: CatalogService[]): CatalogService[] {
   const scored = services
-    .map((s) => ({ s, score: nameCoverage(text, s.name) }))
+    .map((s) => ({ s, score: Math.max(nameCoverage(text, s.name), distinctiveHit(text, s, services) ? SERVICE_MIN_COVERAGE : 0) }))
     .filter((x) => x.score >= SERVICE_MIN_COVERAGE)
     .sort((a, b) => b.score - a.score);
-  if (scored.length === 0) return [];
+  if (scored.length === 0) {
+    // palavra comum a vários serviços ("teste"): lista os que a contêm para a pessoa escolher
+    const said = new Set(tokens(text));
+    const shared = services.filter((s) => tokens(s.name).some((t) => t.length >= 5 && said.has(t) && services.filter((o) => tokens(o.name).includes(t)).length >= 2));
+    return shared.length >= 2 && shared.length <= 4 ? shared : [];
+  }
   const best = scored[0]!.score;
   // só os que empatam ou chegam perto do melhor: se sobrar mais de um, a Cláudia pergunta
   const near = scored.filter((x) => best - x.score < 0.15).map((x) => x.s);
+  if (near.length === 1 && best < 1) {
+    // acertou por uma palavra que outros serviços também têm ("teste" → vários): pergunta em vez de escolher um
+    const said = new Set(tokens(text));
+    const hit = tokens(near[0]!.name).filter((t) => said.has(t));
+    const sharing = hit.length > 0 && hit.every((t) => services.filter((o) => tokens(o.name).includes(t)).length >= 2);
+    if (sharing) {
+      const others = services.filter((o) => o !== near[0] && tokens(o.name).some((t) => hit.includes(t)));
+      if (others.length > 0 && others.length < 6) return [...near, ...others];
+    }
+  }
   if (near.length < 2) return near;
   // pergunta ambígua ("lavagem"): lista também os serviços de nome longo que contêm a palavra
   const extra = services.filter((s) => !near.includes(s) && nameCoverage(text, s.name) >= 0.3);
@@ -181,12 +210,49 @@ export function matchProfessionals(text: string, professionals: CatalogProfessio
   return professionals.filter((p) => tokens(p.name).some((tok) => wanted.has(tok) || [...wanted].some((w) => w.length >= 3 && tok.startsWith(w))));
 }
 
+/** "agendar [a|o] Marcos Vinícius para polimento": o cliente vem ANTES do "para" e o serviço depois. */
+function customerBeforePara(text: string): string | undefined {
+  const t = norm(text);
+  const m = /\bagend\w*\s+(?:a |o )?(.+?)\s+(?:para|pra|pro)\s+/.exec(t);
+  return m ? m[1]!.trim() : undefined;
+}
+
+/** Sequência de 2+ palavras com inicial maiúscula no meio da frase ("… polimento Marcos Vinícius Albuquerque 18/11"). */
+function capitalizedName(text: string): string | undefined {
+  const re = /\p{Lu}[\p{L}'’-]+(?:\s+(?:d[aeo]s?\s+)?\p{Lu}[\p{L}'’-]+)+/gu;
+  for (const m of text.matchAll(re)) {
+    if (m.index === 0) continue; // início da frase ("Agendar Polimento…")
+    if (/^(oi|ola|bom|boa)\b/.test(norm(m[0]))) continue;
+    return norm(m[0]);
+  }
+  return undefined;
+}
+
 export function understandAgendar(text: string, catalog: AgendaCatalog, clock: ChatClock): AgendarUnderstanding {
+  const services = matchServices(text, catalog.services);
+  let customerText = extractCustomerText(text);
+  // o "para" apontou o serviço ("agendar a Marcos para polimento"): o cliente é quem vem antes dele
+  const allServiceWords = (ct: string) => {
+    const tk = tokens(ct);
+    const words = new Set(catalog.services.flatMap((sv) => tokens(sv.name)));
+    return tk.length > 0 && tk.every((w) => words.has(w) || [...words].some((x) => w.length >= 4 && x.startsWith(w)));
+  };
+  if (customerText && allServiceWords(customerText)) {
+    const before = customerBeforePara(text);
+    customerText = before && matchServices(before, catalog.services).length === 0 ? before : undefined;
+  }
+  if (!customerText) {
+    const cap = capitalizedName(text);
+    // nome de profissional ou de serviço com maiúsculas não é o cliente
+    const capTokens = cap ? tokens(cap) : [];
+    const isStaff = capTokens.length > 0 && catalog.professionals.some((p) => capTokens.every((tok) => tokens(p.name).includes(tok)));
+    if (cap && !isStaff && matchServices(cap, catalog.services).length === 0) customerText = cap;
+  }
   return {
     isAgendar: detectAgendar(text),
-    services: matchServices(text, catalog.services),
+    services,
     professionals: matchProfessionals(text, catalog.professionals),
-    customerText: extractCustomerText(text),
+    customerText,
     when: parseDateTimePt(text, clock),
   };
 }
@@ -360,7 +426,12 @@ export function validateAgendar(
           const fits = rules.some((r) => minutesOf(slots.time!) >= minutesOf(r.start) && minutesOf(endParts.time) <= minutesOf(r.end) && endParts.date === slots.date);
           if (!fits) {
             const hours = rules.map((r) => `${r.start} a ${r.end}`).join(" e ");
-            blocks.push(`${name} não atende nesse horário. Nesse dia atende de ${hours}.`);
+            const startsInside = rules.some((r) => minutesOf(slots.time!) >= minutesOf(r.start) && minutesOf(slots.time!) < minutesOf(r.end));
+            blocks.push(
+              startsInside && slots.servico
+                ? `${name} atende de ${hours} nesse dia, mas ${slots.servico.name} dura ${formatDuration(duration)}: começando às ${slots.time} terminaria às ${endParts.time}${endParts.date !== slots.date ? " do dia seguinte" : ""}, depois do fim do expediente.`
+                : `${name} não atende nesse horário. Nesse dia atende de ${hours}.`
+            );
           }
         }
       }

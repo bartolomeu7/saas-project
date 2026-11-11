@@ -6,7 +6,7 @@ import { todayDateSaoPaulo } from "@/lib/timezone";
 import { sanitizeUserText, MAX_MESSAGE_LENGTH } from "@/lib/chat/text.ts";
 import { emptyState, runAgendarTurn, type ChatMessage } from "@/lib/chat/agenda-turn.ts";
 import { appendMessages, bumpUsage, discardDraft, getChatSettings, getOrCreateSession, loadActiveDraft, saveDraft } from "@/lib/chat/server/store";
-import { findCustomers, loadAgendaCatalog, loadSchedule } from "@/lib/chat/server/agenda-data";
+import { findCustomers, findInactiveCustomers, loadAgendaCatalog, loadSchedule } from "@/lib/chat/server/agenda-data";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 20;
@@ -58,7 +58,8 @@ async function handle(request: Request) {
   if (!user || !current) return json({ error: "nao_autenticado" }, 401);
   const companyId = current.company.id;
 
-  // 3) corpo
+  // 3) corpo (só JSON: um formulário de outro site, text/plain, não consegue disparar esta rota)
+  if (!(request.headers.get("content-type") ?? "").toLowerCase().includes("application/json")) return json({ error: "tipo_invalido" }, 415);
   let parsed: z.infer<typeof bodySchema>;
   try {
     parsed = bodySchema.parse(await request.json());
@@ -87,6 +88,7 @@ async function handle(request: Request) {
     { text, choice: parsed.choice, state: existing?.state ?? emptyState(), catalog, clock: nowClock() },
     {
       findCustomers: (t) => findCustomers(companyId, t),
+      findInactiveCustomers: (t) => findInactiveCustomers(companyId, t),
       loadSchedule: (professionalId, date) => loadSchedule(companyId, professionalId, date),
     }
   );

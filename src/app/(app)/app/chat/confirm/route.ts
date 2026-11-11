@@ -69,6 +69,8 @@ async function handle(request: Request) {
   if (!user || !current) return json({ error: "nao_autenticado" }, 401);
   const companyId = current.company.id;
 
+  // só JSON: um formulário de outro site (text/plain) não consegue disparar esta rota
+  if (!(request.headers.get("content-type") ?? "").toLowerCase().includes("application/json")) return json({ error: "tipo_invalido" }, 415);
   let parsed: z.infer<typeof bodySchema>;
   try {
     parsed = bodySchema.parse(await request.json());

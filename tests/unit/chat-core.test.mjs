@@ -294,7 +294,7 @@ test("agendamento válido: sem bloqueios, término calculado pela duração do s
 test("regras do módulo: bloqueio, conflito, fora do expediente, dia sem expediente, profissional sem o serviço", () => {
   assert.match(validateAgendar({ ...READY, time: "11:30" }, ctx()).blocks[0], /bloqueio.*almoço/);
   assert.match(validateAgendar({ ...READY, date: "2026-11-13" }, ctx()).blocks[0], /já está ocupado.*Marcos/);
-  assert.match(validateAgendar({ ...READY, time: "17:00" }, ctx()).blocks[0], /não atende nesse horário.*09:00 a 18:00/);
+  assert.match(validateAgendar({ ...READY, time: "17:00" }, ctx()).blocks[0], /atende de 09:00 a 18:00 nesse dia.*terminaria às/);
   assert.match(validateAgendar({ ...READY, date: "2026-11-14" }, ctx()).blocks[0], /sábado \(dia sem expediente\)/);
   assert.match(validateAgendar({ ...READY, date: "2026-11-15" }, ctx()).blocks[0], /domingo \(dia sem expediente\)/);
   assert.match(validateAgendar({ ...READY, profissional: { id: "p2", name: "Rafael" } }, ctx()).blocks[0], /Rafael não faz Lavagem Detalhada\. Quem faz: Lúcio Silva/);

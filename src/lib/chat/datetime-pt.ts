@@ -238,7 +238,9 @@ function parseTime(t: string, clock: ChatClock, part: DayPart | undefined, probl
     const n = numberFromToken(dq[1]!);
     if (n !== null) {
       const delta = dq[2]!.startsWith("hora") ? n * 60 : n;
-      const r = addMinutesToLocal(clock.today, `${pad(Math.floor(clock.nowMinutes / 60))}:${pad(clock.nowMinutes % 60)}`, delta);
+      // arredonda para cima de 5 em 5 minutos: "daqui a 2 horas" às 12:37 vira 14:40, não 14:37
+      const rounded = Math.ceil((clock.nowMinutes + delta) / 5) * 5 - clock.nowMinutes;
+      const r = addMinutesToLocal(clock.today, `${pad(Math.floor(clock.nowMinutes / 60))}:${pad(clock.nowMinutes % 60)}`, rounded);
       return { time: { value: r.time }, date: { value: r.date, kind: "daqui-a" } };
     }
   }
