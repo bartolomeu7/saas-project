@@ -20,6 +20,9 @@ Data: 11/11/2026. **Nada disto está implementado.** Complementa `PLANEJAMENTO_C
 7. **Cada módulo liberável e desligável separadamente** (flag por módulo e por empresa) e um interruptor global.
 8. **Primeiro consultas e criações; alterações depois; ações destrutivas/irreversíveis só em fase posterior**, com confirmação reforçada.
 
+## Decisão do dono sobre áudio (11/11/2026)
+O áudio fica guardado **só até a ordem de atividade ser concluída**; depois é apagado e permanece **apenas o texto da transcrição** daquela atividade. Isso substitui a ideia anterior de "não guardar áudio nenhum". Detalhes, ciclo de vida e testes: `01 §6.1`, `03 §4`, `04` (invariantes I13 a I16). Pendências: **P2** confirmar com a plataforma o prazo de cópias de segurança do storage; **P3** validar o texto da Política de Privacidade com o jurídico.
+
 ## Níveis de risco das intenções
 | Nível | O que é | Exemplos | Confirmação |
 |-------|---------|----------|-------------|
@@ -41,6 +44,8 @@ Data: 11/11/2026. **Nada disto está implementado.** Complementa `PLANEJAMENTO_C
 |---|---------|--------------|
 | D1 | Entender a frase com **modelo de linguagem hospedado** (híbrido) ou só regras | Híbrido; texto enviado a provedor externo, aviso na Política de Privacidade, áudio não guardado |
 | D2 | Voz na v1 | Texto primeiro; voz do navegador na fase 5 |
+| D11 | **Áudio: decidido pelo dono (11/11)** | Guardar o áudio **temporariamente até a ordem terminar; depois apagar e ficar só o texto** (arquivo 01/§6.1). Teto de segurança 24 h |
+| D12 | Precisamos mesmo **guardar e reouvir** o áudio durante a ordem? (motivo do dono: conferir/corrigir) | Sim, como decidido. Consequência técnica: gravar o áudio além de transcrever; escolher o motor de voz com isso em mente (arquivo 03/§4) |
 | D3 | Veículo/placa | Cadastro opcional só para segmentos automotivos; fora da v1 |
 | D4 | Entrada de estoque: ajuste de saldo ou compra | Ajuste de saldo com motivo na v1 |
 | D5 | Venda pelo chat exige função nova no banco (tudo-ou-nada) | Aprovar a migration (seção 2.5 do arquivo 02) |

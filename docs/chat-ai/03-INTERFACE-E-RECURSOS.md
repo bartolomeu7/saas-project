@@ -118,23 +118,26 @@ Mensagem em português do catálogo (arquivo 01/§8), ícone, **sempre** com a p
 |------|---------------|
 | Entrada | Botão de microfone no composer; atalho (tecla pressionada para falar no desktop) opcional |
 | Motor | v1: reconhecimento do navegador (pt-BR); v2: modelo no navegador ou API hospedada (decisão D2) |
+| **Captura do áudio para guardar** | A voz do navegador (Web Speech API) **devolve só texto, não entrega o arquivo de áudio**. Para guardar o áudio temporariamente é preciso **gravar em paralelo** (`MediaRecorder`) ou usar um motor em que o áudio já passa por nós (modelo no navegador ou API hospedada). Gravar em paralelo com o reconhecimento do navegador **pode conflitar no microfone em alguns aparelhos: provar na prova de conceito**. Ver decisão D12 |
 | Permissão | Fluxo de pedido com explicação ("Para ouvir você, preciso do microfone"); estado "negado" com instrução de como liberar |
 | Indicadores | Nível de áudio em tempo real, tempo gravado, botão parar; limite de duração (ex.: 60 s) |
 | Transcrição | Mostrada **editável** antes de enviar; destaque visual de números e nomes (os mais propensos a erro) |
 | Detecção de silêncio | Para sozinha após pausa (opcional; biblioteca de detecção de voz é uma das opções do levantamento) |
-| Privacidade | Áudio **não é salvo**; descarta após transcrever; aviso na primeira vez |
+| Privacidade e guarda | O áudio é **guardado temporariamente até a ordem terminar** e depois apagado; **fica só o texto** (arquivo 01/§6.1). Aviso na primeira vez e permanente junto do microfone: "Guardo seu áudio só até concluir este pedido; depois fica só o texto." |
+| Ouvir de novo | Botão de reproduzir em cada fala enquanto a ordem está aberta (link assinado de 60 s); some quando o áudio é apagado, ficando só a transcrição |
+| Estado do áudio na bolha | Selo discreto: "áudio disponível" e depois "áudio apagado (só texto)" quando a ordem termina |
 | Falhas | Sem suporte no navegador → esconde o botão e explica; erro de rede → "tente digitar"; ruído → pede para repetir |
 | Teste | Matriz de aparelhos reais (Android Chrome, iPhone Safari, desktop Chrome/Edge) |
 | Resposta falada | **Fora da v1** (ouvir a Cláudia); só texto |
 
 ## 5. Histórico e privacidade na tela
-- Gaveta com conversas por data, título automático, busca simples.
+- Gaveta com conversas por data, título automático, busca simples. Mensagens de voz aparecem só como **texto transcrito** (com o ícone de microfone); o áudio nunca aparece no histórico depois da conclusão.
 - **Excluir conversa** (apaga mensagens; o registro de auditoria da gravação permanece).
 - Aviso permanente discreto: "Eu só gravo depois do seu Confirmar."
 - Link "Como seus dados são tratados" (Política de Privacidade, atualizada se houver provedor externo).
 
 ## 6. Configurações do Chat AI (`/app/configuracoes/chat-ai`)
-Campos: ligar/desligar; **nome da agente**; módulos habilitados (caixas por módulo, respeitando perfis); **teto de valor** para segunda confirmação; tempo de validade do rascunho; retenção de mensagens; ver uso do mês e cota. Somente dono altera (gerente lê). Mudança grava em `audit_logs`.
+Campos: ligar/desligar; **nome da agente**; módulos habilitados (caixas por módulo, respeitando perfis); **teto de valor** para segunda confirmação; tempo de validade do rascunho; retenção de mensagens; ver uso do mês e cota; **prazo máximo de guarda do áudio** (padrão 24 h, só reduzível), com a explicação da regra de apagar ao concluir. Somente dono altera (gerente lê). Mudança grava em `audit_logs`.
 
 ## 7. Painel interno (admin da plataforma) — `/admin/chat-ai`
 Tabelas e gráficos de: mensagens por dia, acerto por intenção, % de correção/descarte, falhas por código, custo por empresa, tempo p95, empresas com Chat ligado, últimas falhas (sem conteúdo sensível). Reaproveita a casca e componentes do painel admin atual.
@@ -161,7 +164,8 @@ Tabelas e gráficos de: mensagens por dia, acerto por intenção, % de correçã
 | Rotas | `POST /api/chat/turn`, `POST /api/chat/confirm`, `GET /api/chat/history`; todas com autenticação; resposta em partes (streaming) opcional |
 | Limites da Vercel | Definir `maxDuration` das rotas e orçar a latência (alvo: resposta em < 3 s sem modelo, < 6 s com) |
 | Rate limit / cota | Tabela `chat_usage` + verificação atômica (hoje não existe no projeto) ou serviço dedicado |
-| Agendador | Rotina diária de retenção e de expiração de rascunhos |
+| Armazenamento de áudio | Bucket privado `chat-audio` no Supabase Storage (mesmo padrão do bucket de documentos), políticas por caminho, limite de tamanho e tipo, links assinados curtos |
+| Agendador | Rotina horária que apaga áudio vencido e confere se o apagamento ocorreu; rotina diária de retenção de mensagens e de expiração de rascunhos |
 | Observabilidade | `audit_logs` (existe) + eventos próprios + painel admin; alerta de custo/falha |
 | Ambientes | Tudo primeiro no **TEST**; Production só com "Autorizo" por migration |
 | Feature flags | Interruptor global + por empresa + por módulo (`chat_settings` e plano) |

@@ -29,6 +29,7 @@ Objetivo: descobrir **antes de escrever o código** o que costuma dar errado, e 
 | Resiliência | falhas simuladas (seção 6) | testes com falha injetada | antes de cada fase |
 | Carga/abuso | limite de mensagens, cota, custo | teste de carga leve | antes do piloto |
 | Voz | transcrição em aparelhos reais | roteiro manual (matriz de aparelhos) | fase 5 |
+| Ciclo de vida do áudio | envio, guarda, reprodução, apagamento em cada estado final, teto de 24 h, rotina horária, políticas de storage | SQL (políticas) + integração no TEST + falha injetada | fase 5 |
 | Regressão do sistema | os 681+ testes atuais continuam passando; telas dos módulos intactas | suíte existente | sempre |
 | Produção (fumaça) | login, abrir Chat, uma conversa de leitura (R0), uma criação na teste1 | roteiro curto | depois de cada deploy |
 
@@ -47,6 +48,10 @@ Objetivo: descobrir **antes de escrever o código** o que costuma dar errado, e 
 | I10 | Toda gravação tem registro em `audit_logs` com origem `chat` | verificação em cada executor |
 | I11 | Mensagem de erro nunca expõe texto técnico/SQL | varredura do catálogo + testes de erro |
 | I12 | Interruptor global/por módulo desliga sem deploy | alternar e tentar usar |
+| I13 | **Áudio é apagado quando a ordem termina** (concluída, descartada, expirada, falhou, conversa excluída) e **nunca passa de 24 h** | para cada estado final, verificar que arquivo e linha `chat_audio` sumiram; rotina horária apaga o vencido |
+| I14 | Depois de apagado, **a transcrição continua** na atividade e o áudio não é recuperável pela interface nem por link antigo | ouvir após apagar: erro/expirado; transcrição presente |
+| I15 | Áudio só é ouvido pelo **próprio dono do rascunho**, por link assinado curto; outro usuário ou empresa não acessa | testes de política de storage + API com sessão trocada |
+| I16 | O áudio **nunca** é enviado ao modelo de linguagem nem aparece em logs | inspeção do que sai para o provedor e dos logs |
 
 ## 4. Corpus de frases (o "placar" de entendimento)
 - **Tamanho:** começa com 100 frases, cresce até 300 antes do piloto; **escritas por quem fala como o cliente** (o dono revisa), com variações de fala natural, abreviações e erros de digitação.
@@ -139,6 +144,13 @@ Cada intenção tem, no mínimo:
 | 32 | Primeira liberação sem plano de volta | Risco sem saída | Interruptor global + por módulo + migrations com reversão | simulação de rollback |
 | 33 | Dado de teste da teste1 misturado com real | Confusão | Chat só usa o que a empresa tem; fixtures de teste separadas no TEST | — |
 | 34 | Datas em fuso errado 🧪(o relógio do servidor é UTC) | Agendamento 3 h deslocado | Toda conversão em America/Sao_Paulo (`timezone.ts`) | teste às 23:55 |
+| 36 | Áudio fica esquecido no storage (aba fechada, erro, rotina parada) | Dado pessoal guardado além do prometido | Teto de 24 h + rotina horária + verificação e alerta (arquivo 01/§6.1) | I13 + teste com a rotina parada |
+| 37 | Apagar o arquivo mas sobrar a linha (ou o contrário) | Inconsistência e vazamento | Apagamento com conferência; alerta de divergência | falha injetada no apagamento |
+| 38 | Link assinado de áudio vaza ou dura demais | Acesso indevido | 60 s, ligado ao usuário dono, bucket privado | I15 |
+| 39 | Apagar o áudio cedo demais (antes de gravar) | Usuário não consegue ouvir/corrigir | Só apaga em estado final; `EXECUTANDO` mantém | transições de estado |
+| 40 | Apagar tarde demais depois do Confirmar (falha na limpeza) | Promessa quebrada | Limpeza faz parte do fechamento do rascunho + rotina de segurança | I13 |
+| 41 | Provedor de transcrição externo retém o áudio | Quebra da política | Só provedor sem retenção e sem treino (contrato); registrar na política | revisão contratual |
+| 42 | Cópia de segurança mantém áudio já apagado | Promessa quebrada | Confirmar com a plataforma o prazo das cópias e declarar | pendência P2 |
 | 35 | Duplicidade de regras entre tela e chat | Divergência futura | Funções núcleo compartilhadas (M5), nunca regras copiadas | revisão + teste de divergência |
 
 ## 8. Portões de liberação (go/no-go por fase)
@@ -152,7 +164,7 @@ Uma fase só avança se **todos** os critérios passarem; cada resultado fica re
 | 3 Consultas + produtos/serviços/clientes | Mesmos critérios por intenção; D6 aprovada e provada |
 | 4 Financeiro e Caixa | Teto de valor e segunda confirmação testados; regras de caixa provadas |
 | 5 Vendas | **D5 provada com falha em cada passo**; venda × tela dão o mesmo total/estoque/pontos em 30 cenários |
-| 6 Compras, voz e botão flutuante | Matriz de aparelhos de voz; testes de recebimento |
+| 6 Compras, voz e botão flutuante | Matriz de aparelhos de voz; testes de recebimento; **I13 a I16 verdes**; política de privacidade atualizada com a regra de guarda do áudio; pendências P2 e P3 resolvidas |
 | 7 RH e R3 | Revisão de segurança dedicada; confirmação reforçada testada |
 | Piloto (teste1 + 1–2 clientes) | ≥ 80% das ordens confirmadas sem correção; abandono < 15%; 0 gravação sem confirmação; 0 vazamento; custo por conversa dentro do orçado; satisfação do dono |
 | Liberação geral (por plano) | 2 semanas de piloto sem incidente grave; painel de qualidade ativo; suporte treinado; Política de Privacidade atualizada |

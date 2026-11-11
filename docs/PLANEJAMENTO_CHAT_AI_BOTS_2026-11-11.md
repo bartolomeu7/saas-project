@@ -47,7 +47,7 @@ Pontos de segurança:
 - **Permissão por intenção**, usando `can()` da matriz: funcionário não lança despesa nem ajusta estoque pelo chat se não puder pela tela.
 - **Limites de plano** e a trava de assinatura já existentes valem do mesmo jeito (mesmas RPCs/guardas).
 - **Sem exclusões/cancelamentos na v1** (só criar). Valor acima de um teto (configurável) pede segunda confirmação.
-- **Áudio não é guardado**: transcreve e descarta; só o texto fica (LGPD). Atualizar a Política de Privacidade se o áudio sair do navegador.
+- **Áudio guardado só temporariamente** (até a ordem terminar), depois apagado; só o texto fica (decisão do dono, 11/11; ver `docs/chat-ai/01 §6.1`). Atualizar a Política de Privacidade se o áudio sair do navegador.
 - Rate limit por usuário/empresa; tamanho máximo de texto e de áudio.
 
 ## 4. Modelo de dados (migrations novas)

@@ -133,7 +133,8 @@ Regras de pergunta:
 |--------|--------------------|-------------|
 | `chat_settings` | `company_id` PK, `enabled`, `agent_name`, `modules text[]`, `value_ceiling`, `retention_days` | Uma linha por empresa; só dono/gestor altera |
 | `chat_sessions` | `id`, `company_id`, `user_id`, `created_at`, `last_active_at`, `title` | Uma conversa |
-| `chat_messages` | `id`, `session_id`, `company_id`, `role` (user/agent), `kind`, `text`, `payload jsonb` (cartão), `draft_id`, `created_at` | **Só texto**, nunca áudio |
+| `chat_messages` | `id`, `session_id`, `company_id`, `role` (user/agent), `kind`, `text`, `transcript text` (texto do áudio, quando a mensagem veio por voz), `input_mode` (texto/voz), `payload jsonb` (cartão), `draft_id`, `created_at` | O **texto da transcrição fica** (até a retenção das mensagens); o áudio não fica aqui |
+| `chat_audio` | `id`, `company_id`, `user_id`, `session_id`, `draft_id`, `message_id`, `storage_path`, `mime`, `size_bytes`, `duration_s`, `created_at`, `expires_at`, `deleted_at`, `delete_reason` | **Áudio temporário** (decisão do dono, 11/11): vive só até a ordem terminar; ver seção 6.1 |
 | `chat_drafts` | `id`, `company_id`, `user_id`, `session_id`, `module`, `intent`, `risk`, `slots jsonb` (valores já resolvidos, com IDs), `raw jsonb` (o que foi dito), `missing text[]`, `warnings jsonb`, `version int`, `status`, `expires_at`, `executed_at`, `result jsonb`, `idempotency_key text unique`, `created_at` | IDs só aqui, nunca vão ao modelo |
 | `chat_feedback` | `draft_id`, `field`, `old_value`, `new_value`, `kind` (correção, descarte, falha) | Alimenta a medição de acerto |
 | `chat_usage` | `company_id`, `day`, `messages`, `llm_calls`, `llm_tokens` | Cota e custo |
@@ -142,7 +143,29 @@ Segurança de dados:
 - **RLS** em todas: `company_id` do usuário **e**, em `chat_drafts`/`chat_sessions`, `user_id = usuário atual` (nem o dono vê o rascunho de outro funcionário pelo chat).
 - Funções de apoio `SECURITY DEFINER` com `EXECUTE` revogado de `anon`/`authenticated` quando só o servidor usa (mesmo padrão das migrations recentes).
 - Retenção: mensagens apagadas após `retention_days` (padrão 90) por rotina agendada; rascunhos executados mantêm só o resumo.
-- **Sem áudio gravado** em nenhum lugar.
+- **Áudio:** guardado temporariamente e apagado quando a ordem termina (seção 6.1). **O texto transcrito permanece** junto da atividade.
+
+### 6.1 Ciclo de vida do áudio (decisão do dono, 11/11/2026)
+**Regra:** o áudio fica guardado **temporariamente, até a ordem de atividade ser concluída**. Depois disso o arquivo é **apagado** e fica **apenas o texto** da transcrição (e o resumo da atividade).
+| Momento | O que acontece com o áudio |
+|---------|----------------------------|
+| Usuário solta o botão de gravar | O arquivo é enviado para um **bucket privado** (`chat-audio`) no caminho `{empresa}/{usuário}/{rascunho}/{n}.webm`; cria linha em `chat_audio` com `expires_at` = agora + 24 h (teto de segurança) |
+| Transcrição | O texto vai para `chat_messages.transcript` e aparece editável na caixa; o áudio continua guardado |
+| Conversa em andamento (perguntas, correções) | Cada fala nova vira outro arquivo ligado ao **mesmo rascunho**; o usuário pode **ouvir de novo** a própria fala na tela |
+| Ordem **concluída** (gravou com sucesso) | Todos os áudios do rascunho são apagados na hora (arquivo + `deleted_at`, `delete_reason = concluida`) |
+| Ordem **descartada/cancelada**, **expirada** (30 min) ou **falhou sem nova tentativa** | Apagados na hora (`delete_reason = descartada, expirada ou falhou`) |
+| Usuário **exclui a conversa** | Apagados na hora (`excluida`) |
+| Rascunho nunca chegou a um estado final (aba fechada, erro) | Rotina a cada hora apaga o que passou de `expires_at` (24 h) (`delete_reason = teto`) |
+| Conta/empresa excluída | Apagados junto com os demais dados (reusa a rotina de exclusão de conta, que já remove arquivos do storage) |
+"Ordem concluída" = rascunho em estado final: `CONCLUIDO`, `DESCARTADO`, `EXPIRADO` ou `FALHOU` (sem nova tentativa em 30 min). Enquanto o rascunho estiver em `COLETANDO`, `AGUARDANDO_CONFIRMACAO` ou `EXECUTANDO`, o áudio é mantido.
+Regras de proteção:
+- Bucket **privado**, tipos permitidos de áudio, tamanho máximo por arquivo (ex.: 2 MB) e duração máxima (60 s); sem URL pública. Escuta só por **link assinado de curta duração (60 s)**, gerado para o **próprio usuário dono do rascunho**.
+- Políticas de `storage.objects` por caminho (empresa e usuário), **no mesmo padrão do bucket de documentos de clientes** que já existe (migration 011). Nem o dono da empresa ouve o áudio de outro funcionário pelo Chat.
+- **O áudio nunca é enviado ao modelo de linguagem** (só o texto). Se a transcrição usar serviço externo (D2), exigir contrato/configuração **sem retenção e sem treino** do provedor e citar na Política de Privacidade.
+- Apagar é **verificado**: a rotina confere que o arquivo sumiu do storage e alerta se sobrar áudio de rascunho em estado final há mais de 15 min.
+- Nenhum áudio vai para logs, e-mails, painel admin ou ferramentas de análise.
+- Cópias de segurança do storage: confirmar com a plataforma que o apagamento atinge também as cópias dentro do prazo declarado (pendência P2).
+- Voz pode ser considerada dado pessoal sensível dependendo do uso; aqui **não é usada para identificar ninguém**. Registrar a finalidade ("conferir e corrigir a ordem") e o prazo na Política de Privacidade e validar o texto com o jurídico (pendência P3).
 
 ## 7. Resolução de cadastros (camada compartilhada)
 Ordem de busca por tipo (`cliente`, `produto`, `servico`, `profissional`, `fornecedor`, `funcionario`), sempre filtrada pela empresa e por status ativo:
@@ -184,7 +207,7 @@ Lição dos testes reais: **mensagem genérica "Não foi possível salvar" não 
 | XSS | Todo texto exibido é escapado; sem HTML vindo de dados; links só para rotas internas montadas por nós (IDs validados) |
 | Abuso e custo | Limite de mensagens por usuário/minuto e por empresa/dia; tamanho máximo da mensagem (ex.: 1.000 caracteres); timeout do provedor; teto de gasto com alerta; interruptor global |
 | Rate limit | **Não existe hoje no projeto**: criar (tabela `chat_usage` + verificação atômica, ou serviço dedicado — decidir) |
-| LGPD | Base: execução do contrato. Texto vai a provedor externo (D1): citar na Política de Privacidade; não enviar documentos (CPF), telefones ou e-mails ao modelo — **mascarar no pré-processamento** |
+| LGPD | Base: execução do contrato. Texto vai a provedor externo (D1): citar na Política de Privacidade; não enviar documentos (CPF), telefones ou e-mails ao modelo — **mascarar no pré-processamento**. **Áudio:** armazenado só até a ordem terminar, depois apagado (seção 6.1); finalidade e prazo declarados na política |
 | Auditoria | Cada gravação: `audit_logs` com origem `chat`, `draft_id`, módulo, intenção, quem confirmou |
 | Logs | Sem conteúdo sensível em logs; guardar ids e códigos |
 | Chaves | Em variáveis de ambiente da Vercel (nunca no código); rotação documentada |
