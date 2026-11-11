@@ -103,10 +103,12 @@ export async function appendMessages(args: {
   sessionId: string;
   draftId: string | null;
   userText: string;
+  /** "voz": o texto veio de ditado; guarda a transcrição (o áudio nunca chega ao servidor) */
+  inputMode?: "texto" | "voz";
   agent: ChatMessage[];
 }): Promise<void> {
   const rows = [
-    { session_id: args.sessionId, company_id: args.companyId, user_id: args.userId, role: "user", kind: "text", text: args.userText.slice(0, 4000), draft_id: args.draftId },
+    { session_id: args.sessionId, company_id: args.companyId, user_id: args.userId, role: "user", kind: "text", text: args.userText.slice(0, 4000), input_mode: args.inputMode ?? "texto", transcript: args.inputMode === "voz" ? args.userText.slice(0, 4000) : null, draft_id: args.draftId },
     ...args.agent.map((m) => ({
       session_id: args.sessionId,
       company_id: args.companyId,

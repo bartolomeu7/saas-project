@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { RotateCcw, SendHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { VoiceButton } from "./voice-button";
+import { mergeTranscript, VOICE_PRIVACY_NOTE } from "@/lib/chat/voice.ts";
 import { AgentAvatar, AgentMessage, UserBubble, type ConfirmFn, type SendFn, type UiMessage } from "./chat-cards";
 import type { ChatMessage } from "@/lib/chat/agenda-turn.ts";
 
@@ -56,6 +58,10 @@ export function ChatClient({ agentName, initialShadow = true }: { agentName: str
   const [shadow, setShadow] = useState(initialShadow);
   const [confirming, setConfirming] = useState(false);
   const [announce, setAnnounce] = useState("");
+  const [listening, setListening] = useState(false);
+  const [voiceUsed, setVoiceUsed] = useState(false);
+  const [voiceNote, setVoiceNote] = useState("");
+  const voiceBase = useRef("");
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const stickToBottom = useRef(true);
@@ -79,12 +85,14 @@ export function ChatClient({ agentName, initialShadow = true }: { agentName: str
       // cartões anteriores ficam travados (histórico); só o mais novo é interativo
       setItems((prev) => [...prev.map((m) => (m.role === "agent" ? { ...m, resolved: true } : m)), { id: nextId(), role: "user", text: clean || "(escolha)" }]);
       setInput("");
+      setVoiceUsed(false);
+      setVoiceNote("");
       setBusy(true);
       try {
         const res = await fetch("/app/chat/turn", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ text: clean, sessionId: sessionId ?? undefined, choice }),
+          body: JSON.stringify({ text: clean, sessionId: sessionId ?? undefined, choice, inputMode: voiceUsed ? "voz" : "texto" }),
         });
         const isJson = res.headers.get("content-type")?.includes("application/json");
         if (!res.ok || !isJson) {
@@ -108,7 +116,7 @@ export function ChatClient({ agentName, initialShadow = true }: { agentName: str
         inputRef.current?.focus();
       }
     },
-    [busy, sessionId]
+    [busy, sessionId, voiceUsed]
   );
 
   // Confirmar: manda só (rascunho, versão); o servidor revalida tudo e grava uma vez (clique duplicado devolve o mesmo resultado)
@@ -148,6 +156,25 @@ export function ChatClient({ agentName, initialShadow = true }: { agentName: str
     },
     [confirming]
   );
+
+  // Ditado: a fala vira texto na caixa (editável); nada é enviado sozinho
+  const onVoiceStart = useCallback(() => {
+    voiceBase.current = input;
+    setVoiceUsed(true);
+    setListening(true);
+  }, [input]);
+  const onVoiceTranscript = useCallback((text: string) => {
+    setInput(mergeTranscript(voiceBase.current, text).slice(0, MAX));
+  }, []);
+  const onVoiceEnd = useCallback(() => {
+    setListening(false);
+    setAnnounce("Pronto. Confira o texto e envie quando estiver certo.");
+    inputRef.current?.focus();
+  }, []);
+  const onVoiceMessage = useCallback((text: string) => {
+    setVoiceNote(text);
+    setAnnounce(text);
+  }, []);
 
   const reset = () => {
     setItems([]);
@@ -235,18 +262,28 @@ export function ChatClient({ agentName, initialShadow = true }: { agentName: str
             id="chat-input"
             ref={inputRef}
             value={input}
-            onChange={(e) => setInput(e.target.value.slice(0, MAX))}
+            onChange={(e) => {
+              setInput(e.target.value.slice(0, MAX));
+              if (e.target.value.trim() === "") setVoiceUsed(false);
+            }}
             onKeyDown={onKeyDown}
             rows={2}
             maxLength={MAX}
-            placeholder={`Escreva para a ${agentName}…`}
+            placeholder={listening ? "Ouvindo… fale agora" : `Escreva ou dite para a ${agentName}…`}
             className="min-h-[2.75rem] flex-1 resize-none rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
-          <Button type="submit" disabled={busy || input.trim().length === 0} aria-label="Enviar mensagem" className="h-11 w-11 p-0">
+          <VoiceButton disabled={busy} onStart={onVoiceStart} onTranscript={onVoiceTranscript} onEnd={onVoiceEnd} onMessage={onVoiceMessage} />
+          <Button type="submit" disabled={busy || listening || input.trim().length === 0} aria-label="Enviar mensagem" className="h-11 w-11 p-0">
             <SendHorizontal className="h-4 w-4" aria-hidden="true" />
           </Button>
         </div>
-        <p className="mt-1 text-right text-xs text-muted-foreground" aria-hidden="true">
+        {voiceNote ? (
+          <p className="mt-1 text-xs text-foreground" role="status">
+            {voiceNote}
+          </p>
+        ) : null}
+        <p className="mt-1 text-xs text-muted-foreground">{VOICE_PRIVACY_NOTE}</p>
+        <p className="text-right text-xs text-muted-foreground" aria-hidden="true">
           {input.length}/{MAX} · Enter envia, Shift+Enter quebra linha
         </p>
       </form>

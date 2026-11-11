@@ -1,4 +1,5 @@
 import { nameCoverage, norm, tokens } from "./text.ts";
+import { spokenNumbersToDigits } from "./numbers-pt.ts";
 import {
   addMinutesToLocal,
   formatDatePt,
@@ -77,17 +78,17 @@ export function detectAgendar(text: string): boolean {
   return /\b(agend\w*|marca(r|ndo)?|marcar|reserv\w*)\b/.test(t) || /\bhorario (pro|pra|para|do|da)\b/.test(t);
 }
 
-const DATE_WORD = /\b(amanha|hoje|ontem|depois de amanha|daqui|segunda|terca|quarta|quinta|sexta|sabado|domingo|dia \d|\d{1,2}\/\d{1,2}|as \d|\d{1,2}h|\d{1,2}:\d{2}|de manha|de tarde|de noite)\b/;
+const DATE_WORD = /\b(amanha|hoje|ontem|depois de amanha|daqui|segunda|terca|quarta|quinta|sexta|sabado|domingo|dia \d+|\d{1,2}\/\d{1,2}|as \d+|\d{1,2}h|\d{1,2}:\d{2}|de manha|de tarde|de noite)\b/;
 
 /** Nome do cliente citado ("pro cliente João Ferreira amanhã…" → "joao ferreira"). */
 export function extractCustomerText(text: string): string | undefined {
-  const t = norm(text);
+  const t = spokenNumbersToDigits(norm(text));
   const m = /\bcliente\s+(.+)/.exec(t) ?? /\b(?:pro|pra|para o|para a|para)\s+(?:cliente\s+)?(.+)/.exec(t);
   if (!m) return undefined;
   let fragment = m[1]!;
   const cut = DATE_WORD.exec(fragment);
   if (cut) fragment = fragment.slice(0, cut.index);
-  fragment = fragment.replace(/\s+com\s+.*$/, "").replace(/\s+(com|e|que)$/, "").trim();
+  fragment = fragment.replace(/\s+com\s+.*$/, "").trim().replace(/\s+(com|e|que|as|a|no|na|em)$/, "").trim();
   const words = fragment.split(" ").filter(Boolean).slice(0, 5);
   return words.length ? words.join(" ") : undefined;
 }

@@ -1,5 +1,5 @@
 import { norm } from "./text.ts";
-import { wordsToNumber } from "./numbers-pt.ts";
+import { spokenNumbersToDigits, wordsToNumber } from "./numbers-pt.ts";
 
 /**
  * Chat AI — datas e horas em português do Brasil, em texto simples (YYYY-MM-DD e HH:mm, horário de São Paulo).
@@ -295,7 +295,8 @@ function parseTime(t: string, clock: ChatClock, part: DayPart | undefined, probl
  * Nunca lança erro; problemas viram `problems` (texto para o usuário).
  */
 export function parseDateTimePt(text: string, clock: ChatClock): ParsedDateTime {
-  const t = norm(text).replace(/-/g, " ").replace(/\bàs\b/g, "as");
+  // o ditado por voz devolve "às dez horas"; vira "às 10 horas" só onde é data/hora
+  const t = spokenNumbersToDigits(norm(text).replace(/-/g, " "));
   const problems: string[] = [];
   const result: ParsedDateTime = { problems };
 

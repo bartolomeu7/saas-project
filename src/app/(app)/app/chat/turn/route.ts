@@ -21,6 +21,7 @@ export const maxDuration = 20;
 const bodySchema = z.object({
   text: z.string().max(MAX_MESSAGE_LENGTH * 3).default(""),
   sessionId: z.string().uuid().optional(),
+  inputMode: z.enum(["texto", "voz"]).default("texto"),
   choice: z.object({ field: z.enum(["cliente", "servico", "profissional", "data", "hora"]), id: z.string().min(1).max(64) }).optional(),
 });
 
@@ -103,7 +104,7 @@ export async function POST(request: Request) {
       ttlMinutes: settings.draftTtlMinutes ?? undefined,
     });
   }
-  await appendMessages({ companyId, userId: user.id, sessionId, draftId: draft?.id ?? null, userText: text || "(escolha)", agent: messages });
+  await appendMessages({ companyId, userId: user.id, sessionId, draftId: draft?.id ?? null, userText: text || "(escolha)", inputMode: parsed.inputMode, agent: messages });
 
   return json({ sessionId, draftId: draft?.id ?? null, version: draft?.version ?? null, status: result.status, shadow, messages });
 }
