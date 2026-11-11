@@ -48,12 +48,12 @@ interface ConfirmResponse {
 let counter = 0;
 const nextId = () => `m${Date.now().toString(36)}${counter++}`;
 
-export function ChatClient({ agentName }: { agentName: string }) {
+export function ChatClient({ agentName, initialShadow = true }: { agentName: string; initialShadow?: boolean }) {
   const [items, setItems] = useState<UiMessage[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [shadow, setShadow] = useState(true);
+  const [shadow, setShadow] = useState(initialShadow);
   const [confirming, setConfirming] = useState(false);
   const [announce, setAnnounce] = useState("");
   const endRef = useRef<HTMLDivElement>(null);

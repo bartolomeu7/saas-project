@@ -16,6 +16,7 @@ import {
   CalendarDays,
   UserCog,
   BriefcaseBusiness,
+  MessagesSquare,
 } from "lucide-react";
 
 export interface NavItem {
@@ -58,6 +59,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: "Caixa", href: "/app/caixa", icon: Wallet, enabled: true },
       { label: "Fornecedores", href: "/app/fornecedores", icon: Users, enabled: true },
       { label: "Agenda", href: "/app/agenda", icon: CalendarDays, enabled: true },
+      { label: "Chat AI", href: "/app/chat", icon: MessagesSquare, enabled: true },
     ],
   },
   {
