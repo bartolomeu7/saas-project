@@ -30,6 +30,8 @@ export interface CatalogProfessional {
   active: boolean;
   /** serviços que o profissional atende */
   serviceIds: string[];
+  /** duração/valor próprios do profissional para um serviço (professional_services); o banco usa antes do padrão do serviço */
+  overrides?: Record<string, { durationMinutes?: number | null; price?: number | null }>;
 }
 
 export interface AgendaCatalog {
@@ -126,7 +128,7 @@ export function understandAgendar(text: string, catalog: AgendaCatalog, clock: C
 export interface AgendarSlots {
   servico?: { id: string; name: string; durationMinutes: number | null; price: number };
   cliente?: { id: string; name: string };
-  profissional?: { id: string; name: string };
+  profissional?: { id: string; name: string; durationOverride?: number | null; priceOverride?: number | null };
   /** YYYY-MM-DD */
   date?: string;
   /** HH:mm */
@@ -224,8 +226,15 @@ export function effectiveDuration(slots: AgendarSlots): number | null {
     const d = minutesOf(slots.endTime) - minutesOf(slots.time);
     return d > 0 ? d : null;
   }
-  const d = slots.servico?.durationMinutes ?? 0;
+  // mesma precedência do banco (create_appointment): duração do profissional para o serviço, depois a do serviço
+  const d = slots.profissional?.durationOverride ?? slots.servico?.durationMinutes ?? 0;
   return d > 0 ? d : null;
+}
+
+/** Profissional como entra no rascunho, já com as sobrescritas dele para o serviço escolhido. */
+export function professionalSlot(pro: CatalogProfessional, serviceId: string | undefined): NonNullable<AgendarSlots["profissional"]> {
+  const o = serviceId ? pro.overrides?.[serviceId] : undefined;
+  return { id: pro.id, name: pro.name, durationOverride: o?.durationMinutes ?? null, priceOverride: o?.price ?? null };
 }
 
 /**
@@ -240,7 +249,7 @@ export function validateAgendar(
   const warnings: string[] = [];
   const result: Validation = { blocks, warnings };
 
-  if (slots.servico && !(slots.servico.durationMinutes && slots.servico.durationMinutes > 0) && !slots.endTime) {
+  if (slots.servico && !effectiveDuration(slots) && !slots.endTime) {
     blocks.push(`O serviço "${slots.servico.name}" está sem duração cadastrada. Informe o horário de término ou cadastre a duração do serviço.`);
   }
   if (slots.servico && slots.profissional) {
@@ -347,7 +356,7 @@ export function summarizeAgendar(slots: AgendarSlots, validation: Validation): C
   if (missingFields(slots).length > 0 || !slots.servico || !slots.cliente || !slots.profissional || !slots.date || !slots.time) return null;
   const duration = validation.durationMinutes ?? effectiveDuration(slots);
   const end = duration ? addMinutesToLocal(slots.date, slots.time, duration) : null;
-  const price = slots.priceOverride ?? slots.servico.price;
+  const price = slots.priceOverride ?? slots.profissional.priceOverride ?? slots.servico.price;
   return {
     module: "Agenda",
     title: "Novo agendamento",
@@ -361,7 +370,11 @@ export function summarizeAgendar(slots: AgendarSlots, validation: Validation): C
         value: `${formatDatePt(slots.date)} · ${slots.time}${end ? ` às ${end.time}${end.date !== slots.date ? " (dia seguinte)" : ""}` : ""}${duration ? ` (${formatDuration(duration)})` : ""}`,
         note: slots.endTime ? undefined : "término calculado pela duração do serviço",
       },
-      { label: "Valor", value: formatBRL(price), note: slots.priceOverride === undefined ? "preço do serviço" : undefined },
+      {
+        label: "Valor",
+        value: formatBRL(price),
+        note: slots.priceOverride !== undefined ? undefined : slots.profissional.priceOverride != null ? "valor do profissional para este serviço" : "preço do serviço",
+      },
       ...(slots.notes ? [{ label: "Observações", value: slots.notes }] : []),
     ],
     warnings: validation.warnings,
