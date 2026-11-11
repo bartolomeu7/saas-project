@@ -33,6 +33,7 @@ export type ChatMessage =
   | { kind: "ask"; text: string; options?: { id: string; label: string }[]; fields: AgendarField[] }
   | { kind: "disambiguate"; text: string; field: PendingField; options: { id: string; label: string; detail?: string }[] }
   | { kind: "confirm"; text: string; card: ConfirmCard }
+  | { kind: "result"; text: string; link?: { href: string; label: string } }
   | { kind: "notice"; text: string }
   | { kind: "error"; text: string };
 

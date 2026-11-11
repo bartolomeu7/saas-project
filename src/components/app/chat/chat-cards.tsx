@@ -20,9 +20,12 @@ export interface UiMessage {
   text: string;
   /** o cartão já foi respondido: botões ficam travados (histórico) */
   resolved?: boolean;
+  /** rascunho a que o cartão de confirmação se refere (id e versão exibida) */
+  draft?: { id: string; version: number };
 }
 
 export type SendFn = (text: string, choice?: { field: PendingField; id: string }) => void;
+export type ConfirmFn = (draft: { id: string; version: number }) => void;
 
 export function AgentAvatar({ name }: { name: string }) {
   return (
@@ -44,14 +47,15 @@ export function UserBubble({ text }: { text: string }) {
   );
 }
 
-function Bubble({ children, tone = "neutral" }: { children: React.ReactNode; tone?: "neutral" | "warning" | "danger" | "info" }) {
-  const icon = tone === "danger" ? <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" /> : tone === "warning" ? <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" /> : tone === "info" ? <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" /> : null;
+function Bubble({ children, tone = "neutral" }: { children: React.ReactNode; tone?: "neutral" | "warning" | "danger" | "info" | "success" }) {
+  const icon = tone === "success" ? <Check className="mt-0.5 h-4 w-4 shrink-0 text-success" aria-hidden="true" /> : tone === "danger" ? <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" /> : tone === "warning" ? <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" /> : tone === "info" ? <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" /> : null;
   return (
     <div
       className={cn(
         "flex max-w-[92%] gap-2 whitespace-pre-wrap break-words rounded-2xl rounded-bl-sm border px-4 py-2 text-sm",
         tone === "neutral" && "border-border bg-card text-foreground",
         tone === "info" && "border-primary/25 bg-primary/10 text-foreground",
+        tone === "success" && "border-success/30 bg-success/10 text-foreground",
         tone === "warning" && "border-warning/30 bg-warning/10 text-foreground",
         tone === "danger" && "border-destructive/30 bg-destructive/10 text-foreground"
       )}
@@ -85,7 +89,7 @@ const FIELD_LINKS: Record<string, (id: string) => string> = {
   servico: (id) => `/app/servicos/${id}`,
 };
 
-export function AgentMessage({ item, onSend, agentName }: { item: UiMessage; onSend: SendFn; agentName: string }) {
+export function AgentMessage({ item, onSend, onConfirm, agentName, shadow, confirming }: { item: UiMessage; onSend: SendFn; onConfirm: ConfirmFn; agentName: string; shadow: boolean; confirming: boolean }) {
   const m = item.message;
   if (!m) return null;
   const locked = item.resolved === true;
@@ -96,6 +100,19 @@ export function AgentMessage({ item, onSend, agentName }: { item: UiMessage; onS
       <div className="min-w-0 flex-1">
         {m.kind === "notice" && <Bubble tone="info">{m.text}</Bubble>}
         {m.kind === "error" && <Bubble tone="danger">{m.text}</Bubble>}
+        {m.kind === "result" && (
+          <Bubble tone="success">
+            {m.text}
+            {m.link ? (
+              <>
+                {" "}
+                <Link href={m.link.href} className="font-medium underline underline-offset-4">
+                  {m.link.label}
+                </Link>
+              </>
+            ) : null}
+          </Bubble>
+        )}
 
         {m.kind === "ask" && (
           <>
@@ -148,15 +165,21 @@ export function AgentMessage({ item, onSend, agentName }: { item: UiMessage; onS
               </ul>
             )}
             <footer className="flex flex-wrap items-center gap-2 border-t border-border px-4 py-3">
-              {/* MODO TESTE: ainda não existe rota de confirmação; o botão fica desabilitado e explica o porquê. */}
-              <Button type="button" size="sm" disabled aria-describedby={`shadow-${item.id}`}>
+              {/* Confirmar só funciona fora do MODO TESTE (interruptor do servidor), uma vez por cartão e nunca em cartão antigo. */}
+              <Button
+                type="button"
+                size="sm"
+                disabled={shadow || locked || confirming || !item.draft}
+                aria-describedby={`shadow-${item.id}`}
+                onClick={() => item.draft && onConfirm(item.draft)}
+              >
                 <Check className="mr-1 h-4 w-4" aria-hidden="true" />
-                Confirmar
+                {confirming ? "Gravando…" : "Confirmar"}
               </Button>
-              <Button type="button" size="sm" variant="outline" disabled={locked} onClick={() => onSend("Quero corrigir: ")}>
+              <Button type="button" size="sm" variant="outline" disabled={locked || confirming} onClick={() => onSend("Quero corrigir: ")}>
                 Corrigir
               </Button>
-              <Button type="button" size="sm" variant="ghost" disabled={locked} onClick={() => onSend("cancela")}>
+              <Button type="button" size="sm" variant="ghost" disabled={locked || confirming} onClick={() => onSend("cancela")}>
                 Cancelar
               </Button>
               <p id={`shadow-${item.id}`} className="basis-full text-xs text-muted-foreground">
