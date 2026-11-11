@@ -105,7 +105,7 @@ sc(R1, "só 'agendar': pergunta o serviço", [T("agendar", ask(/serviço/i))]);
 sc(R1, "'quero agendar uma lavagem' é ambíguo (3 tipos)", [T("quero agendar uma lavagem", pend("servico", 3))]);
 sc(R1, "polimento sem profissional: oferece quem faz", [T("agendar polimento pra Cláudio Mendes amanhã 10h", ask(/quem vai fazer|profission/i))]);
 sc(R1, "'Maria' ambígua", [T("agendar higienização para Maria", pend("cliente", 2))]);
-sc(R1, "'da Fernanda' (sem 'pro/para'): pelo menos pergunta o cliente, sem inventar", [T("agende a lavagem simples da Fernanda Oliveira amanhã às 10h com Felipe", all(notCard, ask(/cliente/i)))]);
+sc(R1, "'da Fernanda Oliveira' (sem 'pro/para'): reconhece o nome pelas maiúsculas", [T("agende a lavagem simples da Fernanda Oliveira amanhã às 10h com Felipe", card({ cli: /Fernanda/ }))]);
 sc(R1, "'preciso de um horário'", [T("preciso de um horário pro Cláudio Mendes amanhã às 10h com o Felipe, lavagem simples", card({ cli: /Cláudio/ }))]);
 sc(R1, "'coloca na agenda' (sem agendar/marcar)", [T("coloca na agenda lavagem simples Cláudio Mendes amanhã 10h Felipe", all(notCard, (r) => (r.messages.some((m) => /Por enquanto eu consigo agendar/.test(m.text ?? "")) ? fail("não reconheceu 'coloca na agenda' como pedido de agendamento", r) : null)))]);
 sc(R1, "cortesia + pedido + 'por favor'", [T("Oi, bom dia! Queria agendar lavagem simples pro Cláudio Mendes amanhã às 10h com Felipe, por favor", card({ cli: /Cláudio/, when: /· 10:00/ }))]);

@@ -63,6 +63,8 @@ export const emptyState = (): AgendarState => ({ slots: {}, asked: [], pending: 
 export interface AgendarPorts {
   /** clientes ativos da empresa cujo nome combina com o texto (no máximo ~5) */
   findCustomers(text: string): Promise<Candidate[]>;
+  /** clientes INATIVOS que combinam com o texto (para avisar em vez de oferecer um cadastro duplicado) */
+  findInactiveCustomers?(text: string): Promise<Candidate[]>;
   /** agenda do profissional no dia (expediente, bloqueios, ocupados); null se não houver como carregar */
   loadSchedule(professionalId: string, date: string): Promise<ProfessionalSchedule | null>;
 }
@@ -143,7 +145,9 @@ export async function runAgendarTurn(input: TurnInput, ports: AgendarPorts): Pro
       };
     }
   } else if (!state.started) {
-    if (!detectAgendar(text)) {
+    // "polimento Beatriz amanhã às 10h": serviço conhecido + data/hora, mesmo sem o verbo
+    const implicit = matchServices(text, catalog.services).length > 0 && (() => { const w = parseDateTimePt(text, clock); return !!(w.date || w.time); })();
+    if (!detectAgendar(text) && !implicit) {
       return {
         state,
         messages: [{ kind: "notice", text: "Por enquanto eu consigo agendar serviços. Tente: \"agenda uma lavagem detalhada pro João amanhã às 14h com o Lúcio\"." }],
@@ -222,7 +226,11 @@ export async function runAgendarTurn(input: TurnInput, ports: AgendarPorts): Pro
       else if (keepPending) {
         // já há uma escolha de serviço pendente: o cliente é resolvido na próxima volta
       } else if (found.length > 1) state.pending = { field: "cliente", options: asOptions(found) };
-      else {
+      else if (ports.findInactiveCustomers && (await ports.findInactiveCustomers(customerText)).length > 0) {
+        const inactive = (await ports.findInactiveCustomers(customerText))[0]!;
+        messages.push({ kind: "notice", text: `O cliente "${inactive.name}" está inativo. Reative em Clientes ou escreva outro nome.` });
+        state.asked = [...state.asked, "cliente"];
+      } else {
         // não existe: oferece cadastrar (só é criado quando a pessoa confirmar o agendamento)
         const shown = originalCustomerName(text, customerText);
         if (!plausibleName(shown)) {
@@ -237,6 +245,12 @@ export async function runAgendarTurn(input: TurnInput, ports: AgendarPorts): Pro
         };
       }
     }
+  }
+
+  // mudança de ideia depois do resumo: "na verdade é para o Marcos" (só troca quando acha UM cliente diferente)
+  else if (state.slots.cliente && u.customerText && !state.pending && !skipCustomer && state.started) {
+    const others = await ports.findCustomers(u.customerText);
+    if (others.length === 1 && others[0]!.id !== state.slots.cliente.id) state.slots.cliente = { id: others[0]!.id, name: others[0]!.name };
   }
 
   // data e hora (só preenche o que falta; mudança de ideia depois do cartão vem em turnos seguintes)
@@ -262,6 +276,10 @@ export async function runAgendarTurn(input: TurnInput, ports: AgendarPorts): Pro
       state.slots.profissional = professionalSlot(only[0]!, state.slots.servico.id);
       messages.push({ kind: "notice", text: `${only[0]!.name} é o único profissional que faz ${state.slots.servico.name}.` });
     }
+  }
+  // "sim" digitado diante do resumo: nada é gravado por texto; lembra do botão
+  if (!state.pending && missingFields(state.slots).length === 0 && /^(sim|confirmo|confirmar|confirma|pode|pode confirmar|ok|isso|fechado|certo)$/.test(norm(text).replace(/[.!?]+$/g, "").trim())) {
+    messages.push({ kind: "notice", text: "Para gravar, toque em Confirmar no resumo. Por texto eu não gravo nada." });
   }
   return finishTurn(state, messages, ports, catalog, clock);
 }

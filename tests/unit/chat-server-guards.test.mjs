@@ -165,3 +165,11 @@ test("confirmar: cliente novo só é cadastrado depois do Confirmar, com a sess�
   assert.ok(confirm.includes("norm(c.name) === norm(s.cliente!.name)") && confirm.includes("CUSTOMER_CREATED"));
   assert.ok(!route.includes('from("customers").insert'), "a conversa (turno) nunca cria cliente");
 });
+
+test("rotas: só aceitam JSON (um formulário de outro site com text/plain não dispara turno nem confirmação)", () => {
+  for (const src of [route, confirm]) {
+    assert.ok(src.includes('mime !== "application/json"') && src.includes('"tipo_invalido"'), "MIME exato, não substring");
+    assert.ok(!src.includes('.includes("application/json")'));
+    assert.ok(src.includes('"sec-fetch-site"') && src.includes('"origem_invalida"'), "só do mesmo site");
+  }
+});
