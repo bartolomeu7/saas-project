@@ -3,6 +3,9 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getCurrentCompany } from "@/lib/companies/queries";
+import { writeAuditLog } from "@/lib/audit/log";
+import { AUDIT_ACTIONS } from "@/types/audit";
+import { norm } from "@/lib/chat/text.ts";
 import { createSessionClient } from "@/lib/supabase/server";
 import { createAppointmentCore } from "@/lib/agenda/create-core";
 import { effectiveDuration } from "@/lib/chat/agenda-agendar.ts";
@@ -127,8 +130,25 @@ async function handle(request: Request) {
       await releaseDraft(companyId, user.id, draft.id);
       return json({ error: "incompleto", message: REFUSAL_MESSAGES.incompleto }, 409);
     }
+    // cliente novo: cadastra só agora (depois do Confirmar). Se já existir um com exatamente esse nome (nova tentativa), reaproveita.
+    let customerId = s.cliente.id;
+    if (s.cliente.isNew) {
+      const existing = (await findCustomers(companyId, s.cliente.name)).find((c) => norm(c.name) === norm(s.cliente!.name));
+      if (existing) customerId = existing.id;
+      else {
+        const { data: made, error: madeError } = await supabase.from("customers").insert({ company_id: companyId, name: s.cliente.name.slice(0, 160) }).select("id").single();
+        if (madeError || !made) {
+          await releaseDraft(companyId, user.id, draft.id);
+          const messages: ChatMessage[] = [{ kind: "error", text: "Não consegui cadastrar o cliente novo. Nada foi gravado. Cadastre em Clientes e peça de novo." }];
+          await appendMessages({ companyId, userId: user.id, sessionId: row.sessionId, draftId: draft.id, userText: "(confirmar)", agent: messages });
+          return json({ error: "falhou", status: "aguardando_confirmacao", messages }, 422);
+        }
+        customerId = made.id as string;
+        await writeAuditLog(supabase, { companyId, actorUserId: user.id, entityType: "customer", entityId: customerId, action: AUDIT_ACTIONS.CUSTOMER_CREATED, metadata: { name: s.cliente.name, origem: "chat_ai" } });
+      }
+    }
     const result = await createAppointmentCore(supabase, {
-      customerId: s.cliente.id,
+      customerId,
       serviceId: s.servico.id,
       professionalId: s.profissional.id,
       startsAtLocal: `${s.date}T${s.time}`,

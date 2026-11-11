@@ -158,3 +158,10 @@ test("rotas do chat ficam em /app e nenhuma está em /api", () => {
   assert.ok(exists("src/app/(app)/app/chat/confirm/route.ts"));
   assert.equal(exists("src/app/api/chat"), false);
 });
+
+test("confirmar: cliente novo só é cadastrado depois do Confirmar, com a sessão do usuário, reaproveitando nome igual e registrando auditoria", () => {
+  assert.ok(confirm.includes("s.cliente.isNew") && confirm.includes('from("customers").insert'));
+  assert.ok(confirm.indexOf("s.cliente.isNew") > confirm.indexOf("recheck.status"), "só depois da revalidação");
+  assert.ok(confirm.includes("norm(c.name) === norm(s.cliente!.name)") && confirm.includes("CUSTOMER_CREATED"));
+  assert.ok(!route.includes('from("customers").insert'), "a conversa (turno) nunca cria cliente");
+});

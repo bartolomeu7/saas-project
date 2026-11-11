@@ -95,6 +95,16 @@ export function extractCustomerText(text: string): string | undefined {
 
 const SERVICE_MIN_COVERAGE = 0.5;
 
+/** Recupera o nome como a pessoa escreveu (com acento e maiúsculas) a partir do texto normalizado. */
+export function originalCustomerName(original: string, normalized: string): string {
+  const words = original.split(/\s+/).filter(Boolean);
+  const wanted = normalized.split(" ").filter(Boolean);
+  for (let i = 0; i + wanted.length <= words.length; i += 1) {
+    if (wanted.every((w, k) => norm(words[i + k]!.replace(/[.,;!?]+$/g, "")) === w)) return words.slice(i, i + wanted.length).map((w) => w.replace(/[.,;!?]+$/g, "")).join(" ");
+  }
+  return wanted.map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+}
+
 export function matchServices(text: string, services: CatalogService[]): CatalogService[] {
   const scored = services
     .map((s) => ({ s, score: nameCoverage(text, s.name) }))
@@ -128,7 +138,8 @@ export function understandAgendar(text: string, catalog: AgendaCatalog, clock: C
 // ---------------------------------------------------------------------------------------------------- rascunho
 export interface AgendarSlots {
   servico?: { id: string; name: string; durationMinutes: number | null; price: number };
-  cliente?: { id: string; name: string };
+  /** isNew: ainda não existe no cadastro; é criado só quando a pessoa confirma (id vazio) */
+  cliente?: { id: string; name: string; isNew?: boolean };
   profissional?: { id: string; name: string; durationOverride?: number | null; priceOverride?: number | null };
   /** YYYY-MM-DD */
   date?: string;
@@ -177,7 +188,10 @@ export function nextQuestion(slots: AgendarSlots, catalog: AgendaCatalog): Quest
   const missing = missingFields(slots);
   if (missing.length === 0) return null;
   const first = missing[0]!;
-  if (first === "servico") return { fields: ["servico"], text: "Qual serviço?", options: catalog.services.map((s) => ({ id: s.id, label: s.name })) };
+  if (first === "servico") {
+    if (catalog.services.length === 0) return { fields: ["servico"], text: "Sua empresa ainda não tem nenhum serviço ativo cadastrado. Cadastre o serviço em Serviços e peça de novo." };
+    return { fields: ["servico"], text: "Qual serviço?", options: catalog.services.map((s) => ({ id: s.id, label: s.name })) };
+  }
   if (first === "cliente") return { fields: ["cliente"], text: "Para qual cliente?" };
 
   const wantsProf = missing.includes("profissional");
@@ -363,7 +377,9 @@ export function summarizeAgendar(slots: AgendarSlots, validation: Validation): C
     title: "Novo agendamento",
     risk: "R1",
     fields: [
-      { label: "Cliente", value: slots.cliente.name, link: { kind: "cliente", id: slots.cliente.id } },
+      slots.cliente.isNew
+        ? { label: "Cliente", value: slots.cliente.name, note: "cliente novo: será cadastrado quando você confirmar" }
+        : { label: "Cliente", value: slots.cliente.name, link: { kind: "cliente" as const, id: slots.cliente.id } },
       { label: "Serviço", value: slots.servico.name, link: { kind: "servico", id: slots.servico.id } },
       { label: "Profissional", value: slots.profissional.name, link: { kind: "profissional", id: slots.profissional.id } },
       {
