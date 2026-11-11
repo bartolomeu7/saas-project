@@ -258,13 +258,13 @@ test("cliente e faixa do dia: 'pro Felipe amanhã de tarde' pergunta a hora", ()
   const q = nextQuestion({ servico: CATALOG.services[1], cliente: { id: "c", name: "Felipe" }, profissional: { id: "p2", name: "Rafael" }, date: "2026-11-12", dayPart: "tarde" }, CATALOG);
   assert.match(q.text, /Em que horário da tarde/);
 });
-test("nome completo do serviço escolhe o mais específico; palavra genérica devolve os dois para perguntar", () => {
+test("nome completo do serviço escolhe o mais específico; palavra genérica devolve todos os que têm a palavra, para perguntar", () => {
   const catalog = {
     ...CATALOG,
     services: [...CATALOG.services, { id: "s8", name: "Lavagem Simples", durationMinutes: 60, price: 60 }, { id: "s9", name: "Lavagem Detalhada Premium", durationMinutes: 240, price: 200 }],
   };
   assert.deepEqual(understandAgendar("agenda lavagem detalhada pro João", catalog, CLOCK).services.map((s) => s.id), ["s1"]);
-  assert.deepEqual(understandAgendar("agenda lavagem pro João", catalog, CLOCK).services.map((s) => s.id).sort(), ["s1", "s8"]);
+  assert.deepEqual(understandAgendar("agenda lavagem pro João", catalog, CLOCK).services.map((s) => s.id).sort(), ["s1", "s8", "s9"]);
 });
 test("não é agendamento", () => {
   assert.equal(detectAgendar("acabou o limpa-baú de 50 litros"), false);

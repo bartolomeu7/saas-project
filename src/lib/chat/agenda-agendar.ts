@@ -75,20 +75,43 @@ export interface AgendarUnderstanding {
 /** A frase parece um pedido de agendamento? */
 export function detectAgendar(text: string): boolean {
   const t = norm(text);
-  return /\b(agend\w*|marca(r|ndo)?|marcar|reserv\w*)\b/.test(t) || /\bhorario (pro|pra|para|do|da)\b/.test(t);
+  // pedidos de apagar/cancelar/consultar não são "agendar" (mesmo citando "agendamentos")
+  if (/\b(cancel\w*|apag\w*|exclu\w*|delet\w*|remov\w*|desmarc\w*|quant\w*|quais|list\w*|mostr\w*|ignor\w*)\b/.test(t) && !/\b(agendar|marcar|reservar)\b/.test(t)) return false;
+  return (
+    /\b(agend(ar|e|ei|ando|a)|marc(ar|a|ando)|reserv(ar|a|e|ando))\b/.test(t) ||
+    /\b(coloc\w*|bot\w*|poe|pon\w*|encaix\w*) (isso |ela |ele )?(na|a) agenda\b/.test(t) ||
+    /\bhorario (pro|pra|para|do|da)\b/.test(t) ||
+    /\bpreciso de (um|o) horario\b/.test(t) ||
+    /^\s*(novo )?agendamento\b/.test(t) ||
+    /\b(um|novo) agendamento\b/.test(t) ||
+    /\bquero (um |fazer um )?agendamento\b/.test(t)
+  );
 }
 
-const DATE_WORD = /\b(amanha|hoje|ontem|depois de amanha|daqui|segunda|terca|quarta|quinta|sexta|sabado|domingo|dia \d+|\d{1,2}\/\d{1,2}|as \d+|\d{1,2}h|\d{1,2}:\d{2}|de manha|de tarde|de noite)\b/;
+const DATE_WORD = /\b(amanha|hoje|ontem|depois de amanha|daqui|segunda|terca|quarta|quinta|sexta|sabado|domingo|dia \d+|\d{1,2}\/\d{1,2}|as \d+|\d{1,2}h|\d{1,2}:\d{2}|de manha|de tarde|de noite|semana|proxim[oa]|primeiro de|janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro|observacao|obs|tipo de servico|servico)\b/;
+
+/** Nome de pessoa plausível (letras, espaço, hífen, apóstrofo, ponto; até 5 palavras). Recusa números, símbolos e frases soltas. */
+export function plausibleName(name: string): boolean {
+  const n = name.trim();
+  if (n.length < 2 || n.length > 80) return false;
+  if (!/^[\p{L}][\p{L}'’.\- ]*$/u.test(n)) return false;
+  const words = n.split(/\s+/);
+  if (words.length > 5) return false;
+  return !/^(nao|sim|talvez|tanto faz|qualquer|nenhum|ninguem|nada|sei la|nao sei|esquece|aquele|aquela)\b/.test(norm(n));
+}
 
 /** Nome do cliente citado ("pro cliente João Ferreira amanhã…" → "joao ferreira"). */
 export function extractCustomerText(text: string): string | undefined {
-  const t = spokenNumbersToDigits(norm(text));
-  const m = /\bcliente\s+(.+)/.exec(t) ?? /\b(?:pro|pra|para o|para a|para)\s+(?:cliente\s+)?(.+)/.exec(t);
+  const t = spokenNumbersToDigits(norm(text)).replace(/\b(?:pra|para) mim\b/g, " ");
+  const a = /\bcliente\s+(.+)/.exec(t);
+  const b = /\b(?:pro|pra|para o|para a|para)\s+(?:cliente\s+)?(.+)/.exec(t);
+  // vale a que aparece primeiro ("... para Cláudio ... observação cliente prefere cera" usa o "para")
+  const m = a && b ? (a.index <= b.index ? a : b) : (a ?? b);
   if (!m) return undefined;
   let fragment = m[1]!;
   const cut = DATE_WORD.exec(fragment);
   if (cut) fragment = fragment.slice(0, cut.index);
-  fragment = fragment.replace(/\s+com\s+.*$/, "").trim().replace(/\s+(com|e|que|as|a|no|na|em)$/, "").trim();
+  fragment = fragment.replace(/\s+com\s+.*$/, "").trim().replace(/^(?:e|eh|o|a)\s+/, "").replace(/\s+(com|e|que|as|a|no|na|em|da|de|do|dos|das)$/, "").trim();
   const words = fragment.split(" ").filter(Boolean).slice(0, 5);
   return words.length ? words.join(" ") : undefined;
 }
@@ -113,14 +136,47 @@ export function matchServices(text: string, services: CatalogService[]): Catalog
   if (scored.length === 0) return [];
   const best = scored[0]!.score;
   // só os que empatam ou chegam perto do melhor: se sobrar mais de um, a Cláudia pergunta
-  return scored.filter((x) => best - x.score < 0.15).map((x) => x.s);
+  const near = scored.filter((x) => best - x.score < 0.15).map((x) => x.s);
+  if (near.length < 2) return near;
+  // pergunta ambígua ("lavagem"): lista também os serviços de nome longo que contêm a palavra
+  const extra = services.filter((s) => !near.includes(s) && nameCoverage(text, s.name) >= 0.3);
+  return [...near, ...extra];
+}
+
+const REF_IGNORE = new Set(["tecnico", "tecnica", "para", "que", "esse", "essa", "ele", "ela", "mim", "voce", "cliente", "servico"]);
+/** Palavras que a pessoa usou para apontar o profissional ("com o Felipe", "responsável Felipe", "vai ser o Felipe"). */
+export function professionalRefs(text: string): Set<string> {
+  const t = norm(text);
+  const wanted = new Set<string>();
+  const cues = /(?:\bcom (?:o |a )?|@|\bprofissional\s+(?:o |a )?|\bpelo |\bpela |\bresponsavel\s+(?:tecnico |tecnica )?(?:o |a )?|\btecnic[oa]\s+(?:o |a )?|\bvai ser (?:o |a )|\bquem faz (?:e |eh |sera )?(?:o |a )?|\bfica com (?:o |a )?)([a-z0-9]+)/g;
+  for (const m of t.matchAll(cues)) if (!REF_IGNORE.has(m[1]!)) wanted.add(m[1]!);
+  return wanted;
+}
+
+/** A pessoa apontou um profissional ("com o Zeca") mas ninguém do cadastro tem esse nome. */
+export function unknownProfessionalRef(text: string, professionals: CatalogProfessional[]): string | undefined {
+  const t = norm(text);
+  const strong = /(?:\bcom (?:o|a) |\bpelo |\bpela |\bresponsavel |\bprofissional |\bvai ser (?:o|a) )([a-z]{3,})/.exec(t);
+  if (!strong || REF_IGNORE.has(strong[1]!)) return undefined;
+  return matchProfessionals(text, professionals).length === 0 ? strong[1] : undefined;
+}
+
+/** Trecho que parece ser o serviço pedido ("agendar enceramento pro João…" → "enceramento"). */
+export function extractServiceText(text: string): string | undefined {
+  const t = norm(text);
+  const m = /\b(?:agend\w*|marc\w*|reserv\w*)\s+(?:(?:um|uma|o|a|de|do|da)\s+)*(.+)/.exec(t);
+  if (!m) return undefined;
+  let frag = m[1]!;
+  const cut = /\b(pro|pra|para|cliente|com|amanha|hoje|ontem|segunda|terca|quarta|quinta|sexta|sabado|domingo|dia|as|em|no|na|do|da)\b|\d/.exec(frag);
+  if (cut) frag = frag.slice(0, cut.index);
+  frag = frag.replace(/^(tipo de servico|servico|atendimento|horario)\s*/, "").trim();
+  if (!frag || /^(horario|atendimento|servico|algo|alguma coisa|isso|ele|ela)$/.test(frag)) return undefined;
+  return frag.split(" ").slice(0, 4).join(" ");
 }
 
 export function matchProfessionals(text: string, professionals: CatalogProfessional[]): CatalogProfessional[] {
   const t = norm(text);
-  const ref = /(?:\bcom\b|@|\bprofissional\b|\bpelo\b|\bpela\b)\s*(?:o |a )?([a-z0-9]+)/g;
-  const wanted = new Set<string>();
-  for (const m of t.matchAll(ref)) wanted.add(m[1]!);
+  const wanted = professionalRefs(text);
   if (wanted.size === 0) return [];
   return professionals.filter((p) => tokens(p.name).some((tok) => wanted.has(tok) || [...wanted].some((w) => w.length >= 3 && tok.startsWith(w))));
 }
@@ -198,6 +254,9 @@ export function nextQuestion(slots: AgendarSlots, catalog: AgendaCatalog): Quest
   const wantsStart = missing.includes("inicio");
   const pros = eligibleProfessionals(catalog, slots.servico?.id);
   const profOptions = pros.map((p) => ({ id: p.id, label: p.name }));
+  if (wantsProf && wantsStart && slots.time && !slots.date) {
+    return { fields: ["inicio", "profissional"], text: `Para que dia, às ${slots.time}? E quem vai fazer o serviço?`, options: profOptions };
+  }
   if (wantsProf && wantsStart) {
     const duration = slots.servico?.durationMinutes ? ` (o término eu calculo: ${formatDuration(slots.servico.durationMinutes)})` : "";
     return {
@@ -212,7 +271,9 @@ export function nextQuestion(slots: AgendarSlots, catalog: AgendaCatalog): Quest
       ? `Em que horário ${slots.dayPart === "manha" ? "da manhã" : `da ${slots.dayPart}`}?`
       : slots.date && !slots.time
         ? "A que horas?"
-        : "Que dia e horário começa?";
+        : slots.time && !slots.date
+          ? `Para que dia, às ${slots.time}?`
+          : "Que dia e horário começa?";
   return { fields: ["inicio"], text: partial };
 }
 

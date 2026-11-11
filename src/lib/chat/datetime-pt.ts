@@ -296,7 +296,9 @@ function parseTime(t: string, clock: ChatClock, part: DayPart | undefined, probl
  */
 export function parseDateTimePt(text: string, clock: ChatClock): ParsedDateTime {
   // o ditado por voz devolve "às dez horas"; vira "às 10 horas" só onde é data/hora
-  const t = spokenNumbersToDigits(norm(text).replace(/-/g, " "));
+  const t = spokenNumbersToDigits(norm(text).replace(/-/g, " "))
+    .replace(/\bprimeiro de (janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\b/g, "1 de $1")
+    .replace(/\bdia primeiro\b/g, "dia 1");
   const problems: string[] = [];
   const result: ParsedDateTime = { problems };
 

@@ -11,6 +11,9 @@ import {
   missingFields,
   nextQuestion,
   originalCustomerName,
+  plausibleName,
+  extractServiceText,
+  unknownProfessionalRef,
   professionalSlot,
   suggestFreeStarts,
   summarizeAgendar,
@@ -115,8 +118,9 @@ export async function runAgendarTurn(input: TurnInput, ports: AgendarPorts): Pro
   if (state.pending) {
     const options = state.pending.options;
     const offerNew = state.pending.field === "cliente" ? options.find((o) => o.id.startsWith(NEW_PREFIX)) : undefined;
+    const no = offerNew && /^(nao|n|nao quero|outro|outro nome|errado|nao e)$/.test(norm(text).replace(/[.!?]+$/g, "").trim());
     const yes = offerNew && /^(sim|s|pode|pode sim|quero|isso|cadastra|cadastrar|ok|claro|certo)$/.test(norm(text).replace(/[.!?]+$/g, "").trim());
-    const picked = yes ? offerNew! : input.choice && input.choice.field === state.pending.field ? options.find((o) => o.id === input.choice!.id) ?? null : pickOption(text, options);
+    const picked = no ? options.find((o) => o.id === OTHER_NAME)! : yes ? offerNew! : input.choice && input.choice.field === state.pending.field ? options.find((o) => o.id === input.choice!.id) ?? null : pickOption(text, options);
     if (picked) {
       applyChoice(state, state.pending.field, picked, catalog);
       if (picked.id === OTHER_NAME) {
@@ -159,8 +163,13 @@ export async function runAgendarTurn(input: TurnInput, ports: AgendarPorts): Pro
 
   if (!state.slots.servico) {
     const found = u.services.length ? u.services : answering("servico") ? matchServices(text, catalog.services) : [];
-    if (found.length === 0 && catalog.services.length > 0 && (answering("servico") || /\bservico\b/.test(norm(text)))) {
-      messages.push({ kind: "notice", text: "Não encontrei esse serviço entre os seus serviços ativos. Escolha um da lista ou cadastre o serviço em Serviços." });
+    const askedService = extractServiceText(text);
+    if (found.length === 0 && catalog.services.length > 0 && (answering("servico") || askedService || /\bservico\b/.test(norm(text)))) {
+      const shown = askedService ?? (answering("servico") ? norm(text).slice(0, 40) : undefined);
+      messages.push({
+        kind: "notice",
+        text: `Não encontrei ${shown ? `o serviço "${shown}"` : "esse serviço"} entre os seus serviços ativos. Escolha um da lista ou cadastre o serviço em Serviços.`,
+      });
     }
     if (found.length === 1) state.slots.servico = { id: found[0]!.id, name: found[0]!.name, durationMinutes: found[0]!.durationMinutes, price: found[0]!.price };
     else if (found.length > 1) {
@@ -168,26 +177,58 @@ export async function runAgendarTurn(input: TurnInput, ports: AgendarPorts): Pro
     }
   }
 
+  // mudança de ideia: citou outro serviço que existe (e o rascunho já tinha um)
+  else if (state.slots.servico && !state.pending && u.services.length === 1 && u.services[0]!.id !== state.slots.servico.id && !answering("servico")) {
+    const s = u.services[0]!;
+    state.slots.servico = { id: s.id, name: s.name, durationMinutes: s.durationMinutes, price: s.price };
+  }
+
+  const pendingNow = state.pending;
+  if (!state.slots.profissional && pendingNow?.field === "servico" && u.professionals.length === 1) {
+    // a escolha do serviço continua pendente, mas o profissional já dito não se perde
+    state.slots.profissional = professionalSlot(u.professionals[0]!, undefined);
+  }
   if (!state.slots.profissional && !state.pending) {
     let found = u.professionals;
-    if (found.length === 0 && answering("profissional")) found = eligibleProfessionals(catalog, state.slots.servico?.id).filter((p) => pickOption(text, [{ id: p.id, label: p.name }]));
+    if (found.length === 0 && answering("profissional")) {
+      const eligible = eligibleProfessionals(catalog, state.slots.servico?.id);
+      const byNumber = /^\s*(?:opcao |numero )?\d{1,2}\s*$/.test(norm(text)) ? pickOption(text, eligible.map((p) => ({ id: p.id, label: p.name }))) : null;
+      found = byNumber ? eligible.filter((p) => p.id === byNumber.id) : eligible.filter((p) => pickOption(text, [{ id: p.id, label: p.name }]));
+    }
     if (found.length === 1) state.slots.profissional = professionalSlot(found[0]!, state.slots.servico?.id);
     else if (found.length > 1) state.pending = { field: "profissional", options: found.map((p) => ({ id: p.id, label: p.name })) };
+    else if (!answering("profissional")) {
+      const unknown = unknownProfessionalRef(text, catalog.professionals);
+      if (unknown) messages.push({ kind: "notice", text: `Não encontrei nenhum profissional chamado "${unknown}".` });
+    }
   } else if (state.slots.profissional && state.slots.servico) {
-    const pro = catalog.professionals.find((p) => p.id === state.slots.profissional!.id);
+    // mudança de ideia: citou outro profissional depois de já ter um
+    const explicit = u.professionals.length === 1 && u.professionals[0]!.id !== state.slots.profissional.id ? u.professionals[0]! : null;
+    const pro = explicit ?? catalog.professionals.find((p) => p.id === state.slots.profissional!.id);
     if (pro) state.slots.profissional = professionalSlot(pro, state.slots.servico.id);
   }
 
-  if (!state.slots.cliente && !state.pending && !skipCustomer) {
-    const customerText = u.customerText ?? (answering("cliente") ? norm(text).replace(/^(?:e |eh |o |a |pro |pra |para |cliente )+/, "").trim() || undefined : undefined);
-    if (customerText) {
+  if (!state.slots.cliente && (!state.pending || (state.pending.field === "servico" && !!u.customerText)) && !skipCustomer) {
+    const keepPending = state.pending;
+    const typed = answering("cliente") ? norm(text).replace(/^(?:e |eh |o |a |pro |pra |para |cliente )+/, "").trim() || undefined : undefined;
+    // resposta solta ("3", "não sei", frase longa) não é nome: não procura nem oferece cadastro
+    const customerText = u.customerText ?? (typed && plausibleName(typed) ? typed : undefined);
+    if (!u.customerText && typed && !customerText) {
+      messages.push({ kind: "notice", text: "Não entendi esse nome de cliente. Escreva só o nome (por exemplo: Maria Souza)." });
+      state.asked = [...state.asked, "cliente"];
+    } else if (customerText) {
       const found = await ports.findCustomers(customerText);
       if (found.length === 1) state.slots.cliente = { id: found[0]!.id, name: found[0]!.name };
-      else if (found.length > 1) state.pending = { field: "cliente", options: asOptions(found) };
+      else if (keepPending) {
+        // já há uma escolha de serviço pendente: o cliente é resolvido na próxima volta
+      } else if (found.length > 1) state.pending = { field: "cliente", options: asOptions(found) };
       else {
         // não existe: oferece cadastrar (só é criado quando a pessoa confirmar o agendamento)
         const shown = originalCustomerName(text, customerText);
-        state.pending = {
+        if (!plausibleName(shown)) {
+          messages.push({ kind: "notice", text: "Não entendi esse nome de cliente. Escreva só o nome (por exemplo: Maria Souza)." });
+          state.asked = [...state.asked, "cliente"];
+        } else state.pending = {
           field: "cliente",
           options: [
             { id: `${NEW_PREFIX}${shown}`, label: `Cadastrar "${shown}" como cliente novo` },
