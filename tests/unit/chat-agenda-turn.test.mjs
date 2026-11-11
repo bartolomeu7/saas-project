@@ -93,11 +93,44 @@ test("resposta que não escolhe nada repete as opções", async () => {
   assert.equal(r.state.pending.field, "cliente");
 });
 
-test("cliente não encontrado: avisa e continua sem inventar", async () => {
+test("cliente não encontrado: oferece cadastrar como novo (sem criar nada) e mantém o nome como foi dito", async () => {
   const r = await turn(emptyState(), "agenda lavagem detalhada pro Zé Inexistente", ports(() => []));
   assert.equal(r.state.slots.cliente, undefined);
-  assert.ok(r.messages.some((m) => m.kind === "notice" && /Não encontrei nenhum cliente/.test(m.text)));
-  assert.ok(r.messages.some((m) => m.kind === "ask"));
+  assert.equal(r.state.pending.field, "cliente");
+  assert.equal(r.state.pending.options[0].id, "novo:Zé Inexistente");
+  assert.ok(r.messages.some((m) => m.kind === "disambiguate" && /cadastrar como cliente novo/.test(m.text)));
+});
+
+test("cliente novo: 'sim' aceita, vira cliente marcado como novo e o cartão avisa que será cadastrado na confirmação", async () => {
+  const p = ports(() => []);
+  let r = await turn(emptyState(), "agendar cliente João Ferreira às 14:00 sexta lavagem detalhada com o Lúcio", p);
+  assert.equal(r.state.pending.field, "cliente");
+  assert.equal(r.state.pending.options[0].id, "novo:João Ferreira");
+  r = await turn(r.state, "sim", p);
+  assert.deepEqual(r.state.slots.cliente, { id: "", name: "João Ferreira", isNew: true });
+  assert.equal(r.status, "aguardando_confirmacao");
+  const card = r.messages.find((m) => m.kind === "confirm").card;
+  assert.ok(card.fields.find((f) => f.label === "Cliente").note.includes("será cadastrado"));
+});
+
+test("cliente novo: responder com outro nome volta a procurar; 'escrever outro nome' pergunta o cliente", async () => {
+  const p = ports((t) => (/joao/.test(t) ? JOAO : []));
+  let r = await turn(emptyState(), "agenda lavagem detalhada pro Zé Inexistente sexta às 14:00 com o Lúcio", p);
+  r = await turn(r.state, "João Ferreira", p);
+  assert.equal(r.state.slots.cliente.id, "c1");
+  let q = await turn(emptyState(), "agenda lavagem detalhada pro Zé Inexistente", ports(() => []));
+  q = await turn(q.state, "2", ports(() => []));
+  assert.ok(q.messages.some((m) => m.kind === "ask" && /cliente/i.test(m.text)));
+});
+
+test("serviço que não existe: avisa em vez de repetir a mesma pergunta; sem nenhum serviço ativo, orienta cadastrar", async () => {
+  const p = ports(() => JOAO);
+  let r = await turn(emptyState(), "agendar pro João Ferreira sexta às 14:00 tipo de serviço enceramento ceramico", p);
+  assert.ok(r.messages.some((m) => m.kind === "notice" && /Não encontrei esse serviço/.test(m.text)));
+  r = await turn(r.state, "enceramento ceramico", p);
+  assert.ok(r.messages.some((m) => m.kind === "notice" && /Não encontrei esse serviço/.test(m.text)));
+  const empty = await turn(emptyState(), "agendar pro João Ferreira sexta às 14:00 lavagem", p, { catalog: { ...CATALOG, services: [] } });
+  assert.ok(empty.messages.some((m) => m.kind === "ask" && /nenhum serviço ativo cadastrado/.test(m.text)));
 });
 
 test("hora ambígua pergunta; dia da semana igual a hoje pergunta; serviço genérico pergunta", async () => {

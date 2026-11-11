@@ -10,6 +10,7 @@ import {
   matchServices,
   missingFields,
   nextQuestion,
+  originalCustomerName,
   professionalSlot,
   suggestFreeStarts,
   summarizeAgendar,
@@ -94,11 +95,15 @@ export function pickOption<T extends { id: string; label: string }>(text: string
   return hits.length === 1 ? hits[0]! : null;
 }
 
+const NEW_PREFIX = "novo:";
+const OTHER_NAME = "outro-nome";
+
 const asOptions = (c: Candidate[]) => c.map((x) => ({ id: x.id, label: x.name, detail: x.detail }));
 
 export async function runAgendarTurn(input: TurnInput, ports: AgendarPorts): Promise<TurnResult> {
   const { catalog, clock } = input;
   const state: AgendarState = { ...input.state, slots: { ...input.state.slots } };
+  let skipCustomer = false;
   const messages: ChatMessage[] = [];
   const text = input.text ?? "";
 
@@ -109,10 +114,20 @@ export async function runAgendarTurn(input: TurnInput, ports: AgendarPorts): Pro
   // 1) escolha pendente (clique ou resposta curta)
   if (state.pending) {
     const options = state.pending.options;
-    const picked = input.choice && input.choice.field === state.pending.field ? options.find((o) => o.id === input.choice!.id) ?? null : pickOption(text, options);
+    const offerNew = state.pending.field === "cliente" ? options.find((o) => o.id.startsWith(NEW_PREFIX)) : undefined;
+    const yes = offerNew && /^(sim|s|pode|pode sim|quero|isso|cadastra|cadastrar|ok|claro|certo)$/.test(norm(text).replace(/[.!?]+$/g, "").trim());
+    const picked = yes ? offerNew! : input.choice && input.choice.field === state.pending.field ? options.find((o) => o.id === input.choice!.id) ?? null : pickOption(text, options);
     if (picked) {
       applyChoice(state, state.pending.field, picked, catalog);
+      if (picked.id === OTHER_NAME) {
+        state.asked = ["cliente"];
+        skipCustomer = true; // "2" era o botão, não o nome
+      }
       state.pending = null;
+    } else if (offerNew) {
+      // não respondeu à oferta: trata o texto como outro nome de cliente
+      state.pending = null;
+      state.asked = [...state.asked, "cliente"];
     } else {
       return {
         state,
@@ -144,6 +159,9 @@ export async function runAgendarTurn(input: TurnInput, ports: AgendarPorts): Pro
 
   if (!state.slots.servico) {
     const found = u.services.length ? u.services : answering("servico") ? matchServices(text, catalog.services) : [];
+    if (found.length === 0 && catalog.services.length > 0 && (answering("servico") || /\bservico\b/.test(norm(text)))) {
+      messages.push({ kind: "notice", text: "Não encontrei esse serviço entre os seus serviços ativos. Escolha um da lista ou cadastre o serviço em Serviços." });
+    }
     if (found.length === 1) state.slots.servico = { id: found[0]!.id, name: found[0]!.name, durationMinutes: found[0]!.durationMinutes, price: found[0]!.price };
     else if (found.length > 1) {
       state.pending = { field: "servico", options: found.map((s) => ({ id: s.id, label: s.name, detail: s.durationMinutes ? formatDuration(s.durationMinutes) : "sem duração" })) };
@@ -160,13 +178,23 @@ export async function runAgendarTurn(input: TurnInput, ports: AgendarPorts): Pro
     if (pro) state.slots.profissional = professionalSlot(pro, state.slots.servico.id);
   }
 
-  if (!state.slots.cliente && !state.pending) {
+  if (!state.slots.cliente && !state.pending && !skipCustomer) {
     const customerText = u.customerText ?? (answering("cliente") ? norm(text).replace(/^(?:e |eh |o |a |pro |pra |para |cliente )+/, "").trim() || undefined : undefined);
     if (customerText) {
       const found = await ports.findCustomers(customerText);
       if (found.length === 1) state.slots.cliente = { id: found[0]!.id, name: found[0]!.name };
       else if (found.length > 1) state.pending = { field: "cliente", options: asOptions(found) };
-      else messages.push({ kind: "notice", text: `Não encontrei nenhum cliente com "${customerText}". Confira o nome ou cadastre o cliente antes.` });
+      else {
+        // não existe: oferece cadastrar (só é criado quando a pessoa confirmar o agendamento)
+        const shown = originalCustomerName(text, customerText);
+        state.pending = {
+          field: "cliente",
+          options: [
+            { id: `${NEW_PREFIX}${shown}`, label: `Cadastrar "${shown}" como cliente novo` },
+            { id: OTHER_NAME, label: "Escrever outro nome" },
+          ],
+        };
+      }
     }
   }
 
@@ -194,12 +222,14 @@ export async function runAgendarTurn(input: TurnInput, ports: AgendarPorts): Pro
       messages.push({ kind: "notice", text: `${only[0]!.name} é o único profissional que faz ${state.slots.servico.name}.` });
     }
   }
-
   return finishTurn(state, messages, ports, catalog, clock);
 }
 
 function applyChoice(state: AgendarState, field: PendingField, option: { id: string; label: string }, catalog: AgendaCatalog) {
-  if (field === "cliente") state.slots.cliente = { id: option.id, name: option.label };
+  if (field === "cliente") {
+    if (option.id.startsWith(NEW_PREFIX)) state.slots.cliente = { id: "", name: option.id.slice(NEW_PREFIX.length), isNew: true };
+    else if (option.id !== OTHER_NAME) state.slots.cliente = { id: option.id, name: option.label };
+  }
   else if (field === "servico") {
     const s = catalog.services.find((x) => x.id === option.id);
     if (s) state.slots.servico = { id: s.id, name: s.name, durationMinutes: s.durationMinutes, price: s.price };
@@ -213,7 +243,7 @@ function applyChoice(state: AgendarState, field: PendingField, option: { id: str
 async function finishTurn(state: AgendarState, messages: ChatMessage[], ports: AgendarPorts, catalog: AgendaCatalog, clock: ChatClock): Promise<TurnResult> {
   if (state.pending) {
     const labels: Record<PendingField, string> = {
-      cliente: "Encontrei mais de um cliente. Qual deles?",
+      cliente: state.pending.options.some((o) => o.id.startsWith(NEW_PREFIX)) ? "Não encontrei esse cliente no cadastro. Quer cadastrar como cliente novo?" : "Encontrei mais de um cliente. Qual deles?",
       servico: "Qual destes serviços?",
       profissional: "Qual profissional?",
       data: "Qual dia você quer?",
