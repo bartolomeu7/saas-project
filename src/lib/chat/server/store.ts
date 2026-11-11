@@ -208,9 +208,13 @@ export interface ChatSettings {
   agentName: string;
 }
 
-/** Configuração do Chat da empresa (a empresa vem da sessão autenticada pela rota). null se não houver linha ou a tabela não existir. */
+export const DEFAULT_CHAT_SETTINGS: ChatSettings = { enabled: true, modules: ["agenda"], draftTtlMinutes: null, agentName: "Cláudia" };
+
+/** Configuração do Chat da empresa (a empresa vem da sessão autenticada pela rota). Sem linha: o padrão liberado (DEFAULT_CHAT_SETTINGS). null se a tabela não existir ou a leitura falhar. */
 export async function getChatSettings(companyId: string): Promise<ChatSettings | null> {
   const { data, error } = await db().from("chat_settings").select("enabled, modules, draft_ttl_minutes, agent_name").eq("company_id", companyId).maybeSingle();
-  if (error || !data) return null;
+  if (error) return null;
+  // Sem linha = padrão liberado para todas as empresas (Agenda, agente "Cláudia"). Uma linha com enabled=false desliga a empresa.
+  if (!data) return { ...DEFAULT_CHAT_SETTINGS };
   return { enabled: data.enabled === true, modules: Array.isArray(data.modules) ? (data.modules as string[]) : [], draftTtlMinutes: (data.draft_ttl_minutes as number | null) ?? null, agentName: String(data.agent_name || "Cláudia") };
 }

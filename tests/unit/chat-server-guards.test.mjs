@@ -69,10 +69,22 @@ const page = read("src/app/(app)/app/chat/page.tsx");
 const client = read("src/components/app/chat/chat-client.tsx");
 const cards = read("src/components/app/chat/chat-cards.tsx");
 
-test("tela: só aparece com interruptor global + empresa com Chat e módulo agenda; sem tabela vira 'indisponível'", () => {
+test("tela: aparece para todas com o interruptor global ligado, a menos que a empresa tenha enabled=false; sem tabela vira 'indisponível'", () => {
   assert.ok(page.includes('process.env.CHAT_AI_ENABLED === "true"'));
-  assert.ok(page.includes("data?.enabled") && page.includes('includes("agenda")'));
+  assert.ok(page.includes("getChatSettings(") && page.includes("settings?.enabled") && page.includes('includes("agenda")'));
   assert.ok(page.includes("ainda não está disponível"));
+});
+
+test("liberado para todos: sem linha em chat_settings vale o padrão ligado (agenda), linha com enabled=false desliga, erro de leitura desliga", () => {
+  assert.ok(store.includes("DEFAULT_CHAT_SETTINGS") && /enabled: true, modules: \["agenda"\]/.test(store));
+  const fn = store.slice(store.indexOf("export async function getChatSettings"));
+  assert.ok(fn.indexOf("if (error) return null") > 0 && fn.indexOf("if (error) return null") < fn.indexOf("DEFAULT_CHAT_SETTINGS"));
+  assert.ok(route.includes("getChatSettings") && confirm.includes("getChatSettings"), "turno e confirmação usam a mesma regra");
+});
+
+test("aviso de desenvolvimento aparece na tela e o item do menu existe", () => {
+  assert.ok(page.includes("Em desenvolvimento") && page.includes("pode errar") && page.includes("usar as telas manualmente"));
+  assert.ok(read("src/components/app/nav-items.ts").includes('href: "/app/chat"'));
 });
 
 test("tela: só fala com /app/chat/turn e /app/chat/confirm e não tem ação de gravar nos módulos", () => {

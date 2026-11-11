@@ -4,33 +4,45 @@ import { PageHeader } from "@/components/app/page-header";
 import { EmptyState } from "@/components/app/empty-state";
 import { ChatClient } from "@/components/app/chat/chat-client";
 import { getCurrentCompany } from "@/lib/companies/queries";
-import { createSessionClient } from "@/lib/supabase/server";
+import { getChatSettings } from "@/lib/chat/server/store";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { TriangleAlert } from "lucide-react";
+import Link from "next/link";
 
 export const metadata: Metadata = { title: "Chat AI" };
 export const dynamic = "force-dynamic";
 
 /**
- * Chat AI (modo teste). Só aparece para quem tem o interruptor global ligado (CHAT_AI_ENABLED) E a empresa ligou o Chat
- * com o módulo Agenda. Se a tabela de configuração ainda não existe no banco, a consulta falha e a página mostra
- * "indisponível" (nunca quebra). Sem item no menu enquanto estiver em teste: acesso por /app/chat.
+ * Chat AI (em desenvolvimento). Aparece para todas as empresas quando o interruptor global (CHAT_AI_ENABLED) está ligado, a não ser que a
+ * empresa tenha uma linha em chat_settings com enabled=false. Se a tabela de configuração ainda não existe no banco, a consulta falha e a página mostra
+ * "indisponível" (nunca quebra). Item "Chat AI" no menu para todos, com o aviso de que está em desenvolvimento.
  */
 export default async function ChatPage() {
   const current = await getCurrentCompany();
   let agentName: string | null = null;
 
   if (process.env.CHAT_AI_ENABLED === "true" && current) {
-    const supabase = (await createSessionClient()) as any;
-    const { data } = await supabase.from("chat_settings").select("enabled, agent_name, modules").eq("company_id", current.company.id).maybeSingle();
-    if (data?.enabled && Array.isArray(data.modules) && data.modules.includes("agenda")) agentName = String(data.agent_name || "Cláudia");
+    const settings = await getChatSettings(current.company.id);
+    if (settings?.enabled && settings.modules.includes("agenda")) agentName = settings.agentName;
   }
 
   return (
     <div className="prime-module-page prime-module-page--chat flex flex-col gap-6 px-4 py-6 sm:px-6">
       <PageHeader title="Chat AI" description="Peça em linguagem natural; eu pergunto o que faltar e só mostro o resumo para você conferir." />
       {agentName ? (
-        <ChatClient agentName={agentName} />
+        <Alert variant="warning" role="note">
+          <TriangleAlert className="h-4 w-4" aria-hidden="true" />
+          <AlertTitle>Em desenvolvimento</AlertTitle>
+          <AlertDescription className="text-foreground">
+            O Chat AI ainda está sendo construído e <strong>pode errar</strong>. Por enquanto, é recomendável usar as telas manualmente (por exemplo, a{" "}
+            <Link href="/app/agenda" className="font-medium underline underline-offset-4">Agenda</Link>) e conferir tudo antes de confirmar. Nada é gravado sem o seu clique em Confirmar.
+          </AlertDescription>
+        </Alert>
+      ) : null}
+      {agentName ? (
+        <ChatClient agentName={agentName} initialShadow={process.env.CHAT_AI_CONFIRM_ENABLED !== "true"} />
       ) : (
-        <EmptyState icon={MessagesSquare} title="O Chat AI ainda não está disponível para a sua empresa." description="Ele está em fase de testes. Quando for liberado, aparece aqui." />
+        <EmptyState icon={MessagesSquare} title="O Chat AI ainda não está disponível para a sua empresa." description="Ele está em desenvolvimento e pode estar desligado para a sua empresa. Quando estiver liberado, aparece aqui." />
       )}
     </div>
   );
