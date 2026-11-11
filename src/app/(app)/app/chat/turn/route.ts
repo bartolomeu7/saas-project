@@ -39,6 +39,16 @@ function nowClock(): { today: string; nowMinutes: number } {
 }
 
 export async function POST(request: Request) {
+  try {
+    return await handle(request);
+  } catch (error) {
+    // Nunca devolve página de erro em HTML: o chat espera JSON e mostraria "sessão expirou" por engano.
+    console.error("[chat/turn] falha inesperada:", error instanceof Error ? error.message : error);
+    return json({ error: "erro_interno" }, 500);
+  }
+}
+
+async function handle(request: Request) {
   // 1) interruptor global (padrão: desligado)
   if (process.env.CHAT_AI_ENABLED !== "true") return json({ error: "indisponivel" }, 404);
 

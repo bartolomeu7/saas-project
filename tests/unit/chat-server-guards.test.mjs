@@ -88,14 +88,14 @@ test("aviso de desenvolvimento aparece na tela e o item do menu existe", () => {
 });
 
 test("tela: só fala com /app/chat/turn e /app/chat/confirm e não tem ação de gravar nos módulos", () => {
-  assert.ok(client.includes('fetch("/app/chat/turn"') && client.includes('fetch("/app/chat/confirm"'));
-  assert.equal([...(client + cards).matchAll(/fetch\(/g)].length, 2);
+  assert.ok(client.includes('post("/app/chat/turn"') && client.includes('post("/app/chat/confirm"'));
+  assert.equal([...(client + cards).matchAll(/fetch\(/g)].length, 1, "um único ponto de rede (post), que renova a sessão e tenta de novo");
   assert.ok(!/(createAppointmentAction|create_appointment|createClient|createSessionClient)/.test(client + cards));
 });
 
 test("tela: Confirmar só funciona fora do modo teste, uma vez por cartão, e manda só (rascunho, versão)", () => {
   assert.ok(cards.includes("disabled={shadow || locked || confirming || !item.draft}"));
-  assert.ok(client.includes("Modo teste") && client.includes("JSON.stringify({ draftId: draft.id, version: draft.version })"));
+  assert.ok(client.includes("modo teste") && client.includes('post("/app/chat/confirm", { draftId: draft.id, version: draft.version })'));
   assert.ok(client.includes("Não sei se gravou: confira na Agenda antes de tentar de novo"), "sem conexão no Confirmar nunca promete que não gravou");
 });
 
@@ -106,12 +106,14 @@ test("tela: texto da conversa nunca vira HTML e links são só rotas internas mo
 
 test("tela: acessibilidade básica (rótulo do campo, região aria-live, log da conversa, Enter envia)", () => {
   assert.ok(client.includes('htmlFor="chat-input"') && client.includes('aria-live="polite"') && client.includes('role="log"'));
-  assert.ok(client.includes("Shift+Enter") && client.includes("isComposing"));
+  assert.ok(client.includes("event.shiftKey") && client.includes("isComposing"));
   assert.ok(cards.includes("aria-label") && cards.includes("sr-only"));
 });
 
 test("tela: erros conhecidos viram mensagem em português (sessão, desligado, limite)", () => {
-  for (const status of ["401", "403", "404", "429"]) assert.ok(client.includes(`${status}:`), status);
+  for (const status of ["403", "404", "429"]) assert.ok(client.includes(`${status}:`), status);
+  assert.ok(client.includes("isSessionProblem") && client.includes("SESSION_EXPIRED"), "401/redirecionamento para o login = sessão expirada");
+  assert.ok(client.includes("getToken"), "renova o token do Clerk antes de falar com o servidor");
   assert.ok(client.includes("Nada foi alterado"));
 });
 

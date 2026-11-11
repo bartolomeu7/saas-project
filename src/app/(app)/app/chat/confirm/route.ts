@@ -49,6 +49,15 @@ function nowClock(): { today: string; nowMinutes: number } {
 const created = (): ChatMessage => ({ kind: "result", text: "Pronto! Agendamento criado.", link: { href: "/app/agenda", label: "Abrir a Agenda" } });
 
 export async function POST(request: Request) {
+  try {
+    return await handle(request);
+  } catch (error) {
+    console.error("[chat/confirm] falha inesperada:", error instanceof Error ? error.message : error);
+    return json({ error: "erro_interno" }, 500);
+  }
+}
+
+async function handle(request: Request) {
   // 1) interruptores (padrão: desligados). Gravar exige o interruptor próprio, além do Chat ligado.
   if (process.env.CHAT_AI_ENABLED !== "true" || process.env.CHAT_AI_CONFIRM_ENABLED !== "true") return json({ error: "indisponivel" }, 404);
 
