@@ -70,7 +70,11 @@ async function handle(request: Request) {
   const companyId = current.company.id;
 
   // só JSON: um formulário de outro site (text/plain) não consegue disparar esta rota
-  if (!(request.headers.get("content-type") ?? "").toLowerCase().includes("application/json")) return json({ error: "tipo_invalido" }, 415);
+  // MIME exato (não por substring: "text/plain; x=application/json" passaria) e, quando o navegador informa, só do mesmo site
+  const mime = (request.headers.get("content-type") ?? "").split(";")[0]!.trim().toLowerCase();
+  if (mime !== "application/json") return json({ error: "tipo_invalido" }, 415);
+  const site = request.headers.get("sec-fetch-site");
+  if (site && site !== "same-origin") return json({ error: "origem_invalida" }, 403);
   let parsed: z.infer<typeof bodySchema>;
   try {
     parsed = bodySchema.parse(await request.json());
