@@ -8,11 +8,16 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { writeAuditLog } from "@/lib/audit/log";
 import type { ActionResult } from "@/lib/auth/actions";
 import type { SupplierFormFields } from "@/types/supplier";
+import { documentError, phoneError } from "@/lib/validations/document";
 
 function parse(formData: FormData): SupplierFormFields | { error: string } {
   const name = String(formData.get("name") ?? "").trim();
   if (!name) return { error: "Informe o nome do fornecedor." };
   const status = String(formData.get("status") ?? "active");
+  const documentProblem = documentError(String(formData.get("document") ?? ""));
+  if (documentProblem) return { error: documentProblem };
+  const phoneProblem = phoneError(String(formData.get("phone") ?? "")) ?? phoneError(String(formData.get("whatsapp") ?? ""));
+  if (phoneProblem) return { error: phoneProblem };
   return {
     name, legal_name: String(formData.get("legal_name") ?? "").trim(),
     document: String(formData.get("document") ?? "").trim(),

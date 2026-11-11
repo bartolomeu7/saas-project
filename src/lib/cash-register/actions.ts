@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { createSessionClient } from "@/lib/supabase/server";
 import { getCurrentCompany } from "@/lib/companies/queries";
 import type { ActionResult } from "@/lib/auth/actions";
+import { parseMoneyInput } from "@/lib/parse-money";
+import { getCurrentOpenCashRegister, listCashMovements, summarizeCashMovements } from "@/lib/cash-register/queries";
 import type { CashMovementDirection } from "@/types/cash-register";
 import type { SalePaymentMethod } from "@/types/sale";
 
@@ -25,17 +27,12 @@ const SALE_PAYMENT_METHODS: readonly SalePaymentMethod[] = ["cash", "pix", "debi
  */
 
 function parsePositiveAmount(value: FormDataEntryValue | null): number | null {
-  if (typeof value !== "string" || value.trim() === "") return null;
-  const parsed = Number(value.replace(",", "."));
-  if (!Number.isFinite(parsed) || parsed <= 0) return null;
-  return parsed;
+  const parsed = typeof value === "string" ? parseMoneyInput(value) : null;
+  return parsed !== null && parsed > 0 ? parsed : null;
 }
 
 function parseNonNegativeAmount(value: FormDataEntryValue | null): number | null {
-  if (typeof value !== "string" || value.trim() === "") return null;
-  const parsed = Number(value.replace(",", "."));
-  if (!Number.isFinite(parsed) || parsed < 0) return null;
-  return parsed;
+  return typeof value === "string" ? parseMoneyInput(value) : null;
 }
 
 function parsePaymentMethod(value: FormDataEntryValue | null): SalePaymentMethod | null {
@@ -143,6 +140,20 @@ export async function createCashMovementAction(
   const current = await getCurrentCompany();
   if (!current) {
     return { error: "Nenhuma empresa encontrada para o usuário atual." };
+  }
+
+  // Uma saída em dinheiro não pode passar do que há na gaveta (senão o saldo esperado fica negativo e o
+  // fechamento mostra uma diferença impossível). O banco não confere isso; a conferência fica aqui.
+  if (direction === "out" && method === "cash") {
+    const register = await getCurrentOpenCashRegister(current.company.id);
+    if (register) {
+      const summary = summarizeCashMovements(Number(register.opening_balance), await listCashMovements(register.id));
+      if (amount > summary.expectedCashBalance + 0.0001) {
+        return {
+          error: `Saída maior que o dinheiro disponível no caixa (${summary.expectedCashBalance.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}).`,
+        };
+      }
+    }
   }
 
   const supabase = await createSessionClient();

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { documentError, phoneError } from "@/lib/validations/document";
 
 /**
  * Todos os campos de texto opcionais aceitam string vazia (do formulário
@@ -74,11 +75,13 @@ export const customerSchema = z.object({
   name: z
     .string()
     .trim()
-    .min(1, "Informe o nome do cliente.")
+    .min(2, "Informe o nome do cliente (pelo menos 2 letras).")
     .max(160, "Nome muito longo."),
-  document: optionalText(32),
-  phone: optionalText(32),
-  whatsapp: optionalText(32),
+  document: optionalText(32).refine((value) => documentError(value) === null, {
+    message: "Documento inválido: confira o CPF ou CNPJ.",
+  }),
+  phone: optionalText(32).refine((value) => phoneError(value) === null, { message: "Telefone inválido: use de 8 a 15 números." }),
+  whatsapp: optionalText(32).refine((value) => phoneError(value) === null, { message: "WhatsApp inválido: use de 8 a 15 números." }),
   email: z
     .string()
     .trim()

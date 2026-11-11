@@ -94,7 +94,14 @@ export default async function TeamPage() {
             A pessoa precisa ter uma conta Prime Ges antes de ser vinculada à empresa.
           </p>
           <div className="mt-5">
-            <AddMemberForm canAddAdmin={isOwner} />
+            {seats?.atLimit || seats?.overLimit ? (
+              <p className="text-sm text-muted-foreground">
+                Inclusões indisponíveis: o limite de usuários do plano foi atingido.{" "}
+                <Link href="/app/assinatura/planos" className="font-medium underline underline-offset-4">Ver planos</Link>.
+              </p>
+            ) : (
+              <AddMemberForm canAddAdmin={isOwner} />
+            )}
           </div>
         </section>
       ) : null}

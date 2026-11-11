@@ -25,6 +25,32 @@ function parseMoney(value: FormDataEntryValue | null): number | undefined {
   return Number.isFinite(number) && number >= 0 ? number : undefined;
 }
 
+const WEEKDAY_NAMES = ["domingo", "segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado"];
+
+/**
+ * Se o profissional tem expediente cadastrado, um dia SEM expediente é dia de folga. O banco só confere o horário
+ * quando existe regra para o dia, então um dia desmarcado ficava livre para agendar — o contrário do que o dono quis.
+ */
+async function offDayError(
+  supabase: Awaited<ReturnType<typeof createSessionClient>>,
+  professionalId: string | null | undefined,
+  localDateTime: string
+): Promise<string | null> {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(localDateTime);
+  if (!professionalId || !match) return null;
+  const weekday = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]))).getUTCDay();
+  const { data } = await supabase
+    .from("professional_availability")
+    .select("weekday")
+    .eq("professional_id", professionalId)
+    .eq("active", true);
+  const rules = (data ?? []) as { weekday: number }[];
+  if (rules.length > 0 && !rules.some((rule) => rule.weekday === weekday)) {
+    return `O profissional não atende em ${WEEKDAY_NAMES[weekday]} (dia sem expediente).`;
+  }
+  return null;
+}
+
 export async function createAppointmentAction(
   _prev: ActionResult,
   formData: FormData
@@ -44,6 +70,8 @@ export async function createAppointmentAction(
   if (!startsAtDate) return { error: "Horário inválido." };
 
   const supabase = await createSessionClient();
+  const offDay = await offDayError(supabase, professionalId, startsAt);
+  if (offDay) return { error: offDay };
   const { error } = await supabase.rpc("create_appointment", {
     p_customer_id: customerId,
     p_service_id: serviceId,
@@ -72,6 +100,9 @@ export async function rescheduleAppointmentAction(
   if (!startsAtDate) return { error: "Horário inválido." };
 
   const supabase = await createSessionClient();
+  const { data: current } = await supabase.from("appointments").select("professional_id").eq("id", appointmentId).maybeSingle();
+  const offDay = await offDayError(supabase, (current as { professional_id: string | null } | null)?.professional_id, startsAt);
+  if (offDay) return { error: offDay };
   const { error } = await supabase.rpc("reschedule_appointment", {
     p_appointment_id: appointmentId,
     p_starts_at: startsAtDate.toISOString(),

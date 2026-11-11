@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useFormState } from "react-dom";
 import { closeCashRegisterAction } from "@/lib/cash-register/actions";
 import type { ActionResult } from "@/lib/auth/actions";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { SubmitButton } from "@/components/shared/auth/submit-button";
+import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/app/confirm-dialog";
 import { FormMessage } from "@/components/shared/auth/form-message";
 import { useKeepInputOnError } from "@/hooks/use-keep-input-on-error";
 
@@ -35,6 +36,7 @@ export function CashRegisterCloseForm({
   const [state, formAction] = useFormState(action, initialState);
   const keepInput = useKeepInputOnError(state);
   const [informedRaw, setInformedRaw] = useState("");
+  const formRef = useRef<HTMLFormElement>(null);
 
   const difference = useMemo(() => {
     const informed = Number(informedRaw.replace(",", "."));
@@ -43,7 +45,7 @@ export function CashRegisterCloseForm({
   }, [informedRaw, expectedCashBalance]);
 
   return (
-    <form action={formAction} onReset={keepInput} className="flex flex-col gap-4">
+    <form ref={formRef} action={formAction} onReset={keepInput} className="flex flex-col gap-4">
       <FormMessage state={state} />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -91,9 +93,24 @@ export function CashRegisterCloseForm({
         <Input id="notes" name="notes" maxLength={200} />
       </div>
 
-      <SubmitButton state={state} pendingLabel="Fechando..." className="w-full sm:w-fit">
-        Fechar caixa
-      </SubmitButton>
+      <ConfirmDialog
+        trigger={
+          <Button type="button" className="w-full sm:w-fit" disabled={difference === null}>
+            Fechar caixa
+          </Button>
+        }
+        title="Fechar o caixa agora?"
+        description={
+          difference === null
+            ? undefined
+            : `Esperado ${formatMoney(expectedCashBalance)}, contado ${formatMoney(expectedCashBalance + difference)}${
+                difference === 0 ? " — sem diferença." : ` — ${difference > 0 ? "sobra" : "falta"} de ${formatMoney(Math.abs(difference))}.`
+              } O caixa fechado não pode ser reaberto.`
+        }
+        confirmLabel="Fechar caixa"
+        cancelLabel="Voltar"
+        onConfirm={() => formRef.current?.requestSubmit()}
+      />
     </form>
   );
 }
