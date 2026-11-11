@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Mic, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { VOICE_LANG, VOICE_MAX_SECONDS, VOICE_UNSUPPORTED_MESSAGE, voiceErrorMessage } from "@/lib/chat/voice.ts";
+import { VOICE_LANG, VOICE_MAX_SECONDS, VOICE_PERMISSION_HINT, VOICE_UNSUPPORTED_MESSAGE, voiceErrorMessage } from "@/lib/chat/voice.ts";
 
 /**
  * Chat AI — botão de ditado (Web Speech API do navegador). Nunca envia nada sozinho: a fala vira TEXTO na caixa de
@@ -89,7 +89,7 @@ export function VoiceButton({
     rec.onstart = () => {
       setListening(true);
       onStart();
-      onMessage("Ouvindo. Fale agora.");
+      onMessage(VOICE_PERMISSION_HINT);
     };
     rec.onresult = (event) => {
       let text = "";

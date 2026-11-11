@@ -27,7 +27,7 @@ test("junta o que já estava digitado com o que foi falado", () => {
 
 test("erros do microfone viram mensagem em português; parar pelo próprio usuário não mostra nada", () => {
   assert.equal(voiceErrorMessage("aborted"), null);
-  assert.match(voiceErrorMessage("not-allowed"), /microfone está bloqueado/);
+  assert.match(voiceErrorMessage("not-allowed"), /microfone está bloqueado.*cadeado/);
   assert.match(voiceErrorMessage("service-not-allowed"), /microfone está bloqueado/);
   assert.match(voiceErrorMessage("no-speech"), /Não ouvi nada/);
   assert.match(voiceErrorMessage("audio-capture"), /microfone/);
@@ -138,4 +138,17 @@ test("voz: o modo de entrada vai ao servidor e só a transcrição (texto) é gu
   assert.ok(route.includes('inputMode: z.enum(["texto", "voz"])') && route.includes("inputMode: parsed.inputMode"));
   assert.ok(store.includes('input_mode: args.inputMode ?? "texto"') && store.includes("transcript: args.inputMode"));
   assert.ok(!/audio|áudio/i.test(store.replace(/o áudio nunca chega ao servidor/i, "")), "o servidor não lida com áudio");
+});
+
+// ------------------------------------------------------------------------------------------------ permissão do microfone
+test("o site libera o microfone SÓ para si mesmo (senão o navegador bloqueia sem pedir permissão); câmera e localização seguem proibidas", () => {
+  const cfg = read("next.config.js");
+  assert.ok(cfg.includes('"camera=(), microphone=(self), geolocation=()"'));
+  assert.ok(!cfg.includes("microphone=()"), "microphone=() impede o pedido de permissão");
+  assert.ok(!/microphone=\*|microphone=\(\*\)/.test(cfg), "nunca liberar o microfone para qualquer origem");
+});
+
+test("ao começar a ouvir, a tela avisa que o navegador vai pedir permissão e como destravar se estiver bloqueado", () => {
+  assert.ok(button.includes("VOICE_PERMISSION_HINT"));
+  assert.match(voiceErrorMessage("not-allowed"), /cadeado/);
 });
