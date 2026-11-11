@@ -28,7 +28,7 @@ export default async function ChatPage() {
     <div className="prime-module-page prime-module-page--chat flex flex-col gap-6 px-4 py-6 sm:px-6">
       <PageHeader title="Chat AI" description="Peça em linguagem natural; eu pergunto o que faltar e só mostro o resumo para você conferir." />
       {agentName ? (
-        <ChatClient agentName={agentName} />
+        <ChatClient agentName={agentName} initialShadow={process.env.CHAT_AI_CONFIRM_ENABLED !== "true"} />
       ) : (
         <EmptyState icon={MessagesSquare} title="O Chat AI ainda não está disponível para a sua empresa." description="Ele está em fase de testes. Quando for liberado, aparece aqui." />
       )}
