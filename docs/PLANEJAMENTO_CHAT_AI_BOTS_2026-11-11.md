@@ -182,3 +182,61 @@ E para "quero adicionar um produto no estoque, um limpa-baú de 50 litros": ela 
 3. **Perguntas econômicas**: obrigatório pergunta; recomendado oferece uma vez; padrão não pergunta.
 4. **Teste por ficha**: cada intenção tem um conjunto de frases e conversas completas (ordem incompleta, ordem completa, resposta fora de ordem, mudança de ideia no meio, nome repetido, horário ocupado) antes de ser liberada.
 5. **Personalização futura:** nome da agente (Cláudia), tom e fichas por segmento (estética automotiva pede veículo; salão não).
+
+---
+
+# Adendo 2 (decisão do dono, 11/11/2026): Cláudia com subagentes por módulo
+
+## F) Desenho
+**Cláudia** é a orquestradora: conversa com o usuário, descobre **qual módulo** a ordem pertence e entrega para o **subagente do módulo**. Cada subagente é responsável por um módulo do sistema.
+
+```
+Usuário ─► Cláudia (orquestradora)
+             ├─ entende a ordem, escolhe o módulo, guarda o estado da conversa
+             ├─ camada compartilhada: busca de cadastros (tags), cartão de confirmação,
+             │   permissões, limites, idempotência, auditoria
+             └─ Subagentes (um por módulo)
+                  Agenda · Estoque/Produtos · Vendas · Financeiro · Caixa · Clientes · Compras · RH
+                  cada um tem:  fichas das suas intenções (obrigatório/recomendado/padrão)
+                                resolvedores (como achar o que o usuário citou)
+                                validações do módulo (expediente, estoque, caixa aberto…)
+                                executor (chama as RPCs que o módulo já usa)
+                                permissão do módulo (matriz `can()`)
+                                conjunto próprio de testes
+```
+
+## G) O que de fato é um "subagente" (importante)
+**Recomendo que cada subagente seja um pacote de código com contrato fixo, e não um modelo de linguagem separado.** O modelo de linguagem (se adotado) é chamado **uma vez por mensagem** pela Cláudia, que já devolve módulo + intenção + campos. Razões: custo e tempo de resposta (vários modelos em cadeia multiplicam os dois), menos pontos de falha e comportamento previsível.
+
+Contrato que todo subagente cumpre (mesma forma em todos):
+1. `intents`: lista das intenções do módulo com suas fichas.
+2. `resolve(campo, texto)`: transforma o que a pessoa disse em um registro real do módulo, ou devolve candidatos para desambiguar.
+3. `validate(rascunho)`: regras do módulo; devolve o que falta e os problemas, com mensagem em português.
+4. `summarize(rascunho)`: dados do cartão de confirmação, com links.
+5. `execute(rascunho)`: grava via RPC existente, com a sessão do usuário. **Só é chamado depois do Confirmar.**
+6. `permission`: papel mínimo, igual ao das telas.
+
+## H) Por que isso é bom
+- **Isolamento de erro:** um defeito no subagente de Vendas não afeta Agenda. Cada módulo é liberado, testado e desligado separadamente (flag por módulo).
+- **Entrega incremental:** começa só com Agenda e vai somando módulos sem reescrever o núcleo.
+- **Regra do módulo no lugar certo:** quando o módulo mudar, só o subagente dele muda.
+- **Permissão por módulo:** o subagente de Financeiro nem responde para funcionário que não tem acesso.
+
+## I) Onde está o risco (e como evitar)
+| Risco | Mitigação |
+|-------|-----------|
+| **Ordens que atravessam módulos** ("vendi um polimento e baixa a cera") | Um subagente **dono** da ordem (Vendas) cuida de tudo; efeitos em outros módulos acontecem **dentro das RPCs** (a venda já baixa o estoque). Subagente nunca chama outro subagente |
+| **Cadastro de cliente/produto repetido em cada módulo** | Resolvedores ficam na **camada compartilhada**; subagentes só os usam |
+| **Experiência diferente por módulo** | Cartão de confirmação, tom e perguntas padronizados na Cláudia; subagente só fornece os dados |
+| **Erro ao escolher o módulo** ("acabou o produto" = estoque ou venda?) | Cláudia pergunta quando a confiança for baixa, nunca adivinha; o cartão mostra o módulo ("Estoque › Baixa") |
+| **Mais código e mais testes** | Contrato único + gerador de testes a partir das fichas; começar por poucos módulos |
+| **Conversa que muda de assunto no meio** | Estado fica com a Cláudia, um rascunho ativo por vez; "cancelar" descarta |
+
+## J) Ordem de implantação por módulo (sugestão)
+1. **Núcleo da Cláudia + camada compartilhada** (estado, confirmação, auditoria, idempotência, busca por tags).
+2. **Agenda** (é a fatia vertical de prova, o caso do seu exemplo).
+3. **Estoque/Produtos** (cadastrar produto, baixa, entrada).
+4. **Financeiro e Caixa** (despesa, receita, sangria/suprimento).
+5. **Vendas** (o mais complexo: várias etapas, pagamento, estoque, pontos).
+6. **Clientes e Compras**; **RH** por último (dados sensíveis).
+Cada módulo só é liberado depois de passar nos testes e na checagem de permissão e isolamento.
