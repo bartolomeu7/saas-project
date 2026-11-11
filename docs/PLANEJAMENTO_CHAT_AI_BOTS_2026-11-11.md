@@ -125,3 +125,60 @@ Testes obrigatórios (o que os testes reais de hoje mostraram que dá errado em 
 - **Voz imprecisa:** o cartão de confirmação mostra o texto transcrito e permite corrigir antes de qualquer gravação.
 - **Custo e abuso:** rate limit, tamanho máximo, flag por plano.
 - **Manutenção das regras:** intenções declaradas em um registro único (campos, executor, permissão), com testes de frases; adicionar intenção não exige mexer no motor.
+
+---
+
+# Adendo (decisão do dono, 11/11/2026): persona "Cláudia" e conversa guiada por pré-requisitos
+
+Este adendo **prevalece** sobre o que estiver diferente acima.
+
+## A) Nome e papel
+- O módulo no menu se chama **Chat AI**. A agente que conversa se chama **Cláudia** (nome configurável por empresa, padrão "Cláudia").
+- O usuário dá uma ordem curta ("Cláudia, faz um agendamento de lavagem detalhada pro cliente João Ferreira"). A Cláudia **entende o tipo de tarefa**, vê **o que o módulo exige** e **pergunta só o que falta**, até ter tudo.
+- **Regra de ouro: a Cláudia nunca grava sozinha.** Sempre mostra o resumo e espera o clique em **Confirmar**. Sem confirmação, nada muda no sistema.
+
+## B) Como ela sabe o que perguntar: pré-requisitos vêm dos módulos reais
+Cada intenção tem uma ficha com dois níveis, tirada do que o módulo realmente pede:
+- **Obrigatório:** sem isso não dá para avançar; a Cláudia pergunta.
+- **Recomendado:** ela oferece uma vez ("quer informar o valor? posso usar o preço do serviço") e o usuário pode pular. Evita interrogatório.
+- **Padrão:** o que o sistema preenche sozinho (ex.: valor = preço do serviço, data de lançamento = hoje).
+
+| Intenção | Obrigatório | Recomendado | Padrão do sistema | Conferências antes de confirmar |
+|----------|-------------|-------------|-------------------|--------------------------------|
+| **Agendar serviço** (estética automotiva) | serviço, cliente, profissional, data, hora de início | veículo/placa (se aprovado), observações, valor | **hora de término = início + duração do serviço** (pode ser ajustada); valor = preço do serviço | profissional habilitado para o serviço, dentro do expediente e sem bloqueio/conflito (a Agenda já recusa e a Cláudia explica o motivo); serviço com duração |
+| **Cadastrar produto** | nome | categoria, unidade, preço de venda, preço de custo, SKU/código de barras, estoque inicial e mínimo | unidade = un, estoque 0 | SKU/código de barras repetido |
+| **Baixa/perda de estoque** ("acabou o limpa-baú") | produto, quantidade que sai (ou "acabou" = saldo 0), motivo | observação | motivo sugerido "perda" ou "acabou" | **o sistema ajusta pelo saldo novo**, então a Cláudia calcula o saldo final a partir da saída pedida e mostra "de 12 para 0" |
+| **Entrada de estoque** | produto, quantidade, motivo | valor de custo, fornecedor | — | decisão: ajuste de saldo ou compra (9.3) |
+| **Registrar venda** | itens (produto/serviço e quantidade), forma de pagamento ou "a receber" | cliente, desconto, observação | data = hoje | estoque suficiente; total confere |
+| **Lançar despesa/receita** | tipo, valor, descrição | categoria, centro de custo, forma de pagamento | data = hoje | valor maior que zero |
+| **Movimento de caixa** | entrada/saída, valor, forma, descrição | — | — | caixa aberto; saída em dinheiro não pode passar do saldo (já bloqueado) |
+
+A ficha de cada intenção fica num **registro único** no código; alterar um módulo (ex.: passar a exigir um campo) é mudar a ficha, e os testes acusam quando a ficha e o módulo divergem.
+
+## C) Exemplo de conversa (agendamento)
+> **Você:** Cláudia, faz um agendamento de lavagem detalhada pro cliente João Ferreira.
+> **Cláudia:** Entendi: **agendamento** de *Lavagem detalhada* para **João Ferreira**. Para marcar eu preciso de:
+> 1. **Data e horário de início** (o término eu calculo: a lavagem detalhada dura 2h30)
+> 2. **Quem vai fazer o serviço** (Rafael, Lúcio)
+> **Você:** Amanhã às 14h com o Lúcio.
+> **Cláudia:** Conferi: o Lúcio atende amanhã das 9h às 18h, sem bloqueios. Quer informar a placa ou uma observação? *(pode pular)*
+> **Você:** Pode pular.
+> **Cláudia:** Confirma este agendamento?
+> • Cliente: **João Ferreira** (abrir perfil) • Serviço: Lavagem detalhada • Profissional: **Lúcio** (abrir perfil) • **12/11, 14:00 às 16:30** • Valor: R$ 120,00
+> [ **Confirmar** ] [ Corrigir ]
+
+Se houver dois "João Ferreira", a Cláudia mostra os dois (com telefone) e pede para escolher. Se o horário estiver ocupado, ela diz e **oferece os próximos horários livres do profissional**.
+
+## D) Outro exemplo (estoque)
+> **Você:** Cláudia, acabou o limpa-baú de 50 litros.
+> **Cláudia:** Entendi: **baixa de estoque** de *Limpa-baú 50 L* (estoque atual: 4 un). Vai a zero. Motivo: *acabou*. Deseja registrar uma **compra para repor**? *(pode pular)*
+> [ **Confirmar baixa** ] [ Corrigir ]
+
+E para "quero adicionar um produto no estoque, um limpa-baú de 50 litros": ela reconhece **cadastrar produto**, vê que só o nome é obrigatório e pergunta o que o módulo de Produtos/Estoque costuma pedir (categoria, unidade, preço de venda, custo, estoque inicial e mínimo), deixando pular o resto.
+
+## E) Consequências para o plano
+1. **Entender "o que a pessoa quis dizer" fica mais importante**: as ordens são faladas livremente ("acabou", "limpa-baú", "faz um agendamento"). Isso reforça a recomendação do **modelo híbrido** (um modelo de linguagem só para *ler* a frase e preencher a ficha; nosso código valida, resolve cadastros e grava). Decisão 9.1 do plano principal e da análise crítica continua em aberto.
+2. **Conversa em etapas** (preencher ficha → conferir regras do sistema → resumo → confirmar), com estado salvo no servidor (`chat_pending_actions`) para o usuário poder responder depois ou por partes.
+3. **Perguntas econômicas**: obrigatório pergunta; recomendado oferece uma vez; padrão não pergunta.
+4. **Teste por ficha**: cada intenção tem um conjunto de frases e conversas completas (ordem incompleta, ordem completa, resposta fora de ordem, mudança de ideia no meio, nome repetido, horário ocupado) antes de ser liberada.
+5. **Personalização futura:** nome da agente (Cláudia), tom e fichas por segmento (estética automotiva pede veículo; salão não).
