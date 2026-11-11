@@ -31,6 +31,7 @@ export const APP_ROUTE_PATTERNS: readonly string[] = [
   "/app/assinatura/pagamento/[id]",
   "/app/assinatura/planos",
   "/app/caixa",
+  "/app/chat",
   "/app/clientes",
   "/app/clientes/[id]",
   "/app/clientes/[id]/editar",
