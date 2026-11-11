@@ -151,3 +151,62 @@ export function moneyProblem(value: number): string | null {
   if (value > MAX_MONEY) return "Esse valor é alto demais para o cadastro.";
   return null;
 }
+
+const MONTH_WORDS = "janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro";
+const TIME_AFTER = new RegExp(`^(?:horas?|h\\b|da manha|da tarde|da noite|de manha|de tarde|de noite|e meia|de (?:${MONTH_WORDS}))`);
+const SPOKEN_PREV = new Set(["as", "das", "ate", "dia"]);
+
+/**
+ * Fala vira dígito SÓ onde o número é data ou hora ("às dez horas" → "as 10 horas", "dia quinze" → "dia 15",
+ * "vinte e cinco de novembro" → "25 de novembro", "às quatorze e trinta" → "as 14 e 30"). Números por extenso fora desse
+ * contexto ficam como estão (nomes e outras palavras não são alterados). O ditado por voz costuma devolver números por extenso.
+ */
+export function spokenNumbersToDigits(text: string): string {
+  const words = norm(text).split(" ").filter(Boolean);
+  const out: string[] = [];
+  let i = 0;
+  while (i < words.length) {
+    const w = words[i]!;
+    if (!isNumberWord(w) || w === "mil" || w === "milhao" || w === "milhoes") {
+      out.push(w);
+      i += 1;
+      continue;
+    }
+    const run = [w];
+    let j = i;
+    while (j + 1 < words.length) {
+      const next = words[j + 1]!;
+      if (isNumberWord(next) && next !== "mil" && next !== "milhao" && next !== "milhoes") {
+        // "vinte cinco" não existe na fala; só junta centenas/dezenas+unidade pelo "e" (abaixo)
+        break;
+      }
+      if (next === "e" && j + 2 < words.length && isNumberWord(words[j + 2]!)) {
+        const left = wordsToNumber(run.filter((x) => x !== "e")) ?? 0;
+        const right = words[j + 2]!;
+        const rightUnit = UNITS[right] ?? 0;
+        const joinable = left >= 100 || (left >= 20 && left % 10 === 0 && rightUnit >= 1 && rightUnit <= 9);
+        if (joinable) {
+          run.push("e", right);
+          j += 2;
+          continue;
+        }
+      }
+      break;
+    }
+    const value = wordsToNumber(run);
+    const prev = words[i - 1];
+    const after = words.slice(j + 1, j + 4).join(" ");
+    const prevOut = out[out.length - 1];
+    const prevOut2 = out[out.length - 2];
+    const isArticle = run.length === 1 && (w === "um" || w === "uma");
+    const cue =
+      (prev !== undefined && SPOKEN_PREV.has(prev)) ||
+      TIME_AFTER.test(after) ||
+      (prev === "e" && prevOut === "e" && prevOut2 !== undefined && /^\d+$/.test(prevOut2));
+    const articleOk = !isArticle || prev === "as" || /^(?:horas?|da )/.test(after);
+    if (value !== null && cue && articleOk) out.push(String(value));
+    else out.push(...run);
+    i = j + 1;
+  }
+  return out.join(" ");
+}
