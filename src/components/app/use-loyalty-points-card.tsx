@@ -167,6 +167,12 @@ function RedeemForm({
         </div>
       </dl>
 
+      {balance < min ? (
+        // Saldo abaixo do mínimo de resgate: o campo teria min > max (impossível de preencher). Explica em vez de travar.
+        <p className="text-sm text-muted-foreground">
+          O resgate exige pelo menos {formatPoints(min)} pontos. Faltam {formatPoints(min - balance)} para este cliente poder usar.
+        </p>
+      ) : (
       <form action={formAction} onReset={keepInput} className="flex flex-col gap-2">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="loyalty-points">Pontos a utilizar</Label>
@@ -206,6 +212,7 @@ function RedeemForm({
         </SubmitButton>
         <FormMessage state={state} />
       </form>
+      )}
     </Card>
   );
 }

@@ -5,6 +5,7 @@ import { createSessionClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/auth/actions";
 import { getCurrentCompany } from "@/lib/companies/queries";
 import { todayDateSaoPaulo } from "@/lib/timezone";
+import { parseMoneyInput } from "@/lib/parse-money";
 import type { Database } from "@/types/supabase";
 
 type FinancialDirection = Database["public"]["Enums"]["financial_entry_direction"];
@@ -25,11 +26,10 @@ function textValue(value: FormDataEntryValue | null): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
+/** Aceita "1234,56", "1.234,56" e "1234.56" (parseMoneyInput); só valores maiores que zero. */
 function parseAmount(value: FormDataEntryValue | null): number | null {
-  const raw = textValue(value).replace(",", ".");
-  if (!raw) return null;
-  const amount = Number(raw);
-  return Number.isFinite(amount) && amount > 0 ? amount : null;
+  const amount = parseMoneyInput(textValue(value));
+  return amount !== null && amount > 0 ? amount : null;
 }
 
 function paymentMethod(value: FormDataEntryValue | null): SalePaymentMethod | null {

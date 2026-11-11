@@ -13,10 +13,10 @@ export function DeactivateCustomerButton({
   return (
     <ConfirmActionForm
       action={deactivateCustomerAction.bind(null, customerId)}
-      label="Excluir"
-      title={`Excluir "${customerName}"?`}
+      label="Inativar"
+      title={`Inativar "${customerName}"?`}
       description="O cliente será marcado como inativo e seus dados serão preservados."
-      confirmLabel="Excluir"
+      confirmLabel="Inativar"
       destructive
     />
   );

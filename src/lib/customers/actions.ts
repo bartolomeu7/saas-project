@@ -6,6 +6,7 @@ import { createSessionClient } from "@/lib/supabase/server";
 import { getCurrentCompany } from "@/lib/companies/queries";
 import { getCurrentUser } from "@/lib/auth/session";
 import { customerSchema } from "@/lib/validations/customer";
+import { documentVariants } from "@/lib/validations/document";
 import { writeAuditLog } from "@/lib/audit/log";
 import { AUDIT_ACTIONS } from "@/types/audit";
 import type { ActionResult } from "@/lib/auth/actions";
@@ -36,6 +37,16 @@ function parseCustomerForm(formData: FormData) {
   });
 }
 
+/** Já existe OUTRO cliente da empresa com este CPF/CNPJ (com ou sem pontuação)? */
+async function documentInUse(companyId: string, document: string | null, excludeId?: string): Promise<boolean> {
+  if (!document) return false;
+  const supabase = await createSessionClient();
+  let query = supabase.from("customers").select("id").eq("company_id", companyId).in("document", documentVariants(document)).limit(1);
+  if (excludeId) query = query.neq("id", excludeId);
+  const { data } = await query;
+  return (data ?? []).length > 0;
+}
+
 /** Cria um novo cliente na empresa do usuário autenticado. */
 export async function createCustomerAction(
   _prevState: ActionResult,
@@ -50,6 +61,10 @@ export async function createCustomerAction(
   const current = await getCurrentCompany();
   if (!current) {
     return { error: "Nenhuma empresa encontrada para o usuário atual." };
+  }
+
+  if (await documentInUse(current.company.id, parsed.data.document)) {
+    return { error: "Já existe um cliente com esse documento." };
   }
 
   const supabase = await createSessionClient();
@@ -115,6 +130,10 @@ export async function updateCustomerAction(
   const current = await getCurrentCompany();
   if (!current) {
     return { error: "Nenhuma empresa encontrada para o usuário atual." };
+  }
+
+  if (await documentInUse(current.company.id, parsed.data.document, id)) {
+    return { error: "Já existe um cliente com esse documento." };
   }
 
   const supabase = await createSessionClient();
