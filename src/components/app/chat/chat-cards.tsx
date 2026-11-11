@@ -42,7 +42,7 @@ export function AgentAvatar({ name }: { name: string }) {
 export function UserBubble({ text }: { text: string }) {
   return (
     <div className="flex justify-end">
-      <p className="max-w-[85%] whitespace-pre-wrap break-words rounded-2xl rounded-br-sm bg-primary px-4 py-2 text-sm text-primary-foreground">{text}</p>
+      <p className="max-w-[88%] whitespace-pre-wrap break-words rounded-2xl rounded-br-sm bg-primary px-4 py-2.5 text-base text-primary-foreground">{text}</p>
     </div>
   );
 }
@@ -52,7 +52,7 @@ function Bubble({ children, tone = "neutral" }: { children: React.ReactNode; ton
   return (
     <div
       className={cn(
-        "flex max-w-[92%] gap-2 whitespace-pre-wrap break-words rounded-2xl rounded-bl-sm border px-4 py-2 text-sm",
+        "flex max-w-[94%] gap-2 whitespace-pre-wrap break-words rounded-2xl rounded-bl-sm border px-4 py-2.5 text-base",
         tone === "neutral" && "border-border bg-card text-foreground",
         tone === "info" && "border-primary/25 bg-primary/10 text-foreground",
         tone === "success" && "border-success/30 bg-success/10 text-foreground",
@@ -71,7 +71,7 @@ function OptionChips({ options, disabled, onPick }: { options: { id: string; lab
     <ul className="mt-2 flex flex-wrap gap-2" aria-label="Opções">
       {options.map((o, i) => (
         <li key={o.id}>
-          <Button type="button" variant="outline" size="sm" disabled={disabled} onClick={() => onPick(o)} className="h-auto min-h-9 flex-col items-start gap-0 py-1.5 text-left">
+          <Button type="button" variant="outline" size="sm" disabled={disabled} onClick={() => onPick(o)} className="h-auto min-h-11 flex-col items-start gap-0 py-2 text-left text-base">
             <span>
               <span className="mr-1 text-muted-foreground">{i + 1}.</span>
               {o.label}
@@ -136,7 +136,7 @@ export function AgentMessage({ item, onSend, onConfirm, agentName, shadow, confi
               </h3>
               <Badge variant="info">Criar</Badge>
             </header>
-            <dl className="grid gap-x-4 gap-y-2 px-4 py-3 text-sm sm:grid-cols-[8rem_1fr]">
+            <dl className="grid gap-x-4 gap-y-2 px-4 py-3 text-base sm:grid-cols-[8rem_1fr]">
               {m.card.fields.map((f) => {
                 const href = f.link ? FIELD_LINKS[f.link.kind]?.(f.link.id) : undefined;
                 return (
@@ -168,7 +168,6 @@ export function AgentMessage({ item, onSend, onConfirm, agentName, shadow, confi
               {/* Confirmar só funciona fora do MODO TESTE (interruptor do servidor), uma vez por cartão e nunca em cartão antigo. */}
               <Button
                 type="button"
-                size="sm"
                 disabled={shadow || locked || confirming || !item.draft}
                 aria-describedby={`shadow-${item.id}`}
                 onClick={() => item.draft && onConfirm(item.draft)}
@@ -176,10 +175,10 @@ export function AgentMessage({ item, onSend, onConfirm, agentName, shadow, confi
                 <Check className="mr-1 h-4 w-4" aria-hidden="true" />
                 {confirming ? "Gravando…" : "Confirmar"}
               </Button>
-              <Button type="button" size="sm" variant="outline" disabled={locked || confirming} onClick={() => onSend("Quero corrigir: ")}>
+              <Button type="button" variant="outline" disabled={locked || confirming} onClick={() => onSend("Quero corrigir: ")}>
                 Corrigir
               </Button>
-              <Button type="button" size="sm" variant="ghost" disabled={locked || confirming} onClick={() => onSend("cancela")}>
+              <Button type="button" variant="ghost" disabled={locked || confirming} onClick={() => onSend("cancela")}>
                 Cancelar
               </Button>
               <p id={`shadow-${item.id}`} className="basis-full text-xs text-muted-foreground">

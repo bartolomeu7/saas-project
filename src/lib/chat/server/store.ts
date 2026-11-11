@@ -116,11 +116,16 @@ export async function appendMessages(args: {
       role: "agent",
       kind: m.kind,
       text: m.text.slice(0, 4000),
+      // MESMAS colunas das linhas do usuário: um insert em lote com colunas diferentes grava NULL no que falta e viola
+      // "input_mode not null" (o histórico deixou de ser salvo por isso)
+      input_mode: "texto",
+      transcript: null,
       payload: m,
       draft_id: args.draftId,
     })),
   ];
-  await db().from("chat_messages").insert(rows);
+  const { error } = await db().from("chat_messages").insert(rows);
+  if (error) console.error("[chat] não consegui guardar as mensagens:", error.message);
 }
 
 /** Soma 1 mensagem no dia e devolve o total do dia (atômico, `chat_bump_usage`). null se falhar. */
