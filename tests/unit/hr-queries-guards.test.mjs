@@ -123,3 +123,12 @@ import { readFileSync as _read } from "node:fs";
     assert.ok(ag.includes("é de um dia futuro"));
   });
 }
+
+{
+  const hr = _read(new URL("../../src/lib/hr/actions.ts", import.meta.url), "utf8");
+  const q = _read(new URL("../../src/lib/hr/queries.ts", import.meta.url), "utf8");
+  test("RH: folha em lote reaproveita o fechamento individual e o painel avisa folha pendente", () => {
+    assert.ok(hr.includes("closePayrollBatchAction") && hr.includes("await closePayrollCore(form)"));
+    assert.ok(q.includes("unclosedPayroll"));
+  });
+}
