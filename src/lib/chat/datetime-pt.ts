@@ -140,7 +140,12 @@ function parseDate(t: string, clock: ChatClock, problems: string[]): ParsedDate 
     const n = numberFromToken(dq[1]!);
     if (n !== null) return { value: addDays(clock.today, dq[2]!.startsWith("semana") ? n * 7 : n), kind: "daqui-a" };
   }
+  if (/\banteontem\b/.test(t)) return { value: addDays(clock.today, -2), kind: "relativa" };
   if (/\bdepois de amanha\b/.test(t)) return { value: addDays(clock.today, 2), kind: "relativa" };
+  if (/\b(no )?fim do mes\b/.test(t) || /\bfinal do mes\b/.test(t)) {
+    const { y, m } = parseYmd(clock.today);
+    return { value: fmt(y, m, daysInMonthOf(y, m)), kind: "relativa" };
+  }
   if (/\bamanha\b/.test(t)) return { value: addDays(clock.today, 1), kind: "relativa" };
   if (/\bhoje\b/.test(t)) return { value: clock.today, kind: "relativa" };
   if (/\bontem\b/.test(t)) return { value: addDays(clock.today, -1), kind: "relativa" };
@@ -160,7 +165,8 @@ function parseDate(t: string, clock: ChatClock, problems: string[]): ParsedDate 
   // 15 de novembro (de 2026) | dia 15 de novembro
   const named = new RegExp(`\\b(\\d{1,2}) de (${MONTH_RE})(?: de (\\d{4}))?\\b`).exec(t);
   if (named) {
-    const r = resolveDayOfMonth(clock, Number(named[1]), MONTHS[named[2]!]!, named[3] ? Number(named[3]) : undefined);
+    const loneYear = /\b(20\d{2})\b/.exec(t);
+    const r = resolveDayOfMonth(clock, Number(named[1]), MONTHS[named[2]!]!, named[3] ? Number(named[3]) : loneYear ? Number(loneYear[1]) : undefined);
     if (typeof r === "string") {
       problems.push(r);
       return undefined;
@@ -184,7 +190,12 @@ function parseDate(t: string, clock: ChatClock, problems: string[]): ParsedDate 
   if (wd) {
     const target = WEEKDAYS[wd[1]!]!;
     const todayWd = weekdayOf(clock.today);
+    // "terça da semana que vem": a terça da PRÓXIMA semana (segunda a domingo seguintes)
+    if (/\b(semana que vem|proxima semana|semana seguinte)\b/.test(t)) {
+      return { value: addDays(clock.today, 7 + (target - todayWd)), kind: "dia-da-semana" };
+    }
     const diff = (target - todayWd + 7) % 7;
+    if (diff === 0 && /\b(que vem|proxim[oa])\b/.test(t)) return { value: addDays(clock.today, 7), kind: "dia-da-semana" };
     if (diff === 0) {
       return { value: addDays(clock.today, 7), candidates: [clock.today, addDays(clock.today, 7)], kind: "dia-da-semana" };
     }
@@ -196,7 +207,8 @@ function parseDate(t: string, clock: ChatClock, problems: string[]): ParsedDate 
 type DayPart = "manha" | "tarde" | "noite" | "madrugada";
 
 function detectDayPart(t: string): DayPart | undefined {
-  if (/\b(da|de|pela) manha\b/.test(t) || /\bmanha\b/.test(t)) return "manha";
+  if (/\b(da|de|pela) manha\b/.test(t) || /\bmanha\b/.test(t) || /\bcedo\b/.test(t) || /\bantes do almoco\b/.test(t)) return "manha";
+  if (/\bdepois do almoco\b/.test(t) || /\bfim da tarde\b/.test(t) || /\bfinal da tarde\b/.test(t)) return "tarde";
   if (/\b(da|de|pela) tarde\b/.test(t) || /\btarde\b/.test(t)) return "tarde";
   if (/\b(da|de|pela) noite\b/.test(t) || /\bnoite\b/.test(t)) return "noite";
   if (/\bmadrugada\b/.test(t)) return "madrugada";
@@ -245,7 +257,7 @@ function parseTime(t: string, clock: ChatClock, part: DayPart | undefined, probl
     }
   }
 
-  if (/\bmeio dia\b/.test(t)) return { time: { value: "12:00" } };
+  if (/\bmeio dia\b/.test(t) && !/\bas \d/.test(t)) return { time: { value: "12:00" } };
   if (/\bmeia noite\b/.test(t)) return { time: { value: "00:00" } };
 
   // intervalo: "das 14 as 16", "de 14h as 16h30", "das 9 ate 11"
@@ -289,6 +301,12 @@ function parseTime(t: string, clock: ChatClock, part: DayPart | undefined, probl
     const time = buildTime(h, minute, !!part || raw >= 7, false, problems);
     return time ? { time } : {};
   }
+  // "agora": próximo múltiplo de 5 minutos
+  if (/\bagora\b/.test(t) && !/\d/.test(t)) {
+    const rounded = Math.ceil(clock.nowMinutes / 5) * 5;
+    const r = addMinutesToLocal(clock.today, "00:00", rounded);
+    return { time: { value: r.time }, date: { value: r.date, kind: "relativa" } };
+  }
   return {};
 }
 
@@ -298,7 +316,16 @@ function parseTime(t: string, clock: ChatClock, part: DayPart | undefined, probl
  */
 export function parseDateTimePt(text: string, clock: ChatClock): ParsedDateTime {
   // o ditado por voz devolve "às dez horas"; vira "às 10 horas" só onde é data/hora
-  const t = spokenNumbersToDigits(norm(text).replace(/-/g, " "))
+  const t = spokenNumbersToDigits(norm(text).replace(/\b(\d{1,2})-(\d{1,2})(?:-(\d{2,4}))?\b/g, (_m, d, mo, y) => `${d}/${mo}${y ? `/${y}` : ""}`).replace(/-/g, " "))
+    // "quinze para as onze" → "10:45"; "dez para as quatro da tarde" → "3:50 da tarde"
+    .replace(/\b(\d{1,2}) (?:minutos |min )?para (?:as |a )?(\d{1,2})\b/g, (m, mi, h) => {
+      const mm = Number(mi);
+      const hh = Number(h);
+      return mm >= 1 && mm <= 59 && hh >= 1 && hh <= 24 ? `as ${hh === 1 ? 12 : hh - 1}:${pad(60 - mm)}` : m;
+    })
+    .replace(/\bmeio dia e (meia|quinze|quarenta e cinco|\d{1,2})\b/g, (_m, x) => `as 12:${pad(x === "meia" ? 30 : x === "quinze" ? 15 : x === "quarenta e cinco" ? 45 : Number(x))}`)
+    // "seg 14h", "sex às 9": abreviação só quando vem horário logo depois (evita confundir "ter" verbo, "dom" nome)
+    .replace(/\b(seg|ter|qua|qui|sex|sab|dom)\b(?=\s+(?:as\s+)?\d)/g, (_m, d) => ({ seg: "segunda", ter: "terca", qua: "quarta", qui: "quinta", sex: "sexta", sab: "sabado", dom: "domingo" } as Record<string, string>)[d]!)
     .replace(/\bprimeiro de (janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\b/g, "1 de $1")
     .replace(/\bdia primeiro\b/g, "dia 1");
   const problems: string[] = [];
@@ -312,5 +339,16 @@ export function parseDateTimePt(text: string, clock: ChatClock): ParsedDateTime 
   if (time.time) result.time = time.time;
   if (time.endTime) result.endTime = time.endTime;
   if (part && !time.time) result.dayPart = part;
+  // "às 9h até 13h": término informado depois do início
+  if (time.time && !time.endTime) {
+    const upTo = /(?:^|\s)ate (?:as )?(\d{1,2})(?:\s*h(?:oras?)?\s*(\d{2})?|:(\d{2}))?(?!\d|\s*\/)/.exec(t);
+    if (upTo) {
+      const startH = Number(time.time.value.slice(0, 2));
+      let eh = applyDayPart(Number(upTo[1]), part);
+      if (!part && eh <= startH && eh < 12) eh += 12;
+      const end = buildTime(eh, Number(upTo[2] ?? upTo[3] ?? 0), true, true, problems);
+      if (end) result.endTime = end.value;
+    }
+  }
   return result;
 }

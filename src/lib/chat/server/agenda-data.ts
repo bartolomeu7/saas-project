@@ -3,6 +3,8 @@ import "server-only";
 import { createSessionClient } from "@/lib/supabase/server";
 import { norm, tokens } from "../text.ts";
 import type { AgendaCatalog, Candidate, ProfessionalSchedule } from "../agenda-agendar.ts";
+import type { DayAppointment } from "../agenda-turn.ts";
+import { customersByPhone, scanCustomers, searchCustomers, type CustomerRow } from "../customer-search.ts";
 import { parseLocalDateTimeSaoPaulo, endOfDaySaoPauloFromDateString } from "@/lib/timezone";
 
 /**
@@ -47,25 +49,73 @@ export async function loadAgendaCatalog(companyId: string): Promise<AgendaCatalo
   };
 }
 
-/** Clientes ativos cujo nome contém todas as palavras do texto (sem acento). Até 5, com o telefone para distinguir. */
-export async function findCustomers(companyId: string, text: string, status: "active" | "inactive" = "active"): Promise<Candidate[]> {
-  const wanted = tokens(text);
-  if (wanted.length === 0) return [];
+/**
+ * Portas de busca de cliente de UMA empresa. A lista é lida do banco no máximo uma vez por status (com a sessão do usuário,
+ * então só enxerga a própria empresa) e reaproveitada nas várias buscas do mesmo turno.
+ */
+export function makeCustomerPorts(companyId: string) {
+  const cache = new Map<string, Promise<CustomerRow[]>>();
+  const load = (status: "active" | "inactive") => {
+    let hit = cache.get(status);
+    if (!hit) {
+      hit = (async () => {
+        const supabase: Db = await createSessionClient();
+        const { data } = await supabase.from("customers").select("id,name,phone").eq("company_id", companyId).eq("status", status).order("name").limit(500);
+        return (data ?? []) as CustomerRow[];
+      })();
+      cache.set(status, hit);
+    }
+    return hit;
+  };
+  return {
+    findCustomers: async (text: string): Promise<Candidate[]> => searchCustomers(await load("active"), text),
+    findInactiveCustomers: async (text: string): Promise<Candidate[]> => searchCustomers(await load("inactive"), text),
+    findCustomersInText: async (text: string): Promise<Candidate[]> => scanCustomers(await load("active"), text),
+    findCustomersByPhone: async (digits: string): Promise<Candidate[]> => customersByPhone(await load("active"), digits),
+  };
+}
+
+/** Clientes ativos que combinam com o nome dito (até 5, com o final do telefone para distinguir). */
+export const findCustomers = (companyId: string, text: string): Promise<Candidate[]> => makeCustomerPorts(companyId).findCustomers(text);
+
+/** Agendamentos do dia (todos os profissionais), só para leitura/consulta. Horário local de São Paulo. */
+export async function loadDayAppointments(companyId: string, date: string): Promise<DayAppointment[]> {
+  const dayStart = parseLocalDateTimeSaoPaulo(`${date}T00:00`);
+  const dayEnd = endOfDaySaoPauloFromDateString(date);
+  if (!dayStart || !dayEnd) return [];
   const supabase: Db = await createSessionClient();
-  const { data } = await supabase.from("customers").select("id,name,phone").eq("company_id", companyId).eq("status", status).order("name").limit(500);
-  const rows = (data ?? []) as { id: string; name: string; phone: string | null }[];
-  return rows
-    .filter((c) => {
-      const have = tokens(c.name);
-      return wanted.every((w) => have.some((h) => h === w || (w.length >= 3 && h.startsWith(w))));
-    })
-    .sort((a, b) => norm(a.name).length - norm(b.name).length)
-    .slice(0, 5)
-    .map((c) => ({ id: c.id, name: c.name, detail: c.phone ? `final ${c.phone.replace(/\D/g, "").slice(-4)}` : undefined }));
+  const { data } = await supabase
+    .from("appointments")
+    .select("starts_at,ends_at,status,customer_id,service_id,professional_id")
+    .eq("company_id", companyId)
+    .gte("starts_at", dayStart.toISOString())
+    .lt("starts_at", dayEnd.toISOString())
+    .order("starts_at")
+    .limit(60);
+  const rows = (data ?? []) as { starts_at: string; ends_at: string; status: string; customer_id: string; service_id: string; professional_id: string }[];
+  if (rows.length === 0) return [];
+  const uniq = (xs: string[]) => [...new Set(xs)];
+  const [cus, svc, pro] = await Promise.all([
+    supabase.from("customers").select("id,name").in("id", uniq(rows.map((r) => r.customer_id))),
+    supabase.from("services").select("id,name").in("id", uniq(rows.map((r) => r.service_id))),
+    supabase.from("professional_profiles").select("id,display_name").in("id", uniq(rows.map((r) => r.professional_id))),
+  ]);
+  const nameOf = (list: { id: string; name?: string; display_name?: string }[] | null) => new Map((list ?? []).map((x) => [x.id, x.name ?? x.display_name ?? "—"]));
+  const cm = nameOf(cus.data);
+  const sm = nameOf(svc.data);
+  const pm = nameOf(pro.data);
+  return rows.map((r) => ({
+    start: toLocalSaoPaulo(r.starts_at).slice(11, 16),
+    end: toLocalSaoPaulo(r.ends_at).slice(11, 16),
+    customer: cm.get(r.customer_id) ?? "—",
+    service: sm.get(r.service_id) ?? "—",
+    professional: pm.get(r.professional_id) ?? "—",
+    status: r.status,
+  }));
 }
 
 /** Clientes inativos com esse nome (só para avisar; nunca entram no agendamento). */
-export const findInactiveCustomers = (companyId: string, text: string) => findCustomers(companyId, text, "inactive");
+export const findInactiveCustomers = (companyId: string, text: string): Promise<Candidate[]> => makeCustomerPorts(companyId).findInactiveCustomers(text);
 
 /** Expediente, bloqueios e agendamentos do profissional no dia (horário local de São Paulo). */
 export async function loadSchedule(companyId: string, professionalId: string, date: string): Promise<ProfessionalSchedule | null> {

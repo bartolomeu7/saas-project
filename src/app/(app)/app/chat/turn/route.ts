@@ -6,7 +6,7 @@ import { todayDateSaoPaulo } from "@/lib/timezone";
 import { sanitizeUserText, MAX_MESSAGE_LENGTH } from "@/lib/chat/text.ts";
 import { emptyState, runAgendarTurn, type ChatMessage } from "@/lib/chat/agenda-turn.ts";
 import { appendMessages, bumpUsage, discardDraft, getChatSettings, getOrCreateSession, loadActiveDraft, saveDraft } from "@/lib/chat/server/store";
-import { findCustomers, findInactiveCustomers, loadAgendaCatalog, loadSchedule } from "@/lib/chat/server/agenda-data";
+import { loadAgendaCatalog, loadDayAppointments, loadSchedule, makeCustomerPorts } from "@/lib/chat/server/agenda-data";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 20;
@@ -91,8 +91,8 @@ async function handle(request: Request) {
   const result = await runAgendarTurn(
     { text, choice: parsed.choice, state: existing?.state ?? emptyState(), catalog, clock: nowClock() },
     {
-      findCustomers: (t) => findCustomers(companyId, t),
-      findInactiveCustomers: (t) => findInactiveCustomers(companyId, t),
+      ...makeCustomerPorts(companyId),
+      loadDayAppointments: (date) => loadDayAppointments(companyId, date),
       loadSchedule: (professionalId, date) => loadSchedule(companyId, professionalId, date),
     }
   );

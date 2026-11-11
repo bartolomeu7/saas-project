@@ -1,4 +1,4 @@
-import { nameCoverage, norm, tokens } from "./text.ts";
+import { fuzzyEq, nameCoverage, norm, tokenMatches, tokens } from "./text.ts";
 import { spokenNumbersToDigits } from "./numbers-pt.ts";
 import {
   addMinutesToLocal,
@@ -77,7 +77,17 @@ export function detectAgendar(text: string): boolean {
   return detectAgendarVerb(text);
 }
 
+const AGENDAR_VERBS = ["agendar", "agende", "agendo", "marcar", "marque", "reservar", "reserve", "agenda"];
+
 function detectAgendarVerb(text: string): boolean {
+  const t0 = norm(text);
+  // erro de digitação no verbo ("agendr", "agnedar", "marca"): palavra a até 2 letras do verbo, sem confundir com "agendamento"
+  const typo = t0.split(/[^a-z]+/).some((w) => w.length >= 5 && w !== "agendamento" && AGENDAR_VERBS.some((v) => w !== v && fuzzyEq(w, v))) || /\bagend\b/.test(t0);
+  if (typo && !/\b(cancel\w*|apag\w*|exclu\w*|delet\w*|remov\w*|desmarc\w*|quant\w*|quais|list\w*|mostr\w*|ignor\w*)\b/.test(t0)) return true;
+  return detectAgendarStrict(text);
+}
+
+function detectAgendarStrict(text: string): boolean {
   const t = norm(text);
   // pedidos de apagar/cancelar/consultar não são "agendar" (mesmo citando "agendamentos")
   if (/\b(cancel\w*|apag\w*|exclu\w*|delet\w*|remov\w*|desmarc\w*|quant\w*|quais|list\w*|mostr\w*|ignor\w*)\b/.test(t) && !/\b(agendar|marcar|reservar)\b/.test(t)) return false;
@@ -92,7 +102,8 @@ function detectAgendarVerb(text: string): boolean {
   );
 }
 
-const DATE_WORD = /\b(amanha|hoje|ontem|depois de amanha|daqui|segunda|terca|quarta|quinta|sexta|sabado|domingo|dia \d+|\d{1,2}\/\d{1,2}|as \d+|\d{1,2}h|\d{1,2}:\d{2}|de manha|de tarde|de noite|semana|proxim[oa]|primeiro de|janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro|observacao|obs|tipo de servico|servico)\b/;
+const DATE_WORD = /\b(amanha|hoje|ontem|depois de amanha|daqui|segunda|terca|quarta|quinta|sexta|sabado|domingo|dia \d+|\d{1,2}\/\d{1,2}|as \d+|\d{1,2}h|\d{1,2}:\d{2}|de manha|de tarde|de noite|semana|proxim[oa]|primeiro de|janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro|observacao|obs|tipo de servico|servico|essa|esse|esta|este|que vem|mes|anteontem|agora|cedo|fim do|ate|das|por|valor|duracao|gratis|desconto|com desconto)\b/;
+const TITLES = /^(?:dr|dra|doutor|doutora|dona|dono|seu|sr|sra|senhor|senhora|sr\.|sra\.|dr\.|dra\.)\s+/;
 
 /** Nome de pessoa plausível (letras, espaço, hífen, apóstrofo, ponto; até 5 palavras). Recusa números, símbolos e frases soltas. */
 export function plausibleName(name: string): boolean {
@@ -105,20 +116,36 @@ export function plausibleName(name: string): boolean {
   return !/^(nao|sim|talvez|tanto faz|qualquer|nenhum|ninguem|nada|sei la|nao sei|esquece|aquele|aquela)\b/.test(norm(n));
 }
 
-/** Nome do cliente citado ("pro cliente João Ferreira amanhã…" → "joao ferreira"). */
-export function extractCustomerText(text: string): string | undefined {
-  const t = spokenNumbersToDigits(norm(text)).replace(/\b(?:pra|para) mim\b/g, " ");
-  const a = /\bcliente\s+(.+)/.exec(t);
-  const b = /\b(?:pro|pra|para o|para a|para)\s+(?:cliente\s+)?(.+)/.exec(t);
-  // vale a que aparece primeiro ("... para Cláudio ... observação cliente prefere cera" usa o "para")
-  const m = a && b ? (a.index <= b.index ? a : b) : (a ?? b);
-  if (!m) return undefined;
-  let fragment = m[1]!;
+/** Primeira palavra que mostra que o trecho NÃO é um nome ("pra marcar um corte…", "para hoje"). */
+const NOT_NAME_START = /^(marcar|agendar|fazer|ver|ter|ir|vir|reservar|cortar|lavar|pintar|hidratar|polir|atender|encaixar|trazer|levar|passar|eu|voce|ele|ela|mim|nos|gente|hoje|amanha|semana|dia|as|um|uma)$/;
+
+function cleanCustomerFragment(raw: string): string | undefined {
+  let fragment = raw.replace(/^(?:para|pra|pro)\s+/, "").replace(TITLES, "").replace(/^(?:o|a)\s+/, "").replace(TITLES, "");
+  // vírgula, ponto e vírgula, interrogação e dois-pontos encerram o nome ("pro João Pedro, de preferência amanhã")
+  fragment = fragment.split(/[,;?!:]|\s-\s/)[0]!;
   const cut = DATE_WORD.exec(fragment);
   if (cut) fragment = fragment.slice(0, cut.index);
   fragment = fragment.replace(/\s+com\s+.*$/, "").trim().replace(/^(?:e|eh|o|a)\s+/, "").replace(/\s+(com|e|que|as|a|no|na|em|da|de|do|dos|das)$/, "").trim();
   const words = fragment.split(" ").filter(Boolean).slice(0, 5);
-  return words.length ? words.join(" ") : undefined;
+  if (words.length === 0 || NOT_NAME_START.test(words[0]!)) return undefined;
+  return words.join(" ");
+}
+
+/** Nome do cliente citado ("pro cliente João Ferreira amanhã…" → "joao ferreira"). */
+export function extractCustomerText(text: string): string | undefined {
+  let t = spokenNumbersToDigits(norm(text)).replace(/\b(?:pra|para) mim\b/g, " ");
+  // a observação ("observação cliente prefere cera") não é parte do pedido
+  const obs = /\b(observacao|observacoes|obs)\b/.exec(t);
+  if (obs) t = t.slice(0, obs.index);
+  const starts: { index: number; rest: string }[] = [];
+  for (const m of t.matchAll(/\bcliente\s*:?\s+(.+)/g)) starts.push({ index: m.index!, rest: m[1]! });
+  for (const m of t.matchAll(/\b(?:pro|pra|para)\s+(?:o |a )?(?:cliente\s+)?(.+)/g)) starts.push({ index: m.index!, rest: m[1]! });
+  // vale o que aparece primeiro e parece nome ("… dá pra marcar um corte pro João Pedro" ignora o primeiro "pra")
+  for (const c of starts.sort((a, b) => a.index - b.index)) {
+    const name = cleanCustomerFragment(c.rest);
+    if (name) return name;
+  }
+  return undefined;
 }
 
 const SERVICE_MIN_COVERAGE = 0.5;
@@ -135,10 +162,9 @@ export function originalCustomerName(original: string, normalized: string): stri
 
 /** Palavra do nome que só existe em UM serviço e foi dita ("polimento" → "Polimento Técnico Completo"). */
 function distinctiveHit(text: string, service: CatalogService, all: CatalogService[]): boolean {
-  const said = new Set(tokens(text));
-  const saidList = [...said];
+  const saidList = [...new Set(tokens(text))];
   return tokens(service.name).some(
-    (t) => t.length >= 5 && !/^\d+$/.test(t) && all.filter((o) => tokens(o.name).includes(t)).length === 1 && (said.has(t) || saidList.some((x) => x.length >= 5 && t.startsWith(x)))
+    (t) => t.length >= 5 && !/^\d+$/.test(t) && all.filter((o) => tokens(o.name).includes(t)).length === 1 && saidList.some((x) => x === t || (x.length >= 5 && t.startsWith(x)) || fuzzyEq(x, t))
   );
 }
 
@@ -177,8 +203,12 @@ const REF_IGNORE = new Set(["tecnico", "tecnica", "para", "que", "esse", "essa",
 export function professionalRefs(text: string): Set<string> {
   const t = norm(text);
   const wanted = new Set<string>();
-  const cues = /(?:\bcom (?:o |a )?|@|\bprofissional\s+(?:o |a )?|\bpelo |\bpela |\bresponsavel\s+(?:tecnico |tecnica )?(?:o |a )?|\btecnic[oa]\s+(?:o |a )?|\bvai ser (?:o |a )|\bquem faz (?:e |eh |sera )?(?:o |a )?|\bfica com (?:o |a )?)([a-z0-9]+)/g;
-  for (const m of t.matchAll(cues)) if (!REF_IGNORE.has(m[1]!)) wanted.add(m[1]!);
+  const cues = /(?:\bcom (?:o |a )?|@|\bprofissional\s*:?\s*(?:o |a )?|\bpelo |\bpela |\bresponsavel\s*:?\s*(?:tecnico |tecnica )?(?:o |a )?|\btecnic[oa]\s*:?\s*(?:o |a )?|\bvai ser (?:o |a )|\bquem faz (?:e |eh |sera )?(?:o |a )?|\bfica com (?:o |a )?|\batendente\s*:?\s*(?:o |a )?)([a-z0-9]+)((?: (?:e|ou) (?:com )?(?:o |a )?[a-z]{3,})*)/g;
+  for (const m of t.matchAll(cues)) {
+    if (!REF_IGNORE.has(m[1]!)) wanted.add(m[1]!);
+    // "com Ana e Felipe" / "com Ana ou com Felipe": todos os citados
+    for (const extra of (m[2] ?? "").matchAll(/(?:e|ou) (?:com )?(?:o |a )?([a-z]{3,})/g)) if (!REF_IGNORE.has(extra[1]!)) wanted.add(extra[1]!);
+  }
   return wanted;
 }
 
@@ -207,7 +237,26 @@ export function matchProfessionals(text: string, professionals: CatalogProfessio
   const t = norm(text);
   const wanted = professionalRefs(text);
   if (wanted.size === 0) return [];
-  return professionals.filter((p) => tokens(p.name).some((tok) => wanted.has(tok) || [...wanted].some((w) => w.length >= 3 && tok.startsWith(w))));
+  return professionals.filter((p) => tokens(p.name).some((tok) => wanted.has(tok) || [...wanted].some((w) => (w.length >= 3 && tok.startsWith(w)) || fuzzyEq(w, tok))));
+}
+
+/**
+ * Profissional citado SEM gatilho ("Ana Paula, corte, João Pedro…", "se a Ana puder"): vale se o nome completo aparece
+ * ou se o primeiro nome (3+ letras, único entre os profissionais) aparece e não faz parte do nome do cliente.
+ */
+export function looseProfessionals(text: string, professionals: CatalogProfessional[], customerText?: string): CatalogProfessional[] {
+  const said = tokens(text);
+  const customerTokens = new Set(customerText ? tokens(customerText) : []);
+  const hits = professionals.filter((p) => {
+    const toks = tokens(p.name);
+    const first = toks[0];
+    if (!first) return false;
+    const fullName = toks.length >= 2 && toks.slice(0, 2).every((tk) => said.some((x) => tokenMatches(x, tk)));
+    if (fullName) return !toks.slice(0, 2).every((tk) => customerTokens.has(tk));
+    const unique = professionals.filter((o) => tokens(o.name)[0] === first).length === 1;
+    return first.length >= 3 && unique && !customerTokens.has(first) && said.some((x) => x === first || fuzzyEq(x, first));
+  });
+  return hits;
 }
 
 /** "agendar [a|o] Marcos Vinícius para polimento": o cliente vem ANTES do "para" e o serviço depois. */
@@ -228,8 +277,17 @@ function capitalizedName(text: string): string | undefined {
   return undefined;
 }
 
+/** Tira da frase os trechos de valor, duração e observação para não confundir com nome de serviço ("duração 45 minutos" ≠ "Teste Duracao"). */
+export function withoutExtras(text: string): string {
+  return text
+    .replace(/\b(?:observa[cç][aã]o|observa[cç][oõ]es|obs)\s*[:\-]?.*$/i, " ")
+    .replace(/\b(?:dura[cç][aã]o(?: de)?|durando|dura|durante)\s*\d+\s*(?:horas?|h|minutos?|min)\b/gi, " ")
+    .replace(/\bpor\s+(?:\d+|uma|duas|meia)\s+(?:horas?|minutos?|min)\b/gi, " ")
+    .replace(/\b(?:valor|pre[cç]o|cobrar)\s*(?:de |para |em )?(?:r\$\s*)?\d+(?:[.,]\d{1,2})?\s*(?:reais|real)?/gi, " ");
+}
+
 export function understandAgendar(text: string, catalog: AgendaCatalog, clock: ChatClock): AgendarUnderstanding {
-  const services = matchServices(text, catalog.services);
+  const services = matchServices(withoutExtras(text), catalog.services);
   let customerText = extractCustomerText(text);
   // o "para" apontou o serviço ("agendar a Marcos para polimento"): o cliente é quem vem antes dele
   const allServiceWords = (ct: string) => {
@@ -271,6 +329,8 @@ export interface AgendarSlots {
   endTime?: string;
   /** só preenchido quando o usuário muda a duração ou o valor */
   priceOverride?: number;
+  /** duração pedida pela pessoa ("por 1 hora"); vale no lugar da do serviço/profissional */
+  durationMinutes?: number;
   notes?: string;
   /** "tarde" etc. quando só disse a faixa */
   dayPart?: string;
@@ -368,6 +428,7 @@ export function effectiveDuration(slots: AgendarSlots): number | null {
     const d = minutesOf(slots.endTime) - minutesOf(slots.time);
     return d > 0 ? d : null;
   }
+  if (slots.durationMinutes && slots.durationMinutes > 0) return slots.durationMinutes;
   // mesma precedência do banco (create_appointment): duração do profissional para o serviço, depois a do serviço
   const d = slots.profissional?.durationOverride ?? slots.servico?.durationMinutes ?? 0;
   return d > 0 ? d : null;
@@ -529,4 +590,74 @@ export function summarizeAgendar(slots: AgendarSlots, validation: Validation): C
     warnings: validation.warnings,
     blocks: validation.blocks,
   };
+}
+
+
+// ---------------------------------------------------------------------------------------------------- extras da frase
+export interface AgendarExtras {
+  /** valor combinado ("valor 80", "por R$ 35", "grátis" = 0) */
+  priceOverride?: number;
+  /** porcentagem de desconto sobre o preço do serviço */
+  discountPct?: number;
+  /** duração em minutos ("por 1 hora", "duração 45 minutos") */
+  durationMinutes?: number;
+  notes?: string;
+  /** coisas que o chat ainda não faz e que não devem ser ignoradas em silêncio */
+  unsupported: ("recorrencia" | "duplicar" | "desconto-sem-valor")[];
+}
+
+const NUM_WORDS: Record<string, number> = { um: 1, uma: 1, dois: 2, duas: 2, tres: 3, quatro: 4, meia: 0.5, meio: 0.5 };
+
+/** Valor, duração e observação ditos junto do pedido. Tudo opcional; nunca lança erro. */
+export function parseExtras(text: string): AgendarExtras {
+  const extras: AgendarExtras = { unsupported: [] };
+  let body = text;
+  const obs = /\b(?:observa[cç][aã]o|observa[cç][oõ]es|obs)\s*[:\-]?\s*(.+)$/i.exec(body);
+  if (obs) {
+    const note = obs[1]!.replace(/\s+/g, " ").trim().slice(0, 200);
+    if (note) extras.notes = note;
+    body = body.slice(0, obs.index);
+  }
+  const t = norm(body).replace(/(\d)\.(\d{3})(?!\d)/g, "$1$2");
+
+  const toNum = (s: string) => Number(s.replace(",", "."));
+  const price =
+    /\b(?:valor|preco|cobrar|cobra|cobre)\s*(?:de |para |em |do servico )?(?:r\$\s*)?(\d+(?:[.,]\d{1,2})?)/.exec(t) ??
+    /\br\$\s*(\d+(?:[.,]\d{1,2})?)/.exec(t) ??
+    /\b(\d+(?:[.,]\d{1,2})?)\s*(?:reais|real)\b/.exec(t);
+  if (price) {
+    const v = toNum(price[1]!);
+    if (Number.isFinite(v) && v >= 0 && v <= 1_000_000) extras.priceOverride = Math.round(v * 100) / 100;
+  } else if (/\b(gratis|gratuito|de graca|cortesia|sem cobrar|sem custo)\b/.test(t)) extras.priceOverride = 0;
+
+  const pct = /\b(\d{1,2})\s*%\s*(?:de )?desconto\b/.exec(t) ?? /\bdesconto de (\d{1,2})\s*%/.exec(t);
+  if (pct) extras.discountPct = Math.min(100, Number(pct[1]));
+  else if (/\bcom desconto\b|\bdar desconto\b|\bdesconto\b/.test(t) && extras.priceOverride === undefined) extras.unsupported.push("desconto-sem-valor");
+
+  const dur =
+    /\b(?:por|durante|duracao(?: de)?|durando|dura)\s*(\d+|uma|duas|meia|meio)\s*(horas?|h|minutos?|min)\b(?:\s*e\s*(meia|\d{1,2}))?/.exec(t) ??
+    /\b(\d+)\s*(minutos?|min)\s*de duracao\b/.exec(t);
+  if (dur) {
+    const raw = dur[1]!;
+    const n = /^\d+$/.test(raw) ? Number(raw) : (NUM_WORDS[raw] ?? 0);
+    const unit = dur[2]!;
+    let minutes = unit.startsWith("h") ? n * 60 : n;
+    if (dur[3]) minutes += dur[3] === "meia" ? 30 : Number(dur[3]);
+    if (minutes >= 5 && minutes <= 12 * 60) extras.durationMinutes = Math.round(minutes);
+  }
+
+  if (/\b(toda (a )?(semana|segunda|terca|quarta|quinta|sexta|sabado)|todos os dias|todo dia|semanalmente|mensalmente|recorrente|se repete|repete|repetir)\b/.test(t)) extras.unsupported.push("recorrencia");
+  if (/\b(duplic\w*|copi\w+ (isso|esse|este))\b/.test(t)) extras.unsupported.push("duplicar");
+  return extras;
+}
+
+/** Serviços citados em partes separadas por "e", "," ou "+" ("corte e barba pro João"): um por parte, na ordem em que aparecem. */
+export function mentionedServices(text: string, services: CatalogService[]): CatalogService[] {
+  const parts = norm(text).split(/\s+e\s+|,|\+|\s+mais\s+/);
+  const out: CatalogService[] = [];
+  for (const part of parts) {
+    const hit = matchServices(part, services);
+    if (hit.length === 1 && !out.includes(hit[0]!)) out.push(hit[0]!);
+  }
+  return out;
 }
