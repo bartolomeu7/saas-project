@@ -34,7 +34,9 @@ export function scheduleWarnings(startsAt: string, durationMinutes: number, nowL
     const [y, mo, d, h, mi] = match.slice(1).map(Number) as [number, number, number, number, number];
     const start = Date.UTC(y, mo - 1, d, h, mi);
     const end = new Date(start + durationMinutes * 60000);
-    if (end.getUTCDate() !== d) {
+    // Termina exatamente às 00:00 do dia seguinte = ainda cabe no dia; só avisa se passar disso.
+    const endsExactlyAtMidnight = end.getTime() === Date.UTC(y, mo - 1, d + 1);
+    if (end.getUTCDate() !== d && !endsExactlyAtMidnight) {
       const hh = String(end.getUTCHours()).padStart(2, "0");
       const mm = String(end.getUTCMinutes()).padStart(2, "0");
       warnings.push(`Esse atendimento termina depois da meia-noite (${hh}:${mm} do dia seguinte). Confira o horário.`);

@@ -8,7 +8,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { can } from "@/lib/permissions/matrix";
 import { parseMoneyInput } from "@/lib/parse-money";
 import { todayDateSaoPaulo } from "@/lib/timezone";
-import { addDays, diffDays } from "@/lib/hr/schedule";
+import { addDays, daysInMonth, diffDays, nextPayday } from "@/lib/hr/schedule";
 import { getEmployee, getEmployeeClt, getHrSettings, getPayrollTables, listVacations } from "@/lib/hr/queries";
 import { calcThirteenth, calcVacationPay, thirteenthAvos } from "@/lib/hr/payroll";
 import { buildPayroll, MONTH_PATTERN } from "@/lib/hr/payroll-service";
@@ -484,6 +484,8 @@ async function closePayrollCore(formData: FormData): Promise<{ error: string } |
 
   const employee = await getEmployee(guard.companyId as string, employeeId);
   if (!employee || employee.mode !== "clt") return { error: "Funcionário CLT não encontrado." };
+  const monthEnd = `${month}-${String(daysInMonth(Number(month.slice(0, 4)), Number(month.slice(5, 7)))).padStart(2, "0")}`;
+  if (employee.started_on && monthEnd < employee.started_on) return { error: "Esse mês é anterior à admissão do funcionário." };
   const [clt, settings] = await Promise.all([getEmployeeClt(employeeId), getHrSettings(guard.companyId)]);
   if (!clt) return { error: "Complete o cadastro CLT do funcionário (jornada e contrato)." };
 
@@ -502,7 +504,8 @@ async function closePayrollCore(formData: FormData): Promise<{ error: string } |
     p_inss: result.inss,
     p_irrf: result.irrf,
     p_vt: result.vt,
-    p_due_on: dueOn || null,
+    // Sem data informada (fechamento em lote), vale o dia de pagamento do funcionário — igual à folha individual.
+    p_due_on: dueOn || nextPayday(employee, monthEnd),
     p_notes: notes || null,
     p_calc: {
       estimate: true,
