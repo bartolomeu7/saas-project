@@ -57,8 +57,9 @@ test("Caixa: saída em dinheiro maior que o saldo é recusada; fechar caixa pede
 });
 
 test("Agenda: dia sem expediente (profissional com expediente cadastrado) não aceita agendamento", () => {
-  const agenda = read("src/lib/agenda/actions.ts");
+  const agenda = read("src/lib/agenda/actions.ts") + read("src/lib/agenda/create-core.ts");
   assert.ok(agenda.includes("offDayError") && agenda.includes("dia sem expediente"));
+  assert.ok(read("src/lib/agenda/actions.ts").includes("createAppointmentCore"), "a tela usa o mesmo núcleo do Chat AI");
 });
 
 test("Fidelidade: saldo abaixo do mínimo de resgate mostra explicação em vez de campo impossível", () => {

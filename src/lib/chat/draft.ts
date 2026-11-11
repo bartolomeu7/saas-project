@@ -95,7 +95,7 @@ export function newDraft<Slots>(input: {
   };
 }
 
-export function isExpired(draft: Draft, now: Date): boolean {
+export function isExpired(draft: Draft<unknown>, now: Date): boolean {
   return now.getTime() >= new Date(draft.expiresAt).getTime();
 }
 
@@ -134,7 +134,7 @@ export interface ConfirmInput {
  * Pode executar? Todas as condições têm de valer; o primeiro motivo de recusa é devolvido.
  * Nada aqui grava: quem executa só roda depois de `ok: true`.
  */
-export function checkConfirm(draft: Draft, input: ConfirmInput): { ok: true } | { ok: false; reason: ConfirmRefusal } {
+export function checkConfirm(draft: Draft<unknown>, input: ConfirmInput): { ok: true } | { ok: false; reason: ConfirmRefusal } {
   if (draft.companyId !== input.companyId) return { ok: false, reason: "empresa" };
   if (draft.userId !== input.userId) return { ok: false, reason: "usuario" };
   if (draft.status !== "aguardando_confirmacao") return { ok: false, reason: "status" };
@@ -161,7 +161,7 @@ export function discard<Slots>(draft: Draft<Slots>): Draft<Slots> {
 }
 
 export function expireIfDue<Slots>(draft: Draft<Slots>, now: Date): Draft<Slots> {
-  if (!isFinal(draft.status) && draft.status !== "executando" && isExpired(draft as Draft, now)) return { ...draft, status: "expirado" };
+  if (!isFinal(draft.status) && draft.status !== "executando" && isExpired(draft, now)) return { ...draft, status: "expirado" };
   return draft;
 }
 
@@ -178,3 +178,27 @@ export const REFUSAL_MESSAGES: Record<ConfirmRefusal, string> = {
   incompleto: "Ainda faltam informações para concluir.",
   bloqueado: "Há um problema a resolver antes de confirmar.",
 };
+
+export type ConfirmPlan =
+  | { action: "execute" }
+  | { action: "replay" }
+  | { action: "in_progress" }
+  | { action: "refuse"; reason: ConfirmRefusal };
+
+/**
+ * Decide o que fazer com um clique em Confirmar (docs/chat-ai/01 §4). Pura: a reivindicação atômica do rascunho
+ * continua sendo feita no banco; aqui só se decide o caminho.
+ *  - replay: o MESMO clique (rascunho, versão) já foi concluído → devolve o resultado guardado, sem gravar de novo
+ *  - in_progress: outro clique está gravando agora
+ *  - refuse: dono, empresa, versão, validade, status ou completude não conferem
+ */
+export function planConfirm(draft: Draft<unknown>, input: ConfirmInput): ConfirmPlan {
+  if (draft.companyId !== input.companyId) return { action: "refuse", reason: "empresa" };
+  if (draft.userId !== input.userId) return { action: "refuse", reason: "usuario" };
+  if (draft.status === "concluido") {
+    return draft.version === input.version ? { action: "replay" } : { action: "refuse", reason: "status" };
+  }
+  if (draft.status === "executando") return draft.version === input.version ? { action: "in_progress" } : { action: "refuse", reason: "versao" };
+  const check = checkConfirm(draft, input);
+  return check.ok ? { action: "execute" } : { action: "refuse", reason: check.reason };
+}

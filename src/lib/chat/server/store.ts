@@ -2,7 +2,7 @@ import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { emptyState, type AgendarState, type ChatMessage } from "../agenda-turn.ts";
-import { DEFAULT_DRAFT_TTL_MINUTES } from "../draft.ts";
+import { DEFAULT_DRAFT_TTL_MINUTES, idempotencyKeyFor, type Draft, type DraftStatus } from "../draft.ts";
 
 /**
  * Chat AI — persistência do estado da conversa (tabelas `chat_*`, migration 20261111200000).
@@ -125,4 +125,92 @@ export async function appendMessages(args: {
 export async function bumpUsage(companyId: string, day: string): Promise<number | null> {
   const { data, error } = await db().rpc("chat_bump_usage", { p_company_id: companyId, p_day: day });
   return error || typeof data !== "number" ? null : data;
+}
+
+// ---------------------------------------------------------------------------------------------------- confirmação
+export interface DraftRow {
+  draft: Draft<AgendarState>;
+  sessionId: string;
+  idempotencyKey: string | null;
+  result: unknown;
+}
+
+/** Rascunho por id, só se for DESTE usuário e DESTA empresa (senão null: nunca revela que existe). */
+export async function loadDraftById(companyId: string, userId: string, draftId: string): Promise<DraftRow | null> {
+  const { data } = await db()
+    .from("chat_drafts")
+    .select("id, company_id, user_id, session_id, module, intent, risk, slots, missing, warnings, blocks, version, status, expires_at, created_at, idempotency_key, result")
+    .eq("id", draftId)
+    .eq("company_id", companyId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (!data) return null;
+  return {
+    sessionId: data.session_id as string,
+    idempotencyKey: (data.idempotency_key as string | null) ?? null,
+    result: data.result ?? null,
+    draft: {
+      id: data.id as string,
+      companyId: data.company_id as string,
+      userId: data.user_id as string,
+      module: data.module as string,
+      intent: data.intent as string,
+      risk: data.risk as Draft["risk"],
+      slots: (data.slots ?? emptyState()) as AgendarState,
+      missing: (data.missing ?? []) as string[],
+      warnings: (data.warnings ?? []) as string[],
+      blocks: (data.blocks ?? []) as string[],
+      version: data.version as number,
+      status: data.status as DraftStatus,
+      expiresAt: data.expires_at as string,
+      createdAt: data.created_at as string,
+    },
+  };
+}
+
+/**
+ * Reivindica o rascunho para executar, de forma ATÔMICA: só um clique vence (mesma versão, ainda aguardando, sem chave).
+ * O UPDATE condicional é a barreira contra duplo clique e abas simultâneas; a coluna `idempotency_key` é única.
+ */
+export async function claimDraft(companyId: string, userId: string, draftId: string, version: number): Promise<boolean> {
+  const { data, error } = await db()
+    .from("chat_drafts")
+    .update({ status: "executando", idempotency_key: idempotencyKeyFor(draftId, version), updated_at: new Date().toISOString() })
+    .eq("id", draftId)
+    .eq("company_id", companyId)
+    .eq("user_id", userId)
+    .eq("version", version)
+    .eq("status", "aguardando_confirmacao")
+    .is("idempotency_key", null)
+    .select("id");
+  return !error && Array.isArray(data) && data.length === 1;
+}
+
+/** Terminou bem: guarda o resultado (o que foi criado) e fecha o rascunho. */
+export async function completeDraft(companyId: string, userId: string, draftId: string, result: Record<string, unknown>): Promise<void> {
+  const now = new Date().toISOString();
+  await db().from("chat_drafts").update({ status: "concluido", result, executed_at: now, updated_at: now }).eq("id", draftId).eq("company_id", companyId).eq("user_id", userId);
+}
+
+/** Não gravou (erro ou mudou algo): devolve o rascunho para ser confirmado de novo e libera a chave. */
+export async function releaseDraft(companyId: string, userId: string, draftId: string, status: "aguardando_confirmacao" | "coletando" = "aguardando_confirmacao"): Promise<void> {
+  await db().from("chat_drafts").update({ status, idempotency_key: null, updated_at: new Date().toISOString() }).eq("id", draftId).eq("company_id", companyId).eq("user_id", userId).eq("status", "executando");
+}
+
+export async function recordFeedback(companyId: string, draftId: string, intent: string, kind: "confirmado" | "falha" | "correcao" | "descarte"): Promise<void> {
+  await db().from("chat_feedback").insert({ company_id: companyId, draft_id: draftId, intent, kind });
+}
+
+export interface ChatSettings {
+  enabled: boolean;
+  modules: string[];
+  draftTtlMinutes: number | null;
+  agentName: string;
+}
+
+/** Configuração do Chat da empresa (a empresa vem da sessão autenticada pela rota). null se não houver linha ou a tabela não existir. */
+export async function getChatSettings(companyId: string): Promise<ChatSettings | null> {
+  const { data, error } = await db().from("chat_settings").select("enabled, modules, draft_ttl_minutes, agent_name").eq("company_id", companyId).maybeSingle();
+  if (error || !data) return null;
+  return { enabled: data.enabled === true, modules: Array.isArray(data.modules) ? (data.modules as string[]) : [], draftTtlMinutes: (data.draft_ttl_minutes as number | null) ?? null, agentName: String(data.agent_name || "Cláudia") };
 }

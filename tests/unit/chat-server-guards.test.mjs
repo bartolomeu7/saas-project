@@ -12,6 +12,7 @@ const exists = (rel) => existsSync(path.join(process.cwd(), rel));
  */
 const route = read("src/app/(app)/app/chat/turn/route.ts");
 const store = read("src/lib/chat/server/store.ts");
+const confirm = read("src/app/(app)/app/chat/confirm/route.ts");
 const data = read("src/lib/chat/server/agenda-data.ts");
 
 test("a rota vive em /app (passa pelas barreiras do middleware), não em /api", () => {
@@ -32,11 +33,11 @@ test("empresa e usuário vêm da sessão autenticada, nunca do corpo da requisi�
   assert.ok(!/company|user/i.test(bodySchema.replace("userText", "")), "o corpo aceito não pode trazer empresa nem usuário");
 });
 
-test("modo sombra: nenhuma gravação nos módulos (sem RPC de negócio, sem rota de confirmação)", () => {
+test("a rota de turno NUNCA grava nos módulos; só a rota de confirmação grava, e com o interruptor próprio", () => {
   assert.ok(!/\.rpc\(\s*["'](create_appointment|complete_appointment|reschedule_appointment|set_appointment_status|create_|adjust_|complete_sale)/.test(route + store + data));
-  assert.equal(exists("src/app/(app)/app/chat/confirm/route.ts"), false);
-  assert.ok(route.includes("shadow: true"));
-  assert.ok(route.includes("Modo teste"));
+  assert.ok(!route.includes("createAppointmentCore"), "o turno nunca cria agendamento");
+  assert.ok(route.includes('CHAT_AI_CONFIRM_ENABLED !== "true"') && route.includes("Modo teste"));
+  assert.ok(confirm.includes("CHAT_AI_CONFIRM_ENABLED") && confirm.includes("CHAT_AI_ENABLED"));
 });
 
 test("o servidor só escreve nas tabelas chat_* e a leitura dos módulos usa a sessão do usuário", () => {
@@ -74,16 +75,16 @@ test("tela: só aparece com interruptor global + empresa com Chat e módulo agen
   assert.ok(page.includes("ainda não está disponível"));
 });
 
-test("tela: só fala com /app/chat/turn e não tem ação de gravar nos módulos", () => {
-  assert.ok(client.includes('fetch("/app/chat/turn"'));
-  assert.equal([...(client + cards).matchAll(/fetch\(/g)].length, 1);
+test("tela: só fala com /app/chat/turn e /app/chat/confirm e não tem ação de gravar nos módulos", () => {
+  assert.ok(client.includes('fetch("/app/chat/turn"') && client.includes('fetch("/app/chat/confirm"'));
+  assert.equal([...(client + cards).matchAll(/fetch\(/g)].length, 2);
   assert.ok(!/(createAppointmentAction|create_appointment|createClient|createSessionClient)/.test(client + cards));
 });
 
-test("tela: confirmar fica desabilitado no modo teste e o texto explica", () => {
-  const confirm = cards.slice(cards.indexOf("MODO TESTE"), cards.indexOf("Corrigir"));
-  assert.ok(/<Button type="button" size="sm" disabled/.test(confirm));
-  assert.ok(client.includes("Modo teste"));
+test("tela: Confirmar só funciona fora do modo teste, uma vez por cartão, e manda só (rascunho, versão)", () => {
+  assert.ok(cards.includes("disabled={shadow || locked || confirming || !item.draft}"));
+  assert.ok(client.includes("Modo teste") && client.includes("JSON.stringify({ draftId: draft.id, version: draft.version })"));
+  assert.ok(client.includes("Não sei se gravou: confira na Agenda antes de tentar de novo"), "sem conexão no Confirmar nunca promete que não gravou");
 });
 
 test("tela: texto da conversa nunca vira HTML e links são só rotas internas montadas por nós", () => {
@@ -100,4 +101,46 @@ test("tela: acessibilidade básica (rótulo do campo, região aria-live, log da 
 test("tela: erros conhecidos viram mensagem em português (sessão, desligado, limite)", () => {
   for (const status of ["401", "403", "404", "429"]) assert.ok(client.includes(`${status}:`), status);
   assert.ok(client.includes("Nada foi alterado"));
+});
+
+// ------------------------------------------------------------------------------------------------ confirmação (grava)
+test("confirmar: o corpo traz só (rascunho, versão); empresa e usuário vêm da sessão", () => {
+  const body = confirm.slice(confirm.indexOf("const bodySchema"), confirm.indexOf("const json"));
+  assert.ok(body.includes("draftId") && body.includes("version"));
+  assert.ok(!/company|user|slots|date|time|cliente|servico/i.test(body.replace("draftId", "")), "nada de dados de gravação vindo do navegador");
+  assert.ok(confirm.includes("getCurrentUser()") && confirm.includes("getCurrentCompany()"));
+});
+
+test("confirmar: decide pelo planConfirm, reivindica de forma atômica e revalida tudo antes de gravar", () => {
+  const order = ["planConfirm(", "claimDraft(", "runAgendarTurn(", "createAppointmentCore("].map((t) => confirm.indexOf(t));
+  assert.ok(order.every((i) => i > 0) && [...order].sort((a, b) => a - b).join() === order.join(), "ordem: plano → reivindicar → revalidar → gravar");
+  assert.ok(confirm.includes('"aguardando_confirmacao"') && confirm.includes('"mudou"'));
+});
+
+test("confirmar: grava com a sessão do usuário (núcleo da tela), nunca com a chave de serviço", () => {
+  assert.ok(confirm.includes("createSessionClient()") && !confirm.includes("createAdminClient"));
+  assert.ok(confirm.includes("createAppointmentCore(supabase"));
+  assert.ok(read("src/lib/agenda/actions.ts").includes("createAppointmentCore"), "tela e chat usam o mesmo núcleo");
+  const firstCode = read("src/lib/agenda/create-core.ts").split("\n").find((l) => l.trim() !== "" && !l.trim().startsWith("//") && !l.trim().startsWith("/*") && !l.trim().startsWith("*"));
+  assert.ok(!/use server/.test(firstCode ?? ""), "o núcleo não pode virar ação chamável pelo navegador");
+  assert.ok(/^import "server-only"/.test(read("src/lib/agenda/create-core.ts")), "o núcleo é só de servidor");
+});
+
+test("confirmar: depois de criar, nunca libera o rascunho (novo clique criaria outro)", () => {
+  assert.ok(confirm.includes("createdId"));
+  const catchBlock = confirm.slice(confirm.lastIndexOf("} catch {"));
+  assert.ok(catchBlock.indexOf("if (createdId)") > 0 && catchBlock.indexOf("if (createdId)") < catchBlock.indexOf("releaseDraft"));
+  const afterCreate = confirm.slice(confirm.indexOf("createdId = result.id"), confirm.indexOf("revalidatePath"));
+  assert.ok(!afterCreate.includes("releaseDraft"), "nada de liberar depois de criar");
+});
+
+test("confirmar: a reivindicação é um UPDATE condicional (mesma versão, ainda aguardando, sem chave)", () => {
+  const claim = store.slice(store.indexOf("export async function claimDraft"), store.indexOf("export async function completeDraft"));
+  for (const part of ['.eq("version", version)', '.eq("status", "aguardando_confirmacao")', '.is("idempotency_key", null)', 'idempotencyKeyFor(draftId, version)']) assert.ok(claim.includes(part), part);
+  assert.ok(claim.includes('.eq("company_id", companyId)') && claim.includes('.eq("user_id", userId)'));
+});
+
+test("rotas do chat ficam em /app e nenhuma está em /api", () => {
+  assert.ok(exists("src/app/(app)/app/chat/confirm/route.ts"));
+  assert.equal(exists("src/app/api/chat"), false);
 });

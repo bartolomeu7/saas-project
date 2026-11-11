@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { RotateCcw, SendHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { AgentAvatar, AgentMessage, UserBubble, type SendFn, type UiMessage } from "./chat-cards";
+import { AgentAvatar, AgentMessage, UserBubble, type ConfirmFn, type SendFn, type UiMessage } from "./chat-cards";
 import type { ChatMessage } from "@/lib/chat/agenda-turn.ts";
 
 /**
@@ -24,12 +24,25 @@ const ERRORS: Record<number, string> = {
   403: "O Chat AI não está ligado para a sua empresa.",
   404: "O Chat AI ainda não está disponível.",
   429: "O limite de mensagens de hoje foi atingido. Tente amanhã.",
+  409: "Não foi possível confirmar agora. Confira o resumo e tente de novo.",
+  422: "Não consegui gravar. Nada foi alterado.",
 };
 
 interface TurnResponse {
   sessionId: string;
+  draftId: string | null;
+  version: number | null;
   status: string;
+  shadow: boolean;
   messages: ChatMessage[];
+}
+
+interface ConfirmResponse {
+  status?: string;
+  messages?: ChatMessage[];
+  message?: string;
+  draftId?: string | null;
+  version?: number | null;
 }
 
 let counter = 0;
@@ -40,6 +53,8 @@ export function ChatClient({ agentName }: { agentName: string }) {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [shadow, setShadow] = useState(true);
+  const [confirming, setConfirming] = useState(false);
   const [announce, setAnnounce] = useState("");
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -80,7 +95,9 @@ export function ChatClient({ agentName }: { agentName: string }) {
         }
         const data = (await res.json()) as TurnResponse;
         if (data.sessionId) setSessionId(data.sessionId);
-        setItems((prev) => [...prev, ...data.messages.map((m) => ({ id: nextId(), role: "agent" as const, text: m.text, message: m }))]);
+        setShadow(data.shadow !== false);
+        const draft = data.draftId && data.version ? { id: data.draftId, version: data.version } : undefined;
+        setItems((prev) => [...prev, ...data.messages.map((m) => ({ id: nextId(), role: "agent" as const, text: m.text, message: m, draft: m.kind === "confirm" ? draft : undefined }))]);
         setAnnounce(data.messages.map((m) => m.text).join(" "));
       } catch {
         const message = "Sem conexão. Nada foi alterado. Tente de novo.";
@@ -92,6 +109,44 @@ export function ChatClient({ agentName }: { agentName: string }) {
       }
     },
     [busy, sessionId]
+  );
+
+  // Confirmar: manda só (rascunho, versão); o servidor revalida tudo e grava uma vez (clique duplicado devolve o mesmo resultado)
+  const confirm: ConfirmFn = useCallback(
+    async (draft) => {
+      if (confirming) return;
+      setConfirming(true);
+      const push = (messages: ChatMessage[], draftCtx?: { id: string; version: number }) => {
+        setItems((prev) => [
+          ...prev.map((m) => (m.role === "agent" ? { ...m, resolved: true } : m)),
+          ...messages.map((m) => ({ id: nextId(), role: "agent" as const, text: m.text, message: m, draft: m.kind === "confirm" ? draftCtx : undefined })),
+        ]);
+        setAnnounce(messages.map((m) => m.text).join(" "));
+      };
+      try {
+        const res = await fetch("/app/chat/confirm", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ draftId: draft.id, version: draft.version }),
+        });
+        const isJson = res.headers.get("content-type")?.includes("application/json");
+        const data = isJson ? ((await res.json()) as ConfirmResponse) : null;
+        if (data?.messages?.length) {
+          // 200 (gravou ou já estava gravado) ou 409/422 com as mensagens do que mudou/falhou
+          const ctx = data.draftId && data.version ? { id: data.draftId, version: data.version } : undefined;
+          push(data.messages, ctx);
+        } else {
+          const message = data?.message ?? (!isJson ? ERRORS[401]! : (ERRORS[res.status] ?? "Não consegui gravar agora. Nada foi alterado. Tente de novo."));
+          push([{ kind: "error", text: message }]);
+        }
+      } catch {
+        push([{ kind: "error", text: "Sem conexão. Não sei se gravou: confira na Agenda antes de tentar de novo." }]);
+      } finally {
+        setConfirming(false);
+        inputRef.current?.focus();
+      }
+    },
+    [confirming]
   );
 
   const reset = () => {
@@ -119,7 +174,7 @@ export function ChatClient({ agentName }: { agentName: string }) {
           <div>
             <p className="text-sm font-semibold leading-tight">{agentName}</p>
             <p className="text-xs text-muted-foreground" aria-hidden={!busy}>
-              {busy ? "conferindo…" : "Modo teste — ainda não grava nada"}
+              {busy ? "conferindo…" : shadow ? "Modo teste — ainda não grava nada" : "Eu só gravo depois do seu Confirmar"}
             </p>
           </div>
         </div>
@@ -151,7 +206,7 @@ export function ChatClient({ agentName }: { agentName: string }) {
             <UserBubble key={m.id} text={m.text} />
           ) : (
             // só os cartões depois da última fala do usuário continuam interativos
-            <AgentMessage key={m.id} item={{ ...m, resolved: m.resolved || index < lastUserIndex }} onSend={send} agentName={agentName} />
+            <AgentMessage key={m.id} item={{ ...m, resolved: m.resolved || index < lastUserIndex }} onSend={send} onConfirm={confirm} agentName={agentName} shadow={shadow} confirming={confirming} />
           )
         )}
         {busy && (

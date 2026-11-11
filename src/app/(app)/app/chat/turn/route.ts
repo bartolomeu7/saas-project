@@ -2,20 +2,19 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getCurrentCompany } from "@/lib/companies/queries";
-import { createSessionClient } from "@/lib/supabase/server";
 import { todayDateSaoPaulo } from "@/lib/timezone";
 import { sanitizeUserText, MAX_MESSAGE_LENGTH } from "@/lib/chat/text.ts";
 import { emptyState, runAgendarTurn, type ChatMessage } from "@/lib/chat/agenda-turn.ts";
-import { appendMessages, bumpUsage, discardDraft, getOrCreateSession, loadActiveDraft, saveDraft } from "@/lib/chat/server/store";
+import { appendMessages, bumpUsage, discardDraft, getChatSettings, getOrCreateSession, loadActiveDraft, saveDraft } from "@/lib/chat/server/store";
 import { findCustomers, loadAgendaCatalog, loadSchedule } from "@/lib/chat/server/agenda-data";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 20;
 
 /**
- * Chat AI — um turno da conversa (MODO SOMBRA): entende, pergunta, valida e mostra o cartão, mas NÃO grava nada nos
- * módulos (não existe rota de confirmação ainda). Desligado por padrão: precisa de CHAT_AI_ENABLED=true no ambiente
- * E de `chat_settings.enabled` com o módulo "agenda" para a empresa. Docs: docs/chat-ai/01.
+ * Chat AI — um turno da conversa: entende, pergunta, valida e mostra o cartão; NUNCA grava nos módulos (quem grava é
+ * /app/chat/confirm, e só com CHAT_AI_CONFIRM_ENABLED=true). Desligado por padrão: precisa de CHAT_AI_ENABLED=true no
+ * ambiente E de `chat_settings.enabled` com o módulo "agenda" para a empresa. Docs: docs/chat-ai/01.
  */
 // A rota vive em /app/chat/turn (e não em /api) DE PROPÓSITO: tudo em /app passa pelo middleware com as barreiras do
 // produto (conta ativa, consentimento, 2FA, assinatura). Uma rota em /api ficaria fora dessas barreiras.
@@ -59,9 +58,8 @@ export async function POST(request: Request) {
   if (!text && !parsed.choice) return json({ error: "mensagem_vazia" }, 400);
 
   // 4) a empresa ligou o Chat e o módulo Agenda? (RLS: o membro lê a configuração da própria empresa)
-  const supabase = (await createSessionClient()) as any;
-  const { data: settings } = await supabase.from("chat_settings").select("enabled, modules, draft_ttl_minutes").eq("company_id", companyId).maybeSingle();
-  if (!settings?.enabled || !Array.isArray(settings.modules) || !settings.modules.includes("agenda")) return json({ error: "desligado" }, 403);
+  const settings = await getChatSettings(companyId);
+  if (!settings?.enabled || !settings.modules.includes("agenda")) return json({ error: "desligado" }, 403);
 
   // 5) cota diária por empresa (contador atômico no banco)
   const total = await bumpUsage(companyId, todayDateSaoPaulo());
@@ -82,8 +80,9 @@ export async function POST(request: Request) {
     }
   );
 
-  // 8) modo sombra: o cartão não tem botão de confirmar e o texto diz isso
-  const messages: ChatMessage[] = result.messages.map((m) => (m.kind === "confirm" ? { ...m, text: "Modo teste: entendi e conferi tudo, mas ainda não gravo nada na agenda." } : m));
+  // 8) modo sombra (padrão): sem o interruptor de gravação o cartão não grava nada e o texto diz isso
+  const shadow = process.env.CHAT_AI_CONFIRM_ENABLED !== "true";
+  const messages: ChatMessage[] = shadow ? result.messages.map((m) => (m.kind === "confirm" ? { ...m, text: "Modo teste: entendi e conferi tudo, mas ainda não gravo nada na agenda." } : m)) : result.messages;
 
   // 9) guarda o estado (rascunho com versão) e a conversa
   let draft: { id: string; version: number } | null = null;
@@ -101,10 +100,10 @@ export async function POST(request: Request) {
       blocks: result.blocks,
       warnings: result.warnings,
       rawText: text,
-      ttlMinutes: settings.draft_ttl_minutes ?? undefined,
+      ttlMinutes: settings.draftTtlMinutes ?? undefined,
     });
   }
   await appendMessages({ companyId, userId: user.id, sessionId, draftId: draft?.id ?? null, userText: text || "(escolha)", agent: messages });
 
-  return json({ sessionId, draftId: draft?.id ?? null, version: draft?.version ?? null, status: result.status, shadow: true, messages });
+  return json({ sessionId, draftId: draft?.id ?? null, version: draft?.version ?? null, status: result.status, shadow, messages });
 }
