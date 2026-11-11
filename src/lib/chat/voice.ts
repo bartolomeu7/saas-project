@@ -31,7 +31,7 @@ export function voiceErrorMessage(code: string): string | null {
       return null;
     case "not-allowed":
     case "service-not-allowed":
-      return "O microfone está bloqueado. Libere o uso do microfone nas permissões do navegador e tente de novo.";
+      return "O microfone está bloqueado neste navegador. Clique no cadeado ao lado do endereço do site, ative o Microfone e toque no microfone de novo.";
     case "no-speech":
       return "Não ouvi nada. Toque no microfone e fale mais perto.";
     case "audio-capture":
@@ -44,6 +44,9 @@ export function voiceErrorMessage(code: string): string | null {
       return "Não consegui ouvir agora. Tente de novo ou escreva a mensagem.";
   }
 }
+
+/** Avisado ao começar: o navegador mostra o pedido de permissão na primeira vez. */
+export const VOICE_PERMISSION_HINT = "Se o navegador perguntar, toque em Permitir para usar o microfone. Ouvindo, fale agora.";
 
 export const VOICE_UNSUPPORTED_MESSAGE = "Seu navegador não permite ditar por voz. Use o Chrome ou o Edge, ou escreva a mensagem.";
 

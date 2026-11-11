@@ -16,8 +16,10 @@ const nextConfig = {
           { key: "X-Frame-Options", value: "DENY" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           {
+            // Microfone liberado SÓ para o próprio site (ditado do Chat AI): `(self)`. Com o microfone proibido para todos (lista vazia) o navegador
+            // bloqueia sem nem mostrar o pedido de permissão. Câmera e localização continuam proibidas.
             key: "Permissions-Policy",
-            value: "camera=(), microphone=(), geolocation=()",
+            value: "camera=(), microphone=(self), geolocation=()",
           },
         ],
       },
