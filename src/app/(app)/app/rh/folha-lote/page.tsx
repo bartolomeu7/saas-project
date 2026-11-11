@@ -46,11 +46,13 @@ export default async function HrBatchPayrollPage({ searchParams: searchParamsPro
         </label>
         <button type="submit" className="h-10 rounded-md border px-4 text-sm">Ver</button>
       </form>
-      {pending.length === 0 ? (
-        <EmptyState title="Nenhuma folha pendente neste mês." description="Todos os funcionários CLT ativos já têm a folha deste mês fechada." icon={UserRoundCheck} />
-      ) : (
-        <BatchPayrollForm key={month} month={month} employees={pending} />
-      )}
+      <BatchPayrollForm
+        key={month}
+        month={month}
+        employees={pending}
+        empty={<EmptyState title="Nenhuma folha pendente neste mês." description="Todos os funcionários CLT ativos já têm a folha deste mês fechada." icon={UserRoundCheck} />}
+      />
+      <p className="text-xs text-muted-foreground">O vencimento de cada folha é o dia de pagamento do funcionário no mês seguinte. Você paga depois, em Pagamentos.</p>
     </div>
   );
 }

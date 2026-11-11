@@ -916,7 +916,9 @@
   .prime-module-page {
     position: relative;
     isolation: isolate;
-    animation: prime-module-page-enter .42s cubic-bezier(.2,.8,.2,1) both;
+    /* "backwards" (não "both"): ao terminar, o transform sai — senão a página vira o bloco de contenção de
+       qualquer elemento `position: fixed` dentro dela (ex.: o botão "+ Novo agendamento" no celular). */
+    animation: prime-module-page-enter .42s cubic-bezier(.2,.8,.2,1) backwards;
   }
 
   .prime-module-page > :first-child {

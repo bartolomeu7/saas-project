@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useFormState } from "react-dom";
 import type { ActionResult } from "@/lib/auth/actions";
 import { closePayrollBatchAction } from "@/lib/hr/actions";
@@ -9,9 +10,18 @@ import { SubmitButton } from "@/components/shared/auth/submit-button";
 
 const initialState: ActionResult = {};
 
-export function BatchPayrollForm({ month, employees }: { month: string; employees: { id: string; name: string; salary: string }[] }) {
+export function BatchPayrollForm({ month, employees, empty }: { month: string; employees: { id: string; name: string; salary: string }[]; empty: ReactNode }) {
   const [state, formAction] = useFormState(closePayrollBatchAction, initialState);
   const keepInput = useKeepInputOnError(state);
+  // Depois de fechar tudo a lista fica vazia; o componente continua montado para a confirmação ("N folha(s) fechada(s)") aparecer.
+  if (employees.length === 0) {
+    return (
+      <div className="grid gap-4">
+        <FormMessage state={state} />
+        {empty}
+      </div>
+    );
+  }
   return (
     <form action={formAction} onReset={keepInput} className="grid gap-4">
       <input type="hidden" name="month" value={month} />

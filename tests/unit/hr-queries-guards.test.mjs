@@ -132,3 +132,23 @@ import { readFileSync as _read } from "node:fs";
     assert.ok(q.includes("unclosedPayroll"));
   });
 }
+
+{
+  const hr = _read(new URL("../../src/lib/hr/actions.ts", import.meta.url), "utf8");
+  const form = _read(new URL("../../src/components/app/hr-batch-payroll-form.tsx", import.meta.url), "utf8");
+  const css = _read(new URL("../../src/app/globals.css", import.meta.url), "utf8");
+  const agendaForms = _read(new URL("../../src/components/app/agenda-action-forms.tsx", import.meta.url), "utf8");
+  test("RH: folha sem data informada (lote) vence no dia de pagamento do funcionário, e mês anterior à admissão é recusado", () => {
+    assert.ok(hr.includes("dueOn || nextPayday(employee, monthEnd)"));
+    assert.ok(hr.includes("anterior à admissão"));
+  });
+  test("RH: o formulário em lote continua montado quando a lista esvazia, para mostrar a confirmação", () => {
+    assert.ok(form.includes("employees.length === 0") && form.includes("<FormMessage state={state} />"));
+  });
+  test("a animação de entrada da página não deixa transform (quebraria position: fixed, ex.: botão da agenda no celular)", () => {
+    assert.ok(/\.prime-module-page \{[^}]*animation: prime-module-page-enter [^;]* backwards;/.test(css));
+  });
+  test("Agenda: término exatamente à meia-noite não gera aviso", () => {
+    assert.ok(agendaForms.includes("endsExactlyAtMidnight"));
+  });
+}
