@@ -126,9 +126,9 @@ test("cliente novo: responder com outro nome volta a procurar; 'escrever outro n
 test("serviço que não existe: avisa em vez de repetir a mesma pergunta; sem nenhum serviço ativo, orienta cadastrar", async () => {
   const p = ports(() => JOAO);
   let r = await turn(emptyState(), "agendar pro João Ferreira sexta às 14:00 tipo de serviço enceramento ceramico", p);
-  assert.ok(r.messages.some((m) => m.kind === "notice" && /Não encontrei esse serviço/.test(m.text)));
+  assert.ok(r.messages.some((m) => m.kind === "notice" && /Não encontrei (o|esse) serviço/.test(m.text)));
   r = await turn(r.state, "enceramento ceramico", p);
-  assert.ok(r.messages.some((m) => m.kind === "notice" && /Não encontrei esse serviço/.test(m.text)));
+  assert.ok(r.messages.some((m) => m.kind === "notice" && /Não encontrei (o|esse) serviço/.test(m.text)));
   const empty = await turn(emptyState(), "agendar pro João Ferreira sexta às 14:00 lavagem", p, { catalog: { ...CATALOG, services: [] } });
   assert.ok(empty.messages.some((m) => m.kind === "ask" && /nenhum serviço ativo cadastrado/.test(m.text)));
 });
