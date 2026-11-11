@@ -159,7 +159,7 @@ async function handle(request: Request) {
       professionalId: s.profissional.id,
       startsAtLocal: `${s.date}T${s.time}`,
       // só manda duração/valor quando a PESSOA definiu; senão o banco aplica a mesma precedência do cartão
-      durationMinutes: s.endTime ? effectiveDuration(s) ?? undefined : undefined,
+      durationMinutes: (s.endTime || s.durationMinutes) ? effectiveDuration(s) ?? undefined : undefined,
       price: s.priceOverride,
       notes: s.notes,
     });
