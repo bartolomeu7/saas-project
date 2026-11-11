@@ -51,6 +51,7 @@ export default async function HrPage({ searchParams: searchParamsPromise }: { se
           <div className="flex flex-wrap gap-2">
             <Link href="/app/rh/configuracoes" className={cn(buttonVariants({ variant: "outline" }))}>Configurações</Link>
             <Link href="/app/rh/pagamentos" className={cn(buttonVariants({ variant: "outline" }))}>Pagamentos</Link>
+            <Link href="/app/rh/folha-lote" className={cn(buttonVariants({ variant: "outline" }))}>Fechar folha em lote</Link>
             <Link href="/app/rh/novo" className={cn(buttonVariants())}>+ Novo funcionário</Link>
           </div>
         }
@@ -62,6 +63,15 @@ export default async function HrPage({ searchParams: searchParamsPromise }: { se
         <MetricCard label="Pago neste mês" value={formatCurrency(dashboard.paidThisMonth)} icon={Wallet} />
         <MetricCard label="Pagamentos nos próximos 7 dias" value={dashboard.upcoming.length} icon={CalendarClock} />
       </div>
+
+      {dashboard.unclosedPayroll ? (
+        <Link href={`/app/rh/folha-lote?mes=${dashboard.unclosedPayroll.month}`} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm hover:no-underline">
+          <span>
+            Folha de {dashboard.unclosedPayroll.month.slice(5, 7)}/{dashboard.unclosedPayroll.month.slice(0, 4)} ainda não fechada para {dashboard.unclosedPayroll.count} funcionário(s) CLT.
+          </span>
+          <span className="font-medium underline underline-offset-4">Fechar folhas →</span>
+        </Link>
+      ) : null}
 
       {empty ? (
         <EmptyState

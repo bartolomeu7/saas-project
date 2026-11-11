@@ -68,6 +68,7 @@ export const APP_ROUTE_PATTERNS: readonly string[] = [
   "/app/rh/[id]/editar",
   "/app/rh/configuracoes",
   "/app/rh/novo",
+  "/app/rh/folha-lote",
   "/app/rh/pagamentos",
   "/app/rh/pagamentos/[id]",
   "/app/servicos",
@@ -99,6 +100,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   imprimir: "Imprimir",
   empresa: "Empresa",
   pagamentos: "Pagamentos",
+  "folha-lote": "Folha em lote",
   configuracoes: "Configurações",
 };
 

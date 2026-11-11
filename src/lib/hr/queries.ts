@@ -2,7 +2,7 @@ import "server-only";
 
 import { createSessionClient } from "@/lib/supabase/server";
 import { todayDateSaoPaulo } from "@/lib/timezone";
-import { addDays, hasBirthdayInMonth, nextPayday } from "@/lib/hr/schedule";
+import { addDays, daysInMonth, hasBirthdayInMonth, nextPayday } from "@/lib/hr/schedule";
 import { acquisitionPeriods, type PayrollTables } from "@/lib/hr/payroll";
 import type {
   HrAdjustment,
@@ -173,6 +173,8 @@ export interface HrDashboard {
   paidThisMonth: number;
   upcoming: { employee: HrEmployee; payday: string }[];
   birthdays: HrEmployee[];
+  /** Folha do mês anterior ainda não fechada (só CLT ativos). */
+  unclosedPayroll: { month: string; count: number } | null;
 }
 
 export async function getHrDashboard(companyId: string): Promise<HrDashboard> {
@@ -199,8 +201,17 @@ export async function getHrDashboard(companyId: string): Promise<HrDashboard> {
     .filter((item) => item.payday <= horizon)
     .sort((a, b) => a.payday.localeCompare(b.payday) || a.employee.full_name.localeCompare(b.employee.full_name));
 
+  const prevYear = Number(today.slice(5, 7)) === 1 ? Number(today.slice(0, 4)) - 1 : Number(today.slice(0, 4));
+  const prevMonthNumber = Number(today.slice(5, 7)) === 1 ? 12 : Number(today.slice(5, 7)) - 1;
+  const prevStart = `${prevYear}-${String(prevMonthNumber).padStart(2, "0")}-01`;
+  const prevEnd = `${prevYear}-${String(prevMonthNumber).padStart(2, "0")}-${String(daysInMonth(prevYear, prevMonthNumber)).padStart(2, "0")}`;
+  const cltIds = employees.filter((employee) => employee.mode === "clt" && (!employee.started_on || employee.started_on <= prevEnd));
+  const closedFlags = await Promise.all(cltIds.map((employee) => hasPaymentInMonth(employee.id, prevStart, prevEnd)));
+  const unclosedCount = closedFlags.filter((closed) => !closed).length;
+
   return {
     today,
+    unclosedPayroll: unclosedCount > 0 ? { month: prevStart.slice(0, 7), count: unclosedCount } : null,
     activeCount: employees.length,
     pendingTotal: pending.reduce((sum, payment) => sum + payment.net_amount, 0),
     pendingPayments: pending.sort((a, b) => a.due_on.localeCompare(b.due_on)),

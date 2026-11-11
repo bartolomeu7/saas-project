@@ -19,6 +19,30 @@ import { useKeepInputOnError } from "@/hooks/use-keep-input-on-error";
 
 const initialState: ActionResult = {};
 
+/** Agora em São Paulo no formato do campo datetime-local (AAAA-MM-DDTHH:mm). */
+function nowSaoPauloLocal(): string {
+  return new Date().toLocaleString("sv-SE", { timeZone: "America/Sao_Paulo" }).replace(" ", "T").slice(0, 16);
+}
+
+/** Avisos (não bloqueiam): horário que já passou e atendimento que termina depois da meia-noite. */
+export function scheduleWarnings(startsAt: string, durationMinutes: number, nowLocal: string): string[] {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(startsAt);
+  if (!match) return [];
+  const warnings: string[] = [];
+  if (startsAt < nowLocal) warnings.push("Esse horário já passou. Confira a data se não quiser registrar um atendimento passado.");
+  if (durationMinutes > 0) {
+    const [y, mo, d, h, mi] = match.slice(1).map(Number) as [number, number, number, number, number];
+    const start = Date.UTC(y, mo - 1, d, h, mi);
+    const end = new Date(start + durationMinutes * 60000);
+    if (end.getUTCDate() !== d) {
+      const hh = String(end.getUTCHours()).padStart(2, "0");
+      const mm = String(end.getUTCMinutes()).padStart(2, "0");
+      warnings.push(`Esse atendimento termina depois da meia-noite (${hh}:${mm} do dia seguinte). Confira o horário.`);
+    }
+  }
+  return warnings;
+}
+
 export function AppointmentForm({
   date,
   customers,
@@ -36,6 +60,9 @@ export function AppointmentForm({
   const [price, setPrice] = useState(services[0] ? String(services[0].sale_price) : "");
   const [startsAt, setStartsAt] = useState(date + "T08:00");
   const service = services.find((row) => row.id === serviceId);
+  const [nowLocal, setNowLocal] = useState("");
+  useEffect(() => setNowLocal(nowSaoPauloLocal()), [startsAt]);
+  const warnings = nowLocal ? scheduleWarnings(startsAt, service?.duration_minutes ?? 0, nowLocal) : [];
 
   // Depende dos campos primitivos de propósito: `service` é um novo objeto
   // a cada render (retorno de `.find()`), então incluí-lo re-executaria o
@@ -86,6 +113,9 @@ export function AppointmentForm({
           className="h-10 rounded-md border bg-background px-3"
           required
         />
+        {warnings.map((text) => (
+          <span key={text} role="status" className="text-xs text-amber-600 dark:text-amber-400">⚠ {text}</span>
+        ))}
       </label>
       <label className="grid gap-1 text-sm">
         Observações

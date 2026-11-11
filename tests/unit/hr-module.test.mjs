@@ -71,7 +71,7 @@ test("ações: toda mutação confere o papel e usa as funções do banco para d
   const actions = [...src.matchAll(/export async function (\w+Action)/g)].map((m) => m[1]);
   assert.deepEqual(
     actions.sort(),
-    ["addAdjustmentAction", "cancelPaymentAction", "cancelVacationAction", "closePayrollAction", "closePeriodAction", "closeThirteenthAction", "closeVacationPayAction", "createEmployeeAction", "deleteAdjustmentAction", "payPaymentAction", "saveHrSettingsAction", "scheduleVacationAction", "setAttendanceAction", "setEmployeeStatusAction", "updateEmployeeAction"].sort()
+    ["addAdjustmentAction", "cancelPaymentAction", "cancelVacationAction", "closePayrollAction", "closePayrollBatchAction", "closePeriodAction", "closeThirteenthAction", "closeVacationPayAction", "createEmployeeAction", "deleteAdjustmentAction", "payPaymentAction", "saveHrSettingsAction", "scheduleVacationAction", "setAttendanceAction", "setEmployeeStatusAction", "updateEmployeeAction"].sort()
   );
   // cada ação confere o papel antes de gravar
   assert.equal((src.match(/await manager\(\)/g) ?? []).length, actions.length);
@@ -156,7 +156,7 @@ test("fase 2 (CLT): a folha usa as tabelas do banco e o app calcula a mesma cont
   assert.ok(service.includes("getPayrollTables(") && service.includes("estimatePayroll("));
   const actions = read("src/lib/hr/actions.ts");
   assert.ok(actions.includes("buildPayroll("), "ao fechar, recalcula no servidor (não aceita número do navegador)");
-  const close = actions.slice(actions.indexOf("export async function closePayrollAction"));
+  const close = actions.slice(actions.indexOf("async function closePayrollCore"));
   assert.ok(close.includes("p_inss: result.inss") && close.includes("p_irrf: result.irrf") && close.includes("p_vt: result.vt"));
   assert.ok(!/formData\.get\("(inss|irrf|vt)"\)/.test(close), "INSS/IRRF/VT nunca vêm do formulário");
   // a tela avisa que é estimativa

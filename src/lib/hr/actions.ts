@@ -465,7 +465,7 @@ export async function saveHrSettingsAction(_prev: ActionResult, formData: FormDa
 }
 
 /** Fecha a folha do mês de um funcionário CLT: o app calcula INSS/IRRF/VT com as tabelas; o banco confere e grava. */
-export async function closePayrollAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
+async function closePayrollCore(formData: FormData): Promise<{ error: string } | { employeeId: string; paymentId?: string }> {
   const employeeId = text(formData.get("employeeId"));
   const month = text(formData.get("month"));
   const overtime50 = parseMoneyInput(text(formData.get("overtime50")) || "0");
@@ -480,9 +480,9 @@ export async function closePayrollAction(_prev: ActionResult, formData: FormData
   if (absences + vacationDays > 31) return { error: "Faltas mais dias de férias não podem passar de 31 dias." };
   if (dueOn && !isDate(dueOn)) return { error: "Data de pagamento inválida." };
   const guard = await manager();
-  if ("error" in guard) return guard;
+  if ("error" in guard && guard.error) return { error: guard.error };
 
-  const employee = await getEmployee(guard.companyId, employeeId);
+  const employee = await getEmployee(guard.companyId as string, employeeId);
   if (!employee || employee.mode !== "clt") return { error: "Funcionário CLT não encontrado." };
   const [clt, settings] = await Promise.all([getEmployeeClt(employeeId), getHrSettings(guard.companyId)]);
   if (!clt) return { error: "Complete o cadastro CLT do funcionário (jornada e contrato)." };
@@ -515,7 +515,46 @@ export async function closePayrollAction(_prev: ActionResult, formData: FormData
   if (error) return { error: friendly(error, "Não foi possível fechar a folha.") };
   revalidateHr(employeeId);
   const paymentId = (Array.isArray(data) ? data[0] : data)?.id as string | undefined;
-  redirect(paymentId ? `/app/rh/pagamentos/${paymentId}` : `/app/rh/${employeeId}?aba=pagamentos`);
+  return { employeeId, paymentId };
+}
+
+export async function closePayrollAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
+  const result = await closePayrollCore(formData);
+  if ("error" in result) return { error: result.error };
+  redirect(result.paymentId ? `/app/rh/pagamentos/${result.paymentId}` : `/app/rh/${result.employeeId}?aba=pagamentos`);
+}
+
+/**
+ * Fecha a folha do mês de vários funcionários CLT de uma vez, sem horas extras, faltas nem férias
+ * (quem tem variações fecha pela ficha). Cada folha passa pelas mesmas regras e pelo mesmo banco da folha individual.
+ */
+export async function closePayrollBatchAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
+  const month = text(formData.get("month"));
+  const ids = formData.getAll("employeeId").map((value) => text(value)).filter(Boolean);
+  if (!MONTH_PATTERN.test(month)) return { error: "Mês inválido." };
+  if (ids.length === 0) return { error: "Marque pelo menos um funcionário." };
+  if (ids.length > 50) return { error: "Feche no máximo 50 folhas por vez." };
+  const guard = await manager();
+  if ("error" in guard && guard.error) return { error: guard.error };
+  const companyId = guard.companyId as string;
+  const failures: string[] = [];
+  let done = 0;
+  for (const employeeId of ids) {
+    const form = new FormData();
+    form.set("employeeId", employeeId);
+    form.set("month", month);
+    const result = await closePayrollCore(form);
+    if ("error" in result) {
+      const employee = await getEmployee(companyId, employeeId).catch(() => null);
+      failures.push(`${employee?.full_name ?? "Funcionário"}: ${result.error}`);
+    } else {
+      done += 1;
+    }
+  }
+  revalidatePath("/app/rh");
+  revalidatePath("/app/rh/pagamentos");
+  if (done === 0) return { error: failures.join(" · ") };
+  return { success: `${done} folha(s) fechada(s).${failures.length ? ` Não fechou: ${failures.join(" · ")}` : ""}` };
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
