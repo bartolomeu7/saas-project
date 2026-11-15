@@ -25,6 +25,8 @@ export interface CatalogService {
   /** minutos; null/0 = serviço sem duração (não dá para agendar) */
   durationMinutes: number | null;
   price: number;
+  /** apelidos que a equipe usa ("limpeza" → "Higienização Interna"); opcional: a coluna pode ainda não existir */
+  aliases?: string[];
 }
 
 export interface CatalogProfessional {
@@ -37,9 +39,30 @@ export interface CatalogProfessional {
   overrides?: Record<string, { durationMinutes?: number | null; price?: number | null }>;
 }
 
+/** Feriado/dia especial cadastrado pela empresa (tabela company_holidays; opcional: pode ainda não existir). */
+export interface CompanyHoliday {
+  /** YYYY-MM-DD */
+  date: string;
+  name: string;
+  /** repete todo ano no mesmo dia e mês */
+  yearly: boolean;
+  /** a empresa não atende nesse dia */
+  closed: boolean;
+}
+
 export interface AgendaCatalog {
   services: CatalogService[];
   professionals: CatalogProfessional[];
+  companyHolidays?: CompanyHoliday[];
+}
+
+/** Aviso se a data cai num dia especial cadastrado pela empresa (nenhum bloqueio: quem decide é a pessoa). */
+export function companyHolidayWarning(date: string, holidays: CompanyHoliday[] | undefined, label: string): string | null {
+  const hit = (holidays ?? []).find((h) => h.date === date || (h.yearly && h.date.slice(5) === date.slice(5)));
+  if (!hit) return null;
+  return hit.closed
+    ? `${label} é "${hit.name}" (dia em que a empresa não atende). Confira se quer agendar nesse dia.`
+    : `${label} é "${hit.name}" (dia especial da empresa). Confira o horário.`;
 }
 
 export interface AvailabilityRule {
@@ -175,7 +198,15 @@ function distinctiveHit(text: string, service: CatalogService, all: CatalogServi
 
 export function matchServices(text: string, services: CatalogService[]): CatalogService[] {
   const scored = services
-    .map((s) => ({ s, score: Math.max(nameCoverage(text, s.name), distinctiveHit(text, s, services) ? SERVICE_MIN_COVERAGE : 0) }))
+    .map((s) => ({
+      s,
+      score: Math.max(
+        nameCoverage(text, s.name),
+        distinctiveHit(text, s, services) ? SERVICE_MIN_COVERAGE : 0,
+        // apelido dito por inteiro vale como o nome
+        ...(s.aliases ?? []).map((a) => (a.trim() ? nameCoverage(text, a) : 0))
+      ),
+    }))
     .filter((x) => x.score >= SERVICE_MIN_COVERAGE)
     .sort((a, b) => b.score - a.score);
   if (scored.length === 0) {
@@ -521,6 +552,8 @@ export function validateAgendar(
     if (slots.date > yearAhead) warnings.push("Essa data está a mais de um ano. Confira.");
     const holiday = holidayWarning(slots.date, formatDatePt(slots.date));
     if (holiday) warnings.push(holiday);
+    const own = companyHolidayWarning(slots.date, ctx.catalog.companyHolidays, formatDatePt(slots.date));
+    if (own) warnings.push(own);
   }
   return result;
 }
