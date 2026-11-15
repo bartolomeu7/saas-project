@@ -103,7 +103,9 @@ async function handle(request: Request) {
 
   // 9) guarda o estado (rascunho com versão) e a conversa
   let draft: { id: string; version: number } | null = null;
-  if (!result.state.started) {
+  // Sem agendamento em andamento o rascunho é descartado, EXCETO quando a última consulta de horários livres precisa ser
+  // lembrada ("agenda o primeiro pro Marcos"): ela vai no mesmo rascunho, que expira sozinho.
+  if (!result.state.started && !result.state.consult) {
     if (existing) await discardDraft(companyId, user.id, existing.id);
   } else {
     draft = await saveDraft({

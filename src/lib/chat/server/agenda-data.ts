@@ -92,9 +92,9 @@ export async function loadDayAppointments(companyId: string, date: string): Prom
     .lt("starts_at", dayEnd.toISOString())
     .order("starts_at")
     .limit(60);
-  const rows = (data ?? []) as { starts_at: string; ends_at: string; status: string; customer_id: string; service_id: string; professional_id: string }[];
+  const rows = (data ?? []) as { starts_at: string; ends_at: string; status: string; customer_id: string | null; service_id: string; professional_id: string | null }[];
   if (rows.length === 0) return [];
-  const uniq = (xs: string[]) => [...new Set(xs)];
+  const uniq = (xs: (string | null)[]) => [...new Set(xs.filter((x): x is string => !!x))];
   const [cus, svc, pro] = await Promise.all([
     supabase.from("customers").select("id,name").in("id", uniq(rows.map((r) => r.customer_id))),
     supabase.from("services").select("id,name").in("id", uniq(rows.map((r) => r.service_id))),
@@ -107,9 +107,9 @@ export async function loadDayAppointments(companyId: string, date: string): Prom
   return rows.map((r) => ({
     start: toLocalSaoPaulo(r.starts_at).slice(11, 16),
     end: toLocalSaoPaulo(r.ends_at).slice(11, 16),
-    customer: cm.get(r.customer_id) ?? "—",
+    customer: r.customer_id ? (cm.get(r.customer_id) ?? "cliente removido") : "sem cliente",
     service: sm.get(r.service_id) ?? "—",
-    professional: pm.get(r.professional_id) ?? "—",
+    professional: r.professional_id ? (pm.get(r.professional_id) ?? "profissional removido") : "sem profissional",
     status: r.status,
   }));
 }
