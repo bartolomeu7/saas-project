@@ -41,7 +41,7 @@ test("horários por voz: 'quinze para as onze', 'dez para as quatro da tarde', '
 test("datas: 'seg 14h', 'dia 20-12', 'quarta da semana que vem', 'fim do mês'", async () => {
   const r = async (when) => (await run([`agendar barba para João Pedro com a Ana ${when}`])).state.slots;
   assert.equal((await r("seg 14h")).date, "2026-11-16");
-  assert.equal((await r("dia 20-12 às 10h")).date, "2026-12-20");
+  assert.equal((await r("dia 21-12 às 10h")).date, "2026-12-21");
   assert.equal((await r("na quarta-feira da semana que vem às 10h")).date, "2026-11-18");
   assert.equal((await r("no fim do mês às 10h")).date, "2026-11-30");
 });
@@ -201,4 +201,72 @@ test("'agendar' sozinho repetido não vira 'não encontrei o serviço agendar'",
 test("exemplo da ajuda usa um serviço da própria empresa", async () => {
   const r = await run(["bla bla bla"]);
   assert.match(text(r), /agenda escova progressiva com tratamento pro João/);
+});
+
+// ------------------------------------------------------------------ rodada real nº 3 (10 testes aleatórios no site, domingo 15/11/2026)
+const SUNDAY = { today: "2026-11-15", nowMinutes: 11 * 60 };
+const runAt = async (turns, clock) => {
+  let state = emptyState();
+  let r;
+  for (const t of turns) {
+    r = await runAgendarTurn({ text: t, state: JSON.parse(JSON.stringify(state)), catalog: CATALOG, clock }, PORTS);
+    state = r.state;
+  }
+  return r;
+};
+
+test("'marcar a Beatriz pra hidratação…' acha o cliente antes do 'pra' (verbo marcar)", async () => {
+  const r = await run(["bom dia, preciso marcar a Beatriz pra hidratação profunda na terça às 14h30"]);
+  assert.ok(r.state.slots.cliente || r.state.pending?.field === "cliente", "reconheceu a Beatriz (ou perguntou qual das duas)");
+  assert.equal(r.state.slots.servico?.name.startsWith("Hidrata"), true);
+});
+
+test("abreviações de chat ('oq tenho amanha', 'hj') não quebram as consultas", async () => {
+  assert.ok(has(await run(["oq tenho amanha"]), "notice", /Agenda de/));
+  assert.ok(has(await run(["oq eu tenho hj?"]), "notice", /Sem agendamentos em quarta/));
+});
+
+test("desconto vale sobre o preço que está valendo agora (depois de 'valor 250')", async () => {
+  let r = await run(["marca polimento pro marcos dia 17 as 14 com o Rafael", "valor 250", "com 10% de desconto"]);
+  assert.match(val(r, "Valor"), /225,00/);
+});
+
+test("domingo: 'semana que vem sexta' é a sexta da semana que começa amanhã (20/11), não 27/11", async () => {
+  const r = await runAt(["agendar teste onda E para Juliana Ferreira semana que vem sexta às 10h com Rafael"], SUNDAY);
+  assert.match(val(r, "Quando"), /20\/11\/2026 · 10:00/);
+});
+
+test("dia sem expediente (domingo): limpa o dia, guarda o horário e sugere o próximo dia com vaga", async () => {
+  let r = await runAt(["agendar teste onda E para Juliana Ferreira hoje às 18h com Rafael"], SUNDAY);
+  assert.ok(has(r, "error", /não atende em domingo/));
+  assert.equal(r.state.slots.date, undefined);
+  assert.equal(r.state.slots.time, "18:00");
+  assert.ok(has(r, "ask", /próximo dia com horário é segunda-feira, 16\/11\/2026/));
+  r = await runAt(["agendar teste onda E para Juliana Ferreira hoje às 18h com Rafael", "segunda às 15h"], SUNDAY);
+  assert.match(val(r, "Quando"), /16\/11\/2026 · 15:00/);
+});
+
+test("depois de 'horários livres', 'agenda o primeiro pro Marcos' continua dali (serviço, dia, profissional e horário já definidos)", async () => {
+  let state = emptyState();
+  let r = await runAgendarTurn({ text: "quais horários livres de polimento na sexta?", state, catalog: CATALOG, clock: CLOCK }, PORTS);
+  assert.ok(r.state.consult?.times.length > 0);
+  const first = r.state.consult.times[0];
+  r = await runAgendarTurn({ text: "agenda o primeiro pro marcos", state: r.state, catalog: CATALOG, clock: CLOCK }, PORTS);
+  assert.equal(r.state.slots.time, first);
+  assert.match(r.state.slots.cliente?.name ?? val(r, "Cliente"), /Marcos/);
+  assert.equal(r.state.slots.servico?.name, "Polimento Técnico Completo");
+});
+
+test("depois de 'horários livres', 'agenda o das 10h pra Beatriz Cavalcanti' escolhe o horário pelo relógio", async () => {
+  let r = await runAgendarTurn({ text: "quais horários livres de barba na sexta?", state: emptyState(), catalog: CATALOG, clock: CLOCK }, PORTS);
+  assert.ok(r.state.consult?.times.includes("10:00"));
+  r = await runAgendarTurn({ text: "marca o das 10h pra Beatriz Cavalcanti", state: r.state, catalog: CATALOG, clock: CLOCK }, PORTS);
+  assert.equal(r.state.slots.time, "10:00");
+});
+
+test("profissional que não faz o serviço: tira a escolha e pergunta quem vai fazer (sem beco sem saída)", async () => {
+  const r = await run(["agendar teste onda E para João Pedro amanhã 17h30 com a Ana"]);
+  assert.ok(has(r, "error", /não faz/));
+  assert.ok(has(r, "ask", /Quem vai fazer/));
+  assert.equal(r.state.slots.profissional, undefined);
 });

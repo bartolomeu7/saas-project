@@ -262,7 +262,7 @@ export function looseProfessionals(text: string, professionals: CatalogProfessio
 /** "agendar [a|o] Marcos Vinícius para polimento": o cliente vem ANTES do "para" e o serviço depois. */
 function customerBeforePara(text: string): string | undefined {
   const t = norm(text);
-  const m = /\bagend\w*\s+(?:a |o )?(.+?)\s+(?:para|pra|pro)\s+/.exec(t);
+  const m = /\b(?:agend\w*|marc\w*|reserv\w*)\s+(?:a |o |um |uma )?(.+?)\s+(?:para|pra|pro)\s+/.exec(t);
   return m ? m[1]!.trim() : undefined;
 }
 
