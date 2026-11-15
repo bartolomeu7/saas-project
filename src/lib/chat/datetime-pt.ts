@@ -192,7 +192,9 @@ function parseDate(t: string, clock: ChatClock, problems: string[]): ParsedDate 
     const todayWd = weekdayOf(clock.today);
     // "terça da semana que vem": a terça da PRÓXIMA semana (segunda a domingo seguintes)
     if (/\b(semana que vem|proxima semana|semana seguinte)\b/.test(t)) {
-      return { value: addDays(clock.today, 7 + (target - todayWd)), kind: "dia-da-semana" };
+      // semana = segunda a domingo: no domingo, "semana que vem" já é a que começa amanhã
+      const mondayThisWeek = addDays(clock.today, -((todayWd + 6) % 7));
+      return { value: addDays(mondayThisWeek, 7 + ((target + 6) % 7)), kind: "dia-da-semana" };
     }
     const diff = (target - todayWd + 7) % 7;
     if (diff === 0 && /\b(que vem|proxim[oa])\b/.test(t)) return { value: addDays(clock.today, 7), kind: "dia-da-semana" };
@@ -324,6 +326,8 @@ export function parseDateTimePt(text: string, clock: ChatClock): ParsedDateTime 
       return mm >= 1 && mm <= 59 && hh >= 1 && hh <= 24 ? `as ${hh === 1 ? 12 : hh - 1}:${pad(60 - mm)}` : m;
     })
     .replace(/\bmeio dia e (meia|quinze|quarenta e cinco|\d{1,2})\b/g, (_m, x) => `as 12:${pad(x === "meia" ? 30 : x === "quinze" ? 15 : x === "quarenta e cinco" ? 45 : Number(x))}`)
+    .replace(/\bhj\b/g, "hoje")
+    .replace(/\b(amn|amnh|amanh)\b/g, "amanha")
     // "seg 14h", "sex às 9": abreviação só quando vem horário logo depois (evita confundir "ter" verbo, "dom" nome)
     .replace(/\b(seg|ter|qua|qui|sex|sab|dom)\b(?=\s+(?:as\s+)?\d)/g, (_m, d) => ({ seg: "segunda", ter: "terca", qua: "quarta", qui: "quinta", sex: "sexta", sab: "sabado", dom: "domingo" } as Record<string, string>)[d]!)
     .replace(/\bprimeiro de (janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\b/g, "1 de $1")

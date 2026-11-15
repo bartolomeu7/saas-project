@@ -143,3 +143,24 @@ test("nada de dado pessoal em exemplo: o faker gera nomes e telefones brasileiro
     assert.match(faker.phone.number({ style: "national" }), /\d{4}/);
   }
 });
+
+test("nunca fica sem saída: se o resumo não saiu, a conversa pergunta, oferece escolha, avisa ou explica (e erro sempre vem com pergunta)", async () => {
+  const days = fc.constantFrom("hoje", "amanhã", "segunda", "sábado", "domingo", "dia 20", "dia 30/11", "semana que vem sexta");
+  const hours = fc.constantFrom("8h", "9h", "12h", "13h", "17h30", "18h", "20h", "às 2 da tarde", "meio dia", "de manhã", "à tarde");
+  const svcs = fc.constantFrom("corte", "barba", "polimento", "escova", "hidratação", "teste onda E");
+  const pros = fc.constantFrom("", "com a Ana", "com o Rafael", "com o Felipe", "qualquer profissional");
+  const clients = fc.constantFrom("João Pedro", "Beatriz", "Juliana Ferreira", "Marcos", "Zé Ninguém");
+  await fc.assert(
+    fc.asyncProperty(svcs, clients, days, hours, pros, async (s, c, d, h, p) => {
+      const text = `agendar ${s} para ${c} ${d} ${h} ${p}`.trim();
+      let state = emptyState();
+      const r = await runAgendarTurn({ text, state, catalog: CATALOG, clock: { today: "2026-11-15", nowMinutes: 11 * 60 } }, PORTS);
+      const kinds = r.messages.map((m) => m.kind);
+      if (kinds.includes("confirm")) return true;
+      const guides = kinds.some((k) => k === "ask" || k === "disambiguate");
+      if (kinds.includes("error") && !guides) return false; // erro sem dizer o que fazer
+      return guides || kinds.includes("notice");
+    }),
+    { numRuns: 300, seed: 20261115 }
+  );
+});

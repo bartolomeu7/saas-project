@@ -1,7 +1,7 @@
 import { norm, tokens } from "./text.ts";
 import { spokenNumbersToDigits } from "./numbers-pt.ts";
 import { findPhonesInText } from "./phone-br.ts";
-import { parseDateTimePt, formatDatePt, minutesOf, weekdayOf, type ChatClock } from "./datetime-pt.ts";
+import { parseDateTimePt, formatDatePt, minutesOf, weekdayOf, addDays as addDaysYmd, type ChatClock } from "./datetime-pt.ts";
 import {
   detectAgendar,
   eligibleProfessionals,
@@ -69,6 +69,8 @@ export interface AgendarState {
   previous?: { date?: string; time?: string; endTime?: string };
   /** horários oferecidos na última pergunta ("o 2", "o primeiro livre") */
   lastOptions?: { id: string; label: string }[];
+  /** última consulta de horários livres: "agenda o primeiro pro Marcos" continua dela */
+  consult?: { date: string; serviceId?: string; proId: string; times: string[] };
 }
 
 export const emptyState = (): AgendarState => ({ slots: {}, asked: [], pending: null, started: false });
@@ -136,6 +138,21 @@ const asOptions = (c: Candidate[]) => c.map((x) => ({ id: x.id, label: x.name, d
 const ANY_PRO = /\b(qualquer (profissional|um|uma|pessoa|atendente)|quem (estiver|tiver|puder) (livre|disponivel|atender)|(o |a )?primeiro (profissional )?(disponivel|livre)|tanto faz( o| a| quem)?( profissional)?|(o|a) que (estiver|tiver) (livre|disponivel)|sem preferencia)\b/;
 const AFFIRMATIVE = /^(sim|confirmo|confirmar|confirma|confirma isso|confirmado|pode|pode confirmar|pode ser|ok|ok pode|isso|isso mesmo|fechado|certo|ta certo|esta certo|ta bom|beleza|blz|show|perfeito|combinado)$/;
 const ORDINALS: Record<string, number> = { primeiro: 1, primeira: 1, segundo: 2, segunda: 2, terceiro: 3, terceira: 3, quarto: 4, quarta: 4, quinto: 5, quinta: 5 };
+
+/** Depois de "quais horários livres…": "agenda o primeiro", "marca o das 10h", "o segundo pro Marcos" → o horário escolhido. */
+function followConsult(t0: string, text: string, memory: NonNullable<AgendarState["consult"]>, clock: ChatClock): string | null {
+  if (!/^(agenda|agende|marca|marque|reserva|reserve|quero|pode ser|fecha)?\s*(o |a |esse |essa )?(primeiro|primeira|segundo|segunda|terceiro|terceira|ultimo|ultima|das? \d|as \d|de \d|\d{1,2}(h|:\d\d))/.test(t0)) return null;
+  const ord = /\b(primeir[oa]|segund[oa]|terceir[oa]|ultim[oa])\b/.exec(t0);
+  if (ord) {
+    const w = ord[1]!;
+    if (w.startsWith("ultim")) return memory.times[memory.times.length - 1] ?? null;
+    const idx = w.startsWith("primeir") ? 0 : w.startsWith("segund") ? 1 : 2;
+    return memory.times[idx] ?? null;
+  }
+  const when = parseDateTimePt(text, clock);
+  const time = when.time && !when.time.candidates ? when.time.value : null;
+  return time && memory.times.includes(time) ? time : null;
+}
 
 /** "o 2", "2", "o segundo", "o primeiro livre", "o último" → uma das opções oferecidas (ou null). */
 export function pickOffered(text: string, options: { id: string; label: string }[]): { id: string; label: string } | null {
@@ -212,32 +229,45 @@ function answerCatalogQuestion(t: string, text: string, catalog: AgendaCatalog):
 }
 
 /** Assuntos que não são "agendar": consulta, ajuda, conversa e coisas que ainda se fazem nas telas. Null = é um agendamento. */
-async function routeOutsideAgendar(text: string, catalog: AgendaCatalog, clock: ChatClock, ports: AgendarPorts): Promise<string[] | null> {
-  const t = norm(text).replace(/[.!?]+$/g, "").trim();
+/** Abreviações de chat que quebram os atalhos de consulta ("oq tenho amanhã?", "vc faz…"). */
+function expandAbbrev(t: string): string {
+  return t.replace(/\b(oq|oque)\b/g, "o que").replace(/\bvc\b/g, "voce").replace(/\bhj\b/g, "hoje").replace(/\b(amn|amnh)\b/g, "amanha").replace(/\bqdo\b/g, "quando").replace(/\bpq\b/g, "por que");
+}
+
+interface Routed {
+  texts: string[];
+  consult?: AgendarState["consult"];
+}
+
+async function routeOutsideAgendar(text: string, catalog: AgendaCatalog, clock: ChatClock, ports: AgendarPorts): Promise<Routed | null> {
+  const t = expandAbbrev(norm(text).replace(/[.!?]+$/g, "").trim());
   const words = t.split(" ").filter(Boolean);
   const strict = detectAgendar(text);
   const example = exampleFor(catalog);
 
   if (/\b(cancel\w*|desmarc\w*|reagend\w*|remarc\w*|apag\w*|exclu\w*|delet\w*|remov\w*)\b/.test(t) && !/\b(agendar|marcar|reservar)\b/.test(t)) {
-    return ["Ainda não cancelo nem reagendo por aqui. Abra a Agenda, toque no agendamento e use Cancelar ou Reagendar. Por aqui eu agendo novos serviços."];
+    return { texts: ["Ainda não cancelo nem reagendo por aqui. Abra a Agenda, toque no agendamento e use Cancelar ou Reagendar. Por aqui eu agendo novos serviços."] };
   }
   const asksSlots = /^(tem|ha|existe|sobrou|sobra|tem algum|ha algum)\s+(algum |alguma )?(horario|vaga)\b/.test(t) || (/\b(horarios?|vaga|vagas)\b/.test(t) && /\b(livre|livres|disponivel|disponiveis|vago|vagos)\b|\bquais horarios\b/.test(t)) || /\b(tem|ha) (horario|vaga)\b.*\?/.test(text.toLowerCase());
   if (!strict || /^(tem|ha|existe)\b/.test(t)) {
-    if (asksSlots) return [await consultFree(text, catalog, clock, ports)];
+    if (asksSlots) {
+      const r = await consultFree(text, catalog, clock, ports);
+      return { texts: [r.text], consult: r.memory };
+    }
   }
-  if (!strict && (/\b(o que|que|quais|quantos|quanto)\b.*\b(agendamentos?|agenda|compromissos?|atendimentos?|clientes)\b/.test(t) || /\b(minha agenda|agenda d[eo] (hoje|amanha))\b/.test(t) || /\b(o que|que) (eu )?(tenho|temos)\b/.test(t))) return [await consultDay(text, clock, ports)];
+  if (!strict && (/\b(o que|que|quais|quantos|quanto)\b.*\b(agendamentos?|agenda|compromissos?|atendimentos?|clientes)\b/.test(t) || /\b(minha agenda|agenda d[eo] (hoje|amanha))\b/.test(t) || /\b(o que|que) (eu )?(tenho|temos)\b/.test(t))) return { texts: [await consultDay(text, clock, ports)] };
   if (!strict) {
     const answer = answerCatalogQuestion(t, text, catalog);
-    if (answer) return [answer];
+    if (answer) return { texts: [answer] };
   }
-  if (!strict && /\b(cadastr\w+|novo cliente|incluir cliente)\b/.test(t) && /\bcliente\b/.test(t)) return ["Cadastrar cliente por aqui ainda não dá. Use o menu Clientes. Se o cliente for novo num agendamento, eu pergunto se quer cadastrar na hora."];
+  if (!strict && /\b(cadastr\w+|novo cliente|incluir cliente)\b/.test(t) && /\bcliente\b/.test(t)) return { texts: ["Cadastrar cliente por aqui ainda não dá. Use o menu Clientes. Se o cliente for novo num agendamento, eu pergunto se quer cadastrar na hora."] };
   if (!strict && /\b(produto|produtos|estoque|vender|venda|vendas|caixa|financeiro|faturamento|fatura|relatorio|relatorios|compra|compras|fornecedor|folha|funcionario)\b/.test(t)) {
-    return ["Esse assunto eu ainda não faço por aqui. Use o menu do lado (Vendas, Caixa, Estoque, Financeiro…). Por enquanto eu só agendo serviços."];
+    return { texts: ["Esse assunto eu ainda não faço por aqui. Use o menu do lado (Vendas, Caixa, Estoque, Financeiro…). Por enquanto eu só agendo serviços."] };
   }
-  if (!strict && /^(oi|ola|opa|e ai|ei|hey|bom dia|boa tarde|boa noite|tudo bem)\b/.test(t) && words.length <= 4) return [`Oi! Sou a Cláudia. Posso agendar serviços, mostrar horários livres e a agenda do dia. Por exemplo: "${example}".`];
-  if (!strict && /\b(obrigad[oa]|valeu|brigad[oa]|thanks|vlw)\b/.test(t) && words.length <= 5) return ["De nada! Quando precisar, é só pedir."];
+  if (!strict && /^(oi|ola|opa|e ai|ei|hey|bom dia|boa tarde|boa noite|tudo bem)\b/.test(t) && words.length <= 4) return { texts: [`Oi! Sou a Cláudia. Posso agendar serviços, mostrar horários livres e a agenda do dia. Por exemplo: "${example}".`] };
+  if (!strict && /\b(obrigad[oa]|valeu|brigad[oa]|thanks|vlw)\b/.test(t) && words.length <= 5) return { texts: ["De nada! Quando precisar, é só pedir."] };
   if (!strict && /\b(ajuda|help|comandos?)\b|\b(o que|oque) (voce|vc|tu) (faz|sabe|pode)\b|\bcomo (funciona|usar|uso)\b/.test(t)) {
-    return [`Eu faço assim: você diz o que quer e eu pergunto só o que faltar. Exemplos:\n• "${example}"\n• "quais horários livres amanhã?"\n• "o que eu tenho hoje?"\nNada é gravado sem o seu Confirmar. Por enquanto só agendo (não cancelo nem reagendo).`];
+    return { texts: [`Eu faço assim: você diz o que quer e eu pergunto só o que faltar. Exemplos:\n• "${example}"\n• "quais horários livres amanhã?"\n• "o que eu tenho hoje?"\nNada é gravado sem o seu Confirmar. Por enquanto só agendo (não cancelo nem reagendo).`] };
   }
   // "polimento Beatriz amanhã às 10h": serviço conhecido + data/hora, mesmo sem o verbo
   const w = parseDateTimePt(text, clock);
@@ -245,25 +275,30 @@ async function routeOutsideAgendar(text: string, catalog: AgendaCatalog, clock: 
   // serviço conhecido ("polimento Beatriz amanhã 10h") ou cliente conhecido ("João Pedro amanhã às 10h") + data/hora
   const implicit = hasWhen && (matchServices(text, catalog.services).length > 0 || ((await ports.findCustomersInText?.(text))?.length ?? 0) > 0);
   if (strict || implicit) return null;
-  return [`Por enquanto eu consigo agendar serviços. Tente: "${example}".`];
+  return { texts: [`Por enquanto eu consigo agendar serviços. Tente: "${example}".`] };
 }
 
-async function consultFree(text: string, catalog: AgendaCatalog, clock: ChatClock, ports: AgendarPorts): Promise<string> {
+async function consultFree(text: string, catalog: AgendaCatalog, clock: ChatClock, ports: AgendarPorts): Promise<{ text: string; memory?: AgendarState["consult"] }> {
   const when = parseDateTimePt(text, clock);
   const date = when.date?.value ?? clock.today;
   const service = matchServices(text, catalog.services)[0];
   const duration = service?.durationMinutes && service.durationMinutes > 0 ? service.durationMinutes : 30;
   const named = [...matchProfessionals(text, catalog.professionals), ...looseProfessionals(text, catalog.professionals)].filter((p, i, a) => p.active && a.indexOf(p) === i);
   const pros = (named.length ? named : eligibleProfessionals(catalog, service?.id)).slice(0, 5);
-  if (pros.length === 0) return "Não achei nenhum profissional ativo para essa consulta. Confira em Equipe.";
+  if (pros.length === 0) return { text: "Não achei nenhum profissional ativo para essa consulta. Confira em Equipe." };
   const lines: string[] = [];
+  let memory: AgendarState["consult"];
   for (const p of pros) {
     const schedule = await ports.loadSchedule(p.id, date);
     if (!schedule) { lines.push(`• ${p.name}: não consegui ler a agenda agora`); continue; }
     const free = suggestFreeStarts(date, service ? effectiveDuration({ servico: { id: service.id, name: service.name, durationMinutes: service.durationMinutes, price: service.price }, profissional: professionalSlot(p, service.id) }) ?? duration : duration, schedule, clock, 8);
     lines.push(`• ${p.name}: ${free.length ? free.join(", ") : "sem horário livre"}`);
+    if (!memory && free.length) memory = { date, serviceId: service?.id, proId: p.id, times: free };
   }
-  return `Horários livres em ${formatDatePt(date)}${service ? ` para ${service.name}` : ` (${duration} min)`}:\n${lines.join("\n")}\nPara agendar, diga por exemplo: "${exampleFor(catalog)}".`;
+  return {
+    text: `Horários livres em ${formatDatePt(date)}${service ? ` para ${service.name}` : ` (${duration} min)`}:\n${lines.join("\n")}\n${memory ? 'Para agendar, diga por exemplo: "agenda o primeiro pro João" ou "agenda o das 10h pra Maria".' : `Para agendar, diga por exemplo: "${exampleFor(catalog)}".`}`,
+    memory,
+  };
 }
 
 async function consultDay(text: string, clock: ChatClock, ports: AgendarPorts): Promise<string> {
@@ -323,11 +358,26 @@ export async function runAgendarTurn(input: TurnInput, ports: AgendarPorts): Pro
       };
     }
   } else if (!state.started) {
-    const routed = await routeOutsideAgendar(text, catalog, clock, ports);
-    if (routed) {
-      return { state, messages: routed.map((t) => ({ kind: "notice" as const, text: t })), status: "coletando", missing: [], blocks: [], warnings: [] };
+    const memory = state.consult;
+    delete state.consult;
+    const follow = memory ? followConsult(t0, text, memory, clock) : null;
+    if (follow && memory) {
+      // "agenda o primeiro pro Marcos" depois de ver os horários livres: já parte com serviço, profissional, dia e horário
+      const svc = memory.serviceId ? catalog.services.find((s) => s.id === memory.serviceId) : undefined;
+      const pro = catalog.professionals.find((p) => p.id === memory.proId);
+      if (svc) state.slots.servico = { id: svc.id, name: svc.name, durationMinutes: svc.durationMinutes, price: svc.price };
+      if (pro) state.slots.profissional = professionalSlot(pro, svc?.id);
+      state.slots.date = memory.date;
+      state.slots.time = follow;
+      state.started = true;
+    } else {
+      const routed = await routeOutsideAgendar(text, catalog, clock, ports);
+      if (routed) {
+        if (routed.consult) state.consult = routed.consult;
+        return { state, messages: routed.texts.map((t) => ({ kind: "notice" as const, text: t })), status: "coletando", missing: [], blocks: [], warnings: [] };
+      }
+      state.started = true;
     }
-    state.started = true;
   }
 
   // horário escolhido entre os que a Cláudia ofereceu ("o 2", "o primeiro livre")
@@ -525,7 +575,8 @@ export async function runAgendarTurn(input: TurnInput, ports: AgendarPorts): Pro
   if (extras.durationMinutes && !state.slots.endTime) state.slots.durationMinutes = extras.durationMinutes;
   if (extras.notes) state.slots.notes = extras.notes;
   if (extras.discountPct !== undefined && state.slots.servico) {
-    const base = state.slots.profissional?.priceOverride ?? state.slots.servico.price;
+    // desconto sobre o preço que está valendo agora (o que a pessoa já combinou, ou o preço do profissional/serviço)
+    const base = state.slots.priceOverride ?? state.slots.profissional?.priceOverride ?? state.slots.servico.price;
     state.slots.priceOverride = Math.round(base * (1 - extras.discountPct / 100) * 100) / 100;
   }
   if (extras.unsupported.includes("recorrencia")) messages.push({ kind: "notice", text: "Ainda não faço agendamentos que se repetem. Eu agendo este e você me pede os próximos." });
@@ -610,9 +661,25 @@ async function finishTurn(state: AgendarState, messages: ChatMessage[], ports: A
     } else if (closed) {
       // ninguém atende nesse dia da semana: o problema é o DIA, não o horário
       state.previous = { date: state.slots.date, time: state.slots.time, endTime: state.slots.endTime };
-      messages.push({ kind: "error", text: `Ninguém atende em ${formatDatePt(state.slots.date)} (dia sem expediente). Qual outro dia prefere?` });
+      const wanted = state.slots.date;
+      messages.push({ kind: "error", text: `Ninguém atende em ${formatDatePt(wanted)} (dia sem expediente).` });
       delete state.slots.date;
       state.asked = ["inicio"];
+      // sugere o próximo dia em que alguém tem vaga
+      let suggestion = "";
+      const duration = effectiveDuration(state.slots);
+      for (let i = 1; i <= 7 && duration && !suggestion; i += 1) {
+        const day = addDaysYmd(wanted, i);
+        for (const p of eligibleProfessionals(catalog, state.slots.servico.id)) {
+          const sched = await ports.loadSchedule(p.id, day);
+          const free = sched ? suggestFreeStarts(day, effectiveDuration({ ...state.slots, profissional: professionalSlot(p, state.slots.servico.id) }) ?? duration, sched, clock, 4) : [];
+          if (free.length) {
+            suggestion = `O próximo dia com horário é ${formatDatePt(day)} (${free.join(", ")}). Quer esse dia? Ou diga outro.`;
+            break;
+          }
+        }
+      }
+      messages.push({ kind: "ask", text: suggestion || "Para qual outro dia você quer?", fields: ["inicio"] });
       return { state, messages, status: "coletando", missing: ["inicio"], blocks: [], warnings: [] };
     } else if (eligibleProfessionals(catalog, state.slots.servico.id).length > 1) {
       state.previous = { date: state.slots.date, time: state.slots.time, endTime: state.slots.endTime };
@@ -665,6 +732,42 @@ async function finishTurn(state: AgendarState, messages: ChatMessage[], ports: A
   const slots = state.slots;
   const schedule = slots.profissional && slots.date ? await ports.loadSchedule(slots.profissional.id, slots.date) : null;
   const validation = validateAgendar(slots, { clock, catalog, schedule });
+  if (validation.blocks.some((b) => /não faz|não está ativo/.test(b)) && slots.servico) {
+    // o profissional escolhido não pode (não faz o serviço ou está inativo): tira a escolha e pergunta quem vai fazer
+    const pros = eligibleProfessionals(catalog, slots.servico.id);
+    delete state.slots.profissional;
+    state.anyPro = false;
+    state.asked = ["profissional"];
+    messages.push({ kind: "error", text: validation.blocks[0]! });
+    messages.push({
+      kind: "ask",
+      text: pros.length ? "Quem vai fazer o serviço?" : "Nenhum profissional ativo faz esse serviço. Ajuste em Equipe.",
+      options: pros.map((p) => ({ id: p.id, label: p.name })),
+      fields: ["profissional"],
+    });
+    return { state, messages, status: "coletando", missing: ["profissional"], blocks: validation.blocks, warnings: validation.warnings };
+  }
+  if (validation.blocks.length > 0 && validation.blocks.some((b) => /dia sem expediente/.test(b)) && slots.profissional && slots.date) {
+    // o problema é o DIA (ele não atende nesse dia da semana): guarda o horário, limpa o dia e já sugere o próximo dia com vaga
+    const duration = effectiveDuration(slots);
+    const wanted = slots.date;
+    state.previous = { date: slots.date, time: slots.time, endTime: slots.endTime };
+    delete state.slots.date;
+    state.asked = ["inicio"];
+    messages.push({ kind: "error", text: validation.blocks[0]! });
+    let suggestion = "";
+    for (let i = 1; i <= 7 && duration; i += 1) {
+      const day = addDaysYmd(wanted, i);
+      const sched = await ports.loadSchedule(slots.profissional.id, day);
+      const free = sched ? suggestFreeStarts(day, duration, sched, clock, 4) : [];
+      if (free.length) {
+        suggestion = `O próximo dia com horário é ${formatDatePt(day)} (${free.join(", ")}). Quer esse dia? Ou diga outro.`;
+        break;
+      }
+    }
+    messages.push({ kind: "ask", text: suggestion || "Para qual outro dia você quer?", fields: ["inicio"] });
+    return { state, messages, status: "coletando", missing: ["inicio"], blocks: validation.blocks, warnings: validation.warnings };
+  }
   if (validation.blocks.length > 0) {
     // limpa o horário que não serve e oferece alternativas
     const duration = effectiveDuration(slots);
