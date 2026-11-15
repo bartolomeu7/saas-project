@@ -110,22 +110,26 @@ async function handle(request: Request) {
       { text: "", state: draft.slots, catalog, clock: nowClock() },
       { findCustomers: (t) => findCustomers(companyId, t), loadSchedule: (professionalId, date) => loadSchedule(companyId, professionalId, date) }
     );
-    if (recheck.status !== "aguardando_confirmacao") {
-      // algo mudou desde o resumo: não grava; devolve o que mudou e volta a coletar (versão nova)
-      await releaseDraft(companyId, user.id, draft.id, "coletando");
+    const freshDates = recheck.state.slots.datas?.length ? recheck.state.slots.datas : null;
+    const draftDates = draft.slots.slots.datas?.length ? draft.slots.slots.datas : null;
+    const datesChanged = JSON.stringify(freshDates) !== JSON.stringify(draftDates);
+    if (recheck.status !== "aguardando_confirmacao" || datesChanged) {
+      // algo mudou desde o resumo: não grava; devolve o que mudou (versão nova do resumo)
+      const keepStatus = recheck.status === "aguardando_confirmacao" ? "aguardando_confirmacao" : "coletando";
+      await releaseDraft(companyId, user.id, draft.id, keepStatus);
       const revised = await saveDraft({
         companyId,
         userId: user.id,
         sessionId: row.sessionId,
         existing: { id: draft.id, version: draft.version, state: draft.slots },
         state: recheck.state,
-        status: "coletando",
+        status: keepStatus,
         missing: recheck.missing,
         blocks: recheck.blocks,
         warnings: recheck.warnings,
         rawText: "(revalidação na confirmação)",
       });
-      const messages: ChatMessage[] = [{ kind: "notice", text: "Antes de gravar, conferi de novo e algo mudou desde o resumo." }, ...recheck.messages];
+      const messages: ChatMessage[] = [{ kind: "notice", text: datesChanged && keepStatus === "aguardando_confirmacao" ? "Antes de gravar, conferi de novo e as datas da série mudaram. Veja o novo resumo." : "Antes de gravar, conferi de novo e algo mudou desde o resumo." }, ...recheck.messages];
       await appendMessages({ companyId, userId: user.id, sessionId: row.sessionId, draftId: draft.id, userText: "(confirmar)", agent: messages });
       return json({ error: "mudou", draftId: draft.id, version: revised?.version ?? null, status: recheck.status, messages }, 409);
     }
@@ -153,37 +157,55 @@ async function handle(request: Request) {
         await writeAuditLog(supabase, { companyId, actorUserId: user.id, entityType: "customer", entityId: customerId, action: AUDIT_ACTIONS.CUSTOMER_CREATED, metadata: { name: s.cliente.name, origem: "chat_ai" } });
       }
     }
-    const result = await createAppointmentCore(supabase, {
-      customerId,
-      serviceId: s.servico.id,
-      professionalId: s.profissional.id,
-      startsAtLocal: `${s.date}T${s.time}`,
-      // só manda duração/valor quando a PESSOA definiu; senão o banco aplica a mesma precedência do cartão
-      durationMinutes: (s.endTime || s.durationMinutes) ? effectiveDuration(s) ?? undefined : undefined,
-      price: s.priceOverride,
-      notes: s.notes,
-    });
+    // uma data (agendamento simples) ou a série já conferida (até 12), na mesma ordem do resumo
+    const dates = recheck.state.slots.datas?.length ? recheck.state.slots.datas : [s.date];
+    const createdIds: string[] = [];
+    let failure: { date: string; error: string } | null = null;
+    for (const date of dates) {
+      const result = await createAppointmentCore(supabase, {
+        customerId,
+        serviceId: s.servico.id,
+        professionalId: s.profissional.id,
+        startsAtLocal: `${date}T${s.time}`,
+        // só manda duração/valor quando a PESSOA definiu; senão o banco aplica a mesma precedência do cartão
+        durationMinutes: (s.endTime || s.durationMinutes) ? effectiveDuration(s) ?? undefined : undefined,
+        price: s.priceOverride,
+        notes: s.notes,
+      });
+      if ("error" in result) {
+        failure = { date, error: result.error };
+        break; // não tenta as próximas: o que já foi criado fica e é contado com exatidão
+      }
+      createdIds.push(result.id || "criado");
+      createdId = createdIds[0]!; // a partir do primeiro criado, NADA libera o rascunho
+    }
 
-    if ("error" in result) {
+    if (failure && createdIds.length === 0) {
       await releaseDraft(companyId, user.id, draft.id);
       await recordFeedback(companyId, draft.id, draft.intent, "falha");
-      const messages: ChatMessage[] = [{ kind: "error", text: `${result.error} Nada foi gravado. Se quiser, confirme de novo ou ajuste o pedido.` }];
+      const messages: ChatMessage[] = [{ kind: "error", text: `${failure.error} Nada foi gravado. Se quiser, confirme de novo ou ajuste o pedido.` }];
       await appendMessages({ companyId, userId: user.id, sessionId: row.sessionId, draftId: draft.id, userText: "(confirmar)", agent: messages });
       return json({ error: "falhou", status: "aguardando_confirmacao", messages }, 422);
     }
 
     // 7) fecha o rascunho com o que foi criado (falha aqui não desfaz nem libera: o agendamento já existe)
-    createdId = result.id || "criado";
-    const message = created();
+    const fmtDate = (d: string) => `${d.slice(8, 10)}/${d.slice(5, 7)}`;
+    const text =
+      dates.length === 1
+        ? created().text
+        : failure
+          ? `Criei ${createdIds.length} de ${dates.length} agendamentos (${dates.slice(0, createdIds.length).map(fmtDate).join(", ")}). Não consegui criar o de ${fmtDate(failure.date)}: ${failure.error} Os seguintes NÃO foram criados. Confira na Agenda.`
+          : `Pronto! Criei ${createdIds.length} agendamentos: ${dates.map(fmtDate).join(", ")}.`;
+    const message: ChatMessage = { kind: "result", text, link: { href: "/app/agenda", label: "Abrir a Agenda" } };
     try {
-      await completeDraft(companyId, user.id, draft.id, { appointmentId: result.id, module: "agenda", intent: draft.intent });
-      await recordFeedback(companyId, draft.id, draft.intent, "confirmado");
+      await completeDraft(companyId, user.id, draft.id, { appointmentId: createdIds[0], appointmentIds: createdIds, falhouEm: failure, module: "agenda", intent: draft.intent });
+      await recordFeedback(companyId, draft.id, draft.intent, failure ? "falha" : "confirmado");
       await appendMessages({ companyId, userId: user.id, sessionId: row.sessionId, draftId: draft.id, userText: "(confirmar)", agent: [message] });
     } catch {
-      // o registro do chat falhou, mas o agendamento foi criado: segue e informa o sucesso
+      // o registro do chat falhou, mas os agendamentos foram criados: segue e informa o resultado
     }
     revalidatePath("/app/agenda");
-    return json({ status: "concluido", messages: [message] });
+    return json({ status: failure ? "parcial" : "concluido", created: createdIds.length, total: dates.length, messages: [message] });
   } catch {
     if (createdId) {
       // já criou: nunca libera para nova tentativa; informa o sucesso

@@ -93,9 +93,9 @@ test("duração pedida ('por 1 hora', 'duração 45 minutos') sem confundir com 
   assert.equal(r.state.slots.servico?.name, "Corte Masculino");
 });
 
-test("pedidos que ainda não existem são avisados (recorrência, duplicar, 'com desconto' sem valor)", async () => {
+test("pedidos que ainda não existem são avisados (duplicar, 'com desconto' sem valor); a recorrência pergunta por quantas vezes", async () => {
   const base = "agendar corte para João Pedro amanhã às 10h com a Ana";
-  assert.ok(has(await run([`${base} toda semana`]), "notice", /não faço agendamentos que se repetem/));
+  assert.ok(has(await run([`${base} toda semana`]), "ask", /Por quantas vezes/), "repetição agora é suportada: pergunta por quantas vezes");
   assert.ok(has(await run([base, "duplica para a Beatriz"]), "notice", /um de cada vez/));
   assert.ok(has(await run([`${base} com desconto`]), "notice", /valor final ou a porcentagem/));
 });

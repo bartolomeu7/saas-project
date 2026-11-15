@@ -2,6 +2,7 @@ import { norm, tokens } from "./text.ts";
 import { spokenNumbersToDigits } from "./numbers-pt.ts";
 import { findPhonesInText } from "./phone-br.ts";
 import { holidayOn } from "./holidays-br.ts";
+import { describeRecurrence, expandRecurrence, parseLimitAnswer, parseRecurrence, MAX_OCCURRENCES } from "./recurrence-pt.ts";
 import { parseDateTimePt, formatDatePt, minutesOf, weekdayOf, addDays as addDaysYmd, type ChatClock } from "./datetime-pt.ts";
 import {
   detectAgendar,
@@ -228,6 +229,17 @@ function answerCatalogQuestion(t: string, text: string, catalog: AgendaCatalog):
   }
   return null;
 }
+
+/** Motivo curto para a lista de datas puladas. */
+function shortReason(block: string): string {
+  if (/ocupado/.test(block)) return "horário ocupado";
+  if (/bloqueio/.test(block)) return "bloqueio do profissional";
+  if (/dia sem expediente|não atende em/.test(block)) return "dia sem expediente";
+  if (/não atende nesse horário|depois do fim do expediente|termin/.test(block)) return "fora do expediente";
+  return block.length > 40 ? `${block.slice(0, 37)}…` : block;
+}
+
+const describeRecurrenceText = (rec: NonNullable<AgendarSlots["recorrencia"]>): string => describeRecurrence(rec);
 
 /** Assuntos que não são "agendar": consulta, ajuda, conversa e coisas que ainda se fazem nas telas. Null = é um agendamento. */
 /** Abreviações de chat que quebram os atalhos de consulta ("oq tenho amanhã?", "vc faz…"). */
@@ -556,7 +568,11 @@ export async function runAgendarTurn(input: TurnInput, ports: AgendarPorts): Pro
   // valores sem dúvida entram mesmo com outra escolha pendente; os ambíguos só viram pergunta se não houver outra pendente
   if (when.date) {
     if (!when.date.candidates) state.slots.date = when.date.value;
-    else if (!state.pending) state.pending = { field: "data", options: when.date.candidates.map((d) => ({ id: d, label: formatDatePt(d) })) };
+    else if (parseRecurrence(text)?.weekday !== undefined) {
+      // "toda quarta" num dia de quarta: a série começa hoje se ainda dá tempo, senão na semana que vem (não precisa perguntar)
+      const t = state.slots.time ?? (when.time && !when.time.candidates ? when.time.value : undefined);
+      state.slots.date = !t || minutesOf(t) > clock.nowMinutes ? when.date.candidates[0]! : when.date.candidates[1]!;
+    } else if (!state.pending) state.pending = { field: "data", options: when.date.candidates.map((d) => ({ id: d, label: formatDatePt(d) })) };
   }
   if (when.time) {
     if (!when.time.candidates) state.slots.time = when.time.value;
@@ -597,7 +613,31 @@ export async function runAgendarTurn(input: TurnInput, ports: AgendarPorts): Pro
     const base = state.slots.priceOverride ?? state.slots.profissional?.priceOverride ?? state.slots.servico.price;
     state.slots.priceOverride = Math.round(base * (1 - extras.discountPct / 100) * 100) / 100;
   }
-  if (extras.unsupported.includes("recorrencia")) messages.push({ kind: "notice", text: "Ainda não faço agendamentos que se repetem. Eu agendo este e você me pede os próximos." });
+
+  // repetição: "toda terça por 8 semanas", "todo dia 5 por 3 meses", "quinzenal 4 vezes"; "só uma vez" desfaz
+  if (/\b(so uma vez|sem repetir|nao repete|nao precisa repetir|sem recorrencia)\b/.test(t0)) {
+    delete state.slots.recorrencia;
+    delete state.slots.datas;
+    delete state.slots.puladas;
+  }
+  const rec = parseRecurrence(text);
+  if (rec) {
+    const before = state.slots.recorrencia;
+    state.slots.recorrencia = { ...(before ?? {}), ...rec, ...(rec.limit ? {} : before?.limit ? { limit: before.limit } : {}) };
+    // "toda terça às 10h" sem dia: a primeira data é a próxima terça (ou o próximo dia 5)
+    if (!state.slots.date && rec.weekday !== undefined) {
+      const diff = (rec.weekday - weekdayOf(clock.today) + 7) % 7;
+      const passed = diff === 0 && !!state.slots.time && minutesOf(state.slots.time) <= clock.nowMinutes;
+      state.slots.date = addDaysYmd(clock.today, passed ? 7 : diff);
+    } else if (!state.slots.date && rec.monthday) {
+      const [y, m, d] = clock.today.split("-").map(Number) as [number, number, number];
+      const ym = d < rec.monthday ? [y, m] : m === 12 ? [y + 1, 1] : [y, m + 1];
+      state.slots.date = `${ym[0]}-${String(ym[1]).padStart(2, "0")}-${String(rec.monthday).padStart(2, "0")}`;
+    }
+  } else if (state.slots.recorrencia && !state.slots.recorrencia.limit && !state.slots.recorrencia.until && answering2("recorrencia")) {
+    const lim = parseLimitAnswer(text);
+    if (lim) state.slots.recorrencia = { ...state.slots.recorrencia, limit: lim };
+  }
   if (extras.unsupported.includes("duplicar")) messages.push({ kind: "notice", text: "Eu agendo um de cada vez. Termine este e peça o outro." });
   if (extras.unsupported.includes("desconto-sem-valor")) messages.push({ kind: "notice", text: 'Diga o valor final ou a porcentagem do desconto. Exemplo: "valor 80" ou "10% de desconto".' });
 
@@ -749,6 +789,17 @@ async function finishTurn(state: AgendarState, messages: ChatMessage[], ports: A
   }
 
   const slots = state.slots;
+  if (slots.recorrencia && !slots.recorrencia.limit && !slots.recorrencia.until) {
+    // repete, mas ainda não disse por quanto tempo
+    state.asked = ["recorrencia"];
+    messages.push({
+      kind: "ask",
+      text: `Vai se repetir ${describeRecurrenceText(slots.recorrencia)}. Por quantas vezes? (no máximo ${MAX_OCCURRENCES})`,
+      options: [4, 8, 12].map((n) => ({ id: String(n), label: `${n} vezes` })),
+      fields: ["recorrencia"],
+    });
+    return { state, messages, status: "coletando", missing: [], blocks: [], warnings: [] };
+  }
   const schedule = slots.profissional && slots.date ? await ports.loadSchedule(slots.profissional.id, slots.date) : null;
   const validation = validateAgendar(slots, { clock, catalog, schedule });
   if (validation.blocks.some((b) => /não faz|não está ativo/.test(b)) && slots.servico) {
@@ -811,7 +862,29 @@ async function finishTurn(state: AgendarState, messages: ChatMessage[], ports: A
     return { state, messages, status: "coletando", missing: hasTimeProblem ? ["inicio"] : [], blocks: validation.blocks, warnings: validation.warnings };
   }
 
-  const card = summarizeAgendar(slots, validation);
+  // série: confere CADA data (a primeira já foi conferida acima); as que não servem são puladas e avisadas
+  if (slots.recorrencia && slots.date) {
+    const { dates, capped } = expandRecurrence(slots.date, slots.recorrencia);
+    const valid = [slots.date];
+    const skipped: { date: string; motivo: string }[] = [];
+    for (const d of dates.slice(1)) {
+      const sch = slots.profissional ? await ports.loadSchedule(slots.profissional.id, d) : null;
+      const v = validateAgendar({ ...slots, date: d }, { clock, catalog, schedule: sch });
+      if (v.blocks.length > 0) skipped.push({ date: d, motivo: shortReason(v.blocks[0]!) });
+      else {
+        valid.push(d);
+        const w = v.warnings.find((x) => !/já passou/.test(x));
+        if (w) validation.warnings.push(w);
+      }
+    }
+    state.slots.datas = valid;
+    state.slots.puladas = skipped;
+    if (capped) messages.push({ kind: "notice", text: `Limitei em ${MAX_OCCURRENCES} agendamentos por vez. Depois é só pedir a continuação.` });
+  } else {
+    delete state.slots.datas;
+    delete state.slots.puladas;
+  }
+  const card = summarizeAgendar(state.slots, validation);
   state.asked = [];
   delete state.previous;
   if (!card) return { state, messages: [...messages, { kind: "error", text: "Não consegui montar o resumo. Vamos tentar de novo?" }], status: "coletando", missing: [], blocks: [], warnings: [] };

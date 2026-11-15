@@ -1,6 +1,7 @@
 import { fuzzyEq, nameCoverage, norm, tokenMatches, tokens } from "./text.ts";
 import { extractMoney, spokenNumbersToDigits } from "./numbers-pt.ts";
 import { holidayWarning } from "./holidays-br.ts";
+import { describeRecurrence, type Recurrence } from "./recurrence-pt.ts";
 import {
   addMinutesToLocal,
   formatDatePt,
@@ -335,12 +336,18 @@ export interface AgendarSlots {
   priceOverride?: number;
   /** duração pedida pela pessoa ("por 1 hora"); vale no lugar da do serviço/profissional */
   durationMinutes?: number;
+  /** repetição pedida ("toda terça por 8 semanas") */
+  recorrencia?: Recurrence;
+  /** datas já conferidas da série (a primeira é `date`); calculado a cada volta, nunca vem da pessoa */
+  datas?: string[];
+  /** datas da série que NÃO serão agendadas e por quê */
+  puladas?: { date: string; motivo: string }[];
   notes?: string;
   /** "tarde" etc. quando só disse a faixa */
   dayPart?: string;
 }
 
-export type AgendarField = "servico" | "cliente" | "profissional" | "inicio";
+export type AgendarField = "servico" | "cliente" | "profissional" | "inicio" | "recorrencia";
 
 /** Ordem de pergunta = ordem desta lista. */
 export const AGENDAR_REQUIRED: AgendarField[] = ["servico", "cliente", "profissional", "inicio"];
@@ -571,9 +578,11 @@ export function summarizeAgendar(slots: AgendarSlots, validation: Validation): C
   const duration = validation.durationMinutes ?? effectiveDuration(slots);
   const end = duration ? addMinutesToLocal(slots.date, slots.time, duration) : null;
   const price = slots.priceOverride ?? slots.profissional.priceOverride ?? slots.servico.price;
+  const serie = slots.datas && slots.datas.length > 1 ? slots.datas : null;
+  const short = (d: string) => `${d.slice(8, 10)}/${d.slice(5, 7)}`;
   return {
     module: "Agenda",
-    title: "Novo agendamento",
+    title: serie ? `Novos agendamentos (${serie.length})` : "Novo agendamento",
     risk: "R1",
     fields: [
       slots.cliente.isNew
@@ -592,6 +601,16 @@ export function summarizeAgendar(slots: AgendarSlots, validation: Validation): C
         note: slots.priceOverride !== undefined ? undefined : slots.profissional.priceOverride != null ? "valor do profissional para este serviço" : "preço do serviço",
       },
       ...(slots.notes ? [{ label: "Observações", value: slots.notes }] : []),
+      ...(serie && slots.recorrencia
+        ? [
+            {
+              label: "Repete",
+              value: `${describeRecurrence(slots.recorrencia)} · ${serie.length} agendamentos, no mesmo horário`,
+              note: slots.puladas?.length ? `pulei ${slots.puladas.length}: ${slots.puladas.map((p) => `${short(p.date)} (${p.motivo})`).join("; ")}` : undefined,
+            },
+            { label: "Datas", value: serie.map((d) => `${formatDatePt(d).split(",")[0]!.slice(0, 3)} ${short(d)}`).join(", ") },
+          ]
+        : []),
     ],
     warnings: validation.warnings,
     blocks: validation.blocks,
@@ -609,7 +628,7 @@ export interface AgendarExtras {
   durationMinutes?: number;
   notes?: string;
   /** coisas que o chat ainda não faz e que não devem ser ignoradas em silêncio */
-  unsupported: ("recorrencia" | "duplicar" | "desconto-sem-valor")[];
+  unsupported: ("duplicar" | "desconto-sem-valor")[];
 }
 
 const NUM_WORDS: Record<string, number> = { um: 1, uma: 1, dois: 2, duas: 2, tres: 3, quatro: 4, meia: 0.5, meio: 0.5 };
@@ -657,7 +676,6 @@ export function parseExtras(text: string): AgendarExtras {
     if (minutes >= 5 && minutes <= 12 * 60) extras.durationMinutes = Math.round(minutes);
   }
 
-  if (/\b(toda (a )?(semana|segunda|terca|quarta|quinta|sexta|sabado)|todos os dias|todo dia|semanalmente|mensalmente|recorrente|se repete|repete|repetir)\b/.test(t)) extras.unsupported.push("recorrencia");
   if (/\b(duplic\w*|copi\w+ (isso|esse|este))\b/.test(t)) extras.unsupported.push("duplicar");
   return extras;
 }
