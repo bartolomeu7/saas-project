@@ -173,3 +173,11 @@ test("rotas: só aceitam JSON (um formulário de outro site com text/plain não 
     assert.ok(src.includes('"sec-fetch-site"') && src.includes('"origem_invalida"'), "só do mesmo site");
   }
 });
+
+test("rota do turno: a memória da consulta de horários livres é guardada (senão 'agenda o primeiro pro Marcos' perde o contexto)", () => {
+  assert.ok(route.includes("!result.state.started && !result.state.consult"));
+});
+
+test("agenda do dia: agendamento sem cliente/profissional aparece com rótulo claro, não com '—'", () => {
+  assert.ok(data.includes('"sem cliente"') && data.includes('"sem profissional"'));
+});
