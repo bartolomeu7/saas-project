@@ -334,12 +334,14 @@ test("cartão só existe com a ficha completa", () => {
 // ------------------------------------------------------------------------------------------------ pureza do núcleo
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
+/** Bibliotecas puras (sem rede, sem banco, sem IA) aprovadas para o núcleo. Cada uma entra por PR, com justificativa. */
+const PURE_LIBS = ["libphonenumber-js/min"];
 test("núcleo do Chat AI é puro: sem banco, rede, React nem Next (só importa arquivos do próprio núcleo)", () => {
   const dir = path.join(process.cwd(), "src/lib/chat");
   for (const file of readdirSync(dir).filter((f) => f.endsWith(".ts"))) {
     const source = readFileSync(path.join(dir, file), "utf8");
     for (const match of source.matchAll(/from\s+["']([^"']+)["']/g)) {
-      assert.ok(match[1].startsWith("./"), `${file} importa "${match[1]}" (o núcleo só pode importar ./ do próprio núcleo)`);
+      assert.ok(match[1].startsWith("./") || PURE_LIBS.includes(match[1]), `${file} importa "${match[1]}" (o núcleo só pode importar ./ do próprio núcleo ou bibliotecas puras aprovadas)`);
     }
     assert.ok(!/\bfetch\(|process\.env|createSessionClient|"use server"/.test(source), `${file} usa rede, ambiente ou servidor`);
   }

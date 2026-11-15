@@ -1,5 +1,6 @@
 import { norm, tokens } from "./text.ts";
 import { spokenNumbersToDigits } from "./numbers-pt.ts";
+import { findPhonesInText } from "./phone-br.ts";
 import { parseDateTimePt, formatDatePt, minutesOf, weekdayOf, type ChatClock } from "./datetime-pt.ts";
 import {
   detectAgendar,
@@ -171,6 +172,9 @@ function addToTime(time: string, delta: number): string | null {
 }
 
 function extractPhoneRef(text: string): string | undefined {
+  // número completo (qualquer formato, com ou sem DDD/+55): vira dígitos nacionais; "final 7777" cai na regra de sufixo abaixo
+  const full = findPhonesInText(text)[0];
+  if (full) return full.national;
   const m = /\b(?:final|terminad[oa] em|telefone|fone|celular|whatsapp|zap)\s*(?:e |do |de |numero |n[uú]mero )?([\d()\s.\-]{4,})/i.exec(text);
   const digits = m?.[1]?.replace(/\D/g, "");
   return digits && digits.length >= 4 ? digits : undefined;
