@@ -335,7 +335,7 @@ test("cartão só existe com a ficha completa", () => {
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 /** Bibliotecas puras (sem rede, sem banco, sem IA) aprovadas para o núcleo. Cada uma entra por PR, com justificativa. */
-const PURE_LIBS = ["libphonenumber-js/min"];
+const PURE_LIBS = ["libphonenumber-js/min", "rrule"];
 test("núcleo do Chat AI é puro: sem banco, rede, React nem Next (só importa arquivos do próprio núcleo)", () => {
   const dir = path.join(process.cwd(), "src/lib/chat");
   for (const file of readdirSync(dir).filter((f) => f.endsWith(".ts"))) {
