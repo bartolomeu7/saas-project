@@ -21,20 +21,34 @@ export function toLocalSaoPaulo(iso: string): string {
 
 export async function loadAgendaCatalog(companyId: string): Promise<AgendaCatalog> {
   const supabase: Db = await createSessionClient();
+  const loadServices = async () => {
+    const base = () => supabase.from("services");
+    // a coluna aliases vem de uma migration: se ainda não existe, o chat segue sem apelidos
+    const withAliases = await base().select("id,name,duration_minutes,sale_price,aliases").eq("company_id", companyId).eq("status", "active").order("name");
+    if (!withAliases.error) return withAliases;
+    return base().select("id,name,duration_minutes,sale_price").eq("company_id", companyId).eq("status", "active").order("name");
+  };
   const [servicesRes, prosRes] = await Promise.all([
-    supabase.from("services").select("id,name,duration_minutes,sale_price").eq("company_id", companyId).eq("status", "active").order("name"),
+    loadServices(),
     supabase.from("professional_profiles").select("id,display_name,active").eq("company_id", companyId).order("display_name"),
   ]);
   const pros = (prosRes.data ?? []) as { id: string; display_name: string; active: boolean }[];
   const links = pros.length
     ? ((await supabase.from("professional_services").select("professional_id,service_id,duration_override_minutes,price_override").in("professional_id", pros.map((p) => p.id))).data ?? [])
     : [];
+  // tabela company_holidays vem de uma migration: se ainda não existe (erro), segue sem feriados da empresa
+  const holidaysRes = await supabase.from("company_holidays").select("holiday_date,name,yearly,closed").eq("company_id", companyId).limit(200);
+  const companyHolidays = holidaysRes.error
+    ? []
+    : ((holidaysRes.data ?? []) as { holiday_date: string; name: string; yearly: boolean; closed: boolean }[]).map((h) => ({ date: h.holiday_date, name: h.name, yearly: h.yearly, closed: h.closed }));
   return {
-    services: ((servicesRes.data ?? []) as { id: string; name: string; duration_minutes: number | null; sale_price: number | string }[]).map((s) => ({
+    companyHolidays,
+    services: ((servicesRes.data ?? []) as { id: string; name: string; duration_minutes: number | null; sale_price: number | string; aliases?: string[] | null }[]).map((s) => ({
       id: s.id,
       name: s.name,
       durationMinutes: s.duration_minutes,
       price: Number(s.sale_price),
+      aliases: Array.isArray(s.aliases) ? s.aliases : [],
     })),
     professionals: pros.map((p) => {
       const mine = (links as { professional_id: string; service_id: string; duration_override_minutes: number | null; price_override: number | string | null }[]).filter((l) => l.professional_id === p.id);
