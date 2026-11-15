@@ -1,5 +1,6 @@
 import { fuzzyEq, nameCoverage, norm, tokenMatches, tokens } from "./text.ts";
 import { extractMoney, spokenNumbersToDigits } from "./numbers-pt.ts";
+import { holidayWarning } from "./holidays-br.ts";
 import {
   addMinutesToLocal,
   formatDatePt,
@@ -511,6 +512,8 @@ export function validateAgendar(
     if (endParts.date !== slots.date && endParts.time !== "00:00") warnings.push(`Esse atendimento termina depois da meia-noite (${endParts.time} do dia seguinte). Confira o horário.`);
     const yearAhead = addMinutesToLocal(ctx.clock.today, "00:00", 366 * 1440).date;
     if (slots.date > yearAhead) warnings.push("Essa data está a mais de um ano. Confira.");
+    const holiday = holidayWarning(slots.date, formatDatePt(slots.date));
+    if (holiday) warnings.push(holiday);
   }
   return result;
 }

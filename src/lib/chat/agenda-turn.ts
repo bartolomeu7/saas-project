@@ -1,6 +1,7 @@
 import { norm, tokens } from "./text.ts";
 import { spokenNumbersToDigits } from "./numbers-pt.ts";
 import { findPhonesInText } from "./phone-br.ts";
+import { holidayOn } from "./holidays-br.ts";
 import { parseDateTimePt, formatDatePt, minutesOf, weekdayOf, addDays as addDaysYmd, type ChatClock } from "./datetime-pt.ts";
 import {
   detectAgendar,
@@ -309,8 +310,9 @@ async function consultFree(text: string, catalog: AgendaCatalog, clock: ChatCloc
     lines.push(`• ${p.name}: ${free.length ? free.join(", ") : "sem horário livre"}`);
     if (!memory && free.length) memory = { date, serviceId: service?.id, proId: p.id, times: free };
   }
+  const holiday = holidayOn(date);
   return {
-    text: `Horários livres em ${formatDatePt(date)}${service ? ` para ${service.name}` : ` (${duration} min)`}:\n${lines.join("\n")}\n${memory ? 'Para agendar, diga por exemplo: "agenda o primeiro pro João" ou "agenda o das 10h pra Maria".' : `Para agendar, diga por exemplo: "${exampleFor(catalog)}".`}`,
+    text: `Horários livres em ${formatDatePt(date)}${service ? ` para ${service.name}` : ` (${duration} min)`}${holiday ? ` — ${holiday.kind === "feriado" ? "feriado" : "ponto facultativo"}: ${holiday.name}` : ""}:\n${lines.join("\n")}\n${memory ? 'Para agendar, diga por exemplo: "agenda o primeiro pro João" ou "agenda o das 10h pra Maria".' : `Para agendar, diga por exemplo: "${exampleFor(catalog)}".`}`,
     memory,
   };
 }
@@ -320,9 +322,11 @@ async function consultDay(text: string, clock: ChatClock, ports: AgendarPorts): 
   const date = when.date?.value ?? clock.today;
   if (!ports.loadDayAppointments) return `Para ver a agenda de ${formatDatePt(date)}, abra o menu Agenda.`;
   const list = (await ports.loadDayAppointments(date)).filter((a) => !/cancel|no_show/.test(a.status));
-  if (list.length === 0) return `Sem agendamentos em ${formatDatePt(date)}.`;
+  const hol = holidayOn(date);
+  const holText = hol ? ` (${hol.kind === "feriado" ? "feriado" : "ponto facultativo"}: ${hol.name})` : "";
+  if (list.length === 0) return `Sem agendamentos em ${formatDatePt(date)}${holText}.`;
   const shown = list.slice(0, 15).map((a) => `• ${a.start}–${a.end} ${a.customer} · ${a.service} (${a.professional})`);
-  return `Agenda de ${formatDatePt(date)} (${list.length} agendamento${list.length > 1 ? "s" : ""}):\n${shown.join("\n")}${list.length > 15 ? `\n… e mais ${list.length - 15}. Veja todos no menu Agenda.` : ""}`;
+  return `Agenda de ${formatDatePt(date)}${holText} (${list.length} agendamento${list.length > 1 ? "s" : ""}):\n${shown.join("\n")}${list.length > 15 ? `\n… e mais ${list.length - 15}. Veja todos no menu Agenda.` : ""}`;
 }
 
 export async function runAgendarTurn(input: TurnInput, ports: AgendarPorts): Promise<TurnResult> {
