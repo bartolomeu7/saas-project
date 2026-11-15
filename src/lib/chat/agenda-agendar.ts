@@ -1,5 +1,5 @@
 import { fuzzyEq, nameCoverage, norm, tokenMatches, tokens } from "./text.ts";
-import { spokenNumbersToDigits } from "./numbers-pt.ts";
+import { extractMoney, spokenNumbersToDigits } from "./numbers-pt.ts";
 import {
   addMinutesToLocal,
   formatDatePt,
@@ -629,6 +629,11 @@ export function parseExtras(text: string): AgendarExtras {
     const v = toNum(price[1]!);
     if (Number.isFinite(v) && v >= 0 && v <= 1_000_000) extras.priceOverride = Math.round(v * 100) / 100;
   } else if (/\b(gratis|gratuito|de graca|cortesia|sem cobrar|sem custo)\b/.test(t)) extras.priceOverride = 0;
+  else {
+    // valor por extenso com moeda: "cento e cinquenta reais", "mil e duzentos reais"
+    const spoken = extractMoney(body);
+    if (spoken && spoken.value > 0 && spoken.value <= 1_000_000) extras.priceOverride = Math.round(spoken.value * 100) / 100;
+  }
 
   const pct = /\b(\d{1,2})\s*%\s*(?:de )?desconto\b/.exec(t) ?? /\bdesconto de (\d{1,2})\s*%/.exec(t);
   if (pct) extras.discountPct = Math.min(100, Number(pct[1]));

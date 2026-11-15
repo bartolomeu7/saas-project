@@ -1,4 +1,5 @@
 import { customerMatches, fuzzyEq, norm, tokenMatches, tokens } from "./text.ts";
+import { normalizePhoneBr } from "./phone-br.ts";
 
 /**
  * Chat AI — busca de clientes (pura, usada pelo servidor e pelos testes). Sem banco: recebe a lista de clientes.
@@ -66,10 +67,17 @@ export function scanCustomers(list: CustomerRow[], text: string, limit = 5): Cus
 export function customersByPhone(list: CustomerRow[], digits: string, limit = 5): CustomerHit[] {
   const d = digits.replace(/\D/g, "");
   if (d.length < 4) return [];
+  // número completo: compara pelo número normalizado (o cadastro pode ter "(11) 99999-0000" e a frase "11999990000")
+  const wanted = d.length >= 8 ? normalizePhoneBr(d) : null;
   return list
     .filter((c) => {
       const p = (c.phone ?? "").replace(/\D/g, "");
-      return p.length > 0 && (d.length >= 8 ? p.endsWith(d) || p.includes(d) : p.endsWith(d));
+      if (p.length === 0) return false;
+      if (wanted) {
+        const mine = normalizePhoneBr(c.phone);
+        if (mine) return mine.e164 === wanted.e164;
+      }
+      return d.length >= 8 ? p.endsWith(d) || p.includes(d) : p.endsWith(d);
     })
     .slice(0, limit)
     .map(toHit);

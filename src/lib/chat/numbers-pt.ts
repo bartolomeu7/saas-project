@@ -17,7 +17,7 @@ const HUNDREDS: Record<string, number> = {
   oitocentas: 800, novecentos: 900, novecentas: 900,
 };
 
-const isNumberWord = (w: string) => w in UNITS || w in TENS || w in HUNDREDS || w === "mil" || w === "milhao" || w === "milhoes";
+export const isNumberWord = (w: string) => w in UNITS || w in TENS || w in HUNDREDS || w === "mil" || w === "milhao" || w === "milhoes";
 
 /** "cento e cinquenta" → 150; null se a sequência não formar número. */
 export function wordsToNumber(words: string[]): number | null {
