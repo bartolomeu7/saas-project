@@ -185,3 +185,32 @@ test("confirmar: grava a série na ordem, para na primeira falha e conta exatame
   assert.ok(confirmSrc.includes("datesChanged"), "datas da série mudaram desde o resumo → pede nova conferência, não grava");
   assert.ok(confirmSrc.includes("createdId = createdIds[0]"), "depois do primeiro criado, nada libera o rascunho");
 });
+
+// ------------------------------------------------------------------ achados do teste real (site, teste1)
+test("o nome do cliente não engole a palavra da repetição ('Juliana toda quarta', 'Marcos quinzenal')", async () => {
+  for (const [text, nome] of [
+    ["agendar teste onda E para Juliana toda quarta às 16h por 4 semanas", "Juliana Ferreira Nogueira"],
+    ["agendar escova progressiva para Marcos quinzenal segunda às 10h por dois meses", "Marcos Vinícius Albuquerque"],
+    ["agendar teste onda E para Beatriz Cavalcanti todo dia 20 às 15h por 3 meses", "Beatriz Cavalcanti Duarte"],
+    ["agendar teste onda E para Juliana semanal quinta às 9h 4 vezes", "Juliana Ferreira Nogueira"],
+    ["agendar teste onda E para Juliana a cada 15 dias às 9h 4 vezes", "Juliana Ferreira Nogueira"],
+    ["agendar teste onda E para Juliana de 7 em 7 dias às 9h 4 vezes", "Juliana Ferreira Nogueira"],
+  ]) {
+    const r = await run([text]);
+    assert.equal(r.state.slots.cliente?.name, nome, text);
+    assert.ok(!r.state.pending?.options?.some((o) => o.id.startsWith("novo:")), `não oferece cliente novo: ${text}`);
+  }
+});
+
+test("propriedade: nenhuma frase de repetição vira nome de cliente novo", async () => {
+  const ritmos = fc.constantFrom("toda quarta", "todas as terças", "todo dia 5", "quinzenal", "semanalmente", "mensal", "a cada 15 dias", "de 7 em 7 dias", "todos os dias");
+  const clientes = fc.constantFrom("Juliana", "Marcos", "Beatriz Cavalcanti", "Zé Ninguém", "Maria Aparecida");
+  await fc.assert(
+    fc.asyncProperty(ritmos, clientes, async (rit, c) => {
+      const r = await run([`agendar teste onda E para ${c} ${rit} às 16h por 4 semanas`], { today: "2026-11-15", nowMinutes: 9 * 60 });
+      const novos = (r.state.pending?.options ?? []).filter((o) => o.id.startsWith("novo:")).map((o) => o.id.slice(5).toLowerCase());
+      return novos.every((n) => !/\b(toda|todas|todo|todos|quinzenal|semanal|semanalmente|mensal|cada|dias)\b/.test(n));
+    }),
+    { numRuns: 80, seed: 20261115 }
+  );
+});

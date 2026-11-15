@@ -104,7 +104,7 @@ function detectAgendarStrict(text: string): boolean {
   );
 }
 
-const DATE_WORD = /\b(amanha|hoje|ontem|depois de amanha|daqui|segunda|terca|quarta|quinta|sexta|sabado|domingo|dia \d+|\d{1,2}\/\d{1,2}|as \d+|\d{1,2}h|\d{1,2}:\d{2}|de manha|de tarde|de noite|semana|proxim[oa]|primeiro de|janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro|observacao|obs|tipo de servico|servico|essa|esse|esta|este|que vem|mes|anteontem|agora|cedo|fim do|ate|das|por|valor|duracao|gratis|desconto|com desconto)\b/;
+const DATE_WORD = /\b(amanha|hoje|ontem|depois de amanha|daqui|segunda|terca|quarta|quinta|sexta|sabado|domingo|dia \d+|\d{1,2}\/\d{1,2}|as \d+|\d{1,2}h|\d{1,2}:\d{2}|de manha|de tarde|de noite|semana|proxim[oa]|primeiro de|janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro|observacao|obs|tipo de servico|servico|essa|esse|esta|este|que vem|mes|anteontem|agora|cedo|fim do|ate|das|por|valor|duracao|gratis|desconto|com desconto|toda|todas|todo|todos|cada|quinzenal|quinzenalmente|semanal|semanalmente|mensal|mensalmente|diario|diariamente|vezes|de \d+ em)\b/;
 const TITLES = /^(?:dr|dra|doutor|doutora|dona|dono|seu|sr|sra|senhor|senhora|sr\.|sra\.|dr\.|dra\.)\s+/;
 
 /** Nome de pessoa plausível (letras, espaço, hífen, apóstrofo, ponto; até 5 palavras). Recusa números, símbolos e frases soltas. */
