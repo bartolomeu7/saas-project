@@ -239,6 +239,20 @@ interface Routed {
   consult?: AgendarState["consult"];
 }
 
+const SCAN_STOP = new Set([
+  "agendar", "agenda", "agende", "marcar", "marca", "marque", "reservar", "reserva", "reserve", "horario", "horarios", "quero", "preciso", "valor", "reais", "real", "mil",
+  "amanha", "hoje", "ontem", "segunda", "terca", "quarta", "quinta", "sexta", "sabado", "domingo", "semana", "tarde", "manha", "noite", "cedo", "dia", "obs", "observacao",
+  "duracao", "horas", "hora", "minutos", "desconto", "gratis", "qualquer", "profissional", "com", "para", "pra", "pro", "bom", "boa", "tudo", "bem",
+]);
+
+/** O texto sem as palavras que são serviço, profissional, dia, hora ou verbo: sobra o que pode ser nome de cliente. */
+function textForCustomerScan(text: string, catalog: AgendaCatalog): string {
+  const stop = new Set(SCAN_STOP);
+  for (const s of catalog.services) for (const t of tokens(s.name)) stop.add(t);
+  for (const p of catalog.professionals) for (const t of tokens(p.name)) stop.add(t);
+  return tokens(text).filter((t) => !stop.has(t) && !/^\d/.test(t)).join(" ");
+}
+
 async function routeOutsideAgendar(text: string, catalog: AgendaCatalog, clock: ChatClock, ports: AgendarPorts): Promise<Routed | null> {
   const t = expandAbbrev(norm(text).replace(/[.!?]+$/g, "").trim());
   const words = t.split(" ").filter(Boolean);
@@ -273,7 +287,7 @@ async function routeOutsideAgendar(text: string, catalog: AgendaCatalog, clock: 
   const w = parseDateTimePt(text, clock);
   const hasWhen = !!(w.date || w.time);
   // serviço conhecido ("polimento Beatriz amanhã 10h") ou cliente conhecido ("João Pedro amanhã às 10h") + data/hora
-  const implicit = hasWhen && (matchServices(text, catalog.services).length > 0 || ((await ports.findCustomersInText?.(text))?.length ?? 0) > 0);
+  const implicit = hasWhen && (matchServices(text, catalog.services).length > 0 || ((await ports.findCustomersInText?.(textForCustomerScan(text, catalog)))?.length ?? 0) > 0);
   if (strict || implicit) return null;
   return { texts: [`Por enquanto eu consigo agendar serviços. Tente: "${example}".`] };
 }
@@ -518,7 +532,7 @@ export async function runAgendarTurn(input: TurnInput, ports: AgendarPorts): Pro
       }
     } else if (!state.pending && ports.findCustomersInText) {
       // nenhum "para/pro": procura no texto o nome de alguém que já é cliente ("corte do joão paulo amanhã 15h")
-      const inText = await ports.findCustomersInText(text);
+      const inText = await ports.findCustomersInText(textForCustomerScan(text, catalog));
       if (inText.length === 1) state.slots.cliente = { id: inText[0]!.id, name: inText[0]!.name };
       else if (inText.length > 1) state.pending = { field: "cliente", options: asOptions(inText) };
     }
@@ -592,7 +606,8 @@ export async function runAgendarTurn(input: TurnInput, ports: AgendarPorts): Pro
     }
   }
   // "sim" digitado diante do resumo: nada é gravado por texto; lembra do botão
-  if (!state.pending && missingFields(state.slots).length === 0 && AFFIRMATIVE.test(t0)) {
+  const hadSummary = !input.state.pending && input.state.started && missingFields(input.state.slots).length === 0;
+  if (hadSummary && !state.pending && missingFields(state.slots).length === 0 && AFFIRMATIVE.test(t0)) {
     messages.push({ kind: "notice", text: "Para gravar, toque em Confirmar no resumo. Por texto eu não gravo nada." });
   }
   return finishTurn(state, messages, ports, catalog, clock);

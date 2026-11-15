@@ -164,3 +164,24 @@ test("nunca fica sem saída: se o resumo não saiu, a conversa pergunta, oferece
     { numRuns: 300, seed: 20261115 }
   );
 });
+
+test("nunca oferece cadastrar como cliente novo um nome que é serviço ou profissional (frases 'pra <serviço> pra <cliente>')", async () => {
+  const svcNames = CATALOG.services.map((s) => s.name.replace(/\s*\(.*\)\s*$/, ""));
+  const proNames = CATALOG.professionals.map((p) => p.name);
+  const forms = fc.constantFrom(
+    (s, c, d) => `preciso de um horário pra ${s} pra ${c} ${d}`,
+    (s, c, d) => `marcar ${s} pra ${c} ${d}`,
+    (s, c, d) => `quero agendar ${s} para ${c} ${d}`,
+    (s, c, d) => `reservar ${s} ${c} ${d}`,
+    (s, c, d) => `bom dia, agendar ${c} pra ${s} ${d}`
+  );
+  await fc.assert(
+    fc.asyncProperty(forms, fc.constantFrom(...svcNames), fc.constantFrom("Zé Ninguém", "Maria Aparecida", "Juliana", "Beatriz", "Marcos"), fc.constantFrom("terça de tarde", "sexta 10h", "amanhã às 9h"), async (form, s, c, d) => {
+      const r = await runAgendarTurn({ text: form(s, c, d), state: emptyState(), catalog: CATALOG, clock: { today: "2026-11-15", nowMinutes: 11 * 60 } }, PORTS);
+      const offered = (r.state.pending?.options ?? []).filter((o) => o.id.startsWith("novo:")).map((o) => o.id.slice(5).toLowerCase());
+      const bad = [...svcNames, ...proNames].map((n) => n.toLowerCase());
+      return offered.every((name) => !bad.some((b) => name === b || b.startsWith(name) && name.split(" ").length > 1));
+    }),
+    { numRuns: 250, seed: 20261115 }
+  );
+});

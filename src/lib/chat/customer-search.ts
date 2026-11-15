@@ -55,6 +55,18 @@ export function scanCustomers(list: CustomerRow[], text: string, limit = 5): Cus
       if (toks[0]!.length >= 4 && matched.length === 1) scored.push({ c, hits: 1 });
     } else if (matched.includes(toks[0]!) && matched.length >= 2) scored.push({ c, hits: matched.length });
   }
+  if (scored.length === 0) {
+    // só o primeiro nome ("reservar polimento marcos quinta"): vale se UM único cliente começa com ele
+    for (const word of said) {
+      if (word.length < 4) continue;
+      const owners = list.filter((c) => {
+        const first = tokens(c.name.replace(/\(.*?\)/g, " "))[0];
+        return !!first && tokenMatches(word, first);
+      });
+      if (owners.length === 1) return [toHit(owners[0]!)];
+    }
+    return [];
+  }
   const best = Math.max(0, ...scored.map((s) => s.hits));
   return scored
     .filter((s) => s.hits === best)

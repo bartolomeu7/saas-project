@@ -270,3 +270,31 @@ test("profissional que não faz o serviço: tira a escolha e pergunta quem vai f
   assert.ok(has(r, "ask", /Quem vai fazer/));
   assert.equal(r.state.slots.profissional, undefined);
 });
+
+// ------------------------------------------------------------------ rodada real nº 4 (bateria de 10 diferentes no site, 15/11/2026)
+test("'preciso de um horário pra escova progressiva pra Juliana terça de tarde': o cliente é Juliana, não 'escova progressiva'", async () => {
+  const r = await run(["preciso de um horário pra escova progressiva pra Juliana terça de tarde"]);
+  assert.equal(r.state.slots.cliente?.name, "Juliana Ferreira Nogueira");
+  assert.equal(r.state.slots.servico?.name, "Escova Progressiva com Tratamento");
+  assert.ok(!r.state.pending?.options?.some((o) => o.id.startsWith("novo:")), "não oferece cadastrar 'escova progressiva'");
+});
+
+test("só o primeiro nome do cliente, sem 'para' ('reservar polimento marcos quinta 9h com rafael valor mil reais')", async () => {
+  const r = await run(["reservar polimento marcos quinta 9h com rafael valor mil reais"]);
+  assert.equal(r.state.slots.cliente?.name, "Marcos Vinícius Albuquerque");
+  assert.equal(r.state.slots.priceOverride, 1000);
+});
+
+test("primeiro nome que NÃO é único não é adivinhado (João: dois clientes) e nome de profissional/serviço não vira cliente", async () => {
+  const r = await run(["reservar polimento joao quinta 9h"]);
+  assert.equal(r.state.slots.cliente, undefined);
+  const s = await run(["agendar teste onda E rafael amanhã às 15h"]);
+  assert.equal(s.state.slots.cliente, undefined);
+});
+
+test("'sim' que responde à oferta de cliente novo NÃO gera o lembrete do botão Confirmar (ainda não há resumo)", async () => {
+  let r = await run(["agendar polimento para Maria Aparecida terça 10h com o Rafael"]);
+  assert.equal(r.state.pending?.options[0].id.startsWith("novo:"), true);
+  r = await run(["agendar polimento para Maria Aparecida terça 10h com o Rafael", "sim"]);
+  assert.ok(!r.messages.some((m) => /toque em Confirmar/.test(m.text ?? "")), "sem lembrete indevido");
+});

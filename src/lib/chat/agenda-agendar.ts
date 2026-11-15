@@ -123,6 +123,9 @@ function cleanCustomerFragment(raw: string): string | undefined {
   let fragment = raw.replace(/^(?:para|pra|pro)\s+/, "").replace(TITLES, "").replace(/^(?:o|a)\s+/, "").replace(TITLES, "");
   // vírgula, ponto e vírgula, interrogação e dois-pontos encerram o nome ("pro João Pedro, de preferência amanhã")
   fragment = fragment.split(/[,;?!:]|\s-\s/)[0]!;
+  // "escova progressiva pra Juliana terça": o serviço veio depois do 1º "pra"; o nome é o que vem depois do ÚLTIMO
+  const parts = fragment.split(/\s+(?:pra|pro|para)\s+/);
+  if (parts.length > 1) fragment = parts[parts.length - 1]!;
   const cut = DATE_WORD.exec(fragment);
   if (cut) fragment = fragment.slice(0, cut.index);
   fragment = fragment.replace(/\s+com\s+.*$/, "").trim().replace(/^(?:e|eh|o|a)\s+/, "").replace(/\s+(com|e|que|as|a|no|na|em|da|de|do|dos|das)$/, "").trim();
