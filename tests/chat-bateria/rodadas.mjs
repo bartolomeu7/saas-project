@@ -92,6 +92,18 @@ add(11, // 4ª série (20/11/2026): horas/datas limite, feriados, injeção, ent
   ["agendar corte para João Pedro amanhã às 10h com Ana", "valor 99999999999"], ["agendar corte", "João Pedro", "amanhã", "10h", "Ana", "sim"], ["agendar corte para João Pedro", "hoje", "12h"],
   ["agendar corte para João Pedro amanhã 10h", "Ana", "voltar", "Felipe"], "quanto tenho em estoque de shampoo?");
 
+add(12, // 5ª série (20/11/2026): nomes parciais, durações por profissional, feriados, pedidos fora do escopo, correções
+  "agendar escova com a Ana amanhã às 10h", "agendar hidratação com Ana sexta às 14h", "agendar polimento com Felipe segunda às 9h", "agendar polimento com a Ana segunda às 9h",
+  "agendar corte com o Rafael amanhã às 11h", "agendar barba com Ana e Felipe amanhã às 11h", "agendar corte masculino para o João Pedro hoje às 18h", "agendar corte para João Pedro hoje às 17h45",
+  "agendar corte para João Pedro amanhã às 17h45", "agendar corte para João Pedro amanhã às 17h30", "agendar polimento para João Pedro amanhã às 15h", "agendar polimento para João Pedro amanhã às 14h",
+  "agendar corte para João Pedro no dia 25 de dezembro às 10h", "agendar corte para João Pedro no dia 1 de janeiro às 10h", "agendar corte para João Pedro no dia 21 de abril às 10h", "agendar corte para João Pedro na sexta-feira santa às 10h",
+  "cancela o último agendamento", "remarca o corte do João Pedro para quinta", "mostra minha agenda de amanhã", "quanto faturei hoje?", "tem estoque de shampoo?", "cadastrar fornecedor Alfa",
+  "agendar corte para João Pedro amanhã às 10h valor 55,50", "agendar corte para João Pedro amanhã às 10h valor 1.000,00", "agendar corte para João Pedro amanhã às 10h por 2 horas", "agendar corte para João Pedro amanhã às 10h por 20 horas",
+  "agendar corte para João Pedro amanhã às 10h por 1 minuto", "agendar corte para João Pedro amanhã às 10h obs: " + "a".repeat(400),
+  ["agendar corte para João Pedro amanhã às 10h com Ana", "troca para o Felipe"], ["agendar corte para João Pedro amanhã às 10h com Ana", "outro dia"], ["agendar corte para João Pedro amanhã às 10h com Ana", "sexta às 15h"],
+  ["agendar corte para João Pedro amanhã às 10h com Ana", "valor 60", "obs: trazer touca"], ["agendar corte", "o João", "hoje"], ["agendar", "corte", "João Pedro", "amanhã 10h", "Ana", "ok"],
+  ["agendar corte para João Pedro amanhã às 10h com Ana", "e uma barba também"]);
+
 const only = process.argv.slice(2).map(Number).filter(Boolean);
 for (const [n, convs] of Object.entries(R)) {
   if (only.length && !only.includes(Number(n))) continue;

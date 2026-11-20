@@ -66,6 +66,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Plano não encontrado." }, { status: 404 });
   }
 
+  if (plan.trial || (plan.price != null && Number(plan.price) <= 0)) {
+    return NextResponse.json({ error: "O teste grátis não é contratado: ele é concedido automaticamente." }, { status: 400 });
+  }
+
+  if (plan.lifetime) {
+    return NextResponse.json({ error: "O acesso vitalício é concedido pelo suporte e não é contratado por aqui." }, { status: 400 });
+  }
+
   if (plan.code === "CUSTOM" || plan.price == null || plan.access_duration_days == null) {
     return NextResponse.json(
       { error: "Este plano é sob consulta — entre em contato com o suporte para um orçamento." },
