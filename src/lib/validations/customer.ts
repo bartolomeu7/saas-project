@@ -78,7 +78,7 @@ const birthDateSchema = z
 
 export const customerSchema = z.object({
   name: requiredText("Informe o nome do cliente (pelo menos 2 letras).", 160, "Nome muito longo.").refine(
-    (value) => value.length >= 2,
+    (value) => value.length >= 2 && /\p{L}/u.test(value),
     "Informe o nome do cliente (pelo menos 2 letras)."
   ),
   document: optionalText(32).refine((value) => documentError(value) === null, {
@@ -102,7 +102,7 @@ export const customerSchema = z.object({
   }),
   complement: optionalText(100),
   neighborhood: optionalText(100),
-  city: optionalText(100),
+  city: optionalText(100).refine((value) => value === null || /\p{L}/u.test(value), { message: "Informe uma cidade válida (com letras)." }),
   state: optionalText(2)
     .transform((value) => (value ? value.toUpperCase() : null))
     .refine((value) => value === null || (BRAZIL_UFS as readonly string[]).includes(value), { message: "UF inválida (use a sigla, ex.: SP)." }),

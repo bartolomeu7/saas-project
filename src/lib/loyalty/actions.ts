@@ -7,6 +7,12 @@ import { getCurrentCompany } from "@/lib/companies/queries";
 import { recalculateSaleTotals } from "@/lib/sales/totals";
 import type { ActionResult } from "@/lib/auth/actions";
 import type { Database } from "@/types/supabase";
+import { endOfDaySaoPauloFromDateString, startOfDaySaoPauloFromDateString } from "@/lib/timezone";
+
+const MAX_CAMPAIGN_BONUS_POINTS = 10_000_000;
+// Os pontos são "integer" no banco: 1e12 vazava "out of range for type integer" (e 2.147.483.647 era aceito).
+const MAX_TIER_POINTS = 100_000_000;
+const MAX_CAMPAIGN_DAYS = 5 * 366;
 
 /** Número obrigatório vindo do formulário; null se ausente/inválido (NaN/Infinity incluídos). */
 function parseRequiredNumber(
@@ -353,10 +359,11 @@ export async function createLoyaltyTierThresholdAction(
 
   const minLifetimePoints = parseRequiredNumber(formData.get("minLifetimePoints"), {
     min: 0,
+    max: MAX_TIER_POINTS,
     integer: true,
   });
   if (minLifetimePoints === null) {
-    return { error: "Pontos mínimos deve ser um número inteiro maior ou igual a zero." };
+    return { error: "Pontos mínimos deve ser um número inteiro de 0 a 100.000.000." };
   }
 
   const supabase = await createSessionClient();
@@ -420,10 +427,11 @@ export async function updateLoyaltyTierThresholdAction(
 
   const minLifetimePoints = parseRequiredNumber(formData.get("minLifetimePoints"), {
     min: 0,
+    max: MAX_TIER_POINTS,
     integer: true,
   });
   if (minLifetimePoints === null) {
-    return { error: "Pontos mínimos deve ser um número inteiro maior ou igual a zero." };
+    return { error: "Pontos mínimos deve ser um número inteiro de 0 a 100.000.000." };
   }
 
   const supabase = await createSessionClient();
@@ -719,6 +727,10 @@ function parseCampaignInput(formData: FormData): CampaignInput | { error: string
   ) {
     return { error: "O bônus em pontos deve ser um número inteiro maior ou igual a zero, ou deixado em branco." };
   }
+  // Sem teto, um bônus de 1 bilhão virava 1.000.000.380 pontos numa venda e a próxima estourava o limite do banco (inteiro).
+  if (bonusPointsRaw !== null && bonusPointsRaw > MAX_CAMPAIGN_BONUS_POINTS) {
+    return { error: "O bônus em pontos é grande demais (máximo 10.000.000 por venda)." };
+  }
   const bonusPoints = bonusPointsRaw;
 
   if (multiplier === null && bonusPoints === null) {
@@ -729,8 +741,10 @@ function parseCampaignInput(formData: FormData): CampaignInput | { error: string
   if (!startsAtRaw) {
     return { error: "Informe a data inicial da campanha." };
   }
-  const startsAtDate = new Date(startsAtRaw);
-  if (Number.isNaN(startsAtDate.getTime())) {
+  // As datas são dias de calendário no fuso de São Paulo: início às 00:00 e fim às 23:59:59 de lá. Antes usavam o fuso do
+  // servidor (UTC): a campanha começava às 21:00 do dia anterior e terminava às 20:59 do último dia.
+  const startsAtDate = startOfDaySaoPauloFromDateString(startsAtRaw);
+  if (!startsAtDate) {
     return { error: "Data inicial inválida." };
   }
 
@@ -738,14 +752,19 @@ function parseCampaignInput(formData: FormData): CampaignInput | { error: string
   if (!endsAtRaw) {
     return { error: "Informe a data final da campanha." };
   }
-  const endsAtDate = new Date(endsAtRaw);
-  if (Number.isNaN(endsAtDate.getTime())) {
+  const endsAtDate = endOfDaySaoPauloFromDateString(endsAtRaw);
+  if (!endsAtDate) {
     return { error: "Data final inválida." };
   }
-  endsAtDate.setHours(23, 59, 59, 999);
 
   if (endsAtDate.getTime() <= startsAtDate.getTime()) {
     return { error: "A data final deve ser depois da data inicial." };
+  }
+  if (startsAtDate.getUTCFullYear() < 2000 || endsAtDate.getUTCFullYear() > 2100) {
+    return { error: "Use datas entre os anos 2000 e 2100." };
+  }
+  if (endsAtDate.getTime() - startsAtDate.getTime() > MAX_CAMPAIGN_DAYS * 86_400_000) {
+    return { error: "A campanha pode durar no máximo 5 anos." };
   }
 
   const statusRaw = formData.get("status");

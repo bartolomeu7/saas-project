@@ -2,6 +2,7 @@ import "server-only";
 
 import { cache } from "react";
 import { createSessionClient } from "@/lib/supabase/server";
+import { buildSearchOr } from "@/lib/search/pattern";
 import { getStockLevel } from "@/types/product";
 import type {
   Product,
@@ -96,18 +97,9 @@ export async function listProducts(
     query = query.eq("category_id", categoryId);
   }
 
-  const trimmedSearch = search?.trim();
-  if (trimmedSearch) {
-    // Mesma sanitização aplicada à busca de clientes: vírgula/parênteses
-    // têm significado especial no filtro .or() do PostgREST.
-    const safeTerm = trimmedSearch.replace(/[,()"\\]/g, "").trim();
-    if (safeTerm) {
-      const term = safeTerm.replace(/[%_]/g, "\\$&");
-      query = query.or(
-        `name.ilike.%${term}%,sku.ilike.%${term}%,barcode.ilike.%${term}%`
-      );
-    }
-  }
+  // Busca sem acento (mesma regra da busca de clientes; sanitização do .or() dentro de buildSearchOr).
+  const searchFilter = buildSearchOr(search ?? "", ["name", "sku", "barcode"]);
+  if (searchFilter) query = query.or(searchFilter);
 
   if (stockLevel === "all") {
     const from = (page - 1) * pageSize;

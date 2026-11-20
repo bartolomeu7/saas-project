@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createSessionClient } from "@/lib/supabase/server";
+import { buildSearchOr } from "@/lib/search/pattern";
 import type { Supplier } from "@/types/supplier";
 
 const db = (client: Awaited<ReturnType<typeof createSessionClient>>) => client as any;
@@ -8,8 +9,8 @@ const db = (client: Awaited<ReturnType<typeof createSessionClient>>) => client a
 export async function listSuppliers(companyId: string, search = ""): Promise<Supplier[]> {
   const supabase = db(await createSessionClient());
   let query = supabase.from("suppliers").select("*").eq("company_id", companyId).order("name");
-  const term = search.trim().replace(/[,()\\"]/g, "").replace(/[%_]/g, "\\$&");
-  if (term) query = query.or(`name.ilike.%${term}%,legal_name.ilike.%${term}%,document.ilike.%${term}%`);
+  const searchFilter = buildSearchOr(search, ["name", "legal_name"], ["document"]);
+  if (searchFilter) query = query.or(searchFilter);
   const { data, error } = await query;
   return error ? [] : ((data ?? []) as Supplier[]);
 }

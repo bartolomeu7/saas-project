@@ -22,12 +22,13 @@ import { useKeepInputOnError } from "@/hooks/use-keep-input-on-error";
 
 const initialState: ActionResult = {};
 
+// Os dias da campanha são de São Paulo (início 00:00 e fim 23:59:59 de lá); "sv-SE" devolve AAAA-MM-DD.
 function toDateInputValue(iso: string): string {
-  return iso.slice(0, 10);
+  return new Date(iso).toLocaleDateString("sv-SE", { timeZone: "America/Sao_Paulo" });
 }
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("pt-BR", { timeZone: "UTC" });
+  return new Date(iso).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
 }
 
 function scopeLabel(campaign: LoyaltyCampaign): string {

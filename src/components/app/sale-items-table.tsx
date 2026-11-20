@@ -89,6 +89,14 @@ function EditableSaleItemRow({ saleId, item }: { saleId: string; item: SaleItem 
     });
   }
 
+  // Enter nos campos de quantidade/desconto salva a linha (antes só o link "Salvar" funcionava).
+  function handleEnter(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "Enter" && dirty && !isSaving) {
+      event.preventDefault();
+      handleSave();
+    }
+  }
+
   function handleRemove() {
     setError(null);
     startRemoving(async () => {
@@ -111,7 +119,9 @@ function EditableSaleItemRow({ saleId, item }: { saleId: string; item: SaleItem 
           step="0.001"
           min="0.001"
           value={quantity}
+          aria-label={`Quantidade de ${item.description}`}
           onChange={(event) => setQuantity(event.target.value)}
+          onKeyDown={handleEnter}
           className="h-8 w-24"
         />
       </TableCell>
@@ -122,7 +132,9 @@ function EditableSaleItemRow({ saleId, item }: { saleId: string; item: SaleItem 
           step="0.01"
           min="0"
           value={discount}
+          aria-label={`Desconto em reais de ${item.description}`}
           onChange={(event) => setDiscount(event.target.value)}
+          onKeyDown={handleEnter}
           className="h-8 w-24"
         />
       </TableCell>

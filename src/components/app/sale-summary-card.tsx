@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { calculateMarginPercentage } from "@/types/sale";
 import type { Sale } from "@/types/sale";
 
+import { formatPercent } from "@/lib/format";
 function formatMoney(value: number): string {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
@@ -48,7 +49,14 @@ export function SaleSummaryCard({ sale, editable }: { sale: Sale; editable: bool
                 step="0.01"
                 min="0"
                 value={discount}
+                aria-label="Desconto manual da venda, em reais"
                 onChange={(event) => setDiscount(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && dirty && !isSaving) {
+                    event.preventDefault();
+                    handleSaveDiscount();
+                  }
+                }}
                 className="h-8 w-28"
               />
               {dirty && (
@@ -94,7 +102,7 @@ export function SaleSummaryCard({ sale, editable }: { sale: Sale; editable: bool
             {formatMoney(sale.estimated_margin)}
             {marginPercentage !== null && (
               <span className="ml-1 text-xs text-muted-foreground">
-                ({marginPercentage.toFixed(1)}%)
+                ({formatPercent(marginPercentage)})
               </span>
             )}
           </dd>

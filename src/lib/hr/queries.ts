@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createSessionClient } from "@/lib/supabase/server";
+import { buildSearchOr } from "@/lib/search/pattern";
 import { todayDateSaoPaulo } from "@/lib/timezone";
 import { addDays, daysInMonth, hasBirthdayInMonth, nextPayday } from "@/lib/hr/schedule";
 import { acquisitionPeriods, type PayrollTables } from "@/lib/hr/payroll";
@@ -49,8 +50,8 @@ export async function listEmployees(
   const supabase = db(await createSessionClient());
   let query = supabase.from("hr_employees").select("*").eq("company_id", companyId).order("full_name");
   if (options.status && options.status !== "all") query = query.eq("status", options.status);
-  const term = (options.search ?? "").trim().replace(/[,()\\"]/g, "").replace(/[%_]/g, "\\$&");
-  if (term) query = query.or(`full_name.ilike.%${term}%,role_title.ilike.%${term}%`);
+  const searchFilter = buildSearchOr(options.search ?? "", ["full_name", "role_title"]);
+  if (searchFilter) query = query.or(searchFilter);
   const { data, error } = await query;
   return error ? [] : ((data ?? []) as any[]).map(normalizeEmployee);
 }

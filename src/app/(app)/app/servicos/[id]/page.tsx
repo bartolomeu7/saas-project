@@ -14,7 +14,7 @@ import { DeactivateServiceButton } from "@/components/app/deactivate-service-but
 import { ReactivateServiceButton } from "@/components/app/reactivate-service-button";
 import { DashboardCard } from "@/components/app/dashboard-card";
 import { ServiceHistoryList } from "@/components/app/service-history-list";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatPercent } from "@/lib/format";
 
 export const metadata: Metadata = {
   title: "Serviço",
@@ -86,7 +86,7 @@ export default async function ServiceDetailPage({
             label="Margem"
             value={formatMoney(margin.value)}
             icon={TrendingUp}
-            hint={margin.percentage === null ? "Sem preço de venda definido" : `${margin.percentage.toFixed(2)}% sobre a venda`}
+            hint={margin.percentage === null ? "Sem preço de venda definido" : `${formatPercent(margin.percentage, 2)} sobre a venda`}
             indicator={margin.value > 0 ? "success" : margin.value < 0 ? "warning" : "neutral"}
           />
           )}

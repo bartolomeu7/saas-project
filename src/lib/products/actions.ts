@@ -145,7 +145,7 @@ export async function updateProductAction(
     return { error: "Categoria inválida." };
   }
 
-  const { error } = await supabase
+  const { data: updatedRows, error } = await supabase
     .from("products")
     .update({
       category_id: parsed.data.categoryId,
@@ -171,13 +171,18 @@ export async function updateProductAction(
     })
     // Redundante com a RLS de propósito (defesa em profundidade).
     .eq("id", id)
-    .eq("company_id", current.company.id);
+    .eq("company_id", current.company.id)
+    .select("id");
 
   if (error) {
     if (error.code === "23505") {
       return { error: "Já existe um produto com esse SKU ou código de barras." };
     }
     return { error: "Não foi possível salvar as alterações. Tente novamente." };
+  }
+
+  if (!updatedRows || updatedRows.length === 0) {
+    return { error: "Produto não encontrado. O cadastro pode ter sido removido ou ser de outra empresa." };
   }
 
   const user = await getCurrentUser();

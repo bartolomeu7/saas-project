@@ -2,6 +2,7 @@ import "server-only";
 
 import { cache } from "react";
 import { createSessionClient } from "@/lib/supabase/server";
+import { buildSearchOr } from "@/lib/search/pattern";
 import type { Service, ServiceStatus, ServiceWithCategory } from "@/types/service";
 
 const DEFAULT_PAGE_SIZE = 20;
@@ -96,16 +97,8 @@ export async function listServices(
     query = query.lte("duration_minutes", maxDuration);
   }
 
-  const trimmedSearch = search?.trim();
-  if (trimmedSearch) {
-    // Mesma sanitização aplicada à busca de produtos/clientes: vírgula/
-    // parênteses têm significado especial no filtro .or() do PostgREST.
-    const safeTerm = trimmedSearch.replace(/[,()"\\]/g, "").trim();
-    if (safeTerm) {
-      const term = safeTerm.replace(/[%_]/g, "\\$&");
-      query = query.ilike("name", `%${term}%`);
-    }
-  }
+  const searchFilter = buildSearchOr(search ?? "", ["name"]);
+  if (searchFilter) query = query.or(searchFilter);
 
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;

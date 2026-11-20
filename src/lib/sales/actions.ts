@@ -30,6 +30,8 @@ import {
   LOYALTY_DISCOUNT_EXCEEDS_SUBTOTAL_ERROR,
   recalculateSaleTotals,
 } from "@/lib/sales/totals";
+import { loyaltyDiscountRuleBroken, loyaltyPercentError } from "@/lib/sales/loyalty-cap";
+import { getLoyaltySettings } from "@/lib/loyalty/queries";
 
 function formatBRL(value: number): string {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -440,9 +442,14 @@ export async function updateSaleItemAction(
     const projectedSubtotal = round2(
       guard.sale.subtotal - Number(item.total_amount) + totalAmount
     );
-    if (projectedSubtotal < guard.sale.loyalty_discount_amount - ROUNDING_TOLERANCE) {
-      return { error: LOYALTY_DISCOUNT_EXCEEDS_SUBTOTAL_ERROR };
-    }
+    const settings = await getLoyaltySettings(current.company.id);
+    const broken = loyaltyDiscountRuleBroken({
+      projectedSubtotal,
+      loyaltyDiscount: guard.sale.loyalty_discount_amount,
+      maxRedeemPercent: settings?.maxRedeemPercentPerSale ?? null,
+    });
+    if (broken === "exceeds_subtotal") return { error: LOYALTY_DISCOUNT_EXCEEDS_SUBTOTAL_ERROR };
+    if (broken === "exceeds_percent") return { error: loyaltyPercentError(settings?.maxRedeemPercentPerSale ?? null) };
   }
 
   const { error } = await supabase
@@ -522,9 +529,14 @@ export async function removeSaleItemAction(
       .maybeSingle();
     if (item) {
       const projectedSubtotal = round2(guard.sale.subtotal - Number(item.total_amount));
-      if (projectedSubtotal < guard.sale.loyalty_discount_amount - ROUNDING_TOLERANCE) {
-        return { ok: false, error: LOYALTY_DISCOUNT_EXCEEDS_SUBTOTAL_ERROR };
-      }
+      const settings = await getLoyaltySettings(current.company.id);
+      const broken = loyaltyDiscountRuleBroken({
+        projectedSubtotal,
+        loyaltyDiscount: guard.sale.loyalty_discount_amount,
+        maxRedeemPercent: settings?.maxRedeemPercentPerSale ?? null,
+      });
+      if (broken === "exceeds_subtotal") return { ok: false, error: LOYALTY_DISCOUNT_EXCEEDS_SUBTOTAL_ERROR };
+      if (broken === "exceeds_percent") return { ok: false, error: loyaltyPercentError(settings?.maxRedeemPercentPerSale ?? null) };
     }
   }
 

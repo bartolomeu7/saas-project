@@ -6,6 +6,7 @@ import { createSessionClient } from "@/lib/supabase/server";
 import { getCurrentCompany } from "@/lib/companies/queries";
 import { getCurrentUser } from "@/lib/auth/session";
 import { productCategorySchema } from "@/lib/validations/product";
+import { nameInUse } from "@/lib/validations/name-in-use";
 import { writeAuditLog } from "@/lib/audit/log";
 import { AUDIT_ACTIONS } from "@/types/audit";
 import type { ActionResult } from "@/lib/auth/actions";
@@ -34,6 +35,10 @@ export async function createCategoryAction(
   }
 
   const supabase = await createSessionClient();
+  if (await nameInUse(supabase, "product_categories", current.company.id, parsed.data.name)) {
+    return { error: "Já existe uma categoria de produto com esse nome." };
+  }
+
   const { data, error } = await supabase
     .from("product_categories")
     .insert({
@@ -81,7 +86,11 @@ export async function updateCategoryAction(
   }
 
   const supabase = await createSessionClient();
-  const { error } = await supabase
+  if (await nameInUse(supabase, "product_categories", current.company.id, parsed.data.name, id)) {
+    return { error: "Já existe uma categoria de produto com esse nome." };
+  }
+
+  const { data: updatedRows, error } = await supabase
     .from("product_categories")
     .update({
       name: parsed.data.name,
@@ -89,10 +98,15 @@ export async function updateCategoryAction(
       status: parsed.data.status,
     })
     .eq("id", id)
-    .eq("company_id", current.company.id);
+    .eq("company_id", current.company.id)
+    .select("id");
 
   if (error) {
     return { error: "Não foi possível salvar as alterações. Tente novamente." };
+  }
+
+  if (!updatedRows || updatedRows.length === 0) {
+    return { error: "Categoria não encontrada. O cadastro pode ter sido removido ou ser de outra empresa." };
   }
 
   const user = await getCurrentUser();

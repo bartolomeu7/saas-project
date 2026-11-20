@@ -7,7 +7,7 @@ import { getCurrentCompany } from "@/lib/companies/queries";
 import { getCurrentUser } from "@/lib/auth/session";
 import { can } from "@/lib/permissions/matrix";
 import { parseMoneyInput } from "@/lib/parse-money";
-import { cleanText } from "@/lib/validations/common";
+import { cleanText, collapseSpaces } from "@/lib/validations/common";
 import { todayDateSaoPaulo } from "@/lib/timezone";
 import { addDays, daysInMonth, diffDays, nextPayday } from "@/lib/hr/schedule";
 import { getEmployee, getEmployeeClt, getHrSettings, getPayrollTables, listVacations } from "@/lib/hr/queries";
@@ -25,6 +25,7 @@ const CONTRACT_TYPES: HrContractType[] = ["indefinite", "experience", "fixed_ter
 const REGIMES: HrEmployerRegime[] = ["simples", "mei", "other"];
 
 /** Texto do formulário sem caracteres de controle/direção invisível e sem espaços nas pontas. */
+const MIN_ATTENDANCE_DATE = "2000-01-01";
 const text = (value: FormDataEntryValue | null) => cleanText(String(value ?? "")).trim();
 
 /**
@@ -83,8 +84,8 @@ interface ParsedInformal extends ParsedCommon {
 }
 
 function parseCommon(formData: FormData): ParsedCommon | { error: string } {
-  const full_name = text(formData.get("full_name"));
-  if (full_name.length < 3) return { error: "Informe o nome completo do funcionário." };
+  const full_name = collapseSpaces(text(formData.get("full_name")));
+  if (full_name.length < 3 || !/\p{L}/u.test(full_name)) return { error: "Informe o nome completo do funcionário." };
   if (full_name.length > 160) return { error: "O nome é longo demais (máximo 160 letras)." };
 
   const birth = text(formData.get("birth_date"));
@@ -98,6 +99,10 @@ function parseCommon(formData: FormData): ParsedCommon | { error: string } {
   }
   const started = text(formData.get("started_on"));
   if (started && !isDate(started)) return { error: "Data de início inválida." };
+  // Sem limites, início em 1900 ou 2099 era aceito. Contratação já combinada pode ser de até 1 ano à frente.
+  if (started && (started < MIN_ATTENDANCE_DATE || started > addDays(todayDateSaoPaulo(), 366))) {
+    return { error: "Data de início fora do período aceito (de 2000 até 1 ano à frente)." };
+  }
   if (started && birth && started < birth) return { error: "A data de início não pode ser anterior à data de nascimento." };
 
   const phone = text(formData.get("phone"));
@@ -122,6 +127,7 @@ function parseEmployee(formData: FormData): ParsedInformal | { error: string } {
   if (!RATE_KINDS.includes(rateKind)) return { error: "Escolha se o pagamento é por diária ou valor fixo." };
   const amount = parseMoneyInput(text(formData.get("base_amount")));
   if (amount === null || amount <= 0) return { error: "Informe o valor (maior que zero)." };
+  if (Math.round(amount * 100) < 1) return { error: "O valor mínimo é R$ 0,01." };
   if (amount >= 10_000_000) return { error: "Valor alto demais." };
 
   const frequency = text(formData.get("pay_frequency")) as HrPayFrequency;
@@ -161,6 +167,7 @@ function parseClt(formData: FormData): ParsedClt | { error: string } {
 
   const salary = parseMoneyInput(text(formData.get("base_amount")));
   if (salary === null || salary <= 0) return { error: "Informe o salário (maior que zero)." };
+  if (Math.round(salary * 100) < 1) return { error: "O salário mínimo aceito é R$ 0,01." };
   if (salary >= 10_000_000) return { error: "Salário alto demais." };
   const payDay = Number(text(formData.get("pay_day_of_month")));
   if (!Number.isInteger(payDay) || payDay < 1 || payDay > 31) return { error: "Informe o dia do mês do pagamento (1 a 31)." };
@@ -323,6 +330,10 @@ export async function setAttendanceAction(_prev: ActionResult, formData: FormDat
   if (dates.length === 0 || dates.some((d) => !isDate(d))) return { error: "Escolha pelo menos um dia válido." };
   const quantity = choice === "clear" ? null : Number(choice);
   if (quantity !== null && (choice === "" || ![0, 0.5, 1].includes(quantity))) return { error: "Escolha: dia inteiro, meio dia ou falta." };
+  // Sem piso, presença de 1901 ou 2020 era gravada (o banco só barra data futura). Apagar (quantity null) segue livre.
+  if (quantity !== null && dates.some((d) => d < MIN_ATTENDANCE_DATE)) {
+    return { error: "Marque presença apenas a partir do ano 2000." };
+  }
   const guard = await manager();
   if ("error" in guard) return guard;
 
@@ -351,7 +362,10 @@ export async function addAdjustmentAction(_prev: ActionResult, formData: FormDat
   if (!employeeId) return { error: "Funcionário inválido." };
   if (!ADJUSTMENT_KINDS.includes(kind)) return { error: "Escolha: vale, desconto ou bônus." };
   if (amount === null || amount <= 0) return { error: "Informe um valor maior que zero." };
+  // 0,001 passa de "maior que zero" mas vira R$ 0,00 ao arredondar para centavos (e o banco recusa com erro técnico)
+  if (Math.round(amount * 100) < 1) return { error: "O valor mínimo é R$ 0,01." };
   if (occurredOn && !isDate(occurredOn)) return { error: "Data inválida." };
+  if (occurredOn && occurredOn < MIN_ATTENDANCE_DATE) return { error: "A data deve ser a partir do ano 2000." };
   if (kind === "advance" && !PAY_METHODS.includes(method as HrPayMethod)) return { error: "Informe como o vale foi pago (dinheiro, Pix ou outro)." };
   const guard = await manager();
   if ("error" in guard) return guard;
@@ -400,6 +414,8 @@ export async function closePeriodAction(_prev: ActionResult, formData: FormData)
   if (!employeeId) return { error: "Funcionário inválido." };
   if (!isDate(start) || !isDate(end)) return { error: "Informe o início e o fim do período." };
   if (end < start) return { error: "O fim do período não pode ser antes do início." };
+  if (start < MIN_ATTENDANCE_DATE) return { error: "O período deve começar a partir do ano 2000." };
+  if (diffDays(start, end) > 366) return { error: "O período pode ter no máximo 1 ano." };
   if (dueOn && !isDate(dueOn)) return { error: "Data de pagamento inválida." };
   const guard = await manager();
   if ("error" in guard) return guard;
@@ -429,6 +445,24 @@ export async function payPaymentAction(_prev: ActionResult, formData: FormData):
   if ("error" in guard) return guard;
 
   const supabase = (await createSessionClient()) as any;
+  // Sem este piso, "pago em 01/01/1900" era aceito (a data só não podia ser futura) e o lançamento do Financeiro saía em 1900.
+  if (paidOn) {
+    const { data: payment } = await supabase
+      .from("hr_payments")
+      .select("period_start")
+      .eq("id", paymentId)
+      .eq("company_id", guard.companyId)
+      .maybeSingle();
+    const periodStart = (payment as { period_start?: string | null } | null)?.period_start ?? null;
+    const floor = periodStart && periodStart > MIN_ATTENDANCE_DATE ? periodStart : MIN_ATTENDANCE_DATE;
+    if (paidOn < floor) {
+      return {
+        error: periodStart
+          ? `A data do pagamento não pode ser antes do início do período (${periodStart.split("-").reverse().join("/")}).`
+          : "A data do pagamento deve ser a partir do ano 2000.",
+      };
+    }
+  }
   const { data, error } = await supabase.rpc("hr_pay_payment", { p_payment_id: paymentId, p_method: method, p_paid_on: paidOn || null });
   if (error) return { error: friendly(error, "Não foi possível registrar o pagamento.") };
   const employeeId = (Array.isArray(data) ? data[0] : data)?.employee_id as string | undefined;

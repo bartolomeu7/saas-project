@@ -12,6 +12,7 @@ import { FormMessage } from "@/components/shared/auth/form-message";
 import { NativeSelect } from "@/components/ui/native-select";
 import { useKeepInputOnError } from "@/hooks/use-keep-input-on-error";
 
+import { formatPercent } from "@/lib/format";
 const initialState: ActionResult = {};
 
 function formatMoney(value: number): string {
@@ -161,7 +162,7 @@ export function ServiceForm({
               <span className="text-xs text-muted-foreground">
                 {margin.percentage === null
                   ? "Defina o preço de venda para calcular %"
-                  : `${margin.percentage.toFixed(2)}% sobre a venda`}
+                  : `${formatPercent(margin.percentage, 2)} sobre a venda`}
               </span>
             </div>
           </div>
