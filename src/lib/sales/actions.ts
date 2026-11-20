@@ -6,6 +6,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createSessionClient } from "@/lib/supabase/server";
 import { getCurrentCompany } from "@/lib/companies/queries";
 import { getCurrentUser } from "@/lib/auth/session";
+import { getCurrentOpenCashRegister } from "@/lib/cash-register/queries";
 import {
   addSaleItemSchema,
   addSalePaymentSchema,
@@ -604,6 +605,14 @@ export async function addSalePaymentAction(
   }
 
   revalidatePath(`/app/vendas/${saleId}`);
+
+  // Dinheiro sem caixa aberto é permitido (nem toda empresa usa o caixa), mas o valor não entra na gaveta: avisa.
+  if (parsed.data.method === "cash") {
+    const openRegister = await getCurrentOpenCashRegister(current.company.id);
+    if (!openRegister) {
+      return { success: "Pagamento registrado. Atenção: não há caixa aberto, então esse dinheiro não entrou no caixa." };
+    }
+  }
   return { success: "Pagamento registrado." };
 }
 

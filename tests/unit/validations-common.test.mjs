@@ -44,3 +44,15 @@ test("parse-money: valor acima do limite do banco é detectado antes de chegar a
   assert.equal(isMoneyTooLarge("abc"), false);
   assert.equal(parseMoneyInput("1.280,50"), 1280.5);
 });
+
+test("cliente: UF, CEP, e-mail, nascimento e caracteres invisíveis usam as regras novas (código)", async () => {
+  const { readFileSync } = await import("node:fs");
+  const src = readFileSync(new URL("../../src/lib/validations/customer.ts", import.meta.url), "utf8");
+  assert.match(src, /BRAZIL_UFS/);
+  assert.match(src, /UF inválida/);
+  assert.match(src, /CEP inválido: use 8 números/);
+  assert.match(src, /toLowerCase\(\)/);
+  assert.match(src, /1900-01-01/);
+  assert.match(src, /requiredText\(/);
+  assert.equal((src.match(/BRAZIL_UFS = \[(.*?)\]/s)?.[1].match(/"[A-Z]{2}"/g) ?? []).length, 27);
+});

@@ -1,13 +1,9 @@
 import { z } from "zod";
+import { boundedMoney, boundedQuantity, cleanText, requiredText } from "./common";
 
-const positiveQuantity = z.coerce
-  .number({ invalid_type_error: "Informe uma quantidade válida." })
-  .positive("A quantidade deve ser maior que zero.");
+const positiveQuantity = boundedQuantity("a quantidade").refine((value) => value > 0, "A quantidade deve ser maior que zero.");
 
-const nonNegativeMoney = (label: string) =>
-  z.coerce
-    .number({ invalid_type_error: `Informe um valor válido para ${label}.` })
-    .min(0, `${label} não pode ser negativo.`);
+const nonNegativeMoney = (label: string) => boundedMoney(label);
 
 export const addSaleItemSchema = z
   .object({
@@ -45,24 +41,17 @@ export const SALE_PAYMENT_METHODS = ["cash", "pix", "debit", "credit", "other"] 
 
 export const addSalePaymentSchema = z.object({
   method: z.enum(SALE_PAYMENT_METHODS),
-  amount: z.coerce
-    .number({ invalid_type_error: "Informe um valor válido." })
-    .positive("O valor do pagamento deve ser maior que zero."),
+  amount: boundedMoney("o valor do pagamento").refine((value) => value > 0, "O valor do pagamento deve ser maior que zero."),
   notes: z
     .string()
-    .trim()
-    .max(200, "Máximo de 200 caracteres.")
-    .optional()
-    .or(z.literal(""))
+    .nullish()
+    .transform((value) => cleanText(value ?? "").trim())
+    .pipe(z.string().max(200, "Máximo de 200 caracteres."))
     .transform((value) => (value ? value : null)),
 });
 export type AddSalePaymentInput = z.infer<typeof addSalePaymentSchema>;
 
 export const cancelSaleSchema = z.object({
-  reason: z
-    .string()
-    .trim()
-    .min(1, "Informe o motivo do cancelamento.")
-    .max(300, "Motivo muito longo."),
+  reason: requiredText("Informe o motivo do cancelamento.", 300, "Motivo muito longo."),
 });
 export type CancelSaleInput = z.infer<typeof cancelSaleSchema>;

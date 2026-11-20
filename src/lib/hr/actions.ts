@@ -7,6 +7,7 @@ import { getCurrentCompany } from "@/lib/companies/queries";
 import { getCurrentUser } from "@/lib/auth/session";
 import { can } from "@/lib/permissions/matrix";
 import { parseMoneyInput } from "@/lib/parse-money";
+import { cleanText } from "@/lib/validations/common";
 import { todayDateSaoPaulo } from "@/lib/timezone";
 import { addDays, daysInMonth, diffDays, nextPayday } from "@/lib/hr/schedule";
 import { getEmployee, getEmployeeClt, getHrSettings, getPayrollTables, listVacations } from "@/lib/hr/queries";
@@ -23,7 +24,8 @@ const PAY_METHODS: HrPayMethod[] = ["cash", "pix", "other"];
 const CONTRACT_TYPES: HrContractType[] = ["indefinite", "experience", "fixed_term"];
 const REGIMES: HrEmployerRegime[] = ["simples", "mei", "other"];
 
-const text = (value: FormDataEntryValue | null) => String(value ?? "").trim();
+/** Texto do formulário sem caracteres de controle/direção invisível e sem espaços nas pontas. */
+const text = (value: FormDataEntryValue | null) => cleanText(String(value ?? "")).trim();
 
 /**
  * Mensagem para a pessoa. As funções do RH recusam com texto em português escrito para leigo (code P0001);
@@ -88,10 +90,15 @@ function parseCommon(formData: FormData): ParsedCommon | { error: string } {
   const birth = text(formData.get("birth_date"));
   if (birth) {
     if (!isDate(birth) || birth < "1900-01-01") return { error: "Data de nascimento inválida." };
-    if (birth > todayDateSaoPaulo()) return { error: "A data de nascimento não pode ser no futuro." };
+    const today = todayDateSaoPaulo();
+    if (birth > today) return { error: "A data de nascimento não pode ser no futuro." };
+    // Idade mínima para trabalhar no Brasil: 14 anos (aprendiz). Abaixo disso quase sempre é erro de digitação.
+    const youngestBirth = `${Number(today.slice(0, 4)) - 14}${today.slice(4)}`;
+    if (birth > youngestBirth) return { error: "O funcionário precisa ter pelo menos 14 anos." };
   }
   const started = text(formData.get("started_on"));
   if (started && !isDate(started)) return { error: "Data de início inválida." };
+  if (started && birth && started < birth) return { error: "A data de início não pode ser anterior à data de nascimento." };
 
   const phone = text(formData.get("phone"));
   const roleTitle = text(formData.get("role_title"));

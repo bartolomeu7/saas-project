@@ -188,30 +188,32 @@ export async function upsertLoyaltySettingsAction(
   const enabled = formData.get("enabled") === "on";
   const pointsExpire = formData.get("pointsExpire") === "on";
 
-  const pointsPerCurrencyUnit = parseRequiredNumber(formData.get("pointsPerCurrencyUnit"));
+  const pointsPerCurrencyUnit = parseRequiredNumber(formData.get("pointsPerCurrencyUnit"), { max: 10_000 });
   if (pointsPerCurrencyUnit === null || pointsPerCurrencyUnit <= 0) {
-    return { error: "Pontos por unidade monetária deve ser um número maior que zero.", field: "pointsPerCurrencyUnit" };
+    return { error: "Pontos por unidade monetária deve ser um número maior que zero (máximo 10.000).", field: "pointsPerCurrencyUnit" };
   }
 
-  const redemptionValuePerPoint = parseRequiredNumber(formData.get("redemptionValuePerPoint"));
+  const redemptionValuePerPoint = parseRequiredNumber(formData.get("redemptionValuePerPoint"), { max: 1_000 });
   if (redemptionValuePerPoint === null || redemptionValuePerPoint <= 0) {
-    return { error: "O valor de cada ponto no resgate deve ser maior que zero.", field: "redemptionValuePerPoint" };
+    return { error: "O valor de cada ponto no resgate deve ser maior que zero (máximo R$ 1.000).", field: "redemptionValuePerPoint" };
   }
 
   const minPurchaseAmountForPoints = parseRequiredNumber(formData.get("minPurchaseAmountForPoints"), {
     min: 0,
+    max: 999_999_999.99,
   });
   if (minPurchaseAmountForPoints === null) {
-    return { error: "Valor mínimo de compra inválido.", field: "minPurchaseAmountForPoints" };
+    return { error: "Valor mínimo de compra inválido (use de 0 até R$ 999.999.999,99).", field: "minPurchaseAmountForPoints" };
   }
 
   const minPointsToRedeem = parseRequiredNumber(formData.get("minPointsToRedeem"), {
     min: 0,
+    max: 100_000_000,
     integer: true,
   });
   if (minPointsToRedeem === null) {
     return {
-      error: "Mínimo de pontos para resgate deve ser um número inteiro maior ou igual a zero.",
+      error: "Mínimo de pontos para resgate deve ser um número inteiro de 0 a 100.000.000.",
       field: "minPointsToRedeem",
     };
   }
@@ -229,32 +231,34 @@ export async function upsertLoyaltySettingsAction(
 
   const birthdayBonusPoints = parseRequiredNumber(formData.get("birthdayBonusPoints"), {
     min: 0,
+    max: 10_000_000,
     integer: true,
   });
   if (birthdayBonusPoints === null) {
     return {
-      error: "Bônus de aniversário deve ser um número inteiro maior ou igual a zero.",
+      error: "Bônus de aniversário deve ser um número inteiro de 0 a 10.000.000.",
       field: "birthdayBonusPoints",
     };
   }
 
   const firstPurchaseBonusPoints = parseRequiredNumber(formData.get("firstPurchaseBonusPoints"), {
     min: 0,
+    max: 10_000_000,
     integer: true,
   });
   if (firstPurchaseBonusPoints === null) {
     return {
-      error: "Bônus de primeira compra deve ser um número inteiro maior ou igual a zero.",
+      error: "Bônus de primeira compra deve ser um número inteiro de 0 a 10.000.000.",
       field: "firstPurchaseBonusPoints",
     };
   }
 
   let pointsExpireAfterDays: number | null = null;
   if (pointsExpire) {
-    const days = parseRequiredNumber(formData.get("pointsExpireAfterDays"), { min: 1, integer: true });
+    const days = parseRequiredNumber(formData.get("pointsExpireAfterDays"), { min: 1, max: 3650, integer: true });
     if (days === null) {
       return {
-        error: "Informe um número de dias maior que zero para a expiração de pontos.",
+        error: "Informe um número de dias entre 1 e 3.650 (10 anos) para a expiração de pontos.",
         field: "pointsExpireAfterDays",
       };
     }

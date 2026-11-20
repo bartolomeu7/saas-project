@@ -1,5 +1,8 @@
 import { z } from "zod";
 import { documentError, phoneError } from "@/lib/validations/document";
+import { cleanText, requiredText } from "@/lib/validations/common";
+
+export const BRAZIL_UFS = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"] as const;
 
 /**
  * Todos os campos de texto opcionais aceitam string vazia (do formulário
@@ -8,10 +11,9 @@ import { documentError, phoneError } from "@/lib/validations/document";
 const optionalText = (max: number) =>
   z
     .string()
-    .trim()
-    .max(max, `Máximo de ${max} caracteres.`)
     .optional()
-    .or(z.literal(""))
+    .transform((value) => cleanText(value ?? "").trim())
+    .pipe(z.string().max(max, `Máximo de ${max} caracteres.`))
     .transform((value) => (value ? value : null));
 
 const MAX_PREFERENCE_ENTRIES = 10;
@@ -69,14 +71,16 @@ const birthDateSchema = z
   })
   .refine((value) => value === null || new Date(value) <= new Date(), {
     message: "Data de nascimento não pode ser no futuro.",
+  })
+  .refine((value) => value === null || value >= "1900-01-01", {
+    message: "Data de nascimento muito antiga (use 1900 ou depois).",
   });
 
 export const customerSchema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(2, "Informe o nome do cliente (pelo menos 2 letras).")
-    .max(160, "Nome muito longo."),
+  name: requiredText("Informe o nome do cliente (pelo menos 2 letras).", 160, "Nome muito longo.").refine(
+    (value) => value.length >= 2,
+    "Informe o nome do cliente (pelo menos 2 letras)."
+  ),
   document: optionalText(32).refine((value) => documentError(value) === null, {
     message: "Documento inválido: confira o CPF ou CNPJ.",
   }),
@@ -88,17 +92,23 @@ export const customerSchema = z.object({
     .max(160)
     .optional()
     .or(z.literal(""))
-    .transform((value) => (value ? value : null))
+    .transform((value) => (value ? value.toLowerCase() : null))
     .refine((value) => value === null || /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value), {
       message: "Informe um e-mail válido.",
     }),
   address: optionalText(200),
-  addressNumber: optionalText(20),
+  addressNumber: optionalText(20).refine((value) => value === null || !value.startsWith("-"), {
+    message: "Número do endereço inválido.",
+  }),
   complement: optionalText(100),
   neighborhood: optionalText(100),
   city: optionalText(100),
-  state: optionalText(2),
-  postalCode: optionalText(16),
+  state: optionalText(2)
+    .transform((value) => (value ? value.toUpperCase() : null))
+    .refine((value) => value === null || (BRAZIL_UFS as readonly string[]).includes(value), { message: "UF inválida (use a sigla, ex.: SP)." }),
+  postalCode: optionalText(16).refine((value) => value === null || value.replace(/\D/g, "").length === 8, {
+    message: "CEP inválido: use 8 números.",
+  }),
   notes: optionalText(2000),
   birthDate: birthDateSchema,
   preferences: preferencesSchema,
