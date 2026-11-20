@@ -13,6 +13,8 @@ import { PwaSetup } from "@/components/pwa/pwa-setup";
 import { THEME_INIT_SCRIPT } from "@/lib/settings/theme";
 import { getMyConsentStatus } from "@/lib/legal/consent";
 import { evaluateSessionGate, SESSION_LIMIT_PATH } from "@/lib/auth/session-gate";
+import { getMaintenanceState } from "@/lib/maintenance-state";
+import { MaintenanceBanner } from "@/components/maintenance/maintenance-banner";
 
 // Toda a área autenticada depende da sessão: nunca é pré-renderizada no build. Sem isto o Next tentava gerar
 // /app/* estaticamente e, num ambiente sem credenciais (Preview), o construtor do cliente Supabase lançava
@@ -71,6 +73,9 @@ export default async function AppLayout({
   }
 
   const defaultOpen = (await cookies()).get("sidebar_state")?.value !== "false";
+  // Aviso de manutenção programada (cache curto e falha aberta: nunca derruba o app).
+  const maintenance = await getMaintenanceState();
+  const isSuperAdmin = profile?.role === "super_admin" && profile?.status === "active";
 
   return (
     <ClerkAppProvider>
@@ -84,6 +89,7 @@ export default async function AppLayout({
         userName={profile?.full_name}
         userEmail={user?.email}
         defaultOpen={defaultOpen}
+        banner={<MaintenanceBanner initial={maintenance} isSuperAdmin={isSuperAdmin} />}
       >
         {children}
       </AppShell>
