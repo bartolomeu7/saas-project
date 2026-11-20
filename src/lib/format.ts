@@ -22,8 +22,8 @@ export function formatDate(isoDate: string): string {
 export function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   const kb = bytes / 1024;
-  if (kb < 1024) return `${kb.toFixed(1)} KB`;
-  return `${(kb / 1024).toFixed(1)} MB`;
+  if (kb < 1024) return `${kb.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} KB`;
+  return `${(kb / 1024).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} MB`;
 }
 
 const dateTimeFormatter = new Intl.DateTimeFormat("pt-BR", {
@@ -55,4 +55,9 @@ export function formatRelative(isoDate: string, now: Date = new Date()): string 
   if (hours < 24) return `há ${hours} h`;
   const days = Math.floor(hours / 24);
   return `há ${days} ${days === 1 ? "dia" : "dias"}`;
+}
+
+/** Percentual no padrão brasileiro: vírgula decimal e o símbolo colado ("55,6%"). */
+export function formatPercent(value: number, fractionDigits = 1): string {
+  return `${new Intl.NumberFormat("pt-BR", { minimumFractionDigits: fractionDigits, maximumFractionDigits: fractionDigits }).format(value)}%`;
 }

@@ -51,7 +51,7 @@ export function CancelSaleButton({ saleId }: { saleId: string }) {
         <DialogHeader>
           <DialogTitle>Cancelar venda</DialogTitle>
           <DialogDescription>
-            Informe o motivo do cancelamento. O estoque de produtos será restaurado.
+            Informe o motivo do cancelamento. O estoque de produtos será restaurado, os pagamentos ficam como estornados e os pontos de fidelidade são devolvidos ou retirados.
           </DialogDescription>
         </DialogHeader>
         <form action={formAction} onReset={keepInput} className="flex flex-col gap-4">

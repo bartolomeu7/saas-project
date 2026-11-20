@@ -2,6 +2,7 @@ import "server-only";
 
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { withClerkRetry } from "@/lib/auth/clerk-retry";
 import { createSessionClient } from "@/lib/supabase/server";
 import {
   decideSessionAccess,
@@ -46,7 +47,9 @@ const CLERK_PAGE_LIMIT = 100;
 /** Sessões ativas do usuário no Clerk (mais recentes primeiro) e se a lista veio completa. */
 export async function listActiveClerkSessionsPage(clerkUserId: string) {
   const client = await clerkClient();
-  const result = await client.sessions.getSessionList({ userId: clerkUserId, status: "active", limit: CLERK_PAGE_LIMIT });
+  const result = await withClerkRetry(() =>
+    client.sessions.getSessionList({ userId: clerkUserId, status: "active", limit: CLERK_PAGE_LIMIT })
+  );
   return { sessions: result.data, complete: result.data.length >= result.totalCount };
 }
 

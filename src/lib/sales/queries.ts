@@ -3,6 +3,7 @@ import "server-only";
 import { cache } from "react";
 import { buildDailySeries, type DailyPoint } from "@/lib/sales/daily-series";
 import { createSessionClient } from "@/lib/supabase/server";
+import { buildSearchOr } from "@/lib/search/pattern";
 import {
   startOfDaySaoPaulo,
   endOfDaySaoPaulo,
@@ -179,14 +180,13 @@ export async function listSales(params: ListSalesParams): Promise<ListSalesResul
       orParts.push(`id.eq.${trimmedSearch}`);
     }
 
-    const safeTerm = trimmedSearch.replace(/[,()"\\]/g, "").trim();
-    if (safeTerm) {
-      const term = safeTerm.replace(/[%_]/g, "\\$&");
+    const customerFilter = buildSearchOr(trimmedSearch, ["name"]);
+    if (customerFilter) {
       const { data: matchedCustomers } = await supabase
         .from("customers")
         .select("id")
         .eq("company_id", companyId)
-        .ilike("name", `%${term}%`);
+        .or(customerFilter);
 
       const ids = (matchedCustomers ?? []).map((c) => c.id);
       if (ids.length > 0) {
@@ -484,9 +484,8 @@ export async function searchProductsForSale(
   const trimmed = search.trim();
   if (!trimmed) return [];
 
-  const safeTerm = trimmed.replace(/[,()"\\]/g, "").trim();
-  if (!safeTerm) return [];
-  const term = safeTerm.replace(/[%_]/g, "\\$&");
+  const searchFilter = buildSearchOr(trimmed, ["name", "sku", "barcode"]);
+  if (!searchFilter) return [];
 
   const { data, error } = await supabase
     .from("products")
@@ -494,7 +493,7 @@ export async function searchProductsForSale(
     .select("id, name, sku, barcode, sale_price, stock_quantity, unit")
     .eq("company_id", companyId)
     .eq("status", "active")
-    .or(`name.ilike.%${term}%,sku.ilike.%${term}%,barcode.ilike.%${term}%`)
+    .or(searchFilter)
     .order("name", { ascending: true })
     .limit(PRODUCT_SEARCH_LIMIT);
 
@@ -511,16 +510,15 @@ export async function searchServicesForSale(
   const trimmed = search.trim();
   if (!trimmed) return [];
 
-  const safeTerm = trimmed.replace(/[,()"\\]/g, "").trim();
-  if (!safeTerm) return [];
-  const term = safeTerm.replace(/[%_]/g, "\\$&");
+  const searchFilter = buildSearchOr(trimmed, ["name"]);
+  if (!searchFilter) return [];
 
   const { data, error } = await supabase
     .from("services")
     .select("id, name, sale_price, duration_minutes, service_categories(name)")
     .eq("company_id", companyId)
     .eq("status", "active")
-    .ilike("name", `%${term}%`)
+    .or(searchFilter)
     .order("name", { ascending: true })
     .limit(SERVICE_SEARCH_LIMIT);
 
@@ -545,16 +543,15 @@ export async function searchCustomersForSale(
   const trimmed = search.trim();
   if (!trimmed) return [];
 
-  const safeTerm = trimmed.replace(/[,()"\\]/g, "").trim();
-  if (!safeTerm) return [];
-  const term = safeTerm.replace(/[%_]/g, "\\$&");
+  const searchFilter = buildSearchOr(trimmed, ["name", "email"], ["phone", "whatsapp", "document"]);
+  if (!searchFilter) return [];
 
   const { data, error } = await supabase
     .from("customers")
     .select("id, name, phone, email")
     .eq("company_id", companyId)
     .eq("status", "active")
-    .or(`name.ilike.%${term}%,phone.ilike.%${term}%,email.ilike.%${term}%`)
+    .or(searchFilter)
     .order("name", { ascending: true })
     .limit(CUSTOMER_SEARCH_LIMIT);
 

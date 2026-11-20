@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { boundedMoney, boundedQuantity, optionalCleanText, requiredText } from "./common";
+import { boundedMoney, boundedQuantity, collapseSpaces, optionalCleanText, requiredText } from "./common";
 
 export const PRODUCT_UNITS = ["un", "kg", "g", "l", "ml", "m", "cx", "pct", "kit"] as const;
 
@@ -11,7 +11,8 @@ export const productSchema = z.object({
     .optional()
     .or(z.literal(""))
     .transform((value) => (value ? value : null)),
-  sku: optionalCleanText(64),
+  // SKU em maiúsculas e sem espaços repetidos: "t3-base" e "T3-BASE" são o mesmo código (o índice único do banco diferencia a caixa).
+  sku: optionalCleanText(64).transform((value) => (value ? collapseSpaces(value).toUpperCase() : value)),
   barcode: optionalCleanText(64),
   description: optionalCleanText(2000),
   unit: z.enum(PRODUCT_UNITS).default("un"),

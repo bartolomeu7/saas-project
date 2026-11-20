@@ -2,6 +2,7 @@ import "server-only";
 
 import { cache } from "react";
 import { createSessionClient } from "@/lib/supabase/server";
+import { buildSearchOr } from "@/lib/search/pattern";
 import type { Customer, CustomerStatus } from "@/types/customer";
 
 const DEFAULT_PAGE_SIZE = 20;
@@ -49,21 +50,10 @@ export async function listCustomers({
     query = query.eq("status", status);
   }
 
-  const trimmedSearch = search?.trim();
-  if (trimmedSearch) {
-    // Vírgula, parênteses e aspas têm significado especial na sintaxe do
-    // filtro .or() do PostgREST (separador de condições, agrupamento,
-    // citação) — removidos em vez de escapados, já que são raros em
-    // nome/telefone/e-mail/documento reais e não vale a complexidade de
-    // um escape completo para um campo de busca.
-    const safeTerm = trimmedSearch.replace(/[,()"\\]/g, "").trim();
-    if (safeTerm) {
-      const term = safeTerm.replace(/[%_]/g, "\\$&");
-      query = query.or(
-        `name.ilike.%${term}%,phone.ilike.%${term}%,email.ilike.%${term}%,document.ilike.%${term}%`
-      );
-    }
-  }
+  // Busca sem acento e tolerante a pontuação (CPF/telefone digitados só com números). Vírgula, parênteses e aspas
+  // têm significado especial no filtro .or() do PostgREST: são removidos em buildSearchOr.
+  const searchFilter = buildSearchOr(search ?? "", ["name", "email"], ["phone", "whatsapp", "document"]);
+  if (searchFilter) query = query.or(searchFilter);
 
   const { data, error, count } = await query
     .order("created_at", { ascending: false })

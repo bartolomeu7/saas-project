@@ -20,7 +20,7 @@ import { SalePaymentList } from "@/components/app/sale-payment-list";
 import { CompleteSaleButton } from "@/components/app/complete-sale-button";
 import { CancelSaleButton } from "@/components/app/cancel-sale-button";
 import { SaleHistoryList } from "@/components/app/sale-history-list";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatPercent } from "@/lib/format";
 
 export const metadata: Metadata = {
   title: "Venda",
@@ -168,7 +168,7 @@ export default async function SaleDetailPage({ params: paramsPromise }: { params
           {isCompleted && (
             <div className="rounded-lg border border-dashed border-border bg-card/40 p-4 text-xs text-muted-foreground">
               Margem estimada — não considera despesas operacionais, impostos ou taxas.
-              {marginPercentage !== null && ` (${marginPercentage.toFixed(1)}% sobre o total)`}
+              {marginPercentage !== null && ` (${formatPercent(marginPercentage)} sobre o total)`}
             </div>
           )}
 

@@ -52,6 +52,9 @@ export const addSalePaymentSchema = z.object({
 export type AddSalePaymentInput = z.infer<typeof addSalePaymentSchema>;
 
 export const cancelSaleSchema = z.object({
-  reason: requiredText("Informe o motivo do cancelamento.", 300, "Motivo muito longo."),
+  reason: requiredText("Informe o motivo do cancelamento.", 300, "Motivo muito longo.").refine(
+    (value) => value.length >= 3,
+    "Descreva o motivo do cancelamento (pelo menos 3 letras)."
+  ),
 });
 export type CancelSaleInput = z.infer<typeof cancelSaleSchema>;

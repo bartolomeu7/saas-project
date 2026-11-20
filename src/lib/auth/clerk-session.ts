@@ -5,6 +5,7 @@ import { auth, currentUser } from "@clerk/nextjs/server";
 import { createClerkSupabaseClient } from "@/lib/supabase/clerk-client";
 import { AccountInactiveError } from "@/lib/auth/account-status";
 import { AuthBackendError, readJwtRole } from "@/lib/auth/token-claims";
+import { withClerkRetry } from "@/lib/auth/clerk-retry";
 
 /**
  * Falha do Supabase ao resolver a identidade NÃO é "sem sessão": distingue
@@ -22,7 +23,7 @@ async function failAuthBackend(step: string, message: string): Promise<never> {
 }
 
 /** Usuário do Clerk (chamada à API do Clerk), no máximo uma vez por requisição. */
-const loadClerkUser = cache(async () => currentUser());
+const loadClerkUser = cache(async () => withClerkRetry(() => currentUser()));
 
 /**
  * Camada de sessão do lado Clerk.

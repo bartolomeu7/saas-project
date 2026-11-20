@@ -7,6 +7,7 @@ import { getCurrentCompany } from "@/lib/companies/queries";
 import { can } from "@/lib/permissions/matrix";
 import { getCurrentUser } from "@/lib/auth/session";
 import { serviceSchema } from "@/lib/validations/service";
+import { nameInUse } from "@/lib/validations/name-in-use";
 import { writeAuditLog } from "@/lib/audit/log";
 import { AUDIT_ACTIONS } from "@/types/audit";
 import type { ActionResult } from "@/lib/auth/actions";
@@ -71,6 +72,10 @@ export async function createServiceAction(
     return { error: "Categoria inválida." };
   }
 
+  if (await nameInUse(supabase, "services", current.company.id, parsed.data.name)) {
+    return { error: "Já existe um serviço com esse nome." };
+  }
+
   const { data, error } = await supabase
     .from("services")
     .insert({
@@ -133,7 +138,11 @@ export async function updateServiceAction(
     return { error: "Categoria inválida." };
   }
 
-  const { error } = await supabase
+  if (await nameInUse(supabase, "services", current.company.id, parsed.data.name, id)) {
+    return { error: "Já existe um serviço com esse nome." };
+  }
+
+  const { data: updatedRows, error } = await supabase
     .from("services")
     .update({
       category_id: parsed.data.categoryId,
@@ -148,10 +157,15 @@ export async function updateServiceAction(
     })
     // Redundante com a RLS de propósito (defesa em profundidade).
     .eq("id", id)
-    .eq("company_id", current.company.id);
+    .eq("company_id", current.company.id)
+    .select("id");
 
   if (error) {
     return { error: "Não foi possível salvar as alterações. Tente novamente." };
+  }
+
+  if (!updatedRows || updatedRows.length === 0) {
+    return { error: "Serviço não encontrado. O cadastro pode ter sido removido ou ser de outra empresa." };
   }
 
   const user = await getCurrentUser();

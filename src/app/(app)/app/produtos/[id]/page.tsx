@@ -16,7 +16,7 @@ import { ReactivateProductButton } from "@/components/app/reactivate-product-but
 import { DashboardCard } from "@/components/app/dashboard-card";
 import { StockAdjustForm } from "@/components/app/stock-adjust-form";
 import { ProductHistoryList } from "@/components/app/product-history-list";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatPercent } from "@/lib/format";
 
 export const metadata: Metadata = {
   title: "Produto",
@@ -86,7 +86,7 @@ export default async function ProductDetailPage({
             label="Margem"
             value={formatMoney(margin.value)}
             icon={TrendingUp}
-            hint={margin.percentage === null ? "Sem preço de venda definido" : `${margin.percentage.toFixed(2)}% sobre a venda`}
+            hint={margin.percentage === null ? "Sem preço de venda definido" : `${formatPercent(margin.percentage, 2)} sobre a venda`}
             indicator={margin.value > 0 ? "success" : margin.value < 0 ? "warning" : "neutral"}
           />
           )}

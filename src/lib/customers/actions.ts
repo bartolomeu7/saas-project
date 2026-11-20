@@ -148,7 +148,7 @@ export async function updateCustomerAction(
     .eq("company_id", current.company.id)
     .maybeSingle();
 
-  const { error } = await supabase
+  const { data: updatedRows, error } = await supabase
     .from("customers")
     .update({
       name: parsed.data.name,
@@ -172,10 +172,15 @@ export async function updateCustomerAction(
     // que a policy falhe por algum motivo, esta cláusula garante que só
     // atualizamos um cliente da própria empresa.
     .eq("id", id)
-    .eq("company_id", current.company.id);
+    .eq("company_id", current.company.id)
+    .select("id");
 
   if (error) {
     return { error: "Não foi possível salvar as alterações. Tente novamente." };
+  }
+
+  if (!updatedRows || updatedRows.length === 0) {
+    return { error: "Cliente não encontrado. O cadastro pode ter sido removido ou ser de outra empresa." };
   }
 
   const user = await getCurrentUser();

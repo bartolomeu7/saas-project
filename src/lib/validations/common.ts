@@ -19,11 +19,14 @@ export function cleanText(value: string): string {
     .replace(/[​-‏‪-‮⁠-⁤⁦-⁩﻿]/g, "");
 }
 
-/** Texto obrigatório: limpa, apara as pontas e exige ao menos 1 caractere. */
+/** Espaços/tabs repetidos viram um só ("Maria   Silva" → "Maria Silva"); quebras de linha ficam como estão. */
+export const collapseSpaces = (value: string): string => value.replace(/[^\S\r\n]{2,}/g, " ");
+
+/** Texto obrigatório: limpa, apara as pontas, junta espaços repetidos e exige ao menos 1 caractere. */
 export const requiredText = (requiredMessage: string, max: number, tooLongMessage = "Texto muito longo.") =>
   z
     .string()
-    .transform((v) => cleanText(v).trim())
+    .transform((v) => collapseSpaces(cleanText(v)).trim())
     .pipe(z.string().min(1, requiredMessage).max(max, tooLongMessage));
 
 /** Texto opcional: limpa, apara e devolve null quando vazio. */

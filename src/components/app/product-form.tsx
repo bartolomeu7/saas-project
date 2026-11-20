@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { NativeSelect } from "@/components/ui/native-select";
 import { useKeepInputOnError } from "@/hooks/use-keep-input-on-error";
 
+import { formatPercent } from "@/lib/format";
 const initialState: ActionResult = {};
 
 const PRODUCT_UNITS = Object.keys(PRODUCT_UNIT_LABELS) as (keyof typeof PRODUCT_UNIT_LABELS)[];
@@ -216,7 +217,7 @@ export function ProductForm({
               <span className="text-xs text-muted-foreground">
                 {margin.percentage === null
                   ? "Defina o preço de venda para calcular %"
-                  : `${margin.percentage.toFixed(2)}% sobre a venda`}
+                  : `${formatPercent(margin.percentage, 2)} sobre a venda`}
               </span>
             </div>
           </div>
