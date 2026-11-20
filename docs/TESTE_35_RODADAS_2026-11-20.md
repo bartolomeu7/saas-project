@@ -77,3 +77,39 @@ migration `20261120120000_receive_zero_total_no_payable` (+ rollback); testes `t
 ## Fica como melhoria (não incluído)
 Encerrar pedido de compra com saldo após recebimento parcial; aviso de vencimento antes da previsão; idempotência (chave) para disparo simultâneo;
 nome de produto duplicado (aviso); lançamento avulso "dinheiro" não sai do caixa (confirmar regra com o dono).
+
+---
+
+# Segunda série (Clientes, Serviços, Vendas, Fidelidade, RH) — 35 rodadas cada
+
+Produtos já tinha passado pelas 35 rodadas na primeira série. Dashboard foi conferido em leitura.
+
+## Clientes
+- CL1 UF aceita minúscula ("sp") e inexistente ("XX") → UF normalizada para maiúscula e validada contra as 27 siglas.
+- CL2 CEP "123" aceito → exige 8 números.
+- CL3 Nascimento em 1800 aceito → mínimo 1900.
+- CL4 E-mail guardado como digitado ("T35K07@EXEMPLO.COM") → guardado em minúsculas.
+- CL5 Número do endereço "-5" aceito → recusado.
+- CL6 Caracteres invisíveis/inversão (U+202E) gravados no nome e demais textos → limpos.
+- OK: CPF/CNPJ válidos e inválidos, CPF repetido recusado ("já existe um cliente com esse documento"), telefone/WhatsApp inválidos, e-mail inválido, nascimento no futuro, nome 500 e notas 10.000 recusados, XSS/SQL tratados como texto.
+
+## Serviços
+- SV1 Duração de 100 h e até 1 milhão de horas aceita → máximo 24 h.
+- SV2 Preço 1e12 dava "Não foi possível salvar" genérico → mensagem clara.
+- SV3 Caracteres invisíveis no nome → limpos.
+- Nota: serviço sem duração (0) é aceito, mas não pode ser agendado ("duração válida"). Melhoria futura: aviso no cadastro.
+
+## Vendas
+- VD1 Pagamento em dinheiro com caixa FECHADO era registrado e o valor não entrava no caixa, sem aviso → agora a confirmação avisa ("não há caixa aberto, esse dinheiro não entrou no caixa").
+- VD2 Pagamento 1e12 vazava "numeric field overflow"; quantidade 1e9 dava "Não foi possível atualizar o item" → limites com mensagem clara (quantidade, desconto, pagamento).
+- OK (conferido no banco): total = subtotal − desconto; subtotal = soma dos itens; saídas de estoque = itens vendidos; pagamentos = receitas no financeiro; cancelamento com motivo estorna estoque, pagamento e financeiro; estoque insuficiente barrado com mensagem; desconto maior que o subtotal barrado; excesso de pagamento barrado; venda sem item barrada; duplo clique em Concluir não duplica.
+
+## Fidelidade
+- FD1 Expiração de pontos em 1.000.000.000 dias aceita; valores gigantes mostravam erros crus em inglês ("out of range for type integer") → limites (pontos/R$ ≤ 10.000, valor do ponto ≤ R$ 1.000, bônus ≤ 10.000.000, dias 1–3.650) com mensagem clara.
+- OK: 23 combinações válidas gravaram e persistiram ao recarregar; zero, negativo, percentual > 100, decimal em campo inteiro barrados.
+
+## RH (cadastro de funcionário)
+- RH1 Data de início anterior ao nascimento aceita → recusada.
+- RH2 Funcionário com 6 anos aceito → mínimo 14 anos.
+- RH3 Caracteres invisíveis no nome/textos → limpos.
+- OK: valores com vírgula/ponto/milhar, diária/fixo, semanal/quinzenal/mensal, modo CLT, Pix (CPF, e-mail, chave aleatória), 200 chars de Pix recusado, valor zero/negativo/texto/gigante recusado.
