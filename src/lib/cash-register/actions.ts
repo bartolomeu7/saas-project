@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { createSessionClient } from "@/lib/supabase/server";
 import { getCurrentCompany } from "@/lib/companies/queries";
 import type { ActionResult } from "@/lib/auth/actions";
-import { parseMoneyInput } from "@/lib/parse-money";
+import { isMoneyTooLarge, MONEY_TOO_LARGE_MESSAGE, parseMoneyInput } from "@/lib/parse-money";
+import { readText, tooLongMessage } from "@/lib/text-input";
 import { getCurrentOpenCashRegister, listCashMovements, summarizeCashMovements } from "@/lib/cash-register/queries";
 import type { CashMovementDirection } from "@/types/cash-register";
 import type { SalePaymentMethod } from "@/types/sale";
@@ -45,13 +46,15 @@ export async function openCashRegisterAction(
   _prevState: ActionResult,
   formData: FormData
 ): Promise<ActionResult> {
+  if (isMoneyTooLarge(String(formData.get("openingBalance") ?? ""))) return { error: MONEY_TOO_LARGE_MESSAGE };
   const openingBalance = parseNonNegativeAmount(formData.get("openingBalance"));
   if (openingBalance === null) {
     return { error: "Informe um saldo inicial válido (maior ou igual a zero)." };
   }
 
-  const notesRaw = formData.get("notes");
-  const notes = typeof notesRaw === "string" && notesRaw.trim() !== "" ? notesRaw.trim() : null;
+  const notesField = readText(formData, "notes", 500);
+  if (notesField.tooLong) return { error: tooLongMessage("Observação", 500) };
+  const notes = notesField.value !== "" ? notesField.value : null;
 
   const current = await getCurrentCompany();
   if (!current) {
@@ -81,13 +84,15 @@ export async function closeCashRegisterAction(
   _prevState: ActionResult,
   formData: FormData
 ): Promise<ActionResult> {
+  if (isMoneyTooLarge(String(formData.get("informedCashBalance") ?? ""))) return { error: MONEY_TOO_LARGE_MESSAGE };
   const informedCashBalance = parseNonNegativeAmount(formData.get("informedCashBalance"));
   if (informedCashBalance === null) {
     return { error: "Informe o saldo em espécie conferido (maior ou igual a zero)." };
   }
 
-  const notesRaw = formData.get("notes");
-  const notes = typeof notesRaw === "string" && notesRaw.trim() !== "" ? notesRaw.trim() : null;
+  const notesField = readText(formData, "notes", 500);
+  if (notesField.tooLong) return { error: tooLongMessage("Observação", 500) };
+  const notes = notesField.value !== "" ? notesField.value : null;
 
   const current = await getCurrentCompany();
   if (!current) {
@@ -121,6 +126,7 @@ export async function createCashMovementAction(
     return { error: "Selecione entrada ou saída." };
   }
 
+  if (isMoneyTooLarge(String(formData.get("amount") ?? ""))) return { error: MONEY_TOO_LARGE_MESSAGE };
   const amount = parsePositiveAmount(formData.get("amount"));
   if (amount === null) {
     return { error: "Informe um valor maior que zero." };
@@ -131,11 +137,12 @@ export async function createCashMovementAction(
     return { error: "Selecione uma forma de pagamento válida." };
   }
 
-  const descriptionRaw = formData.get("description");
-  const description = typeof descriptionRaw === "string" ? descriptionRaw.trim() : "";
+  const descriptionField = readText(formData, "description", 200);
+  const description = descriptionField.value;
   if (description.length === 0) {
     return { error: "Informe uma descrição para a movimentação." };
   }
+  if (descriptionField.tooLong) return { error: tooLongMessage("Descrição", 200) };
 
   const current = await getCurrentCompany();
   if (!current) {

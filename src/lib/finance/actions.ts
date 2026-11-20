@@ -5,7 +5,9 @@ import { createSessionClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/auth/actions";
 import { getCurrentCompany } from "@/lib/companies/queries";
 import { todayDateSaoPaulo } from "@/lib/timezone";
-import { parseMoneyInput } from "@/lib/parse-money";
+import { isMoneyTooLarge, MONEY_TOO_LARGE_MESSAGE, parseMoneyInput } from "@/lib/parse-money";
+import { cleanText } from "@/lib/validations/common";
+import { tooLongMessage } from "@/lib/text-input";
 import type { Database } from "@/types/supabase";
 
 type FinancialDirection = Database["public"]["Enums"]["financial_entry_direction"];
@@ -22,8 +24,20 @@ const PAYMENT_METHODS: readonly SalePaymentMethod[] = [
 
 const categoryKinds: readonly FinancialCategoryKind[] = ["income", "expense"];
 
+/** Texto do formulário sem caracteres de controle/direção invisível e sem espaços nas pontas. */
 function textValue(value: FormDataEntryValue | null): string {
-  return typeof value === "string" ? value.trim() : "";
+  return typeof value === "string" ? cleanText(value).trim() : "";
+}
+
+const MAX_DESCRIPTION = 200;
+const MAX_NOTES = 1000;
+const MAX_NAME = 120;
+
+/** Datas fora desta faixa quase sempre são erro de digitação (ano 0202, 2062...). */
+function dateOutOfRange(isoDate: string): boolean {
+  const year = Number(isoDate.slice(0, 4));
+  const current = new Date().getFullYear();
+  return !Number.isFinite(year) || year < current - 10 || year > current + 5;
 }
 
 /** Aceita "1234,56", "1.234,56" e "1234.56" (parseMoneyInput); só valores maiores que zero. */
@@ -61,6 +75,10 @@ export async function createFinancialEntryAction(
     return { error: "Selecione receita ou despesa." };
   }
   if (!description) return { error: "Informe uma descrição." };
+  if (description.length > MAX_DESCRIPTION) return { error: tooLongMessage("Descrição", MAX_DESCRIPTION) };
+  if (notes && notes.length > MAX_NOTES) return { error: tooLongMessage("Observação", MAX_NOTES) };
+  if (isMoneyTooLarge(textValue(formData.get("amount")))) return { error: MONEY_TOO_LARGE_MESSAGE };
+  if (dateOutOfRange(occurredOn)) return { error: "Data fora do período permitido (de 10 anos atrás a 5 anos à frente)." };
   if (amount === null) return { error: "Informe um valor maior que zero." };
   if (!method) return { error: "Selecione a forma de pagamento." };
 
@@ -96,6 +114,9 @@ export async function payAccountsPayableAction(
   const notes = textValue(formData.get("notes")) || undefined;
 
   if (!payableId) return { error: "Conta a pagar inválida." };
+  if (isMoneyTooLarge(textValue(formData.get("amount")))) return { error: MONEY_TOO_LARGE_MESSAGE };
+  if (notes && notes.length > MAX_NOTES) return { error: tooLongMessage("Observação", MAX_NOTES) };
+  if (dateOutOfRange(paymentDate)) return { error: "Data fora do período permitido." };
   if (amount === null) return { error: "Informe o valor do pagamento." };
   if (!method) return { error: "Selecione a forma de pagamento." };
 
@@ -129,6 +150,7 @@ export async function receiveSalePaymentAction(
   const paidAtRaw = textValue(formData.get("paidAt"));
 
   if (!saleId) return { error: "Recebível inválido." };
+  if (isMoneyTooLarge(textValue(formData.get("amount")))) return { error: MONEY_TOO_LARGE_MESSAGE };
   if (amount === null) return { error: "Informe o valor recebido." };
   if (!method) return { error: "Selecione a forma de recebimento." };
 
@@ -159,6 +181,7 @@ export async function createFinancialCategoryAction(
   const name = textValue(formData.get("name"));
   const kind = categoryKind(formData.get("kind"));
   if (!name) return { error: "Informe o nome da categoria." };
+  if (name.length > MAX_NAME) return { error: tooLongMessage("Nome", MAX_NAME) };
   if (!kind) return { error: "Selecione o tipo da categoria." };
 
   const current = await getCurrentCompany();
@@ -182,6 +205,7 @@ export async function createCostCenterAction(
 ): Promise<ActionResult> {
   const name = textValue(formData.get("name"));
   if (!name) return { error: "Informe o nome do centro de custo." };
+  if (name.length > MAX_NAME) return { error: tooLongMessage("Nome", MAX_NAME) };
 
   const current = await getCurrentCompany();
   if (!current) return { error: "Nenhuma empresa encontrada." };
