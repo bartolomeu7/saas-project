@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useFormState } from "react-dom";
 import type { ActionResult } from "@/lib/auth/actions";
 import {
@@ -142,16 +142,32 @@ export function AppointmentStatusForm({
 }) {
   const [state, formAction] = useFormState(setAppointmentStatusAction, initialState);
   const formRef = useRef<HTMLFormElement>(null);
+  const formId = useId();
 
   return (
-    <form action={formAction} ref={formRef}>
+    <form action={formAction} ref={formRef} id={formId}>
       <input type="hidden" name="appointmentId" value={appointmentId} />
       <input type="hidden" name="status" value={status} />
       {status === "cancelled" ? (
         <ConfirmDialog
           trigger={<Button type="button" variant="outline" size="sm" className="w-auto text-destructive">{label}</Button>}
           title="Cancelar este agendamento?"
-          description="O horário fica livre. Para voltar a atender, será preciso criar um novo agendamento."
+          description={
+            <span className="grid gap-3">
+              <span>O horário fica livre. Para voltar a atender, será preciso criar um novo agendamento.</span>
+              {/* O modal é renderizado fora do <form>; o atributo `form` liga o campo a ele. */}
+              <label className="grid gap-1 text-left text-xs text-muted-foreground">
+                Motivo (opcional)
+                <input
+                  form={formId}
+                  name="reason"
+                  maxLength={200}
+                  placeholder="Ex: cliente desmarcou"
+                  className="h-9 rounded-md border bg-background px-2 text-sm text-foreground"
+                />
+              </label>
+            </span>
+          }
           confirmLabel="Cancelar agendamento"
           cancelLabel="Voltar"
           destructive

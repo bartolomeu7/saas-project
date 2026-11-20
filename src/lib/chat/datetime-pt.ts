@@ -58,6 +58,15 @@ export function isValidYmd(y: number, m: number, d: number): boolean {
   return m >= 1 && m <= 12 && d >= 1 && d <= daysInMonthOf(y, m);
 }
 
+/** Soma meses de calendário; se o dia não existir no mês de destino (31 + 1 mês), usa o último dia dele. */
+export function addMonths(date: string, n: number): string {
+  const { y, m, d } = parseYmd(date);
+  const total = y * 12 + (m - 1) + n;
+  const ny = Math.floor(total / 12);
+  const nm = (total % 12) + 1;
+  return fmt(ny, nm, Math.min(d, daysInMonthOf(ny, nm)));
+}
+
 export function addDays(date: string, n: number): string {
   const { y, m, d } = parseYmd(date);
   const t = new Date(Date.UTC(y, m - 1, d + n));
@@ -134,11 +143,16 @@ function resolveDayOfMonth(clock: ChatClock, day: number, month?: number, year?:
 }
 
 function parseDate(t: string, clock: ChatClock, problems: string[]): ParsedDate | undefined {
-  // daqui a N dias / semanas
-  const dq = /\bdaqui a (\w+) (dia|dias|semana|semanas)\b/.exec(t);
+  // daqui a N dias / semanas / meses / anos
+  const dq = /\bdaqui a (\w+) (dia|dias|semana|semanas|mes|meses|ano|anos)\b/.exec(t);
   if (dq) {
     const n = numberFromToken(dq[1]!);
-    if (n !== null) return { value: addDays(clock.today, dq[2]!.startsWith("semana") ? n * 7 : n), kind: "daqui-a" };
+    if (n !== null) {
+      const unit = dq[2]!;
+      if (unit.startsWith("mes")) return { value: addMonths(clock.today, n), kind: "daqui-a" };
+      if (unit.startsWith("ano")) return { value: addMonths(clock.today, n * 12), kind: "daqui-a" };
+      return { value: addDays(clock.today, unit.startsWith("semana") ? n * 7 : n), kind: "daqui-a" };
+    }
   }
   if (/\banteontem\b/.test(t)) return { value: addDays(clock.today, -2), kind: "relativa" };
   if (/\bdepois de amanha\b/.test(t)) return { value: addDays(clock.today, 2), kind: "relativa" };

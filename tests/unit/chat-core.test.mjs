@@ -107,6 +107,13 @@ test("só data, só hora, meio-dia, daqui a", () => {
   assert.equal(d.date?.value, "2026-11-11");
   assert.equal(dt("daqui a 3 dias").date?.value, "2026-11-14");
 });
+test("daqui a N meses e anos (calendário, com ajuste de fim de mês)", () => {
+  assert.equal(dt("daqui a 2 meses").date?.value, "2027-01-11");
+  assert.equal(dt("daqui a 1 mês").date?.value, "2026-12-11");
+  assert.equal(dt("daqui a 2 anos").date?.value, "2028-11-11");
+  assert.equal(dt("daqui a um ano").date?.value, "2027-11-11");
+  assert.equal(dt("daqui a 3 dias").date?.value, "2026-11-14");
+});
 test("faixa do dia sem hora vira pergunta, não chute", () => {
   const r = dt("amanhã de tarde");
   assert.equal(r.date?.value, "2026-11-12");

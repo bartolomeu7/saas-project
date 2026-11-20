@@ -40,7 +40,7 @@ Módulos: Produtos, Compras, Estoque, Caixa, Financeiro, Agenda e Chat AI.
 - K2 Descrição com bidi/zero-width gravada. FIX: cleanText/requiredText.
 - K3 Descrição aceita 300 chars no servidor (limite 200 só no HTML). FIX: máx 200 no schema (ver abaixo).
 - K4 Observação de abertura com 1000 chars aceita. FIX: máx 500.
-- K5 UI mostra Diferença sem sinal (-0,01 aparece 0,01). Melhoria: rotular "Falta"/"Sobra".
+- K5 (RETIRADO — falso alarme do robô): a tela de fechamento já mostra a diferença com sinal e "(sobra)/(falta)"; o robô é que removeu o sinal ao ler o texto.
 - K6 Disparo simultâneo (0 ms) cria 2 movimentos; duplo clique humano (40/80/150 ms) cria 1. Risco baixo; melhoria: chave de idempotência.
 - OK: conta bate (dinheiro entra/sai; PIX/débito/crédito/outro não entram na gaveta), saída > saldo barrada com mensagem, valor zero/negativo barrado, diferença de fechamento correta no banco (-0,01 / +10,00), abrir/fechar em sequência, 3 casas decimais barrado.
 
@@ -56,8 +56,8 @@ Módulos: Produtos, Compras, Estoque, Caixa, Financeiro, Agenda e Chat AI.
 - A1 Datas absurdas aceitas sem aviso (1999-05-05 e +2 anos). FIX/melhoria: limitar intervalo e pedir confirmação para passado.
 - A2 Observação sem limite (5000 chars). FIX: máx 1000.
 - A3 bidi/zero-width gravados em observação. FIX: cleanText.
-- A4 Confirmar / Reagendar / Cancelar não mostram mensagem de sucesso (só criar mostra). Melhoria UX: toast.
-- A5 Cancelamento sem campo de motivo (cancellation_reason fica vazio). Melhoria: motivo opcional.
+- A4 (RETIRADO — falso alarme do robô): o painel mostra a mensagem de sucesso/erro dentro do formulário; o robô só procurava avisos flutuantes.
+- A5 Cancelamento sem campo de motivo (cancellation_reason ficava vazio). IMPLEMENTADO: campo opcional "Motivo" na confirmação.
 - A6 Sobreposição sem profissional é permitida (overbooking) — comportamento aceitável, documentar.
 - OK: conflitos (início/fim/dentro/idêntico) bloqueados; adjacente permitido; disponibilidade do profissional; ends_at correto; fuso BRT correto; concluir dia futuro bloqueado com mensagem; concluir e cobrar gera venda + entrada no caixa + receita financeira; cancelar pede confirmação.
 
@@ -65,8 +65,8 @@ Módulos: Produtos, Compras, Estoque, Caixa, Financeiro, Agenda e Chat AI.
 - OK: ambiguidade de cliente ("Beatriz" → 2 opções), profissional único, expediente ("sábado sem expediente → próximo dia útil"),
   horários livres, "um serviço por vez", saudações, perguntas fora do escopo, tentativa de injeção de prompt, HTML/XSS, emoji, datas inválidas (31/02, 25h),
   fluxo Confirmar → agendamento correto (término pela duração e valor do profissional).
-- H1 "ontem às 10h" gera cartão de confirmação para data passada sem aviso (melhoria: avisar/recusar).
-- H2 "daqui a 2 anos" não é entendido (pergunta o dia de novo). Melhoria: aceitar "daqui a N dias/semanas/meses".
+- H1 (RETIRADO — falso alarme): o Chat já avisa "Esse horário já passou" no cartão (src/lib/chat/agenda-agendar.ts); o trecho do aviso ficou fora do texto que o robô capturou.
+- H2 "daqui a 2 anos" não era entendido. IMPLEMENTADO: "daqui a N meses/anos" (calendário, com ajuste de fim de mês).
 - H3 "apague todos os clientes" responde "ainda não cancelo nem reagendo" (inofensivo, mas a mensagem não bate com o pedido).
 - H4 Consulta de estoque ainda não existe no Chat (previsto na Fase 2).
 
@@ -75,6 +75,5 @@ Módulos: Produtos, Compras, Estoque, Caixa, Financeiro, Agenda e Chat AI.
 migration `20261120120000_receive_zero_total_no_payable` (+ rollback); testes `tests/unit/validations-common.test.mjs`.
 
 ## Fica como melhoria (não incluído)
-Toast de sucesso em Confirmar/Reagendar/Cancelar; motivo no cancelamento da agenda; rótulo Falta/Sobra no fechamento do caixa;
-encerrar pedido de compra com saldo após recebimento parcial; aviso de vencimento antes da previsão; idempotência (chave) para disparo simultâneo;
+Encerrar pedido de compra com saldo após recebimento parcial; aviso de vencimento antes da previsão; idempotência (chave) para disparo simultâneo;
 nome de produto duplicado (aviso); lançamento avulso "dinheiro" não sai do caixa (confirmar regra com o dono).

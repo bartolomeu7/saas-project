@@ -150,6 +150,7 @@ export async function setAppointmentStatusAction(
   const appointmentId = textValue(formData.get("appointmentId"));
   const status = textValue(formData.get("status")) as AppointmentStatus;
   const reason = textValue(formData.get("reason")) || undefined;
+  if (reason && reason.length > 200) return { error: "Motivo: máximo de 200 caracteres." };
 
   if (!appointmentId) return { error: "Agendamento inválido." };
 
