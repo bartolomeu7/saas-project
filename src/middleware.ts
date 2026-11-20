@@ -1,8 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { clerkMiddleware } from "@clerk/nextjs/server";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/supabase";
 import { isMaintenanceExempt, isMaintenanceOn, maintenanceResponse } from "@/lib/maintenance";
+import { decideMaintenance, needsRoleToDecide, retryAfterSeconds, type MaintenanceDecision, type MaintenanceRequestInfo } from "@/lib/maintenance-gate";
+import { getMaintenanceState } from "@/lib/maintenance-state";
 import { getSubscriptionGuardStatus } from "@/lib/billing/guard";
 import { isActivePlatformAdmin, isActiveSuperAdmin } from "@/lib/admin/permissions";
 import { ACCOUNT_BLOCKED_PATH } from "@/lib/auth/account-status";
@@ -51,7 +53,7 @@ const ADMIN_PREFIX = "/admin";
  * críticas). Admin comum é redirecionado para o dashboard do painel. É só a
  * primeira camada: as páginas e as RPCs repetem a checagem no servidor/banco.
  */
-const SUPER_ADMIN_ONLY_PREFIXES = ["/admin/administrators", "/admin/settings"];
+const SUPER_ADMIN_ONLY_PREFIXES = ["/admin/administrators", "/admin/settings", "/admin/maintenance"];
 
 /**
  * Rotas de autenticação: se o usuário já está logado, não faz sentido
@@ -118,6 +120,28 @@ type SessionSlotRpcClient = {
   }>;
 };
 
+/** Dados da requisição que importam para a manutenção programada (ver src/lib/maintenance-gate.ts). */
+function maintenanceRequestInfo(request: NextRequest): MaintenanceRequestInfo {
+  return {
+    pathname: request.nextUrl.pathname,
+    method: request.method,
+    isServerAction: request.headers.has("next-action"),
+    isRsc: request.headers.has("rsc") || request.nextUrl.searchParams.has("_rsc"),
+  };
+}
+
+/** Resposta do site em manutenção: tela de manutenção (páginas) ou 503 em JSON (gravações, APIs, navegação interna). */
+function maintenanceResponseFor(decision: MaintenanceDecision, request: NextRequest, expectedEndAt: string): NextResponse | null {
+  const headers = { "cache-control": "no-store", "retry-after": String(retryAfterSeconds(expectedEndAt)) };
+  if (decision.action === "deny") {
+    return NextResponse.json({ error: "O sistema está em manutenção. Tente novamente em alguns minutos.", code: "MAINTENANCE" }, { status: 503, headers });
+  }
+  if (decision.action === "page") {
+    return NextResponse.rewrite(new URL("/manutencao", request.url), { status: 503, headers });
+  }
+  return null;
+}
+
 /** Resposta 503 (fail closed) quando a autenticação no banco está indisponível/mal configurada. */
 function authBackendUnavailable(code: AuthBackendErrorCode) {
   const message = AUTH_BACKEND_MESSAGES[code];
@@ -161,6 +185,16 @@ const clerkHandler = clerkMiddleware(async (auth, request) => {
   const { userId, getToken, sessionId } = await auth();
   const { pathname } = request.nextUrl;
   const isAuthenticated = Boolean(userId);
+
+  // Manutenção programada (painel admin): estado com cache e falha aberta. Rotas que não dependem de saber quem é o usuário
+  // (APIs, /conta etc.) decidem já; as do produto (/app, /admin, /onboarding) esperam a leitura do perfil mais abaixo,
+  // porque o super administrador continua entrando durante a manutenção.
+  const maintenance = (await getMaintenanceState()).active;
+  const maintenanceInfo = maintenanceRequestInfo(request);
+  if (maintenance && !needsRoleToDecide(pathname)) {
+    const early = maintenanceResponseFor(decideMaintenance(maintenance, maintenanceInfo, false), request, maintenance.expectedEndAt);
+    if (early) return early;
+  }
 
   if (isProtectedRoute(pathname) && !isAuthenticated) {
     const redirectUrl = new URL("/login", request.url);
@@ -243,6 +277,14 @@ const clerkHandler = clerkMiddleware(async (auth, request) => {
     // APIs (billing/presença) tratam a conta inativa por conta própria (AccountInactiveError => 403).
     if (isApiRoute) return NextResponse.next();
     return NextResponse.redirect(new URL(ACCOUNT_BLOCKED_PATH, request.url));
+  }
+
+  // Manutenção em modo somente leitura ou bloqueio: só o super administrador (profiles.role) passa; o resto vê a tela de
+  // manutenção (páginas) ou recebe 503 (gravações e navegação interna). Sem perfil (primeiro acesso) também é bloqueado.
+  if (maintenance && needsRoleToDecide(pathname)) {
+    const isSuper = Boolean(profile && isActiveSuperAdmin(profile.role as UserRole, profile.status as UserStatus));
+    const blocked = maintenanceResponseFor(decideMaintenance(maintenance, maintenanceInfo, isSuper), request, maintenance.expectedEndAt);
+    if (blocked) return blocked;
   }
 
   // Limite de sessões simultâneas (páginas, Server Actions e APIs do produto; /acesso-sessoes não é protegido por ele).

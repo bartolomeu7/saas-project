@@ -19,6 +19,7 @@ export function AppShell({
   userName,
   userEmail,
   defaultOpen = true,
+  banner,
   children,
 }: {
   company: Company;
@@ -26,6 +27,8 @@ export function AppShell({
   userName?: string | null;
   userEmail?: string | null;
   defaultOpen?: boolean;
+  /** Faixa de avisos da plataforma (manutenção programada), acima do cabeçalho. */
+  banner?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -42,6 +45,7 @@ export function AppShell({
         <AppSidebar userName={userName} userEmail={userEmail} role={role} />
         {/* SidebarInset já renderiza o landmark <main>; o alvo do skip link é um <div>. */}
         <SidebarInset className="prime-app-main min-w-0 bg-background">
+          {banner}
           <Header company={company} role={role} />
           <div id="conteudo-principal" className="flex-1" tabIndex={-1}>
             {children}

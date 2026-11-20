@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   Building2,
+  Construction,
   CreditCard,
   LayoutDashboard,
   Layers,
@@ -59,6 +60,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { label: "Auditoria", href: "/admin/audit", icon: ScrollText },
       { label: "Ferramentas", href: "/admin/tools", icon: Wrench },
       { label: "Integrações", href: "/admin/integrations", icon: Plug },
+      { label: "Manutenção", href: "/admin/maintenance", icon: Construction, superAdminOnly: true },
       { label: "Administradores", href: "/admin/administrators", icon: ShieldCheck, superAdminOnly: true },
       { label: "Configurações", href: "/admin/settings", icon: Settings, superAdminOnly: true },
     ],

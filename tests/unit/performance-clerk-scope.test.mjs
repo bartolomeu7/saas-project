@@ -45,6 +45,8 @@ const WITHOUT_CLERK = [
   "src/app/(public)/politica-de-reembolso/page.tsx",
   "src/app/(public)/termos-de-uso/page.tsx",
   "src/app/conta-excluida/page.tsx",
+  // tela de manutenção: pública e independente do Clerk de propósito (precisa abrir mesmo se o Clerk estiver fora)
+  "src/app/manutencao/page.tsx",
 ];
 
 describe("Escopo do ClerkProvider (Etapa 6)", () => {
