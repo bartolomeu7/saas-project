@@ -6,11 +6,22 @@ import { parseLocalDateTimeSaoPaulo, todayDateSaoPaulo } from "@/lib/timezone";
 import { createAppointmentCore, offDayError } from "@/lib/agenda/create-core";
 import type { ActionResult } from "@/lib/auth/actions";
 import type { Database } from "@/types/supabase";
+import { cleanText } from "@/lib/validations/common";
 
 type AppointmentStatus = Database["public"]["Enums"]["appointment_status"];
 
+/** Texto do formulário sem caracteres de controle/direção invisível e sem espaços nas pontas. */
 const textValue = (value: FormDataEntryValue | null) =>
-  typeof value === "string" ? value.trim() : "";
+  typeof value === "string" ? cleanText(value).trim() : "";
+
+const MAX_NOTES = 1000;
+
+/** Datas absurdas (ano 1999, daqui a 20 anos) quase sempre são erro de digitação: só de 2 anos atrás a 3 anos à frente. */
+function startsAtOutOfRange(startsAtLocal: string): boolean {
+  const year = Number(startsAtLocal.slice(0, 4));
+  const current = new Date().getFullYear();
+  return !Number.isFinite(year) || year < current - 2 || year > current + 3;
+}
 
 function parsePositiveInt(value: FormDataEntryValue | null): number | undefined {
   const raw = textValue(value);
@@ -41,6 +52,8 @@ export async function createAppointmentAction(
   if (!serviceId || !startsAt) {
     return { error: "Informe serviço e horário." };
   }
+  if (startsAtOutOfRange(startsAt)) return { error: "Data fora do período permitido (de 2 anos atrás a 3 anos à frente)." };
+  if (notes && notes.length > MAX_NOTES) return { error: `Observação: máximo de ${MAX_NOTES} caracteres.` };
   const supabase = await createSessionClient();
   const result = await createAppointmentCore(supabase, { customerId, serviceId, professionalId, startsAtLocal: startsAt, durationMinutes: duration, price, notes });
   if ("error" in result) return { error: result.error };
@@ -57,6 +70,7 @@ export async function rescheduleAppointmentAction(
   const startsAt = textValue(formData.get("startsAt"));
 
   if (!appointmentId || !startsAt) return { error: "Agendamento ou horário inválido." };
+  if (startsAtOutOfRange(startsAt)) return { error: "Data fora do período permitido (de 2 anos atrás a 3 anos à frente)." };
   const startsAtDate = parseLocalDateTimeSaoPaulo(startsAt);
   if (!startsAtDate) return { error: "Horário inválido." };
 

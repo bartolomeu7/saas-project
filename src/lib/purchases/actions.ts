@@ -8,6 +8,33 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { writeAuditLog } from "@/lib/audit/log";
 import type { ActionResult } from "@/lib/auth/actions";
 import type { Json } from "@/types/supabase";
+import { cleanText, MAX_MONEY, MAX_QUANTITY } from "@/lib/validations/common";
+
+const MAX_NOTES = 2000;
+
+/** Texto de formulário sem caracteres de controle/direção invisível e sem espaços nas pontas. */
+function cleanField(value: FormDataEntryValue | null): string {
+  return cleanText(String(value ?? "")).trim();
+}
+
+/**
+ * Confere os limites do banco (quantidade numeric(12,3), custo e total da linha numeric(12,2)) antes de chamar a RPC:
+ * sem isso o usuário recebia "numeric field overflow". Devolve a mensagem de erro, ou null se estiver tudo certo.
+ */
+function itemLimitsError(items: Json): string | null {
+  if (!Array.isArray(items)) return null;
+  for (const raw of items) {
+    const item = raw as { quantity?: unknown; unit_cost?: unknown; received_quantity?: unknown };
+    const quantity = Number(item.quantity ?? item.received_quantity ?? 0);
+    const unitCost = Number(item.unit_cost ?? 0);
+    if (Number.isFinite(quantity) && quantity > MAX_QUANTITY) return "Quantidade muito alta em um dos itens.";
+    if (Number.isFinite(unitCost) && unitCost > MAX_MONEY) return "Custo unitário muito alto em um dos itens.";
+    if (Number.isFinite(quantity) && Number.isFinite(unitCost) && quantity * unitCost > MAX_MONEY) {
+      return "O total de um dos itens passa do limite permitido (R$ 999.999.999,99).";
+    }
+  }
+  return null;
+}
 
 function parseDateValue(value: FormDataEntryValue | null): string | null {
   const raw = String(value ?? "").trim();
@@ -32,9 +59,13 @@ export async function createPurchaseOrderAction(
 ): Promise<ActionResult> {
   const supplierId = String(formData.get("supplierId") ?? "").trim();
   const items = parseItems(formData.get("items"));
+  const notes = cleanField(formData.get("notes"));
 
   if (!supplierId) return { error: "Selecione um fornecedor." };
   if (!items) return { error: "Adicione pelo menos um produto ao pedido." };
+  const limitsError = itemLimitsError(items);
+  if (limitsError) return { error: limitsError };
+  if (notes.length > MAX_NOTES) return { error: `Observações: máximo de ${MAX_NOTES} caracteres.` };
 
   const current = await getCurrentCompany();
   if (!current) return { error: "Nenhuma empresa encontrada." };
@@ -45,7 +76,7 @@ export async function createPurchaseOrderAction(
     p_items: items,
     p_expected_at: parseDateValue(formData.get("expectedAt")) ?? undefined,
     p_due_date: String(formData.get("dueDate") ?? "").trim() || undefined,
-    p_notes: String(formData.get("notes") ?? "").trim() || undefined,
+    p_notes: notes || undefined,
   });
 
   if (error || !data) {
@@ -79,6 +110,10 @@ export async function receivePurchaseOrderAction(
 ): Promise<ActionResult> {
   const items = parseItems(formData.get("items"));
   if (!items) return { error: "Informe pelo menos um item recebido." };
+  const limitsError = itemLimitsError(items);
+  if (limitsError) return { error: limitsError };
+  const receiptNotes = cleanField(formData.get("notes"));
+  if (receiptNotes.length > MAX_NOTES) return { error: `Observações: máximo de ${MAX_NOTES} caracteres.` };
 
   const current = await getCurrentCompany();
   if (!current) return { error: "Nenhuma empresa encontrada." };
@@ -87,7 +122,7 @@ export async function receivePurchaseOrderAction(
   const { error } = await supabase.rpc("receive_purchase_order", {
     p_purchase_order_id: purchaseOrderId,
     p_items: items,
-    p_notes: String(formData.get("notes") ?? "").trim() || undefined,
+    p_notes: receiptNotes || undefined,
   });
 
   if (error) {
