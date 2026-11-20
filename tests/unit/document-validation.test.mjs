@@ -43,7 +43,7 @@ test("telefone: letras e tamanhos absurdos recusados; formatos comuns passam", (
 test("clientes e fornecedores usam os validadores; fornecedor/cliente com documento repetido é recusado", () => {
   const customer = read("src/lib/validations/customer.ts");
   assert.ok(customer.includes("documentError") && customer.includes("phoneError") && /length >= 2/.test(customer));
-  assert.ok(read("src/lib/suppliers/actions.ts").includes("documentError"));
+  assert.ok(read("src/lib/validations/supplier.ts").includes("documentError"));
   const actions = read("src/lib/customers/actions.ts");
   assert.ok(actions.includes("Já existe um cliente com esse documento."));
 });

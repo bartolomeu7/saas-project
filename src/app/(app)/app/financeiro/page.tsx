@@ -16,6 +16,8 @@ import {
   SalePaymentForm,
 } from "@/components/app/finance-action-forms";
 import { cn } from "@/lib/utils";
+import { cancelFinancialEntryAction } from "@/lib/finance/actions";
+import { ConfirmActionForm } from "@/components/app/confirm-dialog";
 import { buttonVariants } from "@/components/ui/button";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 
@@ -172,6 +174,7 @@ export default async function FinancePage({
             </TableBody>
           </Table>
           {!payables.length && <div className="p-10 text-center text-sm text-muted-foreground">Nenhuma conta a pagar em aberto.</div>}
+          {payables.length >= 100 && <p className="border-t p-3 text-xs text-muted-foreground">Mostrando as 100 contas com vencimento mais próximo; o total em aberto acima considera todas.</p>}
         </div>
       </PageShell>
     );
@@ -226,12 +229,14 @@ export default async function FinancePage({
             </TableBody>
           </Table>
           {!receivables.length && <div className="p-10 text-center text-sm text-muted-foreground">Nenhum recebível pendente.</div>}
+          {receivables.length >= 100 && <p className="border-t p-3 text-xs text-muted-foreground">Mostrando as 100 vendas pendentes mais antigas; o total a receber acima considera todas.</p>}
         </div>
       </PageShell>
     );
   }
 
   if (view === "lancamentos") {
+    const categoryNames = new Map(categories.map((category) => [category.id, category.name]));
     return (
       <PageShell current="lancamentos">
         <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
@@ -250,20 +255,44 @@ export default async function FinancePage({
           <div className="overflow-x-auto rounded-xl border border-border bg-card/40">
             <div className="border-b p-4"><h2 className="font-semibold">Últimos lançamentos</h2></div>
             <Table className="w-full text-sm">
-              <TableHeader className="bg-secondary/60 text-[11px] uppercase tracking-wider"><TableRow className="border-b text-left text-muted-foreground"><TableHead className="p-3">Data</TableHead><TableHead className="p-3">Descrição</TableHead><TableHead className="p-3">Tipo</TableHead><TableHead className="p-3 text-right">Valor</TableHead></TableRow></TableHeader>
+              <TableHeader className="bg-secondary/60 text-[11px] uppercase tracking-wider"><TableRow className="border-b text-left text-muted-foreground"><TableHead className="p-3">Data</TableHead><TableHead className="p-3">Descrição</TableHead><TableHead className="p-3">Tipo</TableHead><TableHead className="p-3 text-right">Valor</TableHead>{canOperate && <TableHead className="p-3"><span className="sr-only">Ações</span></TableHead>}</TableRow></TableHeader>
               <TableBody>
                 {entries.map((entry) => (
                   <TableRow key={entry.id} className="border-b last:border-0">
                     <TableCell className="p-3">{dateOnly(entry.occurred_on)}</TableCell>
-                    <TableCell className="p-3"><div>{entry.description}</div><div className="text-xs text-muted-foreground">{entry.category_id ? "Categorizado" : "Sem categoria"}</div></TableCell>
+                    <TableCell className="p-3"><div>{entry.description}</div><div className="text-xs text-muted-foreground">{entry.category_id ? categoryNames.get(entry.category_id) ?? "Categorizado" : "Sem categoria"}</div></TableCell>
                     <TableCell className="p-3">{directionLabels[entry.direction]}</TableCell>
                     <TableCell className={cn("p-3 text-right font-semibold", entry.direction === "income" ? "text-emerald-600 dark:text-emerald-500" : "text-rose-600 dark:text-rose-500")}>
                       {entry.direction === "expense" ? "−" : "+"}{money(Number(entry.amount))}
                     </TableCell>
+                    {canOperate && (
+                      <TableCell className="p-3 text-right">
+                        {entry.source_type === null ? (
+                          <ConfirmActionForm
+                            label="Estornar"
+                            title="Estornar este lançamento?"
+                            description={
+                              entry.method === "cash"
+                                ? "O lançamento sai do resultado e o valor volta ao caixa aberto (é preciso ter o caixa aberto)."
+                                : "O lançamento sai do resultado do período. Esta ação não pode ser desfeita."
+                            }
+                            confirmLabel="Estornar"
+                            destructive
+                            action={async () => {
+                              "use server";
+                              return await cancelFinancialEntryAction(entry.id);
+                            }}
+                          />
+                        ) : (
+                          <span className="text-xs text-muted-foreground" title="Estorne na venda, compra ou folha de origem">Origem</span>
+                        )}
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
+            {entries.length >= 20 && <p className="border-t p-3 text-xs text-muted-foreground">Mostrando os 20 lançamentos mais recentes.</p>}
           </div>
         </div>
       </PageShell>

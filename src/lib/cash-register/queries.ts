@@ -71,8 +71,8 @@ export async function getCurrentOpenCashRegister(companyId: string): Promise<Cas
   return { ...(data as CashRegister), opened_by_name: names[data.opened_by] ?? null, closed_by_name: null };
 }
 
-/** O último caixa fechado da empresa (mais recente por closed_at), ou null se nunca houve nenhum. */
-export async function getLastClosedCashRegister(companyId: string): Promise<CashRegisterWithNames | null> {
+/** Os últimos caixas fechados da empresa (mais recente primeiro), para o histórico de fechamentos. */
+export async function listClosedCashRegisters(companyId: string, limit = 10): Promise<CashRegisterWithNames[]> {
   const supabase = await createSessionClient();
   const { data } = await supabase
     .from("cash_registers")
@@ -80,17 +80,16 @@ export async function getLastClosedCashRegister(companyId: string): Promise<Cash
     .eq("company_id", companyId)
     .eq("status", "closed")
     .order("closed_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .limit(limit);
 
-  if (!data) return null;
-
-  const names = await resolveNames([data.opened_by, data.closed_by].filter((id): id is string => !!id));
-  return {
-    ...(data as CashRegister),
-    opened_by_name: names[data.opened_by] ?? null,
-    closed_by_name: data.closed_by ? names[data.closed_by] ?? null : null,
-  };
+  const rows = (data ?? []) as CashRegister[];
+  if (rows.length === 0) return [];
+  const names = await resolveNames([...new Set(rows.flatMap((row) => [row.opened_by, row.closed_by].filter((id): id is string => !!id)))]);
+  return rows.map((row) => ({
+    ...row,
+    opened_by_name: names[row.opened_by] ?? null,
+    closed_by_name: row.closed_by ? names[row.closed_by] ?? null : null,
+  }));
 }
 
 /** Movimentações de um caixa, mais recente primeiro. */

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ClipboardList, CircleDollarSign, PackageCheck, PackageOpen, Truck } from "lucide-react";
+import { ClipboardList, CircleDollarSign, PackageCheck, PackageOpen, Search, Truck } from "lucide-react";
 import { MetricCard } from "@/components/app/metric-card";
 import { PageHeader } from "@/components/app/page-header";
 import { EmptyState } from "@/components/app/empty-state";
@@ -31,13 +31,31 @@ const STATUS_VARIANT: Record<PurchaseOrderStatus, BadgeProps["variant"]> = {
   cancelled: "danger",
 };
 
-export default async function PurchasesPage() {
+const LIST_LIMIT = 100;
+const STATUS_FILTERS = Object.keys(PURCHASE_ORDER_STATUS_LABELS) as PurchaseOrderStatus[];
+
+/** Minúsculas e sem acento, para a busca achar "Cosméticos" digitando "cosmeticos". */
+const plain = (text: string) => text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+export default async function PurchasesPage({
+  searchParams: searchParamsPromise,
+}: {
+  searchParams: Promise<{ q?: string; status?: string }>;
+}) {
+  const searchParams = await searchParamsPromise;
   const current = (await getCurrentCompany())!;
   if (!can(current.role, "purchases.view")) return <NoAccess area="as Compras" />;
-  const [stats, orders] = await Promise.all([
+  const statusFilter = STATUS_FILTERS.find((status) => status === searchParams?.status);
+  const search = plain((searchParams?.q ?? "").slice(0, 80).trim());
+  const [stats, allOrders] = await Promise.all([
     getPurchaseStats(current.company.id),
-    listPurchaseOrders(current.company.id),
+    listPurchaseOrders(current.company.id, statusFilter),
   ]);
+  const matching = search
+    ? allOrders.filter((order) => plain((order.order_number ?? "PC-" + order.id.slice(0, 8)) + " " + (order.suppliers?.name ?? "")).includes(search))
+    : allOrders;
+  const orders = matching.slice(0, LIST_LIMIT);
+  const filtering = Boolean(search || statusFilter);
 
   return (
     <div className="prime-module-page prime-module-page--compras flex flex-col gap-6 px-4 py-6 sm:px-6">
@@ -59,7 +77,7 @@ export default async function PurchasesPage() {
         <MetricCard label="A pagar" value={money(stats.openPayables)} icon={CircleDollarSign} />
       </div>
 
-      {orders.length === 0 ? (
+      {allOrders.length === 0 && !filtering ? (
         <EmptyState
           title="Nenhum pedido de compra ainda."
           description="Crie o primeiro para conectar compras ao estoque."
@@ -69,9 +87,38 @@ export default async function PurchasesPage() {
         />
       ) : (
         <>
+          <form className="flex flex-wrap items-center gap-2" role="search">
+            <div className="relative min-w-[12rem] flex-1 sm:max-w-sm">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+              <input
+                name="q"
+                type="search"
+                defaultValue={searchParams?.q ?? ""}
+                aria-label="Buscar pedido ou fornecedor"
+                placeholder="Buscar pedido ou fornecedor..."
+                className="h-10 w-full rounded-md border border-input bg-background pl-9 pr-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+            </div>
+            <select
+              name="status"
+              defaultValue={statusFilter ?? ""}
+              aria-label="Filtrar por situação do pedido"
+              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+            >
+              <option value="">Todas as situações</option>
+              {STATUS_FILTERS.map((status) => (
+                <option key={status} value={status}>{PURCHASE_ORDER_STATUS_LABELS[status]}</option>
+              ))}
+            </select>
+            <button className={cn(buttonVariants({ variant: "outline" }))}>Filtrar</button>
+          </form>
           <p className="text-xs text-muted-foreground" aria-live="polite">
-            {orders.length} {orders.length === 1 ? "pedido" : "pedidos"}
+            {matching.length} {matching.length === 1 ? "pedido" : "pedidos"}
+            {matching.length > LIST_LIMIT ? " (mostrando os " + LIST_LIMIT + " mais recentes)" : ""}
           </p>
+          {orders.length === 0 && (
+            <p className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">Nenhum pedido encontrado com esse filtro.</p>
+          )}
           <div className="overflow-x-auto rounded-xl border border-border bg-card/40">
             <Table className="w-full text-sm sm:min-w-[560px]">
               <TableHeader className="bg-secondary/60 text-left text-[11px] uppercase tracking-wider text-muted-foreground">

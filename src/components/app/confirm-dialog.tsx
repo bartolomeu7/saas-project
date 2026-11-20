@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 /**
  * Confirmação em modal (AlertDialog do shadcn/ui) no lugar de
@@ -73,7 +74,8 @@ export function ConfirmActionForm({
   destructive = false,
   triggerClassName,
 }: {
-  action: (formData: FormData) => void | Promise<void>;
+  /** Pode devolver `{ error }` para avisar o motivo da recusa sem derrubar a página. */
+  action: (formData: FormData) => void | { error?: string } | Promise<void | { error?: string }>;
   label: string;
   title: string;
   description?: ReactNode;
@@ -90,7 +92,8 @@ export function ConfirmActionForm({
       action={async (formData) => {
         setPending(true);
         try {
-          await action(formData);
+          const result = await action(formData);
+          if (result && typeof result === "object" && result.error) toast.error(result.error);
         } finally {
           setPending(false);
         }

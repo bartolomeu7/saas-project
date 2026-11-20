@@ -661,7 +661,7 @@ export interface AgendarExtras {
   durationMinutes?: number;
   notes?: string;
   /** coisas que o chat ainda não faz e que não devem ser ignoradas em silêncio */
-  unsupported: ("duplicar" | "desconto-sem-valor")[];
+  unsupported: ("duplicar" | "desconto-sem-valor" | "valor-invalido")[];
 }
 
 const NUM_WORDS: Record<string, number> = { um: 1, uma: 1, dois: 2, duas: 2, tres: 3, quatro: 4, meia: 0.5, meio: 0.5 };
@@ -686,6 +686,9 @@ export function parseExtras(text: string): AgendarExtras {
   if (price) {
     const v = toNum(price[1]!);
     if (Number.isFinite(v) && v >= 0 && v <= 1_000_000) extras.priceOverride = Math.round(v * 100) / 100;
+    else extras.unsupported.push("valor-invalido");
+  } else if (/\b(?:valor|preco|cobrar|cobra|cobre)\s*(?:de |para |em |do servico )?(?:r\$\s*)?-\s*\d/.test(t) || /\br\$\s*-\s*\d/.test(t)) {
+    extras.unsupported.push("valor-invalido");
   } else if (/\b(gratis|gratuito|de graca|cortesia|sem cobrar|sem custo)\b/.test(t)) extras.priceOverride = 0;
   else {
     // valor por extenso com moeda: "cento e cinquenta reais", "mil e duzentos reais"

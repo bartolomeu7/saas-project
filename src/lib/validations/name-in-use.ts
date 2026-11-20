@@ -1,6 +1,6 @@
 import type { createSessionClient } from "@/lib/supabase/server";
 
-type NamedTable = "services" | "service_categories" | "product_categories";
+type NamedTable = "services" | "service_categories" | "product_categories" | "suppliers";
 
 /** Escapa % e _ (curingas do ilike) e a própria barra, para comparar o nome inteiro de forma literal. */
 export function escapeLike(value: string): string {
@@ -18,7 +18,7 @@ export async function nameInUse(
   name: string,
   excludeId?: string
 ): Promise<boolean> {
-  // as três tabelas têm id, company_id e name; o cliente tipado não aceita nome de tabela dinâmico
+  // as tabelas têm id, company_id e name; o cliente tipado não aceita nome de tabela dinâmico
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let query = (supabase as any).from(table).select("id").eq("company_id", companyId).ilike("name", escapeLike(name)).limit(1);
   if (excludeId) query = query.neq("id", excludeId);

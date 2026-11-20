@@ -5,7 +5,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { can, canCloseCashRegister } from "@/lib/permissions/matrix";
 import {
   getCurrentOpenCashRegister,
-  getLastClosedCashRegister,
+  listClosedCashRegisters,
   listCashMovements,
   summarizeCashMovements,
 } from "@/lib/cash-register/queries";
@@ -44,7 +44,8 @@ export default async function CashRegisterPage() {
   const openRegister = await getCurrentOpenCashRegister(current.company.id);
 
   if (!openRegister) {
-    const lastClosed = await getLastClosedCashRegister(current.company.id);
+    const closedRegisters = await listClosedCashRegisters(current.company.id, 10);
+    const lastClosed = closedRegisters[0] ?? null;
 
     return (
       <div className="prime-module-page prime-module-page--caixa flex flex-col gap-6 px-4 py-6 sm:px-6">
@@ -77,6 +78,7 @@ export default async function CashRegisterPage() {
                 <dt className="text-xs text-muted-foreground">Diferença</dt>
                 <dd className="text-sm font-medium text-foreground">
                   {formatMoney(Number(lastClosed.cash_difference))}
+                  {Number(lastClosed.cash_difference) > 0 ? " (sobra)" : Number(lastClosed.cash_difference) < 0 ? " (falta)" : ""}
                 </dd>
               </div>
               <div>
@@ -92,6 +94,45 @@ export default async function CashRegisterPage() {
               </div>
             </dl>
           </div>
+        )}
+
+        {closedRegisters.length > 1 && (
+          <section className="overflow-x-auto rounded-xl border border-border bg-card/60" aria-labelledby="historico-caixa">
+            <h2 id="historico-caixa" className="border-b border-border px-5 py-3 text-sm font-semibold text-muted-foreground">
+              Fechamentos anteriores
+            </h2>
+            <table className="w-full min-w-[640px] text-sm">
+              <thead className="text-left text-xs text-muted-foreground">
+                <tr>
+                  <th className="px-5 py-2 font-medium">Aberto em</th>
+                  <th className="px-3 py-2 font-medium">Fechado em</th>
+                  <th className="px-3 py-2 text-right font-medium">Esperado</th>
+                  <th className="px-3 py-2 text-right font-medium">Informado</th>
+                  <th className="px-3 py-2 text-right font-medium">Diferença</th>
+                  <th className="px-5 py-2 font-medium">Fechado por</th>
+                </tr>
+              </thead>
+              <tbody>
+                {closedRegisters.map((register) => {
+                  const difference = Number(register.cash_difference ?? 0);
+                  return (
+                    <tr key={register.id} className="border-t border-border">
+                      <td className="px-5 py-2">{dateTimeFormatter.format(new Date(register.opened_at))}</td>
+                      <td className="px-3 py-2">{register.closed_at ? dateTimeFormatter.format(new Date(register.closed_at)) : "—"}</td>
+                      <td className="px-3 py-2 text-right">{formatMoney(Number(register.expected_cash_balance ?? 0))}</td>
+                      <td className="px-3 py-2 text-right">{formatMoney(Number(register.informed_cash_balance ?? 0))}</td>
+                      <td className={"px-3 py-2 text-right font-medium " + (difference === 0 ? "" : difference > 0 ? "text-emerald-600 dark:text-emerald-500" : "text-destructive")}>
+                        {difference > 0 ? "+" : ""}
+                        {formatMoney(difference)}
+                        {difference > 0 ? " (sobra)" : difference < 0 ? " (falta)" : ""}
+                      </td>
+                      <td className="px-5 py-2">{register.closed_by_name ?? "—"}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </section>
         )}
 
         <div className="max-w-xl rounded-xl border border-border bg-card p-5">

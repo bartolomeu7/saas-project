@@ -219,3 +219,20 @@ export async function createCostCenterAction(
   return { success: "Centro de custo salvo." };
 }
 
+
+/** Estorna um lançamento manual (receita/despesa avulsa). O banco confere papel, origem e, se for dinheiro, o caixa aberto. */
+export async function cancelFinancialEntryAction(entryId: string): Promise<{ error?: string } | void> {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(entryId)) return { error: "Lançamento inválido." };
+  const current = await getCurrentCompany();
+  if (!current) return { error: "Nenhuma empresa encontrada." };
+
+  const supabase = await createSessionClient();
+  // a função é nova e ainda não consta nos tipos gerados do banco
+  const { error } = await (supabase as any).rpc("cancel_manual_financial_entry", { p_entry_id: entryId, p_reason: "Estorno pelo Financeiro" });
+  if (error) return { error: error.message || "Não foi possível estornar o lançamento." };
+
+  revalidatePath("/app/financeiro");
+  revalidatePath("/app/caixa");
+  revalidatePath("/app/relatorios");
+  revalidatePath("/app");
+}

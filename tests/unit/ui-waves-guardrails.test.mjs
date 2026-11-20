@@ -306,7 +306,7 @@ describe("Onda E (lote 3): Estoque, Compras e Fornecedores, mesma funcionalidade
 
   it("Compras mantém as consultas, o link do pedido e dá cor a todos os status do pedido", () => {
     assert.match(purchases, /getPurchaseStats\(current\.company\.id\)/);
-    assert.match(purchases, /listPurchaseOrders\(current\.company\.id\)/);
+    assert.match(purchases, /listPurchaseOrders\(current\.company\.id, statusFilter\)/);
     assert.match(purchases, /"\/app\/compras\/" \+ order\.id/);
     for (const status of ["draft", "ordered", "partially_received", "received", "cancelled"]) {
       assert.match(purchases, new RegExp(`${status}: "`), status);
@@ -341,7 +341,7 @@ describe("Onda E (lote 4): Caixa e Financeiro, só apresentação", () => {
 
   it("Caixa mantém as consultas, a regra de quem opera e todos os formulários", () => {
     assert.match(cash, /getCurrentOpenCashRegister\(current\.company\.id\)/);
-    assert.match(cash, /getLastClosedCashRegister\(current\.company\.id\)/);
+    assert.match(cash, /listClosedCashRegisters\(current\.company\.id, 10\)/);
     assert.match(cash, /listCashMovements\(openRegister\.id\)/);
     assert.match(cash, /summarizeCashMovements\(/);
     // Regra de quem opera vem da matriz: qualquer membro abre; sangria só owner/admin; funcionário fecha só o próprio caixa.

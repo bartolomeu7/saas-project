@@ -76,7 +76,7 @@ export default async function PurchaseOrderPage({
               "use server";
               const formData = new FormData();
               formData.set("reason", "Cancelamento manual");
-              await cancelPurchaseOrderAction(order.id, formData);
+              return await cancelPurchaseOrderAction(order.id, formData);
             }}
           />
         )}
@@ -172,7 +172,7 @@ export default async function PurchaseOrderPage({
                       "use server";
                       const formData = new FormData();
                       formData.set("reason", "Correção de recebimento");
-                      await cancelPurchaseReceiptAction(receipt.id, order.id, formData);
+                      return await cancelPurchaseReceiptAction(receipt.id, order.id, formData);
                     }}
                   />
                 )}

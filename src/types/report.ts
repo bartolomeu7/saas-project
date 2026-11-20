@@ -59,7 +59,10 @@ export interface ReportsWorkspace {
   range: ReportRange;
   summary: ReportSummary;
   salesTrend: ReportTrendPoint[];
+  /** Os 8 itens de maior faturamento (gráfico da tela). */
   topItems: ReportTopItem[];
+  /** Todos os itens vendidos no período, do maior para o menor faturamento (exportação CSV). */
+  allItems: ReportTopItem[];
   paymentMethods: ReportPaymentMethod[];
   appointments: ReportAppointments;
   inventory: ReportInventoryAlerts;

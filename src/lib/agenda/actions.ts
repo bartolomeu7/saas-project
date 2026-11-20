@@ -7,6 +7,7 @@ import { createAppointmentCore, offDayError } from "@/lib/agenda/create-core";
 import type { ActionResult } from "@/lib/auth/actions";
 import type { Database } from "@/types/supabase";
 import { cleanText } from "@/lib/validations/common";
+import { isMoneyTooLarge, MONEY_TOO_LARGE_MESSAGE, parseMoneyInput } from "@/lib/parse-money";
 
 type AppointmentStatus = Database["public"]["Enums"]["appointment_status"];
 
@@ -30,11 +31,9 @@ function parsePositiveInt(value: FormDataEntryValue | null): number | undefined 
   return Number.isInteger(number) && number > 0 ? number : undefined;
 }
 
+/** Aceita "280", "280,50", "1.280,50" e "280.5" (parseMoneyInput); vazio ou inválido vira undefined. */
 function parseMoney(value: FormDataEntryValue | null): number | undefined {
-  const raw = textValue(value).replace(",", ".");
-  if (!raw) return undefined;
-  const number = Number(raw);
-  return Number.isFinite(number) && number >= 0 ? number : undefined;
+  return parseMoneyInput(textValue(value)) ?? undefined;
 }
 
 export async function createAppointmentAction(
@@ -53,6 +52,7 @@ export async function createAppointmentAction(
     return { error: "Informe serviço e horário." };
   }
   if (startsAtOutOfRange(startsAt)) return { error: "Data fora do período permitido (de 2 anos atrás a 3 anos à frente)." };
+  if (isMoneyTooLarge(textValue(formData.get("price")))) return { error: MONEY_TOO_LARGE_MESSAGE };
   if (notes && notes.length > MAX_NOTES) return { error: `Observação: máximo de ${MAX_NOTES} caracteres.` };
   const supabase = await createSessionClient();
   const result = await createAppointmentCore(supabase, { customerId, serviceId, professionalId, startsAtLocal: startsAt, durationMinutes: duration, price, notes });
@@ -69,7 +69,8 @@ export async function rescheduleAppointmentAction(
   const appointmentId = textValue(formData.get("appointmentId"));
   const startsAt = textValue(formData.get("startsAt"));
 
-  if (!appointmentId || !startsAt) return { error: "Agendamento ou horário inválido." };
+  if (!appointmentId) return { error: "Agendamento inválido." };
+  if (!startsAt) return { error: "Informe o novo dia e horário." };
   if (startsAtOutOfRange(startsAt)) return { error: "Data fora do período permitido (de 2 anos atrás a 3 anos à frente)." };
   const startsAtDate = parseLocalDateTimeSaoPaulo(startsAt);
   if (!startsAtDate) return { error: "Horário inválido." };
@@ -105,6 +106,7 @@ export async function completeAppointmentAction(
   const amount = parseMoney(formData.get("amount"));
 
   if (!appointmentId) return { error: "Agendamento inválido." };
+  if (isMoneyTooLarge(textValue(formData.get("amount")))) return { error: MONEY_TOO_LARGE_MESSAGE };
   if (rawMethod && !PAYMENT_METHODS.includes(rawMethod as PaymentMethod)) {
     return { error: "Forma de pagamento inválida." };
   }

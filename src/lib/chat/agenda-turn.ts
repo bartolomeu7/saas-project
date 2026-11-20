@@ -639,6 +639,7 @@ export async function runAgendarTurn(input: TurnInput, ports: AgendarPorts): Pro
     if (lim) state.slots.recorrencia = { ...state.slots.recorrencia, limit: lim };
   }
   if (extras.unsupported.includes("duplicar")) messages.push({ kind: "notice", text: "Eu agendo um de cada vez. Termine este e peça o outro." });
+  if (extras.unsupported.includes("valor-invalido")) messages.push({ kind: "notice", text: "Esse valor não vale. Diga um valor de R$ 0 até R$ 1.000.000, por exemplo \"valor 80\"." });
   if (extras.unsupported.includes("desconto-sem-valor")) messages.push({ kind: "notice", text: 'Diga o valor final ou a porcentagem do desconto. Exemplo: "valor 80" ou "10% de desconto".' });
 
   // único profissional possível: sugere e segue (aparece no cartão)
