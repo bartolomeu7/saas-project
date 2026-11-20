@@ -661,7 +661,7 @@ export interface AgendarExtras {
   durationMinutes?: number;
   notes?: string;
   /** coisas que o chat ainda não faz e que não devem ser ignoradas em silêncio */
-  unsupported: ("duplicar" | "desconto-sem-valor" | "valor-invalido")[];
+  unsupported: ("duplicar" | "desconto-sem-valor" | "valor-invalido" | "duracao-invalida")[];
 }
 
 const NUM_WORDS: Record<string, number> = { um: 1, uma: 1, dois: 2, duas: 2, tres: 3, quatro: 4, meia: 0.5, meio: 0.5 };
@@ -710,6 +710,7 @@ export function parseExtras(text: string): AgendarExtras {
     let minutes = unit.startsWith("h") ? n * 60 : n;
     if (dur[3]) minutes += dur[3] === "meia" ? 30 : Number(dur[3]);
     if (minutes >= 5 && minutes <= 12 * 60) extras.durationMinutes = Math.round(minutes);
+    else extras.unsupported.push("duracao-invalida");
   }
 
   if (/\b(duplic\w*|copi\w+ (isso|esse|este))\b/.test(t)) extras.unsupported.push("duplicar");

@@ -500,7 +500,14 @@ export async function runAgendarTurn(input: TurnInput, ports: AgendarPorts): Pro
     }
   } else if (state.slots.profissional && state.slots.servico) {
     // mudança de ideia: citou outro profissional depois de já ter um
-    const explicit = u.professionals.length === 1 && u.professionals[0]!.id !== state.slots.profissional.id ? u.professionals[0]! : null;
+    let explicit = u.professionals.length === 1 && u.professionals[0]!.id !== state.slots.profissional.id ? u.professionals[0]! : null;
+    // "troca para o Felipe", "pode ser o Felipe", só "Felipe": mensagem curta com o nome, sem a palavra "com" (e sem ser observação)
+    if (!explicit && u.professionals.length === 0 && !/\b(obs|observacao)\b/.test(norm(text)) && tokens(text).length <= 6) {
+      const others = eligibleProfessionals(catalog, state.slots.servico.id).filter((p) => p.id !== state.slots.profissional!.id);
+      // o cliente já está escolhido: o que sobra depois de "para" é o profissional, então só o nome do cliente escolhido conta como colisão
+      const loose = looseProfessionals(text, others, state.slots.cliente?.name);
+      if (loose.length === 1) explicit = loose[0]!;
+    }
     const pro = explicit ?? catalog.professionals.find((p) => p.id === state.slots.profissional!.id);
     if (pro) state.slots.profissional = professionalSlot(pro, state.slots.servico.id);
   }
@@ -639,6 +646,7 @@ export async function runAgendarTurn(input: TurnInput, ports: AgendarPorts): Pro
     if (lim) state.slots.recorrencia = { ...state.slots.recorrencia, limit: lim };
   }
   if (extras.unsupported.includes("duplicar")) messages.push({ kind: "notice", text: "Eu agendo um de cada vez. Termine este e peça o outro." });
+  if (extras.unsupported.includes("duracao-invalida")) messages.push({ kind: "notice", text: "Essa duração não vale. Diga de 5 minutos até 12 horas, por exemplo \"por 1 hora\"." });
   if (extras.unsupported.includes("valor-invalido")) messages.push({ kind: "notice", text: "Esse valor não vale. Diga um valor de R$ 0 até R$ 1.000.000, por exemplo \"valor 80\"." });
   if (extras.unsupported.includes("desconto-sem-valor")) messages.push({ kind: "notice", text: 'Diga o valor final ou a porcentagem do desconto. Exemplo: "valor 80" ou "10% de desconto".' });
 

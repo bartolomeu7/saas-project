@@ -5,7 +5,7 @@ import { createSessionClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/auth/actions";
 import { getCurrentCompany } from "@/lib/companies/queries";
 import { todayDateSaoPaulo } from "@/lib/timezone";
-import { isMoneyTooLarge, MONEY_TOO_LARGE_MESSAGE, parseMoneyInput } from "@/lib/parse-money";
+import { FRACTION_OF_CENT_MESSAGE, hasFractionOfCent, isMoneyTooLarge, MONEY_TOO_LARGE_MESSAGE, parseMoneyInput } from "@/lib/parse-money";
 import { cleanText } from "@/lib/validations/common";
 import { tooLongMessage } from "@/lib/text-input";
 import type { Database } from "@/types/supabase";
@@ -78,6 +78,7 @@ export async function createFinancialEntryAction(
   if (description.length > MAX_DESCRIPTION) return { error: tooLongMessage("Descrição", MAX_DESCRIPTION) };
   if (notes && notes.length > MAX_NOTES) return { error: tooLongMessage("Observação", MAX_NOTES) };
   if (isMoneyTooLarge(textValue(formData.get("amount")))) return { error: MONEY_TOO_LARGE_MESSAGE };
+  if (hasFractionOfCent(textValue(formData.get("amount")))) return { error: FRACTION_OF_CENT_MESSAGE };
   if (dateOutOfRange(occurredOn)) return { error: "Data fora do período permitido (de 10 anos atrás a 5 anos à frente)." };
   if (amount === null) return { error: "Informe um valor maior que zero." };
   if (!method) return { error: "Selecione a forma de pagamento." };
@@ -115,6 +116,7 @@ export async function payAccountsPayableAction(
 
   if (!payableId) return { error: "Conta a pagar inválida." };
   if (isMoneyTooLarge(textValue(formData.get("amount")))) return { error: MONEY_TOO_LARGE_MESSAGE };
+  if (hasFractionOfCent(textValue(formData.get("amount")))) return { error: FRACTION_OF_CENT_MESSAGE };
   if (notes && notes.length > MAX_NOTES) return { error: tooLongMessage("Observação", MAX_NOTES) };
   if (dateOutOfRange(paymentDate)) return { error: "Data fora do período permitido." };
   if (amount === null) return { error: "Informe o valor do pagamento." };

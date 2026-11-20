@@ -9,6 +9,7 @@ import { writeAuditLog } from "@/lib/audit/log";
 import type { ActionResult } from "@/lib/auth/actions";
 import type { Json } from "@/types/supabase";
 import { cleanText, MAX_MONEY, MAX_QUANTITY } from "@/lib/validations/common";
+import { purchaseDatesError } from "@/lib/validations/purchase-dates";
 
 const MAX_NOTES = 2000;
 
@@ -66,6 +67,8 @@ export async function createPurchaseOrderAction(
   const limitsError = itemLimitsError(items);
   if (limitsError) return { error: limitsError };
   if (notes.length > MAX_NOTES) return { error: `Observações: máximo de ${MAX_NOTES} caracteres.` };
+  const datesProblem = purchaseDatesError(String(formData.get("expectedAt") ?? ""), String(formData.get("dueDate") ?? ""), new Date().getFullYear());
+  if (datesProblem) return { error: datesProblem };
 
   const current = await getCurrentCompany();
   if (!current) return { error: "Nenhuma empresa encontrada." };

@@ -14,6 +14,14 @@ export function parseMoneyInput(value: string | undefined | null): number | null
   return Number.isFinite(number) && number >= 0 ? number : null;
 }
 
+/** true quando o valor tem fração de centavo ("0,005", "10,999"): o banco arredondaria sem avisar. */
+export function hasFractionOfCent(value: string | undefined | null): boolean {
+  const parsed = parseMoneyInput(value);
+  return parsed !== null && Math.abs(parsed * 100 - Math.round(parsed * 100)) > 1e-6;
+}
+
+export const FRACTION_OF_CENT_MESSAGE = "Use no máximo 2 casas decimais (centavos).";
+
 /** true quando o texto é um valor válido, porém acima do limite do banco. */
 export function isMoneyTooLarge(value: string | undefined | null): boolean {
   const parsed = parseMoneyInput(value);
