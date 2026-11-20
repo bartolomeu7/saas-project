@@ -35,14 +35,17 @@ export const optionalCleanText = (max: number) =>
     .pipe(z.string().max(max, `Máximo de ${max} caracteres.`))
     .transform((v) => (v ? v : null));
 
+/** "o estoque atual" → "O estoque atual": as mensagens de validação começam com maiúscula. */
+const capitalize = (text: string) => (text ? text.charAt(0).toUpperCase() + text.slice(1) : text);
+
 export const boundedMoney = (label: string) =>
   z.coerce
     .number({ invalid_type_error: `Informe um valor válido para ${label}.` })
-    .min(0, `${label} não pode ser negativo.`)
-    .max(MAX_MONEY, `${label} é grande demais (máximo ${MAX_MONEY.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}).`);
+    .min(0, `${capitalize(label)} não pode ser negativo.`)
+    .max(MAX_MONEY, `${capitalize(label)} é grande demais (máximo ${MAX_MONEY.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}).`);
 
 export const boundedQuantity = (label: string) =>
   z.coerce
     .number({ invalid_type_error: `Informe uma quantidade válida para ${label}.` })
-    .min(0, `${label} não pode ser negativo.`)
-    .max(MAX_QUANTITY, `${label} é grande demais (máximo ${MAX_QUANTITY.toLocaleString("pt-BR")}).`);
+    .min(0, `${capitalize(label)} não pode ser negativo.`)
+    .max(MAX_QUANTITY, `${capitalize(label)} é grande demais (máximo ${MAX_QUANTITY.toLocaleString("pt-BR")}).`);
