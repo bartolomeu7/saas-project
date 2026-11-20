@@ -114,7 +114,9 @@ describe("Escopo do ClerkProvider (Etapa 6)", () => {
 
   it("a proteção de rotas continua no servidor: o middleware segue sendo o clerkMiddleware, para todas as rotas", () => {
     const mw = read(join(SRC, "middleware.ts"));
-    assert.match(mw, /export const middleware = clerkMiddleware\(/);
+    // O middleware exportado só adiciona o modo manutenção na frente; toda rota que passa dele cai no clerkMiddleware.
+    assert.match(mw, /const clerkHandler = clerkMiddleware\(/);
+    assert.match(mw, /export const middleware[^=]*=[^]*return clerkHandler\(request, event\)/);
     assert.match(mw, /PROTECTED_PREFIXES = \["\/app", "\/admin", "\/onboarding", "\/acesso-sessoes", "\/conta", TWO_FACTOR_PATH\]/);
   });
 });

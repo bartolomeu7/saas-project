@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { clerkMiddleware } from "@clerk/nextjs/server";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/supabase";
+import { isMaintenanceExempt, isMaintenanceOn, maintenanceResponse } from "@/lib/maintenance";
 import { getSubscriptionGuardStatus } from "@/lib/billing/guard";
 import { isActivePlatformAdmin, isActiveSuperAdmin } from "@/lib/admin/permissions";
 import { ACCOUNT_BLOCKED_PATH } from "@/lib/auth/account-status";
@@ -156,7 +157,7 @@ function authBackendUnavailable(code: AuthBackendErrorCode) {
  * usuário atual, o que dá o UUID interno (profiles.user_id) e a role numa
  * única consulta.
  */
-export const middleware = clerkMiddleware(async (auth, request) => {
+const clerkHandler = clerkMiddleware(async (auth, request) => {
   const { userId, getToken, sessionId } = await auth();
   const { pathname } = request.nextUrl;
   const isAuthenticated = Boolean(userId);
@@ -347,6 +348,15 @@ export const middleware = clerkMiddleware(async (auth, request) => {
 
   return NextResponse.next();
 });
+
+/** Porta de entrada: o modo manutenção (MAINTENANCE_MODE=1) responde antes de qualquer outra coisa. */
+export const middleware: typeof clerkHandler = (request, event) => {
+  if (isMaintenanceOn(process.env.MAINTENANCE_MODE) && !isMaintenanceExempt(request.nextUrl.pathname)) {
+    const res = maintenanceResponse();
+    return new NextResponse(res.body, { status: res.status, headers: res.headers });
+  }
+  return clerkHandler(request, event);
+};
 
 export const config = {
   matcher: [
