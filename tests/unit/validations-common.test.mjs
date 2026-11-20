@@ -54,5 +54,6 @@ test("cliente: UF, CEP, e-mail, nascimento e caracteres invisíveis usam as regr
   assert.match(src, /toLowerCase\(\)/);
   assert.match(src, /1900-01-01/);
   assert.match(src, /requiredText\(/);
-  assert.equal((src.match(/BRAZIL_UFS = \[(.*?)\]/s)?.[1].match(/"[A-Z]{2}"/g) ?? []).length, 27);
+  const ufs = readFileSync(new URL("../../src/lib/validations/brazil-ufs.ts", import.meta.url), "utf8");
+  assert.equal((ufs.match(/BRAZIL_UFS = \[(.*?)\]/s)?.[1].match(/"[A-Z]{2}"/g) ?? []).length, 27);
 });

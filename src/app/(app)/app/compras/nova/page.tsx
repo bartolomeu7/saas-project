@@ -13,7 +13,7 @@ export const metadata: Metadata = { title: "Novo pedido de compra" };
 export default async function NewPurchasePage() {
   const current = (await getCurrentCompany())!;
   if (!can(current.role, "purchases.view")) return <NoAccess area="as Compras" />;
-  const [suppliers, products] = await Promise.all([
+  const [allSuppliers, products] = await Promise.all([
     listSuppliers(current.company.id),
     listProducts({
       companyId: current.company.id,
@@ -23,6 +23,9 @@ export default async function NewPurchasePage() {
       sortBy: "name",
     }),
   ]);
+
+  // fornecedor inativo "deixa de aparecer para novos pedidos" (e o banco recusa); só os ativos entram na lista
+  const suppliers = allSuppliers.filter((supplier) => supplier.status === "active");
 
   if (!suppliers.length) {
     return (

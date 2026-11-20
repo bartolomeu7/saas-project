@@ -24,6 +24,14 @@ const PAYMENT_LABELS: Record<string, string> = {
 
 const money = (value: unknown) => Number(value ?? 0);
 
+/** Lista de ids em blocos: um `.in(...)` com milhares de ids estoura o tamanho da URL da consulta. */
+const ID_CHUNK = 150;
+function chunkIds(ids: string[]): string[][] {
+  const chunks: string[][] = [];
+  for (let i = 0; i < ids.length; i += ID_CHUNK) chunks.push(ids.slice(i, i + ID_CHUNK));
+  return chunks;
+}
+
 function safePeriod(value: string | undefined): ReportPeriod {
   return value && value in PERIOD_LABELS ? (value as ReportPeriod) : "month";
 }
@@ -60,12 +68,14 @@ async function getSalesLayer(companyId: string, range: ReportRange) {
   let payments: Array<{ sale_id: string; amount: number; method: string }> = [];
 
   if (saleIds.length) {
-    const [itemResult, paymentResult] = await Promise.all([
-      supabase.from("sale_items").select("description, quantity, total_amount, item_type").eq("company_id", companyId).in("sale_id", saleIds),
-      supabase.from("sale_payments").select("sale_id, amount, method").eq("company_id", companyId).eq("status", "paid").in("sale_id", saleIds),
-    ]);
-    items = (itemResult.data ?? []) as typeof items;
-    payments = (paymentResult.data ?? []) as typeof payments;
+    for (const ids of chunkIds(saleIds)) {
+      const [itemResult, paymentResult] = await Promise.all([
+        supabase.from("sale_items").select("description, quantity, total_amount, item_type").eq("company_id", companyId).in("sale_id", ids),
+        supabase.from("sale_payments").select("sale_id, amount, method").eq("company_id", companyId).eq("status", "paid").in("sale_id", ids),
+      ]);
+      items = items.concat((itemResult.data ?? []) as typeof items);
+      payments = payments.concat((paymentResult.data ?? []) as typeof payments);
+    }
   }
 
   const revenue = rows.reduce((sum, row) => sum + money(row.total_amount), 0);
@@ -87,13 +97,14 @@ async function getSalesLayer(companyId: string, range: ReportRange) {
     item.revenue += money(row.total_amount);
     itemMap.set(key, item);
   }
-  const topItems = Array.from(itemMap.values()).sort((a, b) => b.revenue - a.revenue).slice(0, 8);
+  const allItems = Array.from(itemMap.values()).sort((a, b) => b.revenue - a.revenue);
+  const topItems = allItems.slice(0, 8);
 
   const paymentMap = new Map<string, number>();
   for (const row of payments) paymentMap.set(row.method, (paymentMap.get(row.method) ?? 0) + money(row.amount));
   const paymentMethods: ReportPaymentMethod[] = Array.from(paymentMap.entries()).map(([method, amount]) => ({ method, label: PAYMENT_LABELS[method] ?? method, amount })).sort((a, b) => b.amount - a.amount);
 
-  return { revenue, costOfGoods, completedSales: rows.length, averageTicket: rows.length ? revenue / rows.length : null, salesTrend, topItems, paymentMethods };
+  return { revenue, costOfGoods, completedSales: rows.length, averageTicket: rows.length ? revenue / rows.length : null, salesTrend, topItems, allItems, paymentMethods };
 }
 
 async function getFinanceLayer(companyId: string, range: ReportRange) {
@@ -114,9 +125,11 @@ async function getFinanceLayer(companyId: string, range: ReportRange) {
   let accountsReceivable = 0;
   let overdueReceivables = 0;
   if (receivableSales.length) {
-    const { data: payments } = await supabase.from("sale_payments").select("sale_id, amount").eq("company_id", companyId).eq("status", "paid").in("sale_id", receivableSales.map((row) => row.id));
     const paidBySale = new Map<string, number>();
-    for (const payment of payments ?? []) paidBySale.set(payment.sale_id, (paidBySale.get(payment.sale_id) ?? 0) + money(payment.amount));
+    for (const ids of chunkIds(receivableSales.map((row) => row.id))) {
+      const { data: payments } = await supabase.from("sale_payments").select("sale_id, amount").eq("company_id", companyId).eq("status", "paid").in("sale_id", ids);
+      for (const payment of payments ?? []) paidBySale.set(payment.sale_id, (paidBySale.get(payment.sale_id) ?? 0) + money(payment.amount));
+    }
     const today = todayDateSaoPaulo();
     for (const sale of receivableSales) {
       const outstanding = Math.max(0, money(sale.total_amount) - (paidBySale.get(sale.id) ?? 0));
@@ -136,9 +149,24 @@ async function getFinanceLayer(companyId: string, range: ReportRange) {
   return { operatingExpenses, otherIncome, accountsReceivable, accountsPayable, overdueReceivables, overduePayables };
 }
 
+/**
+ * Fim da janela de agendamentos. Em "Este mês" e "Este ano" a agenda também conta o que ainda vai acontecer
+ * até o fim do mês/ano (os agendamentos futuros ficavam de fora, e o relatório do mês escondia a agenda da semana que vem).
+ */
+export function appointmentsWindowEnd(range: ReportRange): string {
+  const now = new Date();
+  if (range.period === "month") return new Date(startOfMonthSaoPaulo(1, now).getTime() - 1).toISOString();
+  if (range.period === "year") {
+    // 1º de janeiro + 366 dias cai sempre em 1º/2 de janeiro do ano seguinte (o ano tem 365 ou 366 dias)
+    const insideNextYear = new Date(startOfYearSaoPaulo(now).getTime() + 366 * 24 * 60 * 60 * 1000);
+    return new Date(startOfYearSaoPaulo(insideNextYear).getTime() - 1).toISOString();
+  }
+  return range.to;
+}
+
 async function getAppointmentsLayer(companyId: string, range: ReportRange) {
   const supabase = await createSessionClient();
-  const { data } = await supabase.from("appointments").select("status").eq("company_id", companyId).gte("starts_at", range.from).lte("starts_at", range.to);
+  const { data } = await supabase.from("appointments").select("status").eq("company_id", companyId).gte("starts_at", range.from).lte("starts_at", appointmentsWindowEnd(range));
   const rows = data ?? [];
   return {
     total: rows.length,
@@ -165,6 +193,7 @@ export const getReportsWorkspace = cache(async function getReportsWorkspace(comp
     summary: { revenue: sales.revenue, costOfGoods: sales.costOfGoods, completedSales: sales.completedSales, averageTicket: sales.averageTicket, otherIncome: finance.otherIncome, operatingExpenses: finance.operatingExpenses, netResult: computeNetResult({ revenue: sales.revenue, costOfGoods: sales.costOfGoods, otherIncome: finance.otherIncome, operatingExpenses: finance.operatingExpenses }), accountsReceivable: finance.accountsReceivable, accountsPayable: finance.accountsPayable, overdueReceivables: finance.overdueReceivables, overduePayables: finance.overduePayables },
     salesTrend: sales.salesTrend,
     topItems: sales.topItems,
+    allItems: sales.allItems,
     paymentMethods: sales.paymentMethods,
     appointments,
     inventory,

@@ -51,7 +51,7 @@ test("Financeiro, Relatórios e CSV usam as mesmas regras e mostram 'Outras rece
   assert.ok(finance.includes("sumOtherIncome") && finance.includes("computeNetResult"));
   assert.ok(reports.includes("sumOtherIncome") && reports.includes("computeNetResult"));
   assert.ok(read("src/app/(app)/app/financeiro/page.tsx").includes("Outras receitas"));
-  assert.ok(read("src/app/(app)/app/relatorios/export/route.ts").includes("Outras receitas"));
+  assert.ok(read("src/lib/reports/csv.ts").includes("Outras receitas"));
 });
 
 // Achado da rodada de uso real: formulários apagavam tudo que o usuário digitou quando o servidor devolvia erro.

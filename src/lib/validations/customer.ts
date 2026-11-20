@@ -2,7 +2,8 @@ import { z } from "zod";
 import { documentError, phoneError } from "@/lib/validations/document";
 import { cleanText, requiredText } from "@/lib/validations/common";
 
-export const BRAZIL_UFS = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"] as const;
+import { BRAZIL_UFS } from "./brazil-ufs.ts";
+export { BRAZIL_UFS };
 
 /**
  * Todos os campos de texto opcionais aceitam string vazia (do formulário

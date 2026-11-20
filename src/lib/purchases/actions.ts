@@ -144,9 +144,9 @@ export async function receivePurchaseOrderAction(
 export async function cancelPurchaseOrderAction(
   purchaseOrderId: string,
   formData: FormData
-): Promise<void> {
+): Promise<{ error?: string } | void> {
   const current = await getCurrentCompany();
-  if (!current) return;
+  if (!current) return { error: "Nenhuma empresa encontrada." };
 
   const supabase = await createSessionClient();
   const { error } = await supabase.rpc("cancel_purchase_order", {
@@ -154,7 +154,7 @@ export async function cancelPurchaseOrderAction(
     p_reason: String(formData.get("reason") ?? "").trim() || undefined,
   });
 
-  if (error) throw new Error(error.message);
+  if (error) return { error: error.message || "Não foi possível cancelar o pedido." };
 
   revalidatePath("/app/compras");
   revalidatePath("/app/compras/" + purchaseOrderId);
@@ -165,9 +165,9 @@ export async function cancelPurchaseReceiptAction(
   purchaseReceiptId: string,
   purchaseOrderId: string,
   formData: FormData
-): Promise<void> {
+): Promise<{ error?: string } | void> {
   const current = await getCurrentCompany();
-  if (!current) return;
+  if (!current) return { error: "Nenhuma empresa encontrada." };
 
   const supabase = await createSessionClient();
   const { error } = await supabase.rpc("cancel_purchase_receipt", {
@@ -175,7 +175,7 @@ export async function cancelPurchaseReceiptAction(
     p_reason: String(formData.get("reason") ?? "").trim() || undefined,
   });
 
-  if (error) throw new Error(error.message);
+  if (error) return { error: error.message || "Não foi possível estornar o recebimento." };
 
   revalidatePath("/app");
   revalidatePath("/app/compras");
