@@ -14,7 +14,7 @@ import {
 } from "../../src/lib/quotes/style.ts";
 import { readQuoteStyleForm } from "../../src/lib/quotes/style-form.ts";
 import { buildQuotePdfModel } from "../../src/lib/quotes/pdf-model.ts";
-import { buildQuotePdfElement, renderQuotePdf } from "../../src/lib/quotes/pdf-document.ts";
+import { buildQuotePdfElement, h, renderQuotePdf } from "../../src/lib/quotes/pdf-document.ts";
 import { BRAND_LEAD, BRAND_NAME, BRAND_SITE, BRAND_TAGLINE, brandLogo } from "../../src/lib/quotes/brand.ts";
 
 const read = (rel) => readFileSync(rel, "utf8");
@@ -340,4 +340,17 @@ test("PDF real: com a assinatura Prime Ges, os dois modelos continuam gerando e 
     assert.equal(pdf.subarray(0, 5).toString("latin1"), "%PDF-");
     assert.ok(pdf.length < 120_000, `${template}: ${pdf.length} bytes`);
   }
+});
+
+test("elementos do PDF usam o símbolo do React 18 (o Next 16 embute o React 19 e quebrava o PDF no site com o erro #31)", () => {
+  const el = h("VIEW", { style: {}, key: "a" }, "um", "dois");
+  assert.equal(el.$$typeof, Symbol.for("react.element"));
+  assert.equal(el.key, "a");
+  assert.equal(el.props.key, undefined);
+  assert.deepEqual(el.props.children, ["um", "dois"]);
+  assert.equal(h("TEXT", null, "só um").props.children, "só um");
+  assert.equal(h("TEXT", null).props.children, undefined);
+  const tree = buildQuotePdfElement(buildQuotePdfModel(company, quote(), items, style()), null, true, null);
+  assert.equal(tree.$$typeof, Symbol.for("react.element"));
+  assert.ok(!read("src/lib/quotes/pdf-document.ts").includes('from "react"'), "pdf-document não importa o React do Next");
 });
