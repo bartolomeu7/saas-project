@@ -5,13 +5,30 @@
  */
 import fs from "node:fs";
 import path from "node:path";
-import React from "react";
 import QRCode from "qrcode";
 import { Document, Font, Image, Page, StyleSheet, Text, View, renderToBuffer } from "@react-pdf/renderer";
 import type { QuotePdfModel } from "./pdf-model.ts";
 import { BRAND_LEAD, BRAND_NAME, BRAND_SITE, BRAND_TAGLINE, brandLogo } from "./brand.ts";
 
-const h = React.createElement;
+/**
+ * Fábrica de elementos própria (no lugar de React.createElement). O Next 16 embute o próprio React 19 nas rotas de API,
+ * e o @react-pdf/renderer (pacote externo) usa o React 18 do node_modules: elementos criados pelo React embutido têm outro
+ * símbolo ($$typeof) e o PDF quebra com "Minified React error #31". Aqui o símbolo é o do React 18, o que o react-pdf espera.
+ */
+const REACT_ELEMENT = Symbol.for("react.element");
+type PdfElement = { $$typeof: symbol; type: unknown; key: string | null; ref: null; props: Record<string, unknown>; _owner: null; _store: { validated: boolean } };
+
+export function h(type: unknown, config?: Record<string, unknown> | null, ...children: unknown[]): PdfElement {
+  const props: Record<string, unknown> = {};
+  let key: string | null = null;
+  for (const name of Object.keys(config ?? {})) {
+    if (name === "key") key = String((config as Record<string, unknown>)[name]);
+    else if (name !== "ref") props[name] = (config as Record<string, unknown>)[name];
+  }
+  if (children.length === 1) props.children = children[0];
+  else if (children.length > 1) props.children = children;
+  return { $$typeof: REACT_ELEMENT, type, key, ref: null, props, _owner: null, _store: { validated: true } };
+}
 
 
 const INK = "#1f2937";
