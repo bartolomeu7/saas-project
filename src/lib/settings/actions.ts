@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createSessionClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth/session";
 import type { ActionResult } from "@/lib/auth/actions";
+import { cleanPersonName } from "@/lib/settings/person-name";
 
 /**
  * Copia nome, e-mail principal e foto da conta (Clerk) para o perfil interno (public.profiles), que é o que o menu
@@ -19,7 +20,7 @@ export async function syncProfileFromClerkAction(): Promise<ActionResult> {
   const [clerkUser, user] = await Promise.all([currentUser(), getCurrentUser().catch(() => null)]);
   if (!clerkUser || !user) return { error: "Sessão expirada. Faça login novamente." };
 
-  const fullName = [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(" ").trim().slice(0, 160) || null;
+  const fullName = cleanPersonName([clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(" ")).slice(0, 160) || null;
   const primary = clerkUser.primaryEmailAddress;
   const email = primary && primary.verification?.status === "verified" ? primary.emailAddress : null;
 

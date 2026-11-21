@@ -6,7 +6,8 @@ import type { ActionResult } from "@/lib/auth/actions";
 import { getCurrentCompany } from "@/lib/companies/queries";
 import { todayDateSaoPaulo } from "@/lib/timezone";
 import { FRACTION_OF_CENT_MESSAGE, hasFractionOfCent, isMoneyTooLarge, MONEY_TOO_LARGE_MESSAGE, parseMoneyInput } from "@/lib/parse-money";
-import { cleanText } from "@/lib/validations/common";
+import { cleanText, collapseSpaces } from "@/lib/validations/common";
+import { nameInUse } from "@/lib/validations/name-in-use";
 import { tooLongMessage } from "@/lib/text-input";
 import type { Database } from "@/types/supabase";
 
@@ -180,16 +181,21 @@ export async function createFinancialCategoryAction(
   _prevState: ActionResult,
   formData: FormData
 ): Promise<ActionResult> {
-  const name = textValue(formData.get("name"));
+  const name = collapseSpaces(textValue(formData.get("name")));
   const kind = categoryKind(formData.get("kind"));
   if (!name) return { error: "Informe o nome da categoria." };
   if (name.length > MAX_NAME) return { error: tooLongMessage("Nome", MAX_NAME) };
+  if (!/\p{L}/u.test(name)) return { error: "O nome da categoria precisa ter letras." };
   if (!kind) return { error: "Selecione o tipo da categoria." };
 
   const current = await getCurrentCompany();
   if (!current) return { error: "Nenhuma empresa encontrada." };
 
   const supabase = await createSessionClient();
+  // antes: a tabela só impedia repetição EXATA e o banco ignorava o pedido em silêncio ("Categoria salva" sem salvar nada)
+  if (await nameInUse(supabase, "financial_categories", current.company.id, name, undefined, { kind })) {
+    return { error: `Já existe uma categoria de ${kind === "income" ? "receita" : "despesa"} com esse nome.` };
+  }
   const { error } = await supabase.rpc("create_financial_category", {
     p_name: name,
     p_kind: kind,
@@ -205,14 +211,18 @@ export async function createCostCenterAction(
   _prevState: ActionResult,
   formData: FormData
 ): Promise<ActionResult> {
-  const name = textValue(formData.get("name"));
+  const name = collapseSpaces(textValue(formData.get("name")));
   if (!name) return { error: "Informe o nome do centro de custo." };
   if (name.length > MAX_NAME) return { error: tooLongMessage("Nome", MAX_NAME) };
+  if (!/\p{L}/u.test(name)) return { error: "O nome do centro de custo precisa ter letras." };
 
   const current = await getCurrentCompany();
   if (!current) return { error: "Nenhuma empresa encontrada." };
 
   const supabase = await createSessionClient();
+  if (await nameInUse(supabase, "cost_centers", current.company.id, name)) {
+    return { error: "Já existe um centro de custo com esse nome." };
+  }
   const { error } = await supabase.rpc("create_cost_center", { p_name: name });
 
   if (error) return { error: error.message || "Não foi possível salvar o centro de custo." };
