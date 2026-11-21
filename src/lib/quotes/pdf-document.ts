@@ -70,48 +70,51 @@ function makeStyles(model: QuotePdfModel) {
   const { brand, onBrand, brandText, soft } = model.palette;
   const modern = model.template === "modern";
   return StyleSheet.create({
-    page: { paddingTop: 36, paddingBottom: 72, paddingHorizontal: 36, fontFamily: FAMILY, fontSize: 9.5, color: INK },
+    page: { paddingTop: 28, paddingBottom: 64, paddingHorizontal: 36, fontFamily: FAMILY, fontSize: 9, color: INK },
     // fontSize e lineHeight juntos, num View que NÃO contém o "Página X de Y": lineHeight no estilo da Page faz o react-pdf descartar o texto dinâmico
-    body: { fontSize: 9.5, lineHeight: 1.4 },
+    body: { fontSize: 9, lineHeight: 1.3 },
     header: modern
-      ? { flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: brand, marginTop: -36, marginHorizontal: -36, paddingTop: 30, paddingBottom: 22, paddingHorizontal: 36 }
-      : { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: 12, borderBottomWidth: 2, borderBottomColor: brand },
-    logoBox: modern ? { backgroundColor: "#ffffff", borderRadius: 6, padding: 7 } : {},
-    logo: { maxWidth: modern ? 150 : 140, maxHeight: modern ? 58 : 66, objectFit: "contain" },
+      ? { flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: brand, marginTop: -28, marginHorizontal: -36, paddingTop: 22, paddingBottom: 14, paddingHorizontal: 36 }
+      : { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: 8, borderBottomWidth: 2, borderBottomColor: brand },
+    logoBox: modern ? { backgroundColor: "#ffffff", borderRadius: 6, padding: 5 } : {},
+    logo: { maxWidth: modern ? 150 : 140, maxHeight: modern ? 46 : 52, objectFit: "contain" },
     companyBox: { flexGrow: 1, flexShrink: 1, paddingLeft: 14, alignItems: "flex-end" },
-    companyName: { fontSize: modern ? 16 : 14, ...BOLD, color: modern ? onBrand : INK, lineHeight: 1.25, marginBottom: 3 },
-    small: { fontSize: 8.5, color: modern ? onBrand : MUTED, textAlign: "right" },
-    titleRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end", marginTop: 18 },
+    companyName: { fontSize: modern ? 15 : 13, ...BOLD, color: modern ? onBrand : INK, lineHeight: 1.25, marginBottom: 2 },
+    small: { fontSize: 8, color: modern ? onBrand : MUTED, textAlign: "right" },
+    titleRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end", marginTop: 12 },
     kicker: { fontSize: 8, letterSpacing: 1.2, color: brandText, ...BOLD },
-    title: { fontSize: 20, ...BOLD, color: modern ? brandText : INK, lineHeight: 1.25 },
+    title: { fontSize: 18, ...BOLD, color: modern ? brandText : INK, lineHeight: 1.25 },
     draft: { fontSize: 9, color: "#b45309", ...BOLD, marginTop: 4 },
     meta: { fontSize: 9, color: MUTED, textAlign: "right" },
     validity: { marginTop: 4, paddingVertical: 3, paddingHorizontal: 8, borderRadius: 10, backgroundColor: soft, color: brandText, fontSize: 9, ...BOLD, textAlign: "center" },
-    subject: { marginTop: 8, fontSize: 11.5, ...BOLD, lineHeight: 1.3 },
-    intro: { marginTop: 8, fontSize: 10, color: INK },
+    subject: { marginTop: 5, fontSize: 11, ...BOLD, lineHeight: 1.3 },
+    intro: { marginTop: 5, fontSize: 9.5, color: INK },
     box: modern
-      ? { marginTop: 14, padding: 10, backgroundColor: soft, borderLeftWidth: 3, borderLeftColor: brand, borderRadius: 3 }
-      : { marginTop: 14, padding: 10, backgroundColor: "#f3f4f6", borderRadius: 3 },
+      ? { marginTop: 9, padding: 8, backgroundColor: soft, borderLeftWidth: 3, borderLeftColor: brand, borderRadius: 3 }
+      : { marginTop: 9, padding: 8, backgroundColor: "#f3f4f6", borderRadius: 3 },
     boxLabel: { fontSize: 8, color: brandText, textTransform: "uppercase", marginBottom: 3, ...BOLD },
-    customerName: { fontSize: 11, ...BOLD },
-    table: { marginTop: 14 },
+    customerName: { fontSize: 11, ...BOLD, marginBottom: 2 },
+    table: { marginTop: 9 },
     th: modern
       ? { flexDirection: "row", paddingVertical: 5, paddingHorizontal: 4, fontSize: 8.5, color: brandText, ...BOLD, borderBottomWidth: 1.5, borderBottomColor: brand }
       : { flexDirection: "row", backgroundColor: brand, color: onBrand, paddingVertical: 5, paddingHorizontal: 4, fontSize: 8.5, ...BOLD },
-    tr: { flexDirection: "row", paddingVertical: 5, paddingHorizontal: 4, borderBottomWidth: 0.5, borderBottomColor: LINE },
+    tr: { flexDirection: "row", paddingVertical: 4, paddingHorizontal: 4, borderBottomWidth: 0.5, borderBottomColor: LINE },
     trAlt: { backgroundColor: modern ? soft : "#ffffff" },
-    totals: { marginTop: 10, alignSelf: "flex-end", width: 220 },
+    totals: { marginTop: 7, alignSelf: "flex-end", width: 220 },
     totalRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 2 },
-    totalFinal: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 7, paddingHorizontal: 8, marginTop: 4, backgroundColor: brand, color: onBrand, borderRadius: modern ? 5 : 0, ...BOLD, fontSize: 12.5 },
-    section: { marginTop: 14 },
+    totalFinal: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 5, paddingHorizontal: 8, marginTop: 3, backgroundColor: brand, color: onBrand, borderRadius: modern ? 5 : 0, ...BOLD, fontSize: 12.5 },
+    sectionsWrap: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" },
+    section: { marginTop: 8 },
+    sectionHalf: { width: "48.5%" },
+    sectionFull: { width: "100%" },
     sectionTitle: { fontSize: 8.5, color: brandText, textTransform: "uppercase", ...BOLD, marginBottom: 3 },
-    pix: { marginTop: 16, flexDirection: "row", padding: 10, borderWidth: 1, borderColor: brand, borderRadius: 5 },
-    pixQr: { width: 92, height: 92 },
-    pixInfo: { flexGrow: 1, flexShrink: 1, paddingLeft: 12 },
+    pix: { marginTop: 10, flexDirection: "row", padding: 8, borderWidth: 1, borderColor: brand, borderRadius: 5 },
+    pixQr: { width: 76, height: 76 },
+    pixInfo: { flexGrow: 1, flexShrink: 1, paddingLeft: 10 },
     pixTitle: { fontSize: 11, ...BOLD, color: brandText },
     pixCode: { marginTop: 4, fontSize: 6.5, color: MUTED, lineHeight: 1.25 },
-    accept: { marginTop: 16 },
-    acceptRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 24 },
+    accept: { marginTop: 10 },
+    acceptRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 20 },
     signature: { width: "46%", borderTopWidth: 0.8, borderTopColor: INK, paddingTop: 3, fontSize: 8.5, color: MUTED },
     watermark: { position: "absolute", top: 330, left: 40, fontSize: 96, ...BOLD, color: "#f3f4f6", transform: "rotate(-32deg)" },
     footer: { position: "absolute", left: 36, right: 36, bottom: 14 },
@@ -205,9 +208,18 @@ export function buildQuotePdfElement(model: QuotePdfModel, logo: PdfLogo | null,
     h(View, { style: styles.totalFinal }, h(Text, null, "Total"), h(Text, null, model.totals.total))
   );
 
-  const sections = model.sections.map((section, index) =>
-    h(View, { key: `s${index}`, style: styles.section, wrap: false }, h(Text, { style: styles.sectionTitle }, section.title), h(Text, null, section.text))
-  );
+  // Condições curtas ficam lado a lado (duas colunas) para o orçamento caber numa folha; texto longo ocupa a largura toda.
+  const SHORT_SECTION = 150;
+  const sections = model.sections.map((section, index) => {
+    const short = section.text.length <= SHORT_SECTION;
+    return h(
+      View,
+      { key: `s${index}`, style: short ? [styles.section, styles.sectionHalf] : [styles.section, styles.sectionFull], wrap: false },
+      h(Text, { style: styles.sectionTitle }, section.title),
+      h(Text, null, section.text)
+    );
+  });
+  const sectionsBlock = sections.length ? h(View, { style: styles.sectionsWrap }, ...sections) : null;
 
   const pix = model.pix
     ? h(
@@ -219,8 +231,8 @@ export function buildQuotePdfElement(model: QuotePdfModel, logo: PdfLogo | null,
           { style: styles.pixInfo },
           h(Text, { style: styles.pixTitle }, "Pague com Pix"),
           h(Text, { style: { marginTop: 2 } }, `Escaneie o QR Code com o app do seu banco. O valor de ${model.pix.amount} já vem preenchido.`),
-          h(Text, { style: { marginTop: 3, color: MUTED, fontSize: 8.5 } }, `Favorecido: ${model.pix.receiver}  |  Chave (${model.pix.keyLabel}): ${model.pix.key}`),
-          h(Text, { style: { marginTop: 5, fontSize: 8, ...BOLD } }, "Pix copia e cola:"),
+          h(Text, { style: { marginTop: 2, color: MUTED, fontSize: 8 } }, `Favorecido: ${model.pix.receiver}  |  Chave (${model.pix.keyLabel}): ${model.pix.key}`),
+          h(Text, { style: { marginTop: 3, fontSize: 7.5, ...BOLD } }, "Pix copia e cola:"),
           h(Text, { style: styles.pixCode }, model.pix.payload)
         )
       )
@@ -238,7 +250,7 @@ export function buildQuotePdfElement(model: QuotePdfModel, logo: PdfLogo | null,
           h(Text, { style: styles.signature }, `${model.acceptance.customerName} - Cliente`),
           h(Text, { style: styles.signature }, `${model.acceptance.companyName} - Empresa`)
         ),
-        h(Text, { style: { marginTop: 8, fontSize: 8.5, color: MUTED } }, "Data do aceite: ____ / ____ / ________")
+        h(Text, { style: { marginTop: 5, fontSize: 8, color: MUTED } }, "Data do aceite: ____ / ____ / ________")
       )
     : null;
 
@@ -292,7 +304,7 @@ export function buildQuotePdfElement(model: QuotePdfModel, logo: PdfLogo | null,
         customer,
         h(View, { style: styles.table }, headRow, ...rows),
         totals,
-        ...sections,
+        sectionsBlock,
         pix,
         acceptance
       ),
