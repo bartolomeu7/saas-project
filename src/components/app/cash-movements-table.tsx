@@ -52,7 +52,7 @@ export function CashMovementsTable({ movements }: { movements: CashMovementWithN
                   className={
                     "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium " +
                     (movement.direction === "in"
-                      ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                      ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
                       : "bg-red-500/10 text-red-600 dark:text-red-400")
                   }
                 >

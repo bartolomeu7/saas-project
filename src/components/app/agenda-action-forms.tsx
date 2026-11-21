@@ -116,7 +116,7 @@ export function AppointmentForm({
           required
         />
         {warnings.map((text) => (
-          <span key={text} role="status" className="text-xs text-amber-600 dark:text-amber-400">⚠ {text}</span>
+          <span key={text} role="status" className="text-xs text-amber-700 dark:text-amber-400">⚠ {text}</span>
         ))}
       </label>
       <label className="grid gap-1 text-sm">

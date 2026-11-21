@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/shared/form-field";
 import { describeClerkError } from "@/lib/settings/clerk-errors";
 import { syncProfileFromClerkAction } from "@/lib/settings/actions";
+import { cleanPersonName, personNameError } from "@/lib/settings/person-name";
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // limite do Clerk para a foto de perfil
 const ACCEPTED_IMAGES = "image/png,image/jpeg,image/webp,image/gif";
@@ -50,13 +51,14 @@ export function ProfileIdentityForm() {
     event.preventDefault();
     if (!user) return;
     setError(null);
-    if (!first.trim()) {
-      setError("Informe pelo menos o primeiro nome.");
+    const problem = personNameError(first, last);
+    if (problem) {
+      setError(problem);
       return;
     }
     startTransition(async () => {
       try {
-        await user.update({ firstName: first.trim(), lastName: last.trim() });
+        await user.update({ firstName: cleanPersonName(first), lastName: cleanPersonName(last) });
         setFirstName(null);
         setLastName(null);
         toast.success("Nome atualizado.");

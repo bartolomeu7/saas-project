@@ -121,7 +121,7 @@ export default async function CashRegisterPage() {
                       <td className="px-3 py-2">{register.closed_at ? dateTimeFormatter.format(new Date(register.closed_at)) : "—"}</td>
                       <td className="px-3 py-2 text-right">{formatMoney(Number(register.expected_cash_balance ?? 0))}</td>
                       <td className="px-3 py-2 text-right">{formatMoney(Number(register.informed_cash_balance ?? 0))}</td>
-                      <td className={"px-3 py-2 text-right font-medium " + (difference === 0 ? "" : difference > 0 ? "text-emerald-600 dark:text-emerald-500" : "text-destructive")}>
+                      <td className={"px-3 py-2 text-right font-medium " + (difference === 0 ? "" : difference > 0 ? "text-emerald-700 dark:text-emerald-500" : "text-destructive")}>
                         {difference > 0 ? "+" : ""}
                         {formatMoney(difference)}
                         {difference > 0 ? " (sobra)" : difference < 0 ? " (falta)" : ""}
@@ -164,7 +164,7 @@ export default async function CashRegisterPage() {
       <div className="flex flex-col gap-1 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <span className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500/15">
-            <Unlock className="h-4 w-4 text-emerald-600 dark:text-emerald-400" strokeWidth={1.75} />
+            <Unlock className="h-4 w-4 text-emerald-700 dark:text-emerald-400" strokeWidth={1.75} />
           </span>
           <span className="text-sm font-medium text-emerald-700 dark:text-emerald-400">Caixa aberto</span>
         </div>

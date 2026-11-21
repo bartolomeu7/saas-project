@@ -211,7 +211,7 @@ export default async function StockPage({
                       <td className="whitespace-nowrap px-4 py-2 text-muted-foreground">{formatDateTime(m.created_at)}</td>
                       <td className="px-3 py-2"><Link href={`/app/produtos/${m.product_id}`} className="hover:underline">{m.product_name}</Link></td>
                       <td className="px-3 py-2">{stockSourceLabel(m.source)}</td>
-                      <td className={cn("px-3 py-2 text-right font-medium tabular-nums", delta > 0 ? "text-emerald-600 dark:text-emerald-500" : delta < 0 ? "text-destructive" : "")}>{formatStockDelta(delta)}</td>
+                      <td className={cn("px-3 py-2 text-right font-medium tabular-nums", delta > 0 ? "text-emerald-700 dark:text-emerald-500" : delta < 0 ? "text-destructive" : "")}>{formatStockDelta(delta)}</td>
                       <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums text-muted-foreground">{m.stock_before} → {m.stock_after}</td>
                       <td className="max-w-[16rem] truncate px-4 py-2 text-muted-foreground" title={m.reason}>{m.reason}</td>
                     </tr>
