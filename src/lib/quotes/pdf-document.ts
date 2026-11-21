@@ -9,8 +9,10 @@ import React from "react";
 import QRCode from "qrcode";
 import { Document, Font, Image, Page, StyleSheet, Text, View, renderToBuffer } from "@react-pdf/renderer";
 import type { QuotePdfModel } from "./pdf-model.ts";
+import { BRAND_LEAD, BRAND_NAME, BRAND_SITE, BRAND_TAGLINE, brandLogo } from "./brand.ts";
 
 const h = React.createElement;
+
 
 const INK = "#1f2937";
 const MUTED = "#6b7280";
@@ -51,7 +53,9 @@ function makeStyles(model: QuotePdfModel) {
   const { brand, onBrand, brandText, soft } = model.palette;
   const modern = model.template === "modern";
   return StyleSheet.create({
-    page: { paddingTop: 36, paddingBottom: 64, paddingHorizontal: 36, fontFamily: FAMILY, fontSize: 9.5, color: INK, lineHeight: 1.4 },
+    page: { paddingTop: 36, paddingBottom: 72, paddingHorizontal: 36, fontFamily: FAMILY, fontSize: 9.5, color: INK },
+    // fontSize e lineHeight juntos, num View que NÃO contém o "Página X de Y": lineHeight no estilo da Page faz o react-pdf descartar o texto dinâmico
+    body: { fontSize: 9.5, lineHeight: 1.4 },
     header: modern
       ? { flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: brand, marginTop: -36, marginHorizontal: -36, paddingTop: 30, paddingBottom: 22, paddingHorizontal: 36 }
       : { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: 12, borderBottomWidth: 2, borderBottomColor: brand },
@@ -93,8 +97,15 @@ function makeStyles(model: QuotePdfModel) {
     acceptRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 24 },
     signature: { width: "46%", borderTopWidth: 0.8, borderTopColor: INK, paddingTop: 3, fontSize: 8.5, color: MUTED },
     watermark: { position: "absolute", top: 330, left: 40, fontSize: 96, ...BOLD, color: "#f3f4f6", transform: "rotate(-32deg)" },
-    footer: { position: "absolute", left: 36, right: 36, bottom: 24, flexDirection: "row", justifyContent: "space-between", fontSize: 8, color: MUTED, borderTopWidth: 0.5, borderTopColor: LINE, paddingTop: 6 },
-    footerText: { flexGrow: 1, flexShrink: 1, paddingRight: 10 },
+    footer: { position: "absolute", left: 36, right: 36, bottom: 14 },
+    footerLine: { flexDirection: "row", justifyContent: "space-between", fontSize: 8, color: MUTED, borderTopWidth: 0.5, borderTopColor: LINE, paddingTop: 6 },
+    footerText: { flexGrow: 1, flexShrink: 1, paddingRight: 90 },
+    pageNumberBox: { position: "absolute", left: 36, right: 36, bottom: 40, flexDirection: "row", justifyContent: "flex-end" },
+    pageNumber: { fontSize: 8, color: MUTED, textAlign: "right", width: 90 },
+    brandRow: { flexDirection: "row", justifyContent: "center", alignItems: "center", marginTop: 7, paddingVertical: 4, paddingHorizontal: 10, borderRadius: 10, backgroundColor: soft },
+    brandLogo: { width: 15, height: 14, marginRight: 5 },
+    brandText: { fontSize: 7.5, color: MUTED },
+    brandName: { fontSize: 7.5, color: brandText, ...BOLD },
   });
 }
 
@@ -214,12 +225,38 @@ export function buildQuotePdfElement(model: QuotePdfModel, logo: PdfLogo | null,
       )
     : null;
 
+  const brand = brandLogo();
   const footer = h(
     View,
     { style: styles.footer, fixed: true },
-    h(Text, { style: styles.footerText }, model.footer ?? `Orçamento ${model.number} - válido até ${model.validUntil}`),
-    pageNumbers ? h(Text, { render: ({ pageNumber, totalPages }: { pageNumber: number; totalPages: number }) => `Página ${pageNumber} de ${totalPages}` }) : null
+    h(
+      View,
+      { style: styles.footerLine },
+      h(Text, { style: styles.footerText }, model.footer ?? `Orçamento ${model.number} - válido até ${model.validUntil}`)
+    ),
+    h(
+      View,
+      { style: styles.brandRow },
+      brand ? h(Image, { src: { data: brand, format: "png" }, style: styles.brandLogo }) : null,
+      h(
+        Text,
+        { style: styles.brandText },
+        `${BRAND_LEAD} `,
+        h(Text, { style: styles.brandName }, BRAND_NAME),
+        `  |  ${BRAND_TAGLINE}  |  ${BRAND_SITE}`
+      )
+    )
   );
+
+  // O "Página X de Y" (texto dinâmico) fica FORA da linha do rodapé: dentro dela o react-pdf descarta a linha inteira
+  // (inclusive o texto do rodapé da empresa). Posicionado na mesma altura da linha, à direita.
+  const pageNumber = pageNumbers
+    ? h(
+        View,
+        { style: styles.pageNumberBox, fixed: true },
+        h(Text, { style: styles.pageNumber, render: ({ pageNumber: page, totalPages }: { pageNumber: number; totalPages: number }) => `Página ${page} de ${totalPages}` })
+      )
+    : null;
 
   return h(
     Document,
@@ -228,17 +265,22 @@ export function buildQuotePdfElement(model: QuotePdfModel, logo: PdfLogo | null,
       Page,
       { size: "A4", style: styles.page },
       model.isDraft ? h(Text, { style: styles.watermark, fixed: true }, "RASCUNHO") : null,
-      header,
-      titleRow,
-      model.title ? h(Text, { style: styles.subject }, model.title) : null,
-      model.intro ? h(Text, { style: styles.intro }, model.intro) : null,
-      customer,
-      h(View, { style: styles.table }, headRow, ...rows),
-      totals,
-      ...sections,
-      pix,
-      acceptance,
-      footer
+      h(
+        View,
+        { style: styles.body },
+        header,
+        titleRow,
+        model.title ? h(Text, { style: styles.subject }, model.title) : null,
+        model.intro ? h(Text, { style: styles.intro }, model.intro) : null,
+        customer,
+        h(View, { style: styles.table }, headRow, ...rows),
+        totals,
+        ...sections,
+        pix,
+        acceptance
+      ),
+      footer,
+      pageNumber
     )
   );
 }

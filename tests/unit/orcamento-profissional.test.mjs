@@ -14,7 +14,8 @@ import {
 } from "../../src/lib/quotes/style.ts";
 import { readQuoteStyleForm } from "../../src/lib/quotes/style-form.ts";
 import { buildQuotePdfModel } from "../../src/lib/quotes/pdf-model.ts";
-import { renderQuotePdf } from "../../src/lib/quotes/pdf-document.ts";
+import { buildQuotePdfElement, renderQuotePdf } from "../../src/lib/quotes/pdf-document.ts";
+import { BRAND_LEAD, BRAND_NAME, BRAND_SITE, BRAND_TAGLINE, brandLogo } from "../../src/lib/quotes/brand.ts";
 
 const read = (rel) => readFileSync(rel, "utf8");
 const pages = (buffer) => (buffer.toString("latin1").match(/\/Type\s*\/Page[^s]/g) ?? []).length;
@@ -282,4 +283,61 @@ test("fiação: fonte Inter, migration, ação, rota do PDF e página de configu
   const page = read("src/app/(app)/app/configuracoes/empresa/page.tsx");
   assert.match(page, /QuoteStyleForm/);
   assert.match(page, /getQuoteStyle/);
+});
+
+// ------------------------------------------------------------------ marca Prime Ges no rodapé + rodapé/numeração
+test("marca Prime Ges: logo pequeno, nome, frase e site definidos num lugar só", () => {
+  assert.equal(BRAND_NAME, "Prime Ges");
+  assert.equal(BRAND_SITE, "primeges.com.br");
+  assert.ok(BRAND_TAGLINE.length > 10 && BRAND_TAGLINE.length < 80);
+  assert.ok(BRAND_LEAD.length > 0);
+  assert.ok(existsSync("public/brand/primeges-logo-pdf.png"), "a imagem do site copia public/");
+  const logo = brandLogo();
+  assert.ok(logo && logo.subarray(0, 4).toString("latin1") === "PNG", "PNG válido");
+  assert.ok(logo.length < 30_000, "logo leve para não pesar cada PDF");
+});
+
+/** Procura, na árvore de elementos do react-pdf, os nós que cumprem o teste. */
+const findAll = (node, test, out = []) => {
+  if (!node || typeof node !== "object") return out;
+  if (test(node)) out.push(node);
+  const kids = node.props?.children;
+  for (const kid of Array.isArray(kids) ? kids : [kids]) findAll(kid, test, out);
+  return out;
+};
+
+test("PDF: lineHeight fora do estilo da Page (com ele o react-pdf some com o \"Página X de Y\" e o rodapé)", () => {
+  const model = buildQuotePdfModel(company, quote({ footer: "Obrigado!" }), items, style());
+  const tree = buildQuotePdfElement(model, null, true, null);
+  const page = findAll(tree, (n) => n.props?.size === "A4")[0];
+  assert.ok(page, "achou a Page");
+  assert.equal("lineHeight" in page.props.style, false, "sem lineHeight na Page");
+  const pageNumbers = findAll(tree, (n) => typeof n.props?.render === "function");
+  assert.equal(pageNumbers.length, 1);
+  assert.equal(pageNumbers[0].props.render({ pageNumber: 2, totalPages: 5 }), "Página 2 de 5");
+  assert.equal(findAll(buildQuotePdfElement(model, null, false, null), (n) => typeof n.props?.render === "function").length, 0, "sem numeração quando desligada");
+});
+
+test("PDF: o rodapé tem o texto da empresa e a assinatura Prime Ges (logo + frase + site)", () => {
+  const model = buildQuotePdfModel(company, quote({ footer: "Obrigado pela preferência!" }), items, style());
+  const tree = buildQuotePdfElement(model, null, true, null);
+  const strings = [];
+  const walk = (n) => {
+    if (typeof n === "string") strings.push(n);
+    else if (n && typeof n === "object") for (const k of [].concat(n.props?.children ?? [])) walk(k);
+  };
+  walk(tree);
+  const all = strings.join(" ");
+  assert.ok(all.includes("Obrigado pela preferência!"));
+  assert.ok(all.includes(BRAND_NAME) && all.includes(BRAND_TAGLINE) && all.includes(BRAND_SITE));
+  const images = findAll(tree, (n) => n.props?.src && n.props.src.format === "png");
+  assert.ok(images.length >= 1, "logo da marca entra como imagem");
+});
+
+test("PDF real: com a assinatura Prime Ges, os dois modelos continuam gerando e o arquivo cresce pouco", async () => {
+  for (const template of ["modern", "classic"]) {
+    const pdf = await renderQuotePdf(buildQuotePdfModel(company, quote(), items, style({ template })), null);
+    assert.equal(pdf.subarray(0, 5).toString("latin1"), "%PDF-");
+    assert.ok(pdf.length < 120_000, `${template}: ${pdf.length} bytes`);
+  }
 });
