@@ -17,6 +17,7 @@ import {
   UserCog,
   BriefcaseBusiness,
   MessagesSquare,
+  FileSignature,
 } from "lucide-react";
 
 export interface NavItem {
@@ -47,6 +48,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: "Produtos", href: "/app/produtos", icon: Package, enabled: true },
       { label: "Serviços", href: "/app/servicos", icon: Wrench, enabled: true },
       { label: "Vendas", href: "/app/vendas", icon: ShoppingCart, enabled: true },
+      { label: "Orçamentos", href: "/app/orcamentos", icon: FileSignature, enabled: true },
       { label: "Fidelidade", href: "/app/fidelidade", icon: Gift, enabled: true },
       { label: "RH", href: "/app/rh", icon: BriefcaseBusiness, enabled: true },
     ],
