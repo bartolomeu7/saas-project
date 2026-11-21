@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
-import { getCurrentCompany, loadCompanyLogo } from "@/lib/companies/queries";
+import { getCurrentCompany, getQuoteStyle, loadCompanyLogo } from "@/lib/companies/queries";
 import { ACCOUNT_BLOCKED_MESSAGE, AccountInactiveError } from "@/lib/auth/account-status";
 import { getQuoteDetail } from "@/lib/quotes/queries";
 import { buildQuotePdfModel } from "@/lib/quotes/pdf-model";
-import { renderQuotePdf, type PdfLogo } from "@/lib/quotes/pdf-document";
+import { renderQuotePdf } from "@/lib/quotes/pdf-document";
+import { logoForPdf } from "@/lib/quotes/logo";
 import { quoteFileName } from "@/lib/quotes/rules";
 
 export const dynamic = "force-dynamic";
@@ -27,22 +28,20 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
   const detail = await getQuoteDetail(current.company.id, id);
   if (!detail) return NextResponse.json({ error: "Orçamento não encontrado." }, { status: 404 });
 
-  // react-pdf só desenha PNG e JPG; o logo WEBP (aceito no cadastro) fica de fora do PDF e o nome da empresa aparece em texto
-  const stored = await loadCompanyLogo(current.company.id);
-  let logo: PdfLogo | null = null;
-  if (stored?.contentType === "image/png") logo = { data: stored.bytes, format: "png" };
-  else if (stored?.contentType === "image/jpeg") logo = { data: stored.bytes, format: "jpg" };
+  // react-pdf só desenha PNG e JPG: o logo WEBP (aceito no cadastro) é convertido para PNG; se falhar, sai só o nome da empresa
+  const [stored, style] = await Promise.all([loadCompanyLogo(current.company.id), getQuoteStyle(current.company.id)]);
+  const logo = await logoForPdf(stored);
 
   let bytes: Buffer;
   try {
-    const model = buildQuotePdfModel(current.company, detail.quote, detail.items);
+    const model = buildQuotePdfModel(current.company, detail.quote, detail.items, style);
     bytes = await renderQuotePdf(model, logo);
   } catch (error) {
     console.error("[orcamento] falha ao gerar o PDF:", error instanceof Error ? error.message : error);
     // logo corrompido não pode impedir o orçamento: tenta de novo sem ele
     if (!logo) return NextResponse.json({ error: "Não foi possível gerar o PDF agora. Tente novamente." }, { status: 500 });
     try {
-      bytes = await renderQuotePdf(buildQuotePdfModel(current.company, detail.quote, detail.items), null);
+      bytes = await renderQuotePdf(buildQuotePdfModel(current.company, detail.quote, detail.items, style), null);
     } catch {
       return NextResponse.json({ error: "Não foi possível gerar o PDF agora. Tente novamente." }, { status: 500 });
     }

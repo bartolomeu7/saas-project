@@ -3,6 +3,8 @@
  * Função pura (sem React, sem banco): quem desenha (pdf-document.ts) só posiciona; é aqui que se testa o conteúdo.
  */
 import { formatCents, formatQuantity, pdfSafeText, toCents, toMilli, QUOTE_STATUS_LABELS, type QuoteStatus } from "./rules.ts";
+import { PIX_KEY_TYPE_LABELS, buildPixPayload, normalizePixKey, pixText } from "./pix.ts";
+import { DEFAULT_QUOTE_STYLE, applyIntro, paletteOf, type QuotePalette, type QuoteStyle, type QuoteTemplate } from "./style.ts";
 
 export interface PdfCompanyInput {
   name: string;
@@ -65,6 +67,12 @@ export interface QuotePdfModel {
   totals: { subtotal: string; discount: string | null; total: string };
   sections: Array<{ title: string; text: string }>;
   footer: string | null;
+  /** Aparência e extras (modelo, cor, apresentação, Pix, aceite). */
+  template: QuoteTemplate;
+  palette: QuotePalette;
+  intro: string | null;
+  pix: { payload: string; receiver: string; keyLabel: string; key: string; amount: string } | null;
+  acceptance: { customerName: string; companyName: string } | null;
 }
 
 const clean = (value: string | null | undefined): string | null => {
@@ -82,7 +90,7 @@ export function isoToBr(iso: string): string {
 const centsOf = (value: number | string): number => toCents(Number(value).toFixed(2));
 const milliOf = (value: number | string): number => toMilli(Number(value).toFixed(3));
 
-export function buildQuotePdfModel(company: PdfCompanyInput, quote: PdfQuoteInput, items: PdfItemInput[]): QuotePdfModel {
+export function buildQuotePdfModel(company: PdfCompanyInput, quote: PdfQuoteInput, items: PdfItemInput[], style: QuoteStyle = DEFAULT_QUOTE_STYLE): QuotePdfModel {
   const street = [clean(company.address), clean(company.address_number), clean(company.complement)].filter(Boolean).join(", ");
   const place = [clean(company.neighborhood), [clean(company.city), clean(company.state)].filter(Boolean).join("/")].filter(Boolean).join(" - ");
   const cep = clean(company.postal_code);
@@ -118,6 +126,23 @@ export function buildQuotePdfModel(company: PdfCompanyInput, quote: PdfQuoteInpu
   });
 
   const generalDiscount = centsOf(quote.discount_amount);
+  const totalCents = centsOf(quote.total_amount);
+  const companyName = clean(company.name) ?? "Empresa";
+  const customerName = clean(quote.customer_name) ?? "Cliente";
+
+  // Pix: só entra com chave válida e valor maior que zero; o valor e o número do orçamento já vão dentro do código
+  let pix: QuotePdfModel["pix"] = null;
+  const pixKey = style.pixKey ? normalizePixKey(style.pixKey) : null;
+  if (pixKey && pixKey.ok && totalCents > 0) {
+    const receiver = pixText(style.pixName ?? companyName, 25, "RECEBEDOR");
+    pix = {
+      payload: buildPixPayload({ key: pixKey.key, receiverName: receiver, city: pixText(company.city, 15, "BRASIL"), amountCents: totalCents, txid: quote.number }),
+      receiver,
+      keyLabel: PIX_KEY_TYPE_LABELS[pixKey.type],
+      key: pixKey.key,
+      amount: formatCents(totalCents),
+    };
+  }
   const sections = [
     { title: "Condições de pagamento", text: clean(quote.payment_terms) },
     { title: "Prazo de entrega / execução", text: clean(quote.delivery_terms) },
@@ -125,22 +150,27 @@ export function buildQuotePdfModel(company: PdfCompanyInput, quote: PdfQuoteInpu
   ].filter((section): section is { title: string; text: string } => section.text !== null);
 
   return {
-    company: { name: clean(company.name) ?? "Empresa", legalName: clean(company.legal_name), document: clean(company.document), address, contacts },
+    company: { name: companyName, legalName: clean(company.legal_name), document: clean(company.document), address, contacts },
     number: quote.number,
     isDraft: quote.status === "draft",
     statusLabel: QUOTE_STATUS_LABELS[quote.status],
     title: clean(quote.title),
     issuedOn: isoToBr(quote.issued_on),
     validUntil: isoToBr(quote.valid_until),
-    customer: { name: clean(quote.customer_name) ?? "Cliente", lines: customerLines },
+    customer: { name: customerName, lines: customerLines },
     items: rows.map(({ discountCents: _ignored, ...row }) => row),
     hasItemDiscount: rows.some((row) => row.discountCents > 0),
     totals: {
       subtotal: formatCents(centsOf(quote.subtotal)),
       discount: generalDiscount > 0 ? formatCents(generalDiscount) : null,
-      total: formatCents(centsOf(quote.total_amount)),
+      total: formatCents(totalCents),
     },
     sections,
     footer: clean(quote.footer),
+    template: style.template,
+    palette: paletteOf(style.brandColor),
+    intro: applyIntro(clean(style.introText), customerName),
+    pix,
+    acceptance: style.showAcceptance ? { customerName, companyName } : null,
   };
 }

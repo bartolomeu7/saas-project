@@ -4,10 +4,11 @@ import { CompanyEditForm } from "@/components/settings/company-edit-form";
 import { CompanyLogoCard } from "@/components/settings/company-logo-card";
 import { CompanyProfileForm } from "@/components/settings/company-profile-form";
 import { QuoteDefaultsForm } from "@/components/settings/quote-defaults-form";
+import { QuoteStyleForm } from "@/components/settings/quote-style-form";
 import { SettingsPageShell } from "@/components/settings/settings-page-shell";
 import { SettingsSection } from "@/components/settings/settings-section";
 import { Badge } from "@/components/ui/badge";
-import { getCompanyLogoMeta, getCurrentCompany, getQuoteDefaults } from "@/lib/companies/queries";
+import { getCompanyLogoMeta, getCurrentCompany, getQuoteDefaults, getQuoteStyle } from "@/lib/companies/queries";
 import { appSettingsNav, canEditCompany } from "@/lib/settings/nav";
 
 export const metadata: Metadata = { title: "Empresa" };
@@ -20,7 +21,7 @@ export default async function CompanySettingsPage() {
   const { company, role } = (await getCurrentCompany())!;
   if (!canEditCompany(role)) redirect("/app/configuracoes");
 
-  const [logo, quoteDefaults] = await Promise.all([getCompanyLogoMeta(company.id), getQuoteDefaults(company.id)]);
+  const [logo, quoteDefaults, quoteStyle] = await Promise.all([getCompanyLogoMeta(company.id), getQuoteDefaults(company.id), getQuoteStyle(company.id)]);
 
   return (
     <SettingsPageShell title="Empresa" description="Nome, dados cadastrais, logo e padrões dos orçamentos." nav={appSettingsNav(role)}>
@@ -67,6 +68,14 @@ export default async function CompanySettingsPage() {
         description="Valem para todo orçamento novo. Em cada orçamento você ainda pode trocar."
       >
         <QuoteDefaultsForm values={quoteDefaults} />
+      </SettingsSection>
+
+      <SettingsSection
+        id="empresa-aparencia-orcamento"
+        title="Aparência do orçamento"
+        description="Modelo, cor da marca, texto de apresentação, Pix com QR Code e aceite do PDF que você envia ao cliente."
+      >
+        <QuoteStyleForm values={quoteStyle} />
       </SettingsSection>
     </SettingsPageShell>
   );

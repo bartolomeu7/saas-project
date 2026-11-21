@@ -8,6 +8,7 @@ import { ACCOUNT_BLOCKED_MESSAGE, AccountInactiveError } from "@/lib/auth/accoun
 import { createCompanySchema } from "@/lib/validations/company";
 import { companyProfileSchema, normalizeCompanyProfile, quoteDefaultsSchema } from "@/lib/validations/company-profile";
 import { checkLogoBytes } from "@/lib/validations/company-logo";
+import { readQuoteStyleForm } from "@/lib/quotes/style-form";
 import type { ActionResult } from "@/lib/auth/actions";
 import { revalidatePath } from "next/cache";
 import {
@@ -191,6 +192,12 @@ const PROFILE_SAFE_MESSAGES = [
   "A validade padrão",
   "As condições de pagamento",
   "O rodapé",
+  "Modelo de orçamento inválido",
+  "Cor da marca inválida",
+  "O texto de apresentação",
+  "Chave Pix inválida",
+  "O nome do recebedor",
+  "Informe se o bloco de aceite",
 ];
 
 function profileErrorMessage(error: { message: string }, fallback: string): string {
@@ -264,6 +271,27 @@ export async function removeCompanyLogoAction(): Promise<ActionResult> {
 
   revalidatePath("/app/configuracoes/empresa");
   return { success: "Logo removido." };
+}
+
+/** Aparência do orçamento: modelo, cor da marca, texto de apresentação, Pix e bloco de aceite. Dono ou administrador; o banco confere o papel. */
+export async function updateQuoteStyleAction(_prevState: ActionResult, formData: FormData): Promise<ActionResult> {
+  const read = readQuoteStyleForm(formData);
+  if (!read.ok) return { error: read.error, field: read.field };
+  const v = read.values;
+
+  const supabase = (await createSessionClient()) as unknown as LooseRpc;
+  const { error } = await supabase.rpc("update_company_quote_style", {
+    p_template: v.template,
+    p_brand_color: v.brandColor,
+    p_intro_text: v.introText,
+    p_pix_key: v.pixKey,
+    p_pix_name: v.pixName,
+    p_show_acceptance: v.showAcceptance,
+  });
+  if (error) return { error: profileErrorMessage(error, "Não foi possível salvar agora. Tente novamente.") };
+
+  revalidatePath("/app/configuracoes/empresa");
+  return { success: "Aparência do orçamento salva." };
 }
 
 /** Padrões dos orçamentos: validade, condições de pagamento e rodapé do PDF. */
