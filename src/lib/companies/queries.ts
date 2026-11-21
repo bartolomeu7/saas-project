@@ -54,3 +54,47 @@ export const getCurrentCompany = cache(async function getCurrentCompany(): Promi
     role: membership.role as CompanyRole,
   };
 });
+
+export interface CompanyLogoMeta {
+  contentType: string;
+  sizeBytes: number;
+  updatedAt: string;
+}
+
+/** Só os dados do logo (sem a imagem): para a tela saber se existe e para o cache do navegador. */
+export async function getCompanyLogoMeta(companyId: string): Promise<CompanyLogoMeta | null> {
+  const supabase = (await createSessionClient()) as any;
+  const { data } = await supabase.from("company_logos").select("content_type, size_bytes, updated_at").eq("company_id", companyId).maybeSingle();
+  if (!data) return null;
+  return { contentType: String(data.content_type), sizeBytes: Number(data.size_bytes), updatedAt: String(data.updated_at) };
+}
+
+/** O logo com os bytes da imagem (rota do logo e, nas próximas fases, o PDF do orçamento). */
+export async function loadCompanyLogo(companyId: string): Promise<{ contentType: string; bytes: Buffer; updatedAt: string } | null> {
+  const supabase = (await createSessionClient()) as any;
+  const { data } = await supabase.from("company_logos").select("content_type, data_base64, updated_at").eq("company_id", companyId).maybeSingle();
+  if (!data) return null;
+  return { contentType: String(data.content_type), bytes: Buffer.from(String(data.data_base64), "base64"), updatedAt: String(data.updated_at) };
+}
+
+export interface QuoteDefaults {
+  validityDays: number;
+  paymentTerms: string;
+  footer: string;
+}
+
+export const DEFAULT_QUOTE_DEFAULTS: QuoteDefaults = { validityDays: 15, paymentTerms: "", footer: "" };
+
+/** Padrões dos orçamentos da empresa (validade, condições, rodapé); sem nada salvo, valem os padrões do sistema (15 dias). */
+export async function getQuoteDefaults(companyId: string): Promise<QuoteDefaults> {
+  const supabase = (await createSessionClient()) as any;
+  const { data } = await supabase.from("company_settings").select("operational_preferences").eq("company_id", companyId).maybeSingle();
+  const quote = (data?.operational_preferences as { quote?: Record<string, unknown> } | null)?.quote;
+  if (!quote || typeof quote !== "object") return DEFAULT_QUOTE_DEFAULTS;
+  const days = Number(quote.validity_days);
+  return {
+    validityDays: Number.isInteger(days) && days >= 1 && days <= 365 ? days : DEFAULT_QUOTE_DEFAULTS.validityDays,
+    paymentTerms: typeof quote.payment_terms === "string" ? quote.payment_terms : "",
+    footer: typeof quote.footer === "string" ? quote.footer : "",
+  };
+}

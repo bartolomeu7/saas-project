@@ -31,6 +31,20 @@ export interface Company {
   status: CompanyStatus;
   created_at: string;
   updated_at: string;
+  /** Dados cadastrais (Orçamento, Fase 0): todos opcionais. */
+  legal_name?: string | null;
+  document?: string | null;
+  phone?: string | null;
+  whatsapp?: string | null;
+  email?: string | null;
+  website?: string | null;
+  postal_code?: string | null;
+  address?: string | null;
+  address_number?: string | null;
+  complement?: string | null;
+  neighborhood?: string | null;
+  city?: string | null;
+  state?: string | null;
 }
 
 /** Espelha a tabela public.company_members. */

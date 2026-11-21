@@ -6,6 +6,8 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { AUTH_BACKEND_MESSAGES, AuthBackendError } from "@/lib/auth/token-claims";
 import { ACCOUNT_BLOCKED_MESSAGE, AccountInactiveError } from "@/lib/auth/account-status";
 import { createCompanySchema } from "@/lib/validations/company";
+import { companyProfileSchema, normalizeCompanyProfile, quoteDefaultsSchema } from "@/lib/validations/company-profile";
+import { checkLogoBytes } from "@/lib/validations/company-logo";
 import type { ActionResult } from "@/lib/auth/actions";
 import { revalidatePath } from "next/cache";
 import {
@@ -169,4 +171,121 @@ export async function requestFreeTrialAction(): Promise<ActionResult> {
     default:
       return { error: TRIAL_UNAVAILABLE_MESSAGE, code: "TRIAL_UNAVAILABLE" };
   }
+}
+
+/**
+ * Mensagens curadas do banco (raise exception das funções da Fase 0 do Orçamento). Qualquer outra coisa vira a mensagem
+ * genérica: nunca vaza detalhe interno.
+ */
+const PROFILE_SAFE_MESSAGES = [
+  "Apenas o proprietário ou um administrador",
+  "Nenhuma empresa encontrada.",
+  "Usuário não autenticado.",
+  "UF inválida",
+  "Informe um e-mail válido.",
+  "CEP inválido",
+  "O site deve começar",
+  "Use uma imagem",
+  "Imagem inválida",
+  "O arquivo não é uma imagem",
+  "A validade padrão",
+  "As condições de pagamento",
+  "O rodapé",
+];
+
+function profileErrorMessage(error: { message: string }, fallback: string): string {
+  const known = PROFILE_SAFE_MESSAGES.some((prefix) => error.message.startsWith(prefix));
+  if (!known) console.error("[company] função de cadastro falhou:", error.message);
+  return known ? error.message : fallback;
+}
+
+// As funções novas ainda não constam nos tipos gerados do banco: a chamada passa por um tipo mínimo.
+type LooseRpc = { rpc(fn: string, args?: Record<string, unknown>): Promise<{ error: { message: string } | null }> };
+
+/** Dados cadastrais da empresa (razão social, documento, contato e endereço). Dono ou administrador; o banco confere o papel. */
+export async function updateCompanyProfileAction(_prevState: ActionResult, formData: FormData): Promise<ActionResult> {
+  const keys = ["legalName", "document", "phone", "whatsapp", "email", "website", "postalCode", "address", "addressNumber", "complement", "neighborhood", "city", "state"] as const;
+  const raw: Record<string, FormDataEntryValue | null> = {};
+  for (const key of keys) raw[key] = formData.get(key);
+  const parsed = companyProfileSchema.safeParse(raw);
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    return { error: issue?.message ?? "Dados inválidos.", field: typeof issue?.path[0] === "string" ? String(issue.path[0]) : undefined };
+  }
+  const data = normalizeCompanyProfile(parsed.data);
+
+  const supabase = (await createSessionClient()) as unknown as LooseRpc;
+  const { error } = await supabase.rpc("update_company_profile", {
+    p_legal_name: data.legalName,
+    p_document: data.document,
+    p_phone: data.phone,
+    p_whatsapp: data.whatsapp,
+    p_email: data.email,
+    p_website: data.website,
+    p_postal_code: data.postalCode,
+    p_address: data.address,
+    p_address_number: data.addressNumber,
+    p_complement: data.complement,
+    p_neighborhood: data.neighborhood,
+    p_city: data.city,
+    p_state: data.state,
+  });
+  if (error) return { error: profileErrorMessage(error, "Não foi possível salvar agora. Tente novamente.") };
+
+  revalidatePath("/app/configuracoes/empresa");
+  return { success: "Dados da empresa salvos." };
+}
+
+/** Logo da empresa: PNG, JPG ou WEBP de até 512 KB. O tipo é conferido pelo conteúdo do arquivo, nunca pelo nome. */
+export async function uploadCompanyLogoAction(_prevState: ActionResult, formData: FormData): Promise<ActionResult> {
+  const file = formData.get("logo");
+  if (!(file instanceof File) || file.size === 0) return { error: "Escolha uma imagem para o logo." };
+  if (file.size > 600 * 1024) return { error: "A imagem é grande demais. Use uma de até 512 KB." };
+
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const check = checkLogoBytes(bytes);
+  if (!check.ok) return { error: check.error };
+
+  const supabase = (await createSessionClient()) as unknown as LooseRpc;
+  const { error } = await supabase.rpc("set_company_logo", {
+    p_content_type: check.contentType,
+    p_data_base64: Buffer.from(bytes).toString("base64"),
+  });
+  if (error) return { error: profileErrorMessage(error, "Não foi possível salvar o logo agora. Tente novamente.") };
+
+  revalidatePath("/app/configuracoes/empresa");
+  return { success: "Logo atualizado." };
+}
+
+export async function removeCompanyLogoAction(): Promise<ActionResult> {
+  const supabase = (await createSessionClient()) as unknown as LooseRpc;
+  const { error } = await supabase.rpc("remove_company_logo");
+  if (error) return { error: profileErrorMessage(error, "Não foi possível remover o logo agora. Tente novamente.") };
+
+  revalidatePath("/app/configuracoes/empresa");
+  return { success: "Logo removido." };
+}
+
+/** Padrões dos orçamentos: validade, condições de pagamento e rodapé do PDF. */
+export async function updateQuoteDefaultsAction(_prevState: ActionResult, formData: FormData): Promise<ActionResult> {
+  const parsed = quoteDefaultsSchema.safeParse({
+    validityDays: formData.get("validityDays"),
+    paymentTerms: formData.get("paymentTerms"),
+    footer: formData.get("footer"),
+  });
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    return { error: issue?.message ?? "Dados inválidos.", field: typeof issue?.path[0] === "string" ? String(issue.path[0]) : undefined };
+  }
+
+  const supabase = (await createSessionClient()) as unknown as LooseRpc;
+  const { error } = await supabase.rpc("update_company_quote_defaults", {
+    p_validity_days: parsed.data.validityDays,
+    p_payment_terms: parsed.data.paymentTerms,
+    p_footer: parsed.data.footer,
+  });
+  if (error) return { error: profileErrorMessage(error, "Não foi possível salvar agora. Tente novamente.") };
+
+  revalidatePath("/app/configuracoes/empresa");
+  return { success: "Padrões dos orçamentos salvos." };
 }
