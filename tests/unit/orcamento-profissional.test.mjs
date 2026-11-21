@@ -354,3 +354,26 @@ test("elementos do PDF usam o símbolo do React 18 (o Next 16 embute o React 19 
   assert.equal(tree.$$typeof, Symbol.for("react.element"));
   assert.ok(!read("src/lib/quotes/pdf-document.ts").includes('from "react"'), "pdf-document não importa o React do Next");
 });
+
+test("PDF cabe numa folha: orçamento típico (3 itens, condições, Pix e aceite) nos dois modelos, com e sem rascunho", async () => {
+  const typical = quote({
+    customer_phone: "11988887777",
+    customer_email: "joao@teste.com",
+    customer_address: "Rua B, 10 - Campinas/SP",
+    payment_terms: "50% na entrada e 50% na entrega.\nPix, boleto ou cartão em até 3x sem juros.\nGarantia de 90 dias sobre o serviço executado.",
+    delivery_terms: "10 dias úteis após a aprovação e o pagamento da entrada.",
+    notes: "Materiais por conta do cliente. Valores sujeitos a alteração caso haja mudança no escopo. O local deve estar liberado e com acesso à água e energia no dia combinado.",
+    footer: "Obrigado pela preferência!",
+  });
+  const three = [
+    { position: 1, description: "Instalação de bancada em granito", unit: "m", quantity: 3.5, unit_price: 250, discount_amount: 25, total_amount: 850 },
+    { position: 2, description: "Torneira monocomando cromada", unit: "un", quantity: 2, unit_price: 120.25, discount_amount: 0, total_amount: 240.5 },
+    { position: 3, description: "Mão de obra", unit: "serv", quantity: 1, unit_price: 250, discount_amount: 0, total_amount: 250 },
+  ];
+  for (const template of ["modern", "classic"]) {
+    for (const status of ["sent", "draft"]) {
+      const pdf = await renderQuotePdf(buildQuotePdfModel(company, { ...typical, status }, three, style({ template, pix_key: "529.982.247-25", show_acceptance: true })), null);
+      assert.equal(pages(pdf), 1, `${template}/${status}: deveria caber em 1 folha`);
+    }
+  }
+});

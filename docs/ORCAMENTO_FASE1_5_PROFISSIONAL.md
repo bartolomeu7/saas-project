@@ -14,6 +14,9 @@ Data: 21/11/2026. Base: `docs/ORCAMENTO_FASE1.md` (MVP) e a análise de apresent
 - **Marca d'água "RASCUNHO"** em todas as páginas de orçamento ainda em rascunho.
 - Título "PROPOSTA COMERCIAL", selo "Válido até dd/mm/aaaa" e blocos que não se partem entre páginas.
 
+## Cabe numa folha
+Layout compactado (margens, espaços, QR de 76 pt, fonte 9 pt) e condições curtas (até 150 caracteres: pagamento, prazo) lado a lado em duas colunas. Um orçamento típico — 3 itens, condições, observações, Pix e aceite — sai em **1 folha A4** nos dois modelos, inclusive em rascunho (teste `PDF cabe numa folha`). Com muitos itens ou textos longos continua passando para a 2ª folha, com rodapé e "Página X de Y" em todas.
+
 ## Assinatura Prime Ges no rodapé
 
 Em todas as páginas do PDF, na parte de baixo: logo pequeno do Prime Ges + "Orçamento emitido com **Prime Ges** | Gestão simples para o seu negócio crescer. | primeges.com.br". Texto e frase ficam em `src/lib/quotes/brand.ts` (trocar a frase é mudar uma linha); o logo é `public/brand/primeges-logo-pdf.png` (160 px, ~10 KB). Aparece nos dois modelos e na cor da marca da empresa.
