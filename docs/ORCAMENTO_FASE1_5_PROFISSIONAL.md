@@ -14,6 +14,13 @@ Data: 21/11/2026. Base: `docs/ORCAMENTO_FASE1.md` (MVP) e a análise de apresent
 - **Marca d'água "RASCUNHO"** em todas as páginas de orçamento ainda em rascunho.
 - Título "PROPOSTA COMERCIAL", selo "Válido até dd/mm/aaaa" e blocos que não se partem entre páginas.
 
+## Assinatura Prime Ges no rodapé
+
+Em todas as páginas do PDF, na parte de baixo: logo pequeno do Prime Ges + "Orçamento emitido com **Prime Ges** | Gestão simples para o seu negócio crescer. | primeges.com.br". Texto e frase ficam em `src/lib/quotes/brand.ts` (trocar a frase é mudar uma linha); o logo é `public/brand/primeges-logo-pdf.png` (160 px, ~10 KB). Aparece nos dois modelos e na cor da marca da empresa.
+
+### Correção junto: rodapé e "Página X de Y" não saíam
+O texto de rodapé da empresa ("Obrigado pela preferência!") e a numeração de páginas já estavam sumindo dos PDFs desde a Fase 1. Causa (reproduzida em teste isolado): `lineHeight` no estilo da `Page` faz o react-pdf descartar o texto dinâmico e a linha inteira que o contém. Agora `fontSize`/`lineHeight` ficam num bloco que envolve só o corpo, e o "Página X de Y" fica fora dele. Há teste que trava isso (`orcamento-profissional.test.mjs`).
+
 ## Onde configurar
 
 Configurações → Empresa → **Aparência do orçamento** (só proprietário e administrador): modelo, cor, texto de apresentação, chave Pix, nome do recebedor e aceite. O link **"Ver PDF de exemplo"** abre um PDF fictício com o que está salvo (`/api/orcamentos/exemplo/pdf`, não grava nada).
