@@ -4,6 +4,7 @@ import { cache } from "react";
 import { createSessionClient } from "@/lib/supabase/server";
 import { getClerkInternalUserId } from "@/lib/auth/clerk-session";
 import type { Company, CompanyRole, CurrentCompany } from "@/types/company";
+import { parseQuoteStyle, type QuoteStyle } from "@/lib/quotes/style";
 
 /**
  * Retorna a empresa atual do usuário autenticado (a primeira encontrada
@@ -75,6 +76,13 @@ export async function loadCompanyLogo(companyId: string): Promise<{ contentType:
   const { data } = await supabase.from("company_logos").select("content_type, data_base64, updated_at").eq("company_id", companyId).maybeSingle();
   if (!data) return null;
   return { contentType: String(data.content_type), bytes: Buffer.from(String(data.data_base64), "base64"), updatedAt: String(data.updated_at) };
+}
+
+/** Aparência e extras do PDF do orçamento da empresa (modelo, cor, apresentação, Pix, aceite); sem nada salvo valem os padrões do sistema. */
+export async function getQuoteStyle(companyId: string): Promise<QuoteStyle> {
+  const supabase = (await createSessionClient()) as any;
+  const { data } = await supabase.from("company_settings").select("operational_preferences").eq("company_id", companyId).maybeSingle();
+  return parseQuoteStyle((data?.operational_preferences as { quote_style?: unknown } | null)?.quote_style);
 }
 
 export interface QuoteDefaults {
