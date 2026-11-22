@@ -3,10 +3,12 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getTransaction, SyncPayError } from "@/lib/syncpay/client";
 import { mapSyncPayStatus } from "@/lib/syncpay/webhook";
+import { checkTransaction, MisticPayError } from "@/lib/misticpay/client";
+import { mapMisticPayStatus } from "@/lib/misticpay/webhook";
 import { rejectionMessage, toCents } from "@/lib/billing/amount";
 import { AUDIT_ACTIONS } from "@/types/audit";
 import type { Json } from "@/types/supabase";
-import type { SubscriptionPaymentStatus } from "@/types/billing";
+import type { PaymentGateway, SubscriptionPaymentStatus } from "@/types/billing";
 
 export interface ConfirmPaymentResult {
   ok: boolean;
@@ -18,7 +20,9 @@ export interface ConfirmPaymentResult {
 
 /** Atualização de status vinda do provedor (webhook assinado ou consulta de contingência). */
 export interface ProviderUpdate {
-  /** `reference_id` da transação na SyncPay. */
+  /** Gateway que originou a atualização: tem que ser o mesmo da cobrança gravada. */
+  provider: PaymentGateway;
+  /** Identificador da transação no gateway (SyncPay: `reference_id`; MisticPay: `transactionId` da criação). */
   providerTransactionId: string;
   /** Chave de idempotência do evento (webhook: `event_id`; consulta: `<reference_id>:<status>`). */
   eventId: string;
@@ -36,12 +40,15 @@ export interface ProviderUpdate {
 
 /**
  * Máximo de consultas de contingência por pagamento. A SyncPay aceita 5 por transação (V1+V2 somadas) e responde 429 a
- * partir da 6ª; guardamos uma de folga. O caminho normal é o webhook assinado.
+ * partir da 6ª; guardamos uma de folga. O caminho normal é o webhook assinado. A MisticPay não documenta limite por
+ * transação (só 100 req/s por chave): o teto abaixo é apenas um freio contra cliques repetidos.
  */
 export const MAX_STATUS_CHECKS = 4;
+export const MISTICPAY_MAX_STATUS_CHECKS = 30;
 
 /** Antes disso o botão "Já paguei" não consulta o provedor: o webhook costuma chegar em segundos e cada consulta é contada. */
 export const MIN_CHECK_AGE_SECONDS = 120;
+export const MISTICPAY_MIN_CHECK_AGE_SECONDS = 10;
 
 export interface ConfirmPaymentOptions {
   /** Reconsulta o provedor mesmo com o pagamento local já "paid" (detectar estorno). Webhook e admin passam true. */
@@ -63,7 +70,7 @@ export async function applyProviderUpdate(paymentId: string, update: ProviderUpd
 
   const { data: payment } = await supabase.from("subscription_payments").select("*").eq("id", paymentId).maybeSingle();
   if (!payment) return { ok: false, status: "pending", message: "Pagamento não encontrado." };
-  if (payment.provider !== "syncpay") return { ok: false, status: payment.status, message: "Pagamento de outro provedor." };
+  if (payment.provider !== update.provider) return { ok: false, status: payment.status, message: "Pagamento de outro provedor." };
 
   // O evento tem que ser da transação deste pagamento. Sem id gravado ainda (cartão cujo 200 veio sem transaction_id), o
   // vínculo é feito agora — o índice único (provider, provider_transaction_id) impede duas linhas com a mesma transação.
@@ -138,7 +145,7 @@ export async function confirmPaymentFromProvider(paymentId: string, options: Con
   if (payment.status === "refunded") return { ok: true, status: "refunded" };
   if (payment.status === "paid" && !options.recheckPaid) return { ok: true, status: "paid" };
 
-  if (payment.provider !== "syncpay") {
+  if (payment.provider !== "syncpay" && payment.provider !== "misticpay") {
     return { ok: false, status: payment.status, message: "Este pagamento é de um provedor anterior e não pode ser reverificado." };
   }
   if (!payment.provider_transaction_id) {
@@ -149,7 +156,8 @@ export async function confirmPaymentFromProvider(paymentId: string, options: Con
     };
   }
 
-  const minAge = options.minAgeSeconds ?? MIN_CHECK_AGE_SECONDS;
+  const isMistic = payment.provider === "misticpay";
+  const minAge = options.minAgeSeconds ?? (isMistic ? MISTICPAY_MIN_CHECK_AGE_SECONDS : MIN_CHECK_AGE_SECONDS);
   const ageSeconds = (Date.now() - new Date(payment.created_at).getTime()) / 1000;
   if (ageSeconds < minAge) {
     return { ok: false, status: payment.status, message: "Aguarde alguns instantes: a confirmação chega automaticamente assim que o banco avisar." };
@@ -161,12 +169,14 @@ export async function confirmPaymentFromProvider(paymentId: string, options: Con
     .update({ status_checks: payment.status_checks + 1 })
     .eq("id", payment.id)
     .eq("status_checks", payment.status_checks)
-    .lt("status_checks", MAX_STATUS_CHECKS)
+    .lt("status_checks", isMistic ? MISTICPAY_MAX_STATUS_CHECKS : MAX_STATUS_CHECKS)
     .select("id")
     .maybeSingle();
   if (!reserved) {
     return { ok: false, status: payment.status, message: "A confirmação ainda não chegou. Ela é automática: se você já pagou, aguarde alguns minutos ou fale com o suporte." };
   }
+
+  if (isMistic) return verifyMisticPayment(payment.id);
 
   let snapshot;
   try {
@@ -188,6 +198,7 @@ export async function confirmPaymentFromProvider(paymentId: string, options: Con
   if (!status) return { ok: false, status: payment.status, message: "Situação desconhecida no provedor." };
 
   return applyProviderUpdate(payment.id, {
+    provider: "syncpay",
     providerTransactionId: snapshot.referenceId,
     eventId: `${snapshot.referenceId}:${snapshot.status}`,
     eventType: "transaction.status_check",
@@ -196,6 +207,51 @@ export async function confirmPaymentFromProvider(paymentId: string, options: Con
     amount: snapshot.amount,
     endToEndId: snapshot.endToEndId,
     payload: { reference_id: snapshot.referenceId, status: snapshot.status, amount: snapshot.amount, ...(snapshot.endToEndId ? { end_to_end_id: snapshot.endToEndId } : {}) },
+  });
+}
+
+/**
+ * MisticPay: consulta `POST /transactions/check` (fonte da verdade — o webhook dela não é assinado) e aplica o resultado.
+ * É chamada pelo webhook (depois de conferir o token da URL), pelo "Já paguei" e pelo painel; quem chama pelo cliente passa antes
+ * pelas travas de idade e de quantidade em confirmPaymentFromProvider. Tenta primeiro o identificador devolvido na criação e,
+ * se a MisticPay disser que não o conhece (404), o `transactionId` que enviamos (o id do pagamento): ambos são nossos.
+ */
+export async function verifyMisticPayment(paymentId: string): Promise<ConfirmPaymentResult> {
+  const supabase = createAdminClient();
+  const { data: payment } = await supabase.from("subscription_payments").select("*").eq("id", paymentId).maybeSingle();
+  if (!payment) return { ok: false, status: "pending", message: "Pagamento não encontrado." };
+  if (payment.provider !== "misticpay") return { ok: false, status: payment.status, message: "Pagamento de outro provedor." };
+  const providerId = payment.provider_transaction_id;
+  if (!providerId) return { ok: false, status: payment.status, message: "A cobrança ainda não foi criada no provedor." };
+
+  let snapshot;
+  try {
+    try {
+      snapshot = await checkTransaction(providerId);
+    } catch (error) {
+      if (!(error instanceof MisticPayError) || error.status !== 404) throw error;
+      snapshot = await checkTransaction(payment.id);
+    }
+  } catch (error) {
+    const transient = error instanceof MisticPayError && (error.status === 0 || error.status === 429 || error.status >= 500);
+    return { ok: false, status: payment.status, message: "Não foi possível consultar o status agora.", transient };
+  }
+
+  if (snapshot.type && snapshot.type !== "DEPOSITO") return { ok: false, status: payment.status, message: "Divergência ao confirmar a cobrança." };
+
+  const status = mapMisticPayStatus(snapshot.state);
+  if (!status) return { ok: false, status: payment.status, message: "Situação desconhecida no provedor." };
+
+  return applyProviderUpdate(payment.id, {
+    provider: "misticpay",
+    providerTransactionId: providerId,
+    eventId: `${providerId}:${snapshot.state}`,
+    eventType: "transaction.status_check",
+    status,
+    providerStatus: snapshot.state,
+    amount: snapshot.value,
+    endToEndId: null,
+    payload: { transaction_id: providerId, status: snapshot.state, amount: snapshot.value },
   });
 }
 

@@ -3694,6 +3694,7 @@ export type Database = {
           p_currency?: string
           p_method?: string
           p_plan_id: string
+          p_provider?: string
           p_stale_seconds?: number
         }
         Returns: {
@@ -4874,6 +4875,14 @@ export type Database = {
       set_platform_setting: {
         Args: { p_key: string; p_reason?: string; p_value: number }
         Returns: undefined
+      }
+      set_active_payment_gateway: {
+        Args: { p_provider: string; p_reason?: string }
+        Returns: undefined
+      }
+      get_active_payment_gateway: {
+        Args: Record<PropertyKey, never>
+        Returns: string
       }
       set_platform_user_role: {
         Args: {

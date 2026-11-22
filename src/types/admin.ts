@@ -151,6 +151,7 @@ export const PAYMENT_METHOD_LABELS: Record<string, string> = {
 };
 
 export const PAYMENT_PROVIDER_LABELS: Record<string, string> = {
+  misticpay: "MisticPay",
   syncpay: "SyncPay",
   evopay: "EvoPay (anterior)",
   manual: "Manual",
@@ -466,7 +467,7 @@ export interface PlatformDashboard {
     pending_count: number;
     manual_30d: number;
     evopay_30d: number;
-    /** Recebido pelo gateway online (SyncPay + EvoPay anterior) nos últimos 30 dias. */
+    /** Recebido pelo gateway online (MisticPay + SyncPay + EvoPay anterior) nos últimos 30 dias. */
     gateway_30d: number;
     refunded_total: number;
   };
@@ -520,7 +521,23 @@ export interface PaymentEventRow {
   total_count: number;
 }
 
+/** Saúde de um gateway de pagamento (webhook + cobranças), vinda de platform_integrations_status(). */
+export interface GatewayIntegrationStatus {
+  deliveries_24h: number;
+  processed_24h: number;
+  errors_24h: number;
+  unmatched_24h: number;
+  last_delivery_at: string | null;
+  last_error_at: string | null;
+  pending_payments: number;
+  pending_older_1h: number;
+  last_paid_at: string | null;
+  events_total: number;
+  events_unprocessed: number;
+}
+
 export interface IntegrationsStatus {
+  misticpay: GatewayIntegrationStatus;
   syncpay: {
     deliveries_24h: number;
     processed_24h: number;

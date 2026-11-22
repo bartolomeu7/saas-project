@@ -7,7 +7,7 @@ import { getCurrentCompany } from "@/lib/companies/queries";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getPlanById } from "@/lib/billing/queries";
 import { CheckoutForm } from "@/components/app/checkout-form";
-import { cardCheckoutConfig } from "@/lib/syncpay/client";
+import { cardAvailable } from "@/lib/billing/gateway";
 import { buildBuyer } from "@/lib/billing/buyer";
 import { documentProblem, formatDocument, formatPhone, phoneProblem } from "@/lib/billing/checkout-profile";
 
@@ -19,7 +19,7 @@ const CURRENCY = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
- * Passo entre "Assinar" e o QR Code: resume o plano e, se faltar CPF/CNPJ ou telefone no cadastro da empresa (a SyncPay
+ * Passo entre "Assinar" e o QR Code: resume o plano e, se faltar CPF/CNPJ ou telefone no cadastro da empresa (o gateway
  * exige), já mostra os campos aqui. Ao confirmar, salva no cadastro e gera o pagamento. O preço é lido do plano no banco.
  */
 export default async function CheckoutPage({
@@ -59,10 +59,10 @@ export default async function CheckoutPage({
 
   const canPay = current.role === "owner" || current.role === "admin";
   const company = current.company;
-  const cardEnabled = cardCheckoutConfig().enabled;
+  const cardEnabled = await cardAvailable();
   const initialMethod = method === "card" && cardEnabled ? "card" : "pix";
 
-  // o que ainda falta para a SyncPay aceitar a cobrança (mesma regra do servidor)
+  // o que ainda falta para o gateway aceitar a cobrança (mesma regra do servidor)
   const buyer = buildBuyer({
     companyName: company.name,
     legalName: company.legal_name,

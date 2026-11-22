@@ -8,6 +8,7 @@ import { confirmPaymentFromProvider } from "@/lib/billing/confirm-payment";
 import type { ActionResult } from "@/lib/auth/actions";
 import { buildPlanPayload } from "@/lib/admin/plan-form";
 import type { Json } from "@/types/supabase";
+import { PAYMENT_GATEWAYS, PAYMENT_GATEWAY_LABELS } from "@/types/billing";
 
 /**
  * Server Actions do painel da PLATAFORMA. Cada uma só valida o formato do pedido
@@ -504,8 +505,8 @@ export async function reactivateSubscriptionAction(companyId: string, formData: 
 }
 
 /**
- * Reverifica um pagamento da SyncPay: consulta a transação na SyncPay (contingência: no máximo 4 consultas por pagamento, a
- * API aceita 5) pelo mesmo caminho do webhook e do "Já paguei". O service_role só é
+ * Reverifica um pagamento de gateway (SyncPay ou MisticPay): consulta a transação no provedor (contingência; SyncPay: no máximo
+ * 4 consultas por pagamento, a API aceita 5) pelo mesmo caminho do webhook e do "Já paguei". O service_role só é
  * usado dentro de confirmPaymentFromProvider, no servidor, DEPOIS de o ator ser
  * validado como admin; o resultado é auditado via RPC.
  */
@@ -525,17 +526,18 @@ export async function reverifyPaymentAction(paymentId: string): Promise<ActionRe
     return { error: toUserMessage(detailError) };
   }
   const provider = (detail as unknown as { payment: { provider: string } }).payment.provider;
-  if (provider !== "syncpay") {
-    return { error: "Somente pagamentos do gateway atual (SyncPay) podem ser reverificados." };
+  if (provider !== "syncpay" && provider !== "misticpay") {
+    return { error: "Somente pagamentos da SyncPay ou da MisticPay podem ser reverificados." };
   }
+  const providerLabel = provider === "misticpay" ? "MisticPay" : "SyncPay";
 
   let result: Awaited<ReturnType<typeof confirmPaymentFromProvider>>;
   try {
     result = await confirmPaymentFromProvider(parsed.data, { recheckPaid: true, minAgeSeconds: 0 });
   } catch (error) {
-    // Ex.: service role/SyncPay não configurados neste ambiente. Nunca expõe o erro cru.
+    // Ex.: service role/gateway não configurados neste ambiente. Nunca expõe o erro cru.
     console.error("[admin] reverificação falhou:", error instanceof Error ? error.message : "erro desconhecido");
-    result = { ok: false, status: "pending", message: "Não foi possível consultar a SyncPay neste ambiente agora." };
+    result = { ok: false, status: "pending", message: `Não foi possível consultar a ${providerLabel} neste ambiente agora.` };
   }
 
   const { error: auditError } = await supabase.rpc("admin_audit_payment_reverify", {
@@ -555,7 +557,7 @@ export async function reverifyPaymentAction(paymentId: string): Promise<ActionRe
   if (!result.ok) {
     return { error: result.message ?? "Não foi possível reverificar o pagamento agora." };
   }
-  return { success: `Reverificado na SyncPay: ${result.status === "paid" ? "pagamento confirmado" : `situação "${result.status}"`}.` };
+  return { success: `Reverificado na ${providerLabel}: ${result.status === "paid" ? "pagamento confirmado" : `situação "${result.status}"`}.` };
 }
 
 /* -------------------------------------------------------------------- planos */
@@ -716,6 +718,34 @@ export async function setPlatformSettingAction(key: string, formData: FormData):
   revalidatePath("/admin/settings");
   revalidatePath("/admin/audit");
   return { success: "Configuração salva." };
+}
+
+/**
+ * SUPER_ADMIN: escolhe o gateway que recebe as NOVAS cobranças (MisticPay ou SyncPay). Cobranças já criadas continuam no
+ * gateway em que nasceram e seus webhooks seguem valendo. A troca é validada e auditada no banco (set_active_payment_gateway).
+ */
+export async function setActiveGatewayAction(formData: FormData): Promise<ActionResult> {
+  await requireSuperAdmin();
+
+  const parsed = z
+    .object({
+      provider: z.enum(PAYMENT_GATEWAYS, { message: "Escolha um gateway válido." }),
+      reason: z.string().trim().max(500, "Motivo muito longo.").optional(),
+    })
+    .safeParse({ provider: formString(formData, "provider"), reason: formString(formData, "reason") });
+  if (!parsed.success) return invalid(parsed.error.issues[0]);
+
+  const supabase = await createSessionClient();
+  const { error } = await supabase.rpc("set_active_payment_gateway", { p_provider: parsed.data.provider, p_reason: parsed.data.reason });
+  if (error) {
+    console.error("[admin] set_active_payment_gateway() falhou:", error.message);
+    return { error: toUserMessage(error) };
+  }
+
+  revalidatePath("/admin/integrations");
+  revalidatePath("/admin/audit");
+  revalidatePath("/app/assinatura/planos");
+  return { success: `Gateway ativo: ${PAYMENT_GATEWAY_LABELS[parsed.data.provider]}. As novas cobranças usarão este gateway.` };
 }
 
 export async function syncEntitlementsAction(companyId: string): Promise<ActionResult> {
@@ -963,7 +993,7 @@ const RECONCILE_BATCH = 15;
 const RECONCILE_BUDGET_MS = 8_000;
 
 /**
- * Reconsulta na SyncPay (contingência: o caminho normal é o webhook assinado; cada pagamento aceita no máximo 4 consultas)
+ * Reconsulta no gateway (contingência: o caminho normal é o webhook; na SyncPay cada pagamento aceita no máximo 4 consultas)
  * as cobranças pendentes com mais de 10 minutos. Segura e repetível: o banco só concede acesso com valor igual
  * ao esperado e é idempotente por evento. Para dentro de um orçamento de tempo; rode de novo para o restante.
  */
@@ -1018,7 +1048,7 @@ export async function reconcilePendingPaymentsAction(): Promise<ActionResult> {
 
   const summary = `${checked} verificada(s): ${confirmed} confirmada(s), ${stillPending} ainda pendente(s), ${errors} com erro.`;
   if (errors > 0 && confirmed === 0 && stillPending === 0) {
-    return { error: `Não foi possível consultar a SyncPay agora. ${summary}` };
+    return { error: `Não foi possível consultar o gateway agora. ${summary}` };
   }
   return { success: summary };
 }

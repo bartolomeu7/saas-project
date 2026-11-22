@@ -8,7 +8,12 @@ import { Pagination } from "@/components/app/pagination";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { AdminActionDialog } from "@/components/admin/admin-action-dialog";
 import { parseEnum, parsePage, type SearchParams } from "@/lib/admin/params";
+import { setActiveGatewayAction } from "@/lib/admin/actions";
+import { gatewayConfigured, getActiveGateway } from "@/lib/billing/gateway";
+import { PAYMENT_GATEWAYS, PAYMENT_GATEWAY_LABELS, type PaymentGateway } from "@/types/billing";
+import type { GatewayIntegrationStatus } from "@/types/admin";
 import {
   ADMIN_PAGE_SIZE,
   getIntegrationsStatus,
@@ -29,72 +34,130 @@ const OUTCOME_LABELS: Record<(typeof OUTCOMES)[number], string> = {
 };
 const OUTCOME_VARIANTS = { processed: "success", payment_not_found: "warning", ignored: "muted", error: "danger" } as const;
 
+const GATEWAY_NOTES: Record<PaymentGateway, string> = {
+  misticpay: "Pix. Webhook sem assinatura: protegido por token na URL e sempre confirmado na API antes de liberar acesso.",
+  syncpay: "Pix e cartão. Webhook assinado (HMAC). Aguardando a liberação do Pix pela API na conta.",
+};
+
+function GatewayCard({ gateway, status, active, configured }: { gateway: PaymentGateway; status: GatewayIntegrationStatus; active: boolean; configured: boolean }) {
+  const variant = !configured ? "muted" : status.errors_24h > 0 ? "danger" : status.pending_older_1h > 0 ? "warning" : "success";
+  const label = !configured ? "Sem credenciais" : status.errors_24h > 0 ? "Com erros" : status.pending_older_1h > 0 ? "Atenção" : "Saudável";
+  return (
+    <Card className={active ? "border-primary/50" : undefined}>
+      <CardHeader>
+        <CardTitle className="flex items-center justify-between gap-2 text-base">
+          <span className="flex items-center gap-2">
+            {PAYMENT_GATEWAY_LABELS[gateway]}
+            {active && <Badge variant="info">Ativo</Badge>}
+          </span>
+          <Badge variant={variant}>{label}</Badge>
+        </CardTitle>
+        <CardDescription>{GATEWAY_NOTES[gateway]}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <dl className="flex flex-col gap-2">
+          <DetailRow label="Entregas (24 h)">{status.deliveries_24h}</DetailRow>
+          <DetailRow label="Processadas">{status.processed_24h}</DetailRow>
+          <DetailRow label="Sem pagamento">{status.unmatched_24h}</DetailRow>
+          <DetailRow label="Erros">{status.errors_24h}</DetailRow>
+          <DetailRow label="Última entrega">
+            {status.last_delivery_at ? `${formatDateTime(status.last_delivery_at)} (${formatRelative(status.last_delivery_at)})` : "Nenhuma"}
+          </DetailRow>
+          <DetailRow label="Pagamentos pendentes">
+            {status.pending_payments}
+            {status.pending_older_1h > 0 && <span className="text-warning"> · {status.pending_older_1h} há mais de 1 h</span>}
+          </DetailRow>
+          <DetailRow label="Último pago">{status.last_paid_at ? formatDateTime(status.last_paid_at) : "—"}</DetailRow>
+          <DetailRow label="Eventos (total / sem processar)">
+            {status.events_total} / {status.events_unprocessed}
+          </DetailRow>
+        </dl>
+      </CardContent>
+    </Card>
+  );
+}
+
 /**
- * Integrações: SyncPay (webhook + pagamentos), Clerk (identidade) e Supabase (banco).
+ * Integrações: gateways de pagamento (MisticPay e SyncPay, com a escolha do ativo), Clerk (identidade) e Supabase (banco).
  * Tudo vem do banco (platform_integrations_status e as listas de entregas/eventos):
- * nenhum payload bruto, token ou segredo é exibido. O webhook da SyncPay é assinado (HMAC) e
- * idempotente por event_id (payment_events). Se uma entrega falhar, “Reverificar na SyncPay”
- * no pagamento consulta a transação (contingência, no máximo 4 consultas por pagamento).
+ * nenhum payload bruto, token ou segredo é exibido. O webhook da SyncPay é assinado (HMAC); o da MisticPay não é, então
+ * é protegido por token e confirmado na API. Ambos são idempotentes por evento (payment_events). Se uma entrega falhar,
+ * “Reverificar no gateway” no pagamento consulta a transação (contingência).
  */
 export default async function AdminIntegrationsPage({
   searchParams: searchParamsPromise,
 }: {
   searchParams: Promise<SearchParams>;
 }) {
-  await requirePlatformAdmin();
+  const admin = await requirePlatformAdmin();
   const searchParams = await searchParamsPromise;
 
   const outcome = parseEnum(searchParams.outcome, OUTCOMES);
   const page = parsePage(searchParams.page);
+  const activeGateway = await getActiveGateway();
+  const gateway = parseEnum(searchParams.gateway, PAYMENT_GATEWAYS) ?? activeGateway;
 
   const [status, deliveries, events] = await Promise.all([
     getIntegrationsStatus(),
-    listWebhookDeliveries({ provider: "syncpay", outcome, page }),
-    listPaymentEvents({ provider: "syncpay", page: 1 }),
+    listWebhookDeliveries({ provider: gateway, outcome, page }),
+    listPaymentEvents({ provider: gateway, page: 1 }),
   ]);
-  const { syncpay, clerk, supabase } = status;
+  const { clerk, supabase } = status;
+  const isSuperAdmin = admin.role === "super_admin";
 
   return (
     <div className="flex flex-col gap-6 px-4 py-6 sm:px-6">
       <PageHeader
         eyebrow="Sistema"
         title="Integrações"
-        description="Saúde de SyncPay, Clerk e Supabase, e o histórico de webhooks."
+        description="Gateway de pagamento ativo, saúde de MisticPay, SyncPay, Clerk e Supabase, e o histórico de webhooks."
       />
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between gap-2 text-base">
-              SyncPay
-              <Badge variant={syncpay.errors_24h > 0 ? "danger" : syncpay.pending_older_1h > 0 ? "warning" : "success"}>
-                {syncpay.errors_24h > 0 ? "Com erros" : syncpay.pending_older_1h > 0 ? "Atenção" : "Saudável"}
-              </Badge>
-            </CardTitle>
-            <CardDescription>Pagamentos Pix e webhook (últimas 24 h).</CardDescription>
-          </CardHeader>
+      <Card>
+        <CardHeader>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <CardTitle className="text-base">Gateway de pagamento ativo</CardTitle>
+            <Badge variant={gatewayConfigured(activeGateway) ? "success" : "danger"}>
+              {PAYMENT_GATEWAY_LABELS[activeGateway]}
+              {gatewayConfigured(activeGateway) ? "" : " · sem credenciais"}
+            </Badge>
+          </div>
+          <CardDescription>
+            Recebe as NOVAS cobranças de assinatura. Cobranças já criadas continuam no gateway em que nasceram e os dois webhooks seguem
+            valendo. O cartão só existe na SyncPay: com a MisticPay ativa, o site oferece apenas Pix.
+          </CardDescription>
+        </CardHeader>
+        {isSuperAdmin && (
           <CardContent>
-            <dl className="flex flex-col gap-2">
-              <DetailRow label="Entregas (24 h)">{syncpay.deliveries_24h}</DetailRow>
-              <DetailRow label="Processadas">{syncpay.processed_24h}</DetailRow>
-              <DetailRow label="Sem pagamento">{syncpay.unmatched_24h}</DetailRow>
-              <DetailRow label="Erros">{syncpay.errors_24h}</DetailRow>
-              <DetailRow label="Última entrega">
-                {syncpay.last_delivery_at ? `${formatDateTime(syncpay.last_delivery_at)} (${formatRelative(syncpay.last_delivery_at)})` : "Nenhuma"}
-              </DetailRow>
-              <DetailRow label="Pagamentos pendentes">
-                {syncpay.pending_payments}
-                {syncpay.pending_older_1h > 0 && (
-                  <span className="text-warning"> · {syncpay.pending_older_1h} há mais de 1 h</span>
-                )}
-              </DetailRow>
-              <DetailRow label="Último pago">{syncpay.last_paid_at ? formatDateTime(syncpay.last_paid_at) : "—"}</DetailRow>
-              <DetailRow label="Eventos (total / sem processar)">
-                {syncpay.events_total} / {syncpay.events_unprocessed}
-              </DetailRow>
-            </dl>
+            <AdminActionDialog
+              triggerLabel="Trocar gateway"
+              triggerSize="sm"
+              title="Trocar o gateway de pagamento"
+              description="As próximas cobranças serão criadas no gateway escolhido. A troca fica registrada na auditoria."
+              submitLabel="Salvar"
+              action={setActiveGatewayAction}
+              fields={[
+                {
+                  type: "select",
+                  name: "provider",
+                  label: "Gateway",
+                  required: true,
+                  defaultValue: activeGateway,
+                  options: PAYMENT_GATEWAYS.map((value) => ({
+                    value,
+                    label: `${PAYMENT_GATEWAY_LABELS[value]}${gatewayConfigured(value) ? "" : " (sem credenciais neste ambiente)"}`,
+                  })),
+                },
+                { type: "textarea", name: "reason", label: "Motivo (opcional)", maxLength: 500 },
+              ]}
+            />
           </CardContent>
-        </Card>
+        )}
+      </Card>
+
+      <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
+        <GatewayCard gateway="misticpay" status={status.misticpay} active={activeGateway === "misticpay"} configured={gatewayConfigured("misticpay")} />
+        <GatewayCard gateway="syncpay" status={status.syncpay} active={activeGateway === "syncpay"} configured={gatewayConfigured("syncpay")} />
 
         <Card>
           <CardHeader>
@@ -139,7 +202,7 @@ export default async function AdminIntegrationsPage({
 
       <section aria-labelledby="deliveries-heading" className="flex flex-col gap-3">
         <h2 id="deliveries-heading" className="text-lg font-semibold tracking-tight text-foreground">
-          Entregas de webhook (SyncPay)
+          Entregas de webhook ({PAYMENT_GATEWAY_LABELS[gateway]})
         </h2>
         <AdminFilters
           basePath="/admin/integrations"
@@ -147,6 +210,13 @@ export default async function AdminIntegrationsPage({
           searchPlaceholder=""
           hideSearch
           selects={[
+            {
+              name: "gateway",
+              label: "Gateway",
+              allLabel: `Gateway ativo (${PAYMENT_GATEWAY_LABELS[activeGateway]})`,
+              value: gateway !== activeGateway ? gateway : undefined,
+              options: PAYMENT_GATEWAYS.map((value) => ({ value, label: PAYMENT_GATEWAY_LABELS[value] })),
+            },
             {
               name: "outcome",
               label: "Resultado",
@@ -164,7 +234,7 @@ export default async function AdminIntegrationsPage({
             description={
               outcome
                 ? "Nenhuma entrega com este resultado."
-                : "Quando a SyncPay chamar o webhook, cada entrega aparece aqui."
+                : `Quando a ${PAYMENT_GATEWAY_LABELS[gateway]} chamar o webhook, cada entrega aparece aqui.`
             }
           />
         ) : (
@@ -213,7 +283,7 @@ export default async function AdminIntegrationsPage({
           pageSize={ADMIN_PAGE_SIZE}
           total={deliveries.total}
           basePath="/admin/integrations"
-          searchParams={{ outcome }}
+          searchParams={{ outcome, gateway: gateway !== activeGateway ? gateway : undefined }}
           itemLabel="entrega"
           itemLabelPlural="entregas"
         />

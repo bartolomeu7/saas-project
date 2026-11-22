@@ -32,7 +32,7 @@ import { PAYMENT_METHOD_LABELS, PAYMENT_PROVIDER_LABELS, PAYMENT_STATUS_LABELS }
 export const metadata = { title: "Pagamentos" };
 
 const STATUSES = ["pending", "paid", "expired", "cancelled", "failed", "refunded"] as const;
-const PROVIDERS = ["syncpay", "evopay", "manual"] as const;
+const PROVIDERS = ["misticpay", "syncpay", "evopay", "manual"] as const;
 const METHODS = ["pix", "transfer", "cash", "card_external", "other"] as const;
 const SORTS = [
   { value: "created_desc", label: "Mais recentes" },
@@ -84,7 +84,7 @@ export default async function AdminPaymentsPage({
       <PageHeader
         eyebrow="Financeiro"
         title="Pagamentos"
-        description="Pagamentos de assinatura recebidos pela SyncPay (Pix e cartão), pela EvoPay (anterior) e registrados manualmente."
+        description="Pagamentos de assinatura recebidos pela MisticPay (Pix), pela SyncPay (Pix e cartão), pela EvoPay (anterior) e registrados manualmente."
         actions={<ReconcileButton />}
       />
 
@@ -135,7 +135,7 @@ export default async function AdminPaymentsPage({
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Recebido por forma</CardTitle>
-              <CardDescription>A SyncPay recebe Pix e cartão; a EvoPay anterior era sempre Pix.</CardDescription>
+              <CardDescription>A MisticPay recebe Pix; a SyncPay, Pix e cartão; a EvoPay anterior era sempre Pix.</CardDescription>
             </CardHeader>
             <CardContent>
               <BreakdownBars

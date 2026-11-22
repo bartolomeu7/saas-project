@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { reverifyPaymentAction } from "@/lib/admin/actions";
 
-/** Consulta o status do pagamento direto na SyncPay (server-to-server) e atualiza se mudou. */
+/** Consulta o status do pagamento direto no gateway (SyncPay ou MisticPay, server-to-server) e atualiza se mudou. */
 export function ReverifyPaymentButton({ paymentId }: { paymentId: string }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -26,7 +26,7 @@ export function ReverifyPaymentButton({ paymentId }: { paymentId: string }) {
         })
       }
     >
-      {pending ? "Consultando a SyncPay..." : "Reverificar na SyncPay"}
+      {pending ? "Consultando o gateway..." : "Reverificar no gateway"}
     </Button>
   );
 }
