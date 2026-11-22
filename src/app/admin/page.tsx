@@ -201,7 +201,7 @@ export default async function AdminDashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Webhooks (24 h)</CardTitle>
-            <CardDescription>Entregas recebidas da SyncPay.</CardDescription>
+            <CardDescription>Entregas recebidas dos gateways de pagamento.</CardDescription>
           </CardHeader>
           <CardContent>
             <BreakdownBars

@@ -105,6 +105,7 @@ export async function POST(request: Request) {
   let transient = false;
   try {
     const result = await applyProviderUpdate(paymentId, {
+      provider: "syncpay",
       providerTransactionId: event.referenceId,
       eventId: event.eventId,
       eventType: event.event,

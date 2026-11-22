@@ -17,6 +17,19 @@ export type SubscriptionPaymentStatus =
   | "refunded";
 export type SubscriptionPaymentMethod = "pix";
 
+/** Gateways que podem receber as novas cobranças de assinatura. O ativo é escolhido pelo super administrador. */
+export const PAYMENT_GATEWAYS = ["misticpay", "syncpay"] as const;
+export type PaymentGateway = (typeof PAYMENT_GATEWAYS)[number];
+
+export const PAYMENT_GATEWAY_LABELS: Record<PaymentGateway, string> = {
+  misticpay: "MisticPay",
+  syncpay: "SyncPay",
+};
+
+export function isPaymentGateway(value: unknown): value is PaymentGateway {
+  return typeof value === "string" && (PAYMENT_GATEWAYS as readonly string[]).includes(value);
+}
+
 export const SUBSCRIPTION_STATUS_LABELS: Record<SubscriptionStatus, string> = {
   trialing: "Teste grátis",
   pending: "Pendente",

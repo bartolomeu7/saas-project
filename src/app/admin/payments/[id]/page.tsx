@@ -28,7 +28,7 @@ const OUTCOME_LABELS: Record<string, string> = {
 
 /**
  * Detalhe de um pagamento. Mostra eventos de pagamento (idempotência) e entregas
- * de webhook SEM payload bruto; documento do pagador mascarado. Reverificar (SyncPay)
+ * de webhook SEM payload bruto; documento do pagador mascarado. Reverificar (SyncPay/MisticPay)
  * refaz a consulta server-to-server e anular (manual) é exclusivo de super_admin.
  */
 export default async function AdminPaymentDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -41,7 +41,7 @@ export default async function AdminPaymentDetailPage({ params }: { params: Promi
 
   const { payment, events, deliveries } = detail;
   const canVoid = admin.role === "super_admin" && payment.provider === "manual" && payment.status === "paid";
-  const canReverify = payment.provider === "syncpay" && payment.status !== "paid";
+  const canReverify = (payment.provider === "syncpay" || payment.provider === "misticpay") && payment.status !== "paid";
 
   return (
     <div className="flex flex-col gap-6 px-4 py-6 sm:px-6">

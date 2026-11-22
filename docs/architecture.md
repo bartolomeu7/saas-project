@@ -169,9 +169,13 @@ de acesso pronto, mas ainda nenhuma página de conteúdo.
   usuários, planos, assinaturas, pagamentos, APIs, consumo, logs, webhooks,
   cupons, configurações, administradores, permissões, auditoria.
 
-## Pagamentos (implementado — Billing/SyncPay)
+## Pagamentos (implementado — Billing/MisticPay/SyncPay)
 
-- Provedor: **SyncPay** (Pix e cartão), integrado em `src/lib/billing/` e `src/lib/syncpay/`
+- Dois gateways, escolha do super administrador em `/admin/integrations` (`platform_settings.payment_gateway`, lido por
+  `getActiveGateway()` em `src/lib/billing/gateway.ts`): **MisticPay** (Pix; `src/lib/misticpay/`, guia
+  `docs/MISTICPAY_INTEGRACAO.md`; webhook sem assinatura: token na URL + confirmação pela API `transactions/check`) e **SyncPay**
+  (Pix e cartão). Cada cobrança nasce e termina no gateway em que foi criada; os dois webhooks ficam sempre ativos.
+- Provedor **SyncPay** (Pix e cartão), integrado em `src/lib/billing/` e `src/lib/syncpay/`
   (`src/lib/syncpay/client.ts` fala com a API externa; `src/lib/syncpay/webhook.ts` valida a assinatura e lê o evento;
   `src/lib/billing/guard.ts` expõe `getActiveSubscription`/`getSubscriptionGuardStatus`, no mesmo molde Edge-safe do guard
   de `/admin`). Detalhes, variáveis de ambiente e checklist de ativação: `docs/SYNCPAY_INTEGRACAO.md`.
@@ -194,8 +198,8 @@ de acesso pronto, mas ainda nenhuma página de conteúdo.
 
 ## APIs externas
 
-- SyncPay (pagamentos Pix e cartão, ver acima) é a primeira e única integração externa
-  isolada em `lib/` (`src/lib/syncpay/client.ts`), nunca chamada diretamente
+- MisticPay e SyncPay (pagamentos, ver acima) são as integrações externas de cobrança,
+  isoladas em `lib/` (`src/lib/misticpay/client.ts`, `src/lib/syncpay/client.ts`), nunca chamadas diretamente
   do frontend — sempre a partir de Server Actions ou do Route Handler do
   webhook.
 - Novas integrações devem seguir o mesmo padrão: módulo próprio em `lib/`,
