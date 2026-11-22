@@ -8,8 +8,8 @@ import type { PricingView } from "@/lib/billing/pricing-display";
 
 /**
  * Cartão da tela de planos do app. Mostra o MESMO modelo do site (PricingView, vindo de get_public_plans), inclusive
- * preço anterior/desconto quando a promoção está vigente. O clique em "Assinar" envia só o `planId`: o valor cobrado é
- * sempre lido do plano no servidor/banco (/api/billing/create-payment + claim_subscription_payment) — nenhum preço
+ * preço anterior/desconto quando a promoção está vigente. O clique em "Assinar" abre o checkout só com o `planId`: o valor
+ * cobrado é sempre lido do plano no servidor/banco (/api/billing/create-payment + claim_gateway_payment) — nenhum preço
  * trafega do navegador.
  */
 export function PlanCard({
@@ -29,36 +29,13 @@ export function PlanCard({
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState<"pix" | "card" | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [needsProfile, setNeedsProfile] = useState(false);
 
   const isCustom = plan.kind === "custom";
 
-  async function handleSubscribe(method: "pix" | "card") {
-    setError(null);
-    setNeedsProfile(false);
+  /** "Assinar" leva ao checkout: resumo do plano, dados que faltarem no cadastro e só então a cobrança. */
+  function handleSubscribe(method: "pix" | "card") {
     setLoading(method);
-
-    try {
-      const response = await fetch("/api/billing/create-payment", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planId: plan.id, method }),
-      });
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.error ?? "Não foi possível iniciar o pagamento.");
-        setNeedsProfile(data.code === "BILLING_PROFILE_INCOMPLETE");
-        setLoading(null);
-        return;
-      }
-
-      router.push(`/app/assinatura/pagamento/${data.paymentId}`);
-    } catch {
-      setError("Erro de conexão. Tente novamente.");
-      setLoading(null);
-    }
+    router.push(`/app/assinatura/checkout/${plan.id}?method=${method}`);
   }
 
   return (
@@ -92,13 +69,6 @@ export function PlanCard({
         ))}
       </ul>
 
-      {error && <p className="text-xs text-destructive">{error}</p>}
-      {needsProfile && (
-        <a href="/app/configuracoes/empresa" className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
-          Completar cadastro da empresa
-        </a>
-      )}
-
       {isCurrent ? (
         <Button variant="outline" disabled>
           Plano atual
@@ -114,11 +84,11 @@ export function PlanCard({
       ) : (
         <div className="flex flex-col gap-2">
           <Button onClick={() => handleSubscribe("pix")} disabled={loading !== null}>
-            {loading === "pix" ? "Gerando Pix..." : "Assinar com Pix"}
+            {loading === "pix" ? "Abrindo..." : "Assinar com Pix"}
           </Button>
           {cardEnabled && (
             <Button variant="outline" onClick={() => handleSubscribe("card")} disabled={loading !== null}>
-              {loading === "card" ? "Preparando..." : "Pagar com cartão"}
+              {loading === "card" ? "Abrindo..." : "Pagar com cartão"}
             </Button>
           )}
         </div>
