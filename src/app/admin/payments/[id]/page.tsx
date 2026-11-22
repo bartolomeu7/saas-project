@@ -28,7 +28,7 @@ const OUTCOME_LABELS: Record<string, string> = {
 
 /**
  * Detalhe de um pagamento. Mostra eventos de pagamento (idempotência) e entregas
- * de webhook SEM payload bruto; documento do pagador mascarado. Reverificar (EvoPay)
+ * de webhook SEM payload bruto; documento do pagador mascarado. Reverificar (SyncPay)
  * refaz a consulta server-to-server e anular (manual) é exclusivo de super_admin.
  */
 export default async function AdminPaymentDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -41,7 +41,7 @@ export default async function AdminPaymentDetailPage({ params }: { params: Promi
 
   const { payment, events, deliveries } = detail;
   const canVoid = admin.role === "super_admin" && payment.provider === "manual" && payment.status === "paid";
-  const canReverify = payment.provider === "evopay" && payment.status !== "paid";
+  const canReverify = payment.provider === "syncpay" && payment.status !== "paid";
 
   return (
     <div className="flex flex-col gap-6 px-4 py-6 sm:px-6">
@@ -85,7 +85,7 @@ export default async function AdminPaymentDetailPage({ params }: { params: Promi
             <DetailRow label="Pago em">{payment.paid_at ? formatDateTime(payment.paid_at) : "—"}</DetailRow>
             {payment.external_reference && <DetailRow label="Referência"><code className="text-xs">{payment.external_reference}</code></DetailRow>}
             {payment.provider_transaction_id && (
-              <DetailRow label="ID na EvoPay"><code className="text-xs">{payment.provider_transaction_id}</code></DetailRow>
+              <DetailRow label="ID no provedor"><code className="text-xs">{payment.provider_transaction_id}</code></DetailRow>
             )}
             {payment.end_to_end_id && <DetailRow label="End-to-end"><code className="text-xs">{payment.end_to_end_id}</code></DetailRow>}
             {payment.payer_name && <DetailRow label="Pagador">{payment.payer_name}</DetailRow>}
@@ -162,7 +162,7 @@ export default async function AdminPaymentDetailPage({ params }: { params: Promi
         <Card className="overflow-hidden">
           <CardHeader>
             <CardTitle className="text-base">Entregas de webhook</CardTitle>
-            <CardDescription>Chamadas recebidas da EvoPay para este pagamento.</CardDescription>
+            <CardDescription>Chamadas recebidas do provedor para este pagamento.</CardDescription>
           </CardHeader>
           {deliveries.length === 0 ? (
             <CardContent>

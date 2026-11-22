@@ -158,6 +158,14 @@ export interface SubscriptionPayment {
   payer_document: string | null;
   end_to_end_id: string | null;
   external_reference: string | null;
+  /** 'pix' | 'card' nos pagamentos do gateway atual (SyncPay); null nos antigos (EvoPay era sempre Pix) e nos manuais. */
+  charge_method: string | null;
+  card_brand: string | null;
+  card_last4: string | null;
+  card_submitted_at: string | null;
+  card_attempts: number;
+  /** Consultas de contingência feitas ao provedor (a SyncPay aceita no máximo 5 por transação). */
+  status_checks: number;
   due_at: string | null;
   paid_at: string | null;
   created_at: string;
@@ -178,7 +186,7 @@ export interface ActiveSubscriptionResult {
 
 const REFERENCE_PREFIX = "PRIMEGES";
 
-/** Referência única que associa a cobrança na EvoPay ao pagamento interno. */
+/** Referência única que associa a cobrança no provedor (vai na descrição da cobrança) ao pagamento interno. */
 export function buildExternalReference(subscriptionPaymentId: string): string {
   return `${REFERENCE_PREFIX}:${subscriptionPaymentId}`;
 }

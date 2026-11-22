@@ -6,8 +6,8 @@ import { ConfirmActionForm } from "@/components/app/confirm-dialog";
 import { reconcilePendingPaymentsAction } from "@/lib/admin/actions";
 
 /**
- * Rede de segurança do webhook da EvoPay (uma única tentativa, sem assinatura): reconsulta no provedor as cobranças
- * Pix pendentes há mais de 10 minutos. Nunca confia em payload — a confirmação segue o mesmo caminho do "Já paguei".
+ * Rede de segurança do webhook da SyncPay: reconsulta no provedor as cobranças pendentes há mais de 10 minutos (no máximo
+ * 4 consultas por pagamento). A confirmação segue o mesmo caminho do "Já paguei".
  */
 export function ReconcileButton() {
   const router = useRouter();
@@ -25,7 +25,7 @@ export function ReconcileButton() {
       }}
       label="Reconciliar pendentes"
       title="Reconciliar cobranças pendentes?"
-      description="Consulta a EvoPay para cada cobrança Pix pendente há mais de 10 minutos (até 15 por vez) e confirma as que já foram pagas. Seguro e repetível."
+      description="Consulta a SyncPay para cada cobrança pendente há mais de 10 minutos (até 15 por vez) e confirma as que já foram pagas. Seguro e repetível."
       confirmLabel="Reconciliar"
     />
   );

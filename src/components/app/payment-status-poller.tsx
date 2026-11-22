@@ -19,6 +19,8 @@ const TERMINAL_STATUSES: SubscriptionPaymentStatus[] = [
   "refunded",
 ];
 
+const CARD_FAILED_MESSAGE = "O pagamento no cartão não foi aprovado. Tente outro cartão ou use o Pix.";
+
 const FRIENDLY_MESSAGES: Partial<Record<SubscriptionPaymentStatus, string>> = {
   paid: "Pagamento confirmado! Sua assinatura já está ativa.",
   expired: "Este Pix expirou. Gere um novo pagamento para continuar.",
@@ -29,9 +31,11 @@ const FRIENDLY_MESSAGES: Partial<Record<SubscriptionPaymentStatus, string>> = {
 export function PaymentStatusPoller({
   paymentId,
   initialStatus,
+  method = "pix",
 }: {
   paymentId: string;
   initialStatus: SubscriptionPaymentStatus;
+  method?: "pix" | "card";
 }) {
   const router = useRouter();
   const [status, setStatus] = useState(initialStatus);
@@ -85,7 +89,7 @@ export function PaymentStatusPoller({
         {SUBSCRIPTION_PAYMENT_STATUS_LABELS[status]}
       </p>
 
-      {FRIENDLY_MESSAGES[status] && (
+      {(method === "card" && status === "failed" ? CARD_FAILED_MESSAGE : FRIENDLY_MESSAGES[status]) && (
         <p
           className={
             status === "paid"
@@ -93,13 +97,13 @@ export function PaymentStatusPoller({
               : "text-sm text-destructive"
           }
         >
-          {FRIENDLY_MESSAGES[status]}
+          {method === "card" && status === "failed" ? CARD_FAILED_MESSAGE : FRIENDLY_MESSAGES[status]}
         </p>
       )}
 
       {errorMessage && <p className="text-xs text-destructive">{errorMessage}</p>}
 
-      {!isTerminal && (
+      {!isTerminal && method === "pix" && (
         <Button onClick={handleCheckNow} disabled={checking} className="w-full">
           {checking ? "Consultando..." : "Já paguei"}
         </Button>

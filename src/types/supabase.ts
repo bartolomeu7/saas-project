@@ -2714,6 +2714,11 @@ export type Database = {
         Row: {
           amount: number
           amount_with_tax: number | null
+          card_attempts: number
+          card_brand: string | null
+          card_last4: string | null
+          card_submitted_at: string | null
+          charge_method: string | null
           company_id: string
           created_at: string
           currency: string
@@ -2734,6 +2739,7 @@ export type Database = {
           provider_transaction_id: string | null
           recorded_by: string | null
           status: Database["public"]["Enums"]["subscription_payment_status"]
+          status_checks: number
           subscription_id: string | null
           tax_amount: number | null
           updated_at: string
@@ -2741,6 +2747,11 @@ export type Database = {
         Insert: {
           amount: number
           amount_with_tax?: number | null
+          card_attempts?: number
+          card_brand?: string | null
+          card_last4?: string | null
+          card_submitted_at?: string | null
+          charge_method?: string | null
           company_id: string
           created_at?: string
           currency?: string
@@ -2761,6 +2772,7 @@ export type Database = {
           provider_transaction_id?: string | null
           recorded_by?: string | null
           status?: Database["public"]["Enums"]["subscription_payment_status"]
+          status_checks?: number
           subscription_id?: string | null
           tax_amount?: number | null
           updated_at?: string
@@ -2768,6 +2780,11 @@ export type Database = {
         Update: {
           amount?: number
           amount_with_tax?: number | null
+          card_attempts?: number
+          card_brand?: string | null
+          card_last4?: string | null
+          card_submitted_at?: string | null
+          charge_method?: string | null
           company_id?: string
           created_at?: string
           currency?: string
@@ -2788,6 +2805,7 @@ export type Database = {
           provider_transaction_id?: string | null
           recorded_by?: string | null
           status?: Database["public"]["Enums"]["subscription_payment_status"]
+          status_checks?: number
           subscription_id?: string | null
           tax_amount?: number | null
           updated_at?: string
@@ -3668,6 +3686,22 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      claim_gateway_payment: {
+        Args: {
+          p_amount: number
+          p_company_id: string
+          p_currency?: string
+          p_method?: string
+          p_plan_id: string
+          p_stale_seconds?: number
+        }
+        Returns: {
+          created: boolean
+          has_charge: boolean
+          payment_id: string
+          payment_status: Database["public"]["Enums"]["subscription_payment_status"]
+        }[]
       }
       claim_subscription_payment: {
         Args: {

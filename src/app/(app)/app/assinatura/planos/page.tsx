@@ -4,6 +4,7 @@ import { getCurrentSubscription, getPlanById, getPublicPlans } from "@/lib/billi
 import { PlanCard } from "@/components/app/plan-card";
 import { PageHeader } from "@/components/app/page-header";
 import { toPricingView } from "@/lib/billing/pricing-display";
+import { cardCheckoutConfig } from "@/lib/syncpay/client";
 import type { Plan, PublicPlan } from "@/types/billing";
 
 export const metadata: Metadata = {
@@ -25,6 +26,7 @@ function toCatalogShape(plan: Plan): PublicPlan {
 export default async function PlansPage() {
   const current = (await getCurrentCompany())!;
   const companyId = current.company.id;
+  const cardEnabled = cardCheckoutConfig().enabled;
 
   // FONTE ÚNICA: o mesmo catálogo da home (get_public_plans), agora com a sessão do usuário.
   const [catalog, subscription] = await Promise.all([
@@ -63,6 +65,7 @@ export default async function PlansPage() {
               hiddenFromCatalog={hidden}
               isCurrent={subscription?.plan_id === plan.id && subscription.status === "active"}
               highlighted={plan.highlight !== null}
+              cardEnabled={cardEnabled}
             />
           ))}
         </div>

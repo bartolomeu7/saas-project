@@ -32,8 +32,8 @@ async function assertOwnPayment(paymentId: string): Promise<string | null> {
 
 /**
  * Leitura leve para o polling automático da tela de pagamento — apenas
- * relê o status já salvo no nosso banco (nenhuma chamada à EvoPay), para
- * não sobrecarregar a API do provedor a cada 5-10s.
+ * relê o status já salvo no nosso banco (nenhuma chamada à SyncPay): o status real chega pelo
+ * webhook assinado e a API do provedor limita as consultas por transação.
  */
 export async function getPaymentStatusAction(paymentId: string): Promise<PaymentStatusResult> {
   const companyId = await assertOwnPayment(paymentId);
@@ -57,8 +57,8 @@ export async function getPaymentStatusAction(paymentId: string): Promise<Payment
 
 /**
  * Ação do botão "Já paguei" — APENAS consulta o servidor (via
- * confirmPaymentFromProvider, que sempre re-verifica na EvoPay antes de
- * confirmar). Nunca altera o status diretamente a partir do clique.
+ * confirmPaymentFromProvider: contingência, com idade mínima do pagamento e no máximo 4
+ * consultas à SyncPay por pagamento). Nunca altera o status diretamente a partir do clique.
  */
 export async function checkPaymentNowAction(paymentId: string): Promise<PaymentStatusResult> {
   const companyId = await assertOwnPayment(paymentId);

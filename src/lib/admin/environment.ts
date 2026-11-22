@@ -39,8 +39,10 @@ export function getEnvironmentChecks(): EnvironmentCheck[] {
     { key: "supabase_url", label: "Supabase — URL", configured: Boolean(env.NEXT_PUBLIC_SUPABASE_URL) },
     { key: "supabase_anon", label: "Supabase — chave anon", configured: Boolean(env.NEXT_PUBLIC_SUPABASE_ANON_KEY) },
     { key: "supabase_service", label: "Supabase — service role (somente servidor)", configured: Boolean(env.SUPABASE_SERVICE_ROLE_KEY) },
-    { key: "evopay_key", label: "EvoPay — chave de API", configured: Boolean(env.EVOPAY_API_KEY) },
-    { key: "evopay_url", label: "EvoPay — URL da API", configured: Boolean(env.EVOPAY_API_BASE_URL) },
+    { key: "syncpay_id", label: "SyncPay — Client ID", configured: Boolean(env.SYNCPAY_CLIENT_ID) },
+    { key: "syncpay_secret", label: "SyncPay — Client Secret (somente servidor)", configured: Boolean(env.SYNCPAY_CLIENT_SECRET) },
+    { key: "syncpay_webhook", label: "SyncPay — segredo do webhook", configured: Boolean(env.SYNCPAY_WEBHOOK_SECRET) },
+    { key: "syncpay_card", label: "SyncPay — cartão (chave pública + liberação)", configured: Boolean(env.SYNCPAY_PUBLIC_KEY) && env.SYNCPAY_CARD_ENABLED === "1" },
     { key: "app_url", label: "URL pública do app", configured: Boolean(env.NEXT_PUBLIC_APP_URL) },
   ];
 }

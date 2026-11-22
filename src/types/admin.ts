@@ -151,7 +151,8 @@ export const PAYMENT_METHOD_LABELS: Record<string, string> = {
 };
 
 export const PAYMENT_PROVIDER_LABELS: Record<string, string> = {
-  evopay: "EvoPay",
+  syncpay: "SyncPay",
+  evopay: "EvoPay (anterior)",
   manual: "Manual",
 };
 
@@ -465,6 +466,8 @@ export interface PlatformDashboard {
     pending_count: number;
     manual_30d: number;
     evopay_30d: number;
+    /** Recebido pelo gateway online (SyncPay + EvoPay anterior) nos últimos 30 dias. */
+    gateway_30d: number;
     refunded_total: number;
   };
   mrr_estimate: number;
@@ -518,6 +521,20 @@ export interface PaymentEventRow {
 }
 
 export interface IntegrationsStatus {
+  syncpay: {
+    deliveries_24h: number;
+    processed_24h: number;
+    errors_24h: number;
+    unmatched_24h: number;
+    last_delivery_at: string | null;
+    last_error_at: string | null;
+    pending_payments: number;
+    pending_older_1h: number;
+    last_paid_at: string | null;
+    events_total: number;
+    events_unprocessed: number;
+  };
+  /** Gateway anterior (histórico). */
   evopay: {
     deliveries_24h: number;
     processed_24h: number;

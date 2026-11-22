@@ -6,32 +6,30 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { ACCOUNT_BLOCKED_MESSAGE, AccountInactiveError } from "@/lib/auth/account-status";
 import { writeAuditLog } from "@/lib/audit/log";
 import { AUDIT_ACTIONS } from "@/types/audit";
-import { siteConfig } from "@/config/site";
 import { createPaymentSchema } from "@/lib/validations/billing";
-import { createPixCharge, EvoPayError } from "@/lib/evopay/client";
+import { cardCheckoutConfig, createPixCharge, SyncPayError } from "@/lib/syncpay/client";
 import { buildExternalReference } from "@/types/billing";
-import { amountsMatch } from "@/lib/billing/amount";
-import { confirmPaymentFromProvider } from "@/lib/billing/confirm-payment";
+import { buildBuyer, incompleteProfileMessage } from "@/lib/billing/buyer";
 
 /**
- * Cria (ou REAPROVEITA) a cobrança Pix da assinatura da empresa do usuário logado.
+ * Cria (ou REAPROVEITA) a cobrança da assinatura da empresa do usuário logado, em Pix ou cartão (SyncPay).
  *
- * Nunca confia em preço/company_id vindos do frontend: o plan_id é validado e o preço é sempre lido
- * de public.plans no momento da chamada. subscription_payments não tem policy de INSERT para
- * `authenticated` (só service_role escreve) — por isso as escritas usam createAdminClient().
+ * Nunca confia em preço/company_id vindos do frontend: o plan_id é validado e o preço é sempre lido de public.plans no
+ * momento da chamada. subscription_payments não tem policy de INSERT para `authenticated` (só service_role escreve) — por
+ * isso as escritas usam createAdminClient().
  *
- * Idempotência (a mesma intenção = mesma empresa + mesmo plano): a reserva é feita no banco por
- * claim_subscription_payment() (advisory lock + índice parcial único de UMA cobrança evopay
- * "pending" por empresa+plano). Repetição após timeout, clique duplo ou chamadas simultâneas devolvem
- * a MESMA cobrança em vez de criar outra. Uma nova compra legítima (outro plano, ou o mesmo plano
- * depois de a anterior expirar/cancelar/ser paga) gera uma nova cobrança.
+ * Idempotência (mesma intenção = empresa + plano + forma): a reserva é feita no banco por claim_gateway_payment() (advisory
+ * lock + índice parcial único de UMA cobrança aberta por empresa+plano+forma). Repetição após timeout, clique duplo ou
+ * chamadas simultâneas devolvem a MESMA cobrança em vez de criar outra.
+ *  - Pix: a cobrança é criada aqui (POST /cash-in) e a tela mostra o QR Code.
+ *  - Cartão: aqui só nasce a reserva; a cobrança acontece em /api/billing/pay-card, com o token do iFrame da SyncPay.
+ * A SyncPay exige nome, CPF/CNPJ válido, e-mail e telefone do comprador: saem do cadastro da empresa (nunca do navegador).
  */
 export async function POST(request: Request) {
   let current, user;
   try {
     [current, user] = await Promise.all([getCurrentCompany(), getCurrentUser()]);
   } catch (error) {
-    // Conta inativa/suspensa não contrata nem renova plano.
     if (error instanceof AccountInactiveError) {
       return NextResponse.json({ error: ACCOUNT_BLOCKED_MESSAGE }, { status: 403 });
     }
@@ -42,10 +40,7 @@ export async function POST(request: Request) {
   }
 
   if (current.role !== "owner" && current.role !== "admin") {
-    return NextResponse.json(
-      { error: "Apenas o proprietário ou administradores podem contratar ou renovar o plano." },
-      { status: 403 }
-    );
+    return NextResponse.json({ error: "Apenas o proprietário ou administradores podem contratar ou renovar o plano." }, { status: 403 });
   }
 
   const body = await request.json().catch(() => null);
@@ -53,117 +48,98 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Plano inválido." }, { status: 400 });
   }
+  const method = parsed.data.method;
+
+  if (method === "card" && !cardCheckoutConfig().enabled) {
+    return NextResponse.json({ error: "O pagamento por cartão não está disponível no momento. Use o Pix." }, { status: 400 });
+  }
 
   const supabase = await createSessionClient();
-  const { data: plan } = await supabase
-    .from("plans")
-    .select("*")
-    .eq("id", parsed.data.planId)
-    .eq("status", "active")
-    .maybeSingle();
+  const { data: plan } = await supabase.from("plans").select("*").eq("id", parsed.data.planId).eq("status", "active").maybeSingle();
 
   if (!plan) {
     return NextResponse.json({ error: "Plano não encontrado." }, { status: 404 });
   }
-
   if (plan.trial || (plan.price != null && Number(plan.price) <= 0)) {
     return NextResponse.json({ error: "O teste grátis não é contratado: ele é concedido automaticamente." }, { status: 400 });
   }
-
   if (plan.lifetime) {
     return NextResponse.json({ error: "O acesso vitalício é concedido pelo suporte e não é contratado por aqui." }, { status: 400 });
   }
-
   if (plan.code === "CUSTOM" || plan.price == null || plan.access_duration_days == null) {
-    return NextResponse.json(
-      { error: "Este plano é sob consulta — entre em contato com o suporte para um orçamento." },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Este plano é sob consulta — entre em contato com o suporte para um orçamento." }, { status: 400 });
+  }
+
+  const buyerResult = buildBuyer({
+    companyName: current.company.name,
+    legalName: current.company.legal_name,
+    document: current.company.document,
+    phone: current.company.phone,
+    whatsapp: current.company.whatsapp,
+    companyEmail: current.company.email,
+    userEmail: user.email,
+  });
+  if (!buyerResult.ok) {
+    return NextResponse.json({ error: incompleteProfileMessage(buyerResult.missing), code: "BILLING_PROFILE_INCOMPLETE" }, { status: 422 });
   }
 
   const admin = createAdminClient();
 
-  async function claim() {
-    const { data, error } = await admin.rpc("claim_subscription_payment", {
-      p_company_id: current!.company.id,
-      p_plan_id: plan!.id,
-      p_amount: Number(plan!.price),
-      p_currency: plan!.currency,
-    });
-    return { claim: data?.[0] ?? null, error };
-  }
-
-  let { claim: reservation, error: claimError } = await claim();
+  const { data: claimRows, error: claimError } = await admin.rpc("claim_gateway_payment", {
+    p_company_id: current.company.id,
+    p_plan_id: plan.id,
+    p_amount: Number(plan.price),
+    p_currency: plan.currency,
+    p_method: method,
+  });
+  const reservation = claimRows?.[0] ?? null;
   if (claimError || !reservation) {
     return NextResponse.json({ error: "Não foi possível iniciar o pagamento." }, { status: 500 });
   }
 
+  const paymentId = reservation.payment_id;
+
   if (!reservation.created) {
     if (!reservation.has_charge) {
       // Outra requisição da mesma intenção está criando a cobrança neste instante.
-      return NextResponse.json(
-        { error: "Seu pagamento já está sendo preparado. Aguarde alguns segundos e tente novamente.", code: "PAYMENT_IN_PROGRESS" },
-        { status: 409 }
-      );
+      return NextResponse.json({ error: "Seu pagamento já está sendo preparado. Aguarde alguns segundos e tente novamente.", code: "PAYMENT_IN_PROGRESS" }, { status: 409 });
     }
-
-    // Já existe cobrança aberta no provedor: reconsulta para não reaproveitar um Pix expirado/pago.
-    const refreshed = await confirmPaymentFromProvider(reservation.payment_id).catch(() => null);
-    const stillOpen = !refreshed || !refreshed.ok || refreshed.status === "pending" || refreshed.status === "paid";
-    if (stillOpen) {
-      // Provedor indisponível => também reaproveita (evita cobrança duplicada com estado desconhecido).
-      return NextResponse.json({ paymentId: reservation.payment_id, reused: true });
-    }
-
-    // A anterior terminou (expirada/cancelada/falha): a vaga foi liberada, cria uma nova.
-    ({ claim: reservation, error: claimError } = await claim());
-    if (claimError || !reservation) {
-      return NextResponse.json({ error: "Não foi possível iniciar o pagamento." }, { status: 500 });
-    }
-    if (!reservation.created) {
-      return NextResponse.json({ paymentId: reservation.payment_id, reused: true });
-    }
+    // Já existe cobrança aberta: reaproveita. O status real chega pelo webhook; não se reconsulta o provedor (limite de 5 por transação).
+    return NextResponse.json({ paymentId, reused: true });
   }
 
-  const paymentId = reservation.payment_id;
+  if (method === "card") {
+    await writeAuditLog(admin, {
+      companyId: current.company.id,
+      actorUserId: user.id,
+      entityType: "subscription_payment",
+      entityId: paymentId,
+      action: AUDIT_ACTIONS.PAYMENT_CREATED,
+      metadata: { plan_code: plan.code, method: "card" },
+    });
+    return NextResponse.json({ paymentId });
+  }
+
   const externalReference = buildExternalReference(paymentId);
 
   try {
     const charge = await createPixCharge({
       amount: Number(plan.price),
-      externalReference,
-      callbackUrl: `${siteConfig.url}/api/webhooks/evopay`,
+      description: `Prime Ges ${plan.code} ${externalReference}`.slice(0, 120),
+      buyer: buyerResult.buyer,
     });
-
-    // O provedor tem que ter criado a cobrança exatamente no valor pedido; senão não existe QR para ninguém pagar.
-    if (!amountsMatch(plan.price, charge.amount)) {
-      await admin
-        .from("subscription_payments")
-        .update({ status: "failed", provider_transaction_id: charge.id ?? null, notes: "Valor da cobrança no provedor diferente do pedido." })
-        .eq("id", paymentId);
-      return NextResponse.json(
-        { error: "Não foi possível gerar o Pix agora. Tente novamente em instantes." },
-        { status: 502 }
-      );
-    }
 
     const { error: updateError } = await admin
       .from("subscription_payments")
       .update({
-        provider_transaction_id: charge.id,
+        provider_transaction_id: charge.identifier,
         external_reference: externalReference,
-        amount_with_tax: charge.amountWithTax ?? null,
-        tax_amount: charge.taxAmount ?? null,
-        pix_qr_code_text: charge.qrCodeText ?? null,
-        pix_qr_code_url: charge.qrCodeUrl ?? null,
+        pix_qr_code_text: charge.pixCode,
       })
       .eq("id", paymentId);
 
     if (updateError) {
-      return NextResponse.json(
-        { error: "Cobrança criada, mas houve um problema ao salvar os dados. Tente novamente." },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "Cobrança criada, mas houve um problema ao salvar os dados. Tente novamente." }, { status: 500 });
     }
 
     await writeAuditLog(admin, {
@@ -172,7 +148,7 @@ export async function POST(request: Request) {
       entityType: "subscription_payment",
       entityId: paymentId,
       action: AUDIT_ACTIONS.PAYMENT_CREATED,
-      metadata: { plan_code: plan.code, provider_transaction_id: charge.id },
+      metadata: { plan_code: plan.code, method: "pix", provider_transaction_id: charge.identifier },
     });
 
     return NextResponse.json({ paymentId });
@@ -180,11 +156,11 @@ export async function POST(request: Request) {
     // Libera a vaga: a reserva só fica "pending" enquanto há chance de existir cobrança no provedor.
     await admin.from("subscription_payments").update({ status: "failed" }).eq("id", paymentId);
 
-    const message =
-      error instanceof EvoPayError
-        ? "Não foi possível gerar o Pix agora. Tente novamente em instantes."
-        : "Erro inesperado ao gerar o pagamento.";
-
+    if (error instanceof SyncPayError) {
+      // 401/403/422 aqui costumam ser configuração (credenciais, IP não autorizado, conta ainda não aprovada): vai para o log do servidor, sem dados do usuário.
+      console.error(`[billing] SyncPay recusou a criação do Pix (HTTP ${error.status}).`);
+    }
+    const message = error instanceof SyncPayError ? "Não foi possível gerar o Pix agora. Tente novamente em instantes." : "Erro inesperado ao gerar o pagamento.";
     return NextResponse.json({ error: message }, { status: 502 });
   }
 }

@@ -25,7 +25,7 @@ function deltaLabel(current: number, previous: number): string {
 /**
  * Dashboard da plataforma. Todo número vem de get_platform_dashboard() (uma única
  * RPC SECURITY DEFINER, agregando no banco): usuários, presença, empresas,
- * assinaturas, receita (EvoPay + manual), séries de 30 dias, distribuição por plano,
+ * assinaturas, receita (gateway + manual), séries de 30 dias, distribuição por plano,
  * saúde do webhook e auditoria recente (admin vê só as próprias ações). A “receita
  * recorrente estimada” é derivada (preço ÷ duração × 30 das assinaturas pagas
  * ativas) e vem rotulada como estimativa. Nada é fictício.
@@ -80,7 +80,7 @@ export default async function AdminDashboardPage() {
           label="Receita total"
           value={formatCurrency(revenue.paid_total)}
           icon={TrendingUp}
-          detail={`30 dias: EvoPay ${formatCurrency(revenue.evopay_30d)} · manual ${formatCurrency(revenue.manual_30d)} · estornado (total) ${formatCurrency(revenue.refunded_total)}`}
+          detail={`30 dias: gateway ${formatCurrency(revenue.gateway_30d ?? revenue.evopay_30d)} · manual ${formatCurrency(revenue.manual_30d)} · estornado (total) ${formatCurrency(revenue.refunded_total)}`}
         />
         <MetricCard
           label="Recorrente estimada (mensal)"
@@ -201,7 +201,7 @@ export default async function AdminDashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Webhooks (24 h)</CardTitle>
-            <CardDescription>Entregas recebidas da EvoPay.</CardDescription>
+            <CardDescription>Entregas recebidas da SyncPay.</CardDescription>
           </CardHeader>
           <CardContent>
             <BreakdownBars

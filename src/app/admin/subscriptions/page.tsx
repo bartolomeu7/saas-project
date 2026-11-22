@@ -22,7 +22,7 @@ import { SUBSCRIPTION_FILTER_LABELS, type SubscriptionFilterState } from "@/type
 export const metadata = { title: "Assinaturas" };
 
 const STATES = ["active", "trialing", "expired", "cancelled", "pending"] as const satisfies readonly Exclude<SubscriptionFilterState, "none">[];
-const PROVIDERS = ["evopay", "manual"] as const;
+const PROVIDERS = ["syncpay", "evopay", "manual"] as const;
 const EXPIRING = ["7", "15", "30"] as const;
 const SORTS = [
   { value: "expires_asc", label: "Vencimento mais próximo" },
@@ -104,7 +104,8 @@ export default async function AdminSubscriptionsPage({
             allLabel: "Qualquer origem",
             value: provider,
             options: [
-              { value: "evopay", label: "EvoPay" },
+              { value: "syncpay", label: "SyncPay" },
+              { value: "evopay", label: "EvoPay (anterior)" },
               { value: "manual", label: "Manual" },
             ],
           },
