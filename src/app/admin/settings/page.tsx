@@ -29,7 +29,7 @@ const CAPABILITIES: { feature: string; admin: boolean }[] = [
   { feature: "Conceder dias de acesso (até o limite acima) e liberar 30 dias", admin: true },
   { feature: "Registrar pagamento manual, atribuir plano, reativar assinatura", admin: true },
   { feature: "Editar nome de usuário comum e dados básicos da empresa", admin: true },
-  { feature: "Reverificar pagamento na EvoPay e usar Ferramentas", admin: true },
+  { feature: "Reverificar pagamento na SyncPay e usar Ferramentas", admin: true },
   { feature: "Ver a auditoria completa (admin vê só as próprias ações)", admin: false },
   { feature: "Alterar papéis, gerenciar administradores", admin: false },
   { feature: "Cancelar assinatura, ajustar vencimento, anular pagamento manual", admin: false },

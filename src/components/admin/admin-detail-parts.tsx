@@ -114,7 +114,7 @@ export function PaymentsCard({ payments, empty = "Nenhum pagamento registrado." 
     <Card className="overflow-hidden">
       <CardHeader>
         <CardTitle className="text-base">Pagamentos recentes</CardTitle>
-        <CardDescription>Últimos 10 pagamentos da empresa (EvoPay e manuais).</CardDescription>
+        <CardDescription>Últimos 10 pagamentos da empresa (gateway e manuais).</CardDescription>
       </CardHeader>
       {payments.length === 0 ? (
         <CardContent>

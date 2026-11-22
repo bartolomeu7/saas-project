@@ -30,12 +30,11 @@ const OUTCOME_LABELS: Record<(typeof OUTCOMES)[number], string> = {
 const OUTCOME_VARIANTS = { processed: "success", payment_not_found: "warning", ignored: "muted", error: "danger" } as const;
 
 /**
- * Integrações: EvoPay (webhook + pagamentos), Clerk (identidade) e Supabase (banco).
+ * Integrações: SyncPay (webhook + pagamentos), Clerk (identidade) e Supabase (banco).
  * Tudo vem do banco (platform_integrations_status e as listas de entregas/eventos):
- * nenhum payload bruto, token ou segredo é exibido. O webhook da EvoPay não é
- * assinado; por isso cada entrega é só um aviso e o status real é SEMPRE reconfirmado
- * por consulta server-to-server (idempotente via payment_events). Reprocessar =
- * “Reverificar na EvoPay” no pagamento.
+ * nenhum payload bruto, token ou segredo é exibido. O webhook da SyncPay é assinado (HMAC) e
+ * idempotente por event_id (payment_events). Se uma entrega falhar, “Reverificar na SyncPay”
+ * no pagamento consulta a transação (contingência, no máximo 4 consultas por pagamento).
  */
 export default async function AdminIntegrationsPage({
   searchParams: searchParamsPromise,
@@ -50,48 +49,48 @@ export default async function AdminIntegrationsPage({
 
   const [status, deliveries, events] = await Promise.all([
     getIntegrationsStatus(),
-    listWebhookDeliveries({ provider: "evopay", outcome, page }),
-    listPaymentEvents({ provider: "evopay", page: 1 }),
+    listWebhookDeliveries({ provider: "syncpay", outcome, page }),
+    listPaymentEvents({ provider: "syncpay", page: 1 }),
   ]);
-  const { evopay, clerk, supabase } = status;
+  const { syncpay, clerk, supabase } = status;
 
   return (
     <div className="flex flex-col gap-6 px-4 py-6 sm:px-6">
       <PageHeader
         eyebrow="Sistema"
         title="Integrações"
-        description="Saúde de EvoPay, Clerk e Supabase, e o histórico de webhooks."
+        description="Saúde de SyncPay, Clerk e Supabase, e o histórico de webhooks."
       />
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center justify-between gap-2 text-base">
-              EvoPay
-              <Badge variant={evopay.errors_24h > 0 ? "danger" : evopay.pending_older_1h > 0 ? "warning" : "success"}>
-                {evopay.errors_24h > 0 ? "Com erros" : evopay.pending_older_1h > 0 ? "Atenção" : "Saudável"}
+              SyncPay
+              <Badge variant={syncpay.errors_24h > 0 ? "danger" : syncpay.pending_older_1h > 0 ? "warning" : "success"}>
+                {syncpay.errors_24h > 0 ? "Com erros" : syncpay.pending_older_1h > 0 ? "Atenção" : "Saudável"}
               </Badge>
             </CardTitle>
             <CardDescription>Pagamentos Pix e webhook (últimas 24 h).</CardDescription>
           </CardHeader>
           <CardContent>
             <dl className="flex flex-col gap-2">
-              <DetailRow label="Entregas (24 h)">{evopay.deliveries_24h}</DetailRow>
-              <DetailRow label="Processadas">{evopay.processed_24h}</DetailRow>
-              <DetailRow label="Sem pagamento">{evopay.unmatched_24h}</DetailRow>
-              <DetailRow label="Erros">{evopay.errors_24h}</DetailRow>
+              <DetailRow label="Entregas (24 h)">{syncpay.deliveries_24h}</DetailRow>
+              <DetailRow label="Processadas">{syncpay.processed_24h}</DetailRow>
+              <DetailRow label="Sem pagamento">{syncpay.unmatched_24h}</DetailRow>
+              <DetailRow label="Erros">{syncpay.errors_24h}</DetailRow>
               <DetailRow label="Última entrega">
-                {evopay.last_delivery_at ? `${formatDateTime(evopay.last_delivery_at)} (${formatRelative(evopay.last_delivery_at)})` : "Nenhuma"}
+                {syncpay.last_delivery_at ? `${formatDateTime(syncpay.last_delivery_at)} (${formatRelative(syncpay.last_delivery_at)})` : "Nenhuma"}
               </DetailRow>
               <DetailRow label="Pagamentos pendentes">
-                {evopay.pending_payments}
-                {evopay.pending_older_1h > 0 && (
-                  <span className="text-warning"> · {evopay.pending_older_1h} há mais de 1 h</span>
+                {syncpay.pending_payments}
+                {syncpay.pending_older_1h > 0 && (
+                  <span className="text-warning"> · {syncpay.pending_older_1h} há mais de 1 h</span>
                 )}
               </DetailRow>
-              <DetailRow label="Último pago">{evopay.last_paid_at ? formatDateTime(evopay.last_paid_at) : "—"}</DetailRow>
+              <DetailRow label="Último pago">{syncpay.last_paid_at ? formatDateTime(syncpay.last_paid_at) : "—"}</DetailRow>
               <DetailRow label="Eventos (total / sem processar)">
-                {evopay.events_total} / {evopay.events_unprocessed}
+                {syncpay.events_total} / {syncpay.events_unprocessed}
               </DetailRow>
             </dl>
           </CardContent>
@@ -140,7 +139,7 @@ export default async function AdminIntegrationsPage({
 
       <section aria-labelledby="deliveries-heading" className="flex flex-col gap-3">
         <h2 id="deliveries-heading" className="text-lg font-semibold tracking-tight text-foreground">
-          Entregas de webhook (EvoPay)
+          Entregas de webhook (SyncPay)
         </h2>
         <AdminFilters
           basePath="/admin/integrations"
@@ -165,7 +164,7 @@ export default async function AdminIntegrationsPage({
             description={
               outcome
                 ? "Nenhuma entrega com este resultado."
-                : "Quando a EvoPay chamar o webhook, cada entrega aparece aqui."
+                : "Quando a SyncPay chamar o webhook, cada entrega aparece aqui."
             }
           />
         ) : (

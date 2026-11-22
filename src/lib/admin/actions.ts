@@ -504,8 +504,8 @@ export async function reactivateSubscriptionAction(companyId: string, formData: 
 }
 
 /**
- * Reverifica um pagamento EvoPay: refaz o GET /pix na EvoPay (nunca confia em
- * payload) via o mesmo caminho do webhook e do "Já paguei". O service_role só é
+ * Reverifica um pagamento da SyncPay: consulta a transação na SyncPay (contingência: no máximo 4 consultas por pagamento, a
+ * API aceita 5) pelo mesmo caminho do webhook e do "Já paguei". O service_role só é
  * usado dentro de confirmPaymentFromProvider, no servidor, DEPOIS de o ator ser
  * validado como admin; o resultado é auditado via RPC.
  */
@@ -525,17 +525,17 @@ export async function reverifyPaymentAction(paymentId: string): Promise<ActionRe
     return { error: toUserMessage(detailError) };
   }
   const provider = (detail as unknown as { payment: { provider: string } }).payment.provider;
-  if (provider !== "evopay") {
-    return { error: "Somente pagamentos da EvoPay podem ser reverificados." };
+  if (provider !== "syncpay") {
+    return { error: "Somente pagamentos do gateway atual (SyncPay) podem ser reverificados." };
   }
 
   let result: Awaited<ReturnType<typeof confirmPaymentFromProvider>>;
   try {
-    result = await confirmPaymentFromProvider(parsed.data, { recheckPaid: true });
+    result = await confirmPaymentFromProvider(parsed.data, { recheckPaid: true, minAgeSeconds: 0 });
   } catch (error) {
-    // Ex.: service role/EvoPay não configurados neste ambiente. Nunca expõe o erro cru.
+    // Ex.: service role/SyncPay não configurados neste ambiente. Nunca expõe o erro cru.
     console.error("[admin] reverificação falhou:", error instanceof Error ? error.message : "erro desconhecido");
-    result = { ok: false, status: "pending", message: "Não foi possível consultar a EvoPay neste ambiente agora." };
+    result = { ok: false, status: "pending", message: "Não foi possível consultar a SyncPay neste ambiente agora." };
   }
 
   const { error: auditError } = await supabase.rpc("admin_audit_payment_reverify", {
@@ -555,7 +555,7 @@ export async function reverifyPaymentAction(paymentId: string): Promise<ActionRe
   if (!result.ok) {
     return { error: result.message ?? "Não foi possível reverificar o pagamento agora." };
   }
-  return { success: `Reverificado na EvoPay: ${result.status === "paid" ? "pagamento confirmado" : `situação "${result.status}"`}.` };
+  return { success: `Reverificado na SyncPay: ${result.status === "paid" ? "pagamento confirmado" : `situação "${result.status}"`}.` };
 }
 
 /* -------------------------------------------------------------------- planos */
@@ -963,8 +963,8 @@ const RECONCILE_BATCH = 15;
 const RECONCILE_BUDGET_MS = 8_000;
 
 /**
- * Reconsulta na EvoPay (GET /pix?id=, a única fonte de verdade: o webhook não é assinado e tem UMA tentativa)
- * as cobranças Pix pendentes com mais de 10 minutos. Segura e repetível: o banco só concede acesso com valor igual
+ * Reconsulta na SyncPay (contingência: o caminho normal é o webhook assinado; cada pagamento aceita no máximo 4 consultas)
+ * as cobranças pendentes com mais de 10 minutos. Segura e repetível: o banco só concede acesso com valor igual
  * ao esperado e é idempotente por evento. Para dentro de um orçamento de tempo; rode de novo para o restante.
  */
 export async function reconcilePendingPaymentsAction(): Promise<ActionResult> {
@@ -980,7 +980,7 @@ export async function reconcilePendingPaymentsAction(): Promise<ActionResult> {
     return { error: toUserMessage(error) };
   }
   if (!candidates || candidates.length === 0) {
-    return { success: "Nenhuma cobrança Pix pendente para reconciliar." };
+    return { success: "Nenhuma cobrança pendente para reconciliar." };
   }
 
   const startedAt = Date.now();
@@ -1018,7 +1018,7 @@ export async function reconcilePendingPaymentsAction(): Promise<ActionResult> {
 
   const summary = `${checked} verificada(s): ${confirmed} confirmada(s), ${stillPending} ainda pendente(s), ${errors} com erro.`;
   if (errors > 0 && confirmed === 0 && stillPending === 0) {
-    return { error: `Não foi possível consultar a EvoPay agora. ${summary}` };
+    return { error: `Não foi possível consultar a SyncPay agora. ${summary}` };
   }
   return { success: summary };
 }

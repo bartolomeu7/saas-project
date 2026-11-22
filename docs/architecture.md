@@ -6,7 +6,7 @@ já estão implementados: Produtos, Serviços, Vendas (com pagamentos,
 descontos e cancelamento), Fidelidade (configurações, níveis,
 multiplicadores, campanhas, resgate de pontos), Documentos de cliente
 (upload/Storage), Sorteio e Ranking de clientes, Caixa e Billing/assinatura
-via EvoPay (Pix). O painel administrativo da plataforma (`/admin`) tem o guard
+via SyncPay (Pix e cartão). O painel administrativo da plataforma (`/admin`) tem o guard
 de acesso pronto, mas ainda nenhuma página de conteúdo.
 
 ## Visão geral
@@ -169,18 +169,17 @@ de acesso pronto, mas ainda nenhuma página de conteúdo.
   usuários, planos, assinaturas, pagamentos, APIs, consumo, logs, webhooks,
   cupons, configurações, administradores, permissões, auditoria.
 
-## Pagamentos (implementado — Billing/EvoPay)
+## Pagamentos (implementado — Billing/SyncPay)
 
-- Provedor: **EvoPay** (Pix), integrado em `src/lib/billing/`
-  (`src/lib/billing/evopay.ts` fala com a API externa; `src/lib/billing/guard.ts`
-  expõe `getActiveSubscription`/`getSubscriptionGuardStatus`, no mesmo molde
-  Edge-safe do guard de `/admin`).
-- Webhook dedicado em `src/app/api/webhooks/evopay/route.ts`, que valida a
-  autenticidade do evento antes de chamar `confirmPaymentFromProvider`.
-  `assertOwnPayment` garante que um pagamento só é confirmado para a empresa
-  a que pertence.
-- Nenhuma chave EvoPay é exposta ao frontend; toda comunicação com o provedor
-  acontece server-side.
+- Provedor: **SyncPay** (Pix e cartão), integrado em `src/lib/billing/` e `src/lib/syncpay/`
+  (`src/lib/syncpay/client.ts` fala com a API externa; `src/lib/syncpay/webhook.ts` valida a assinatura e lê o evento;
+  `src/lib/billing/guard.ts` expõe `getActiveSubscription`/`getSubscriptionGuardStatus`, no mesmo molde Edge-safe do guard
+  de `/admin`). Detalhes, variáveis de ambiente e checklist de ativação: `docs/SYNCPAY_INTEGRACAO.md`.
+- Webhook dedicado em `src/app/api/webhooks/syncpay/route.ts`: confere a assinatura HMAC (corpo cru, janela de 5 min) e chama
+  `applyProviderUpdate`. A consulta direta ao provedor (`confirmPaymentFromProvider`) é só contingência (no máximo 4 por
+  pagamento). `assertOwnPayment` garante que um pagamento só é confirmado para a empresa a que pertence.
+- Nenhuma chave da SyncPay é exposta ao frontend (a chave pública `pk_live_` do iFrame de cartão pode ficar na página); toda
+  comunicação com o provedor acontece server-side.
 - `src/middleware.ts` bloqueia `/app/*` (qualquer role, incluindo owner) para
   empresas sem assinatura `trialing`/`active` não expirada, redirecionando
   para `/app/assinatura`.
@@ -195,8 +194,8 @@ de acesso pronto, mas ainda nenhuma página de conteúdo.
 
 ## APIs externas
 
-- EvoPay (pagamentos Pix, ver acima) é a primeira e única integração externa
-  isolada em `lib/` (`src/lib/billing/evopay.ts`), nunca chamada diretamente
+- SyncPay (pagamentos Pix e cartão, ver acima) é a primeira e única integração externa
+  isolada em `lib/` (`src/lib/syncpay/client.ts`), nunca chamada diretamente
   do frontend — sempre a partir de Server Actions ou do Route Handler do
   webhook.
 - Novas integrações devem seguir o mesmo padrão: módulo próprio em `lib/`,

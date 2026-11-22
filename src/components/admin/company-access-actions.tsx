@@ -49,7 +49,7 @@ const REASON_FIELD = {
  * limites, estado e auditoria no banco — um pedido forjado é recusado do mesmo jeito.
  *
  *  - "Conceder acesso": libera acesso SEM pagamento (30 dias | período do plano | personalizado | vitalício).
- *  - "Registrar pagamento": documenta dinheiro RECEBIDO fora do EvoPay; opcionalmente também libera o acesso.
+ *  - "Registrar pagamento": documenta dinheiro RECEBIDO fora do gateway; opcionalmente também libera o acesso.
  *  - "Trocar/Atribuir plano": muda o plano; com período ativo preserva o vencimento.
  */
 export function CompanyAccessActions({
@@ -97,7 +97,7 @@ export function CompanyAccessActions({
       <AdminActionDialog
         triggerLabel="Registrar pagamento"
         title="Registrar pagamento recebido"
-        description="Documenta um pagamento recebido fora do EvoPay (Pix direto, transferência, dinheiro...). Informe apenas dinheiro realmente recebido: nada é cobrado nem simulado aqui."
+        description="Documenta um pagamento recebido fora do gateway (Pix direto, transferência, dinheiro...). Informe apenas dinheiro realmente recebido: nada é cobrado nem simulado aqui."
         submitLabel="Registrar pagamento"
         idempotent
         action={(formData) => recordManualPaymentAction(companyId, formData)}

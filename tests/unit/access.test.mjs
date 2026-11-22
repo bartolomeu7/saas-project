@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { daysUntilExpiry, isSubscriptionAccessActive } from "../../src/lib/billing/access.ts";
-import { minimizeProviderPayload } from "../../src/lib/billing/payload.ts";
 
 const NOW = Date.parse("2026-10-09T12:00:00Z");
 const future = "2026-11-09T12:00:00Z";
@@ -49,39 +48,5 @@ describe("regra única de acesso (prazo x vitalício)", () => {
     assert.equal(daysUntilExpiry({ status: "active", expires_at: past, lifetime: false }, NOW), 0);
     assert.equal(daysUntilExpiry({ status: "active", expires_at: null, lifetime: true }, NOW), null);
     assert.equal(daysUntilExpiry({ status: "active", expires_at: new Date(NOW + 3_600_000).toISOString(), lifetime: false }, NOW), 1);
-  });
-});
-
-describe("minimização do payload do provedor (LGPD)", () => {
-  const full = {
-    id: "cmq47c6un0c05ufvvo58ohpqk",
-    status: "COMPLETED",
-    amount: 89,
-    taxAmount: 1.2,
-    amountWithTax: 87.8,
-    endToEndId: "E60746948202406101500abcdef123456",
-    qrCodeText: "000201...",
-    qrCodeBase64: "iVBORw0...",
-    qrCodeUrl: "https://example.invalid/qr.png",
-    payerName: "João Silva",
-    payerDocument: "12345678901",
-    createdAt: "2026-10-09T10:00:00Z",
-    updatedAt: "2026-10-09T10:05:00Z",
-  };
-
-  it("remove nome/documento do pagador e QR Code, mantém o necessário para auditar", () => {
-    const payload = minimizeProviderPayload(full);
-    assert.deepEqual(Object.keys(payload).sort(), ["amount", "amountWithTax", "createdAt", "endToEndId", "id", "status", "taxAmount", "updatedAt"]);
-    const text = JSON.stringify(payload);
-    for (const secret of ["João", "12345678901", "000201", "iVBOR", "qr.png"]) assert.equal(text.includes(secret), false, secret);
-  });
-
-  it("o valor continua presente e numérico (a função de banco lê `amount` do payload)", () => {
-    assert.equal(minimizeProviderPayload(full).amount, 89);
-  });
-
-  it("campos ausentes não viram chaves vazias", () => {
-    const payload = minimizeProviderPayload({ id: "x", status: "PENDING", amount: 10 });
-    assert.deepEqual(payload, { id: "x", status: "PENDING", amount: 10 });
   });
 });

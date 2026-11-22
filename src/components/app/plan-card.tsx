@@ -17,41 +17,47 @@ export function PlanCard({
   isCurrent,
   highlighted,
   hiddenFromCatalog = false,
+  cardEnabled = false,
 }: {
   plan: PricingView;
   isCurrent?: boolean;
   highlighted?: boolean;
   /** Plano ativo do cliente que não está mais listado no site: continua renovável. */
   hiddenFromCatalog?: boolean;
+  /** Mostra também o botão de pagamento por cartão (só quando a SyncPay está configurada para cartão). */
+  cardEnabled?: boolean;
 }) {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<"pix" | "card" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [needsProfile, setNeedsProfile] = useState(false);
 
   const isCustom = plan.kind === "custom";
 
-  async function handleSubscribe() {
+  async function handleSubscribe(method: "pix" | "card") {
     setError(null);
-    setLoading(true);
+    setNeedsProfile(false);
+    setLoading(method);
 
     try {
       const response = await fetch("/api/billing/create-payment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planId: plan.id }),
+        body: JSON.stringify({ planId: plan.id, method }),
       });
       const data = await response.json();
 
       if (!response.ok) {
         setError(data.error ?? "Não foi possível iniciar o pagamento.");
-        setLoading(false);
+        setNeedsProfile(data.code === "BILLING_PROFILE_INCOMPLETE");
+        setLoading(null);
         return;
       }
 
       router.push(`/app/assinatura/pagamento/${data.paymentId}`);
     } catch {
       setError("Erro de conexão. Tente novamente.");
-      setLoading(false);
+      setLoading(null);
     }
   }
 
@@ -87,6 +93,11 @@ export function PlanCard({
       </ul>
 
       {error && <p className="text-xs text-destructive">{error}</p>}
+      {needsProfile && (
+        <a href="/app/configuracoes/empresa" className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
+          Completar cadastro da empresa
+        </a>
+      )}
 
       {isCurrent ? (
         <Button variant="outline" disabled>
@@ -101,9 +112,16 @@ export function PlanCard({
           {plan.ctaHref ? plan.ctaLabel : "Falar com o suporte"}
         </a>
       ) : (
-        <Button onClick={handleSubscribe} disabled={loading}>
-          {loading ? "Gerando Pix..." : "Assinar com Pix"}
-        </Button>
+        <div className="flex flex-col gap-2">
+          <Button onClick={() => handleSubscribe("pix")} disabled={loading !== null}>
+            {loading === "pix" ? "Gerando Pix..." : "Assinar com Pix"}
+          </Button>
+          {cardEnabled && (
+            <Button variant="outline" onClick={() => handleSubscribe("card")} disabled={loading !== null}>
+              {loading === "card" ? "Preparando..." : "Pagar com cartão"}
+            </Button>
+          )}
+        </div>
       )}
     </div>
   );

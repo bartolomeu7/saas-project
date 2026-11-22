@@ -5,7 +5,7 @@
 
 const onlyDigits = (value: string) => value.replace(/\D/g, "");
 
-function cpfIsValid(digits: string): boolean {
+export function cpfIsValid(digits: string): boolean {
   if (digits.length !== 11 || /^(\d)\1{10}$/.test(digits)) return false;
   for (const length of [9, 10]) {
     let sum = 0;
@@ -16,7 +16,7 @@ function cpfIsValid(digits: string): boolean {
   return true;
 }
 
-function cnpjIsValid(digits: string): boolean {
+export function cnpjIsValid(digits: string): boolean {
   if (digits.length !== 14 || /^(\d)\1{13}$/.test(digits)) return false;
   for (const length of [12, 13]) {
     const weights = length === 12 ? [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2] : [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
