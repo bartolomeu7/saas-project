@@ -10,6 +10,7 @@ import { payCardSchema } from "@/lib/validations/billing";
 import { cardCheckoutConfig, createCardCharge, SyncPayError } from "@/lib/syncpay/client";
 import { buildBuyer, incompleteProfileMessage, isCardToken, siteOrigin } from "@/lib/billing/buyer";
 import { buildExternalReference } from "@/types/billing";
+import { providerFailureNote } from "@/lib/syncpay/errors";
 import { readIpEnv, resolveClientIp } from "@/lib/security/client-ip";
 import { siteConfig } from "@/config/site";
 
@@ -155,7 +156,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Estamos confirmando o seu pagamento. Se não for aprovado em alguns minutos, tente novamente.", code: "PAYMENT_UNKNOWN" }, { status: 202 });
     }
 
-    console.error(`[billing] SyncPay respondeu HTTP ${error.status}${error.code ? ` (${error.code})` : ""} ao cobrar cartão.`);
+    console.error(`[billing] SyncPay recusou a cobrança no cartão${error.code ? ` (${error.code})` : ""}. ${providerFailureNote(error.status, error.message)}`);
 
     if (error.status === 409) {
       // token já usado: pode existir cobrança anterior — mantém a vaga fechada e espera o webhook

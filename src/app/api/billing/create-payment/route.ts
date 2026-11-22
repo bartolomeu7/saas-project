@@ -10,6 +10,7 @@ import { createPaymentSchema } from "@/lib/validations/billing";
 import { cardCheckoutConfig, createPixCharge, SyncPayError } from "@/lib/syncpay/client";
 import { buildExternalReference } from "@/types/billing";
 import { buildBuyer, incompleteProfileMessage } from "@/lib/billing/buyer";
+import { providerFailureNote } from "@/lib/syncpay/errors";
 
 /**
  * Cria (ou REAPROVEITA) a cobrança da assinatura da empresa do usuário logado, em Pix ou cartão (SyncPay).
@@ -154,11 +155,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ paymentId });
   } catch (error) {
     // Libera a vaga: a reserva só fica "pending" enquanto há chance de existir cobrança no provedor.
-    await admin.from("subscription_payments").update({ status: "failed" }).eq("id", paymentId);
+    const note = error instanceof SyncPayError ? providerFailureNote(error.status, error.message) : "Erro inesperado ao criar a cobrança.";
+    await admin.from("subscription_payments").update({ status: "failed", notes: note }).eq("id", paymentId);
 
     if (error instanceof SyncPayError) {
-      // 401/403/422 aqui costumam ser configuração (credenciais, IP não autorizado, conta ainda não aprovada): vai para o log do servidor, sem dados do usuário.
-      console.error(`[billing] SyncPay recusou a criação do Pix (HTTP ${error.status}).`);
+      // 401/403/422/500 aqui costumam ser configuração da conta (credenciais, IP não autorizado, conta não aprovada, Pix não habilitado):
+      // o motivo exato vai para o log do servidor e para as observações do pagamento (painel admin), sem dados do usuário.
+      console.error(`[billing] SyncPay recusou a criação do Pix. ${note}`);
     }
     const message = error instanceof SyncPayError ? "Não foi possível gerar o Pix agora. Tente novamente em instantes." : "Erro inesperado ao gerar o pagamento.";
     return NextResponse.json({ error: message }, { status: 502 });
