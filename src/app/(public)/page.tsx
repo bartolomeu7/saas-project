@@ -13,13 +13,14 @@ import { SaleFlow } from "@/components/marketing/sale-flow";
 import { FaqList, FinalCta, Heading, ModuleTabs, PricingGrid, PrimaryCta, modulesByName } from "@/components/marketing/sections";
 import { DIFFERENTIALS, FEATURES, HOW_IT_WORKS_STEPS, PROBLEMS, SEGMENTS, buildFaq } from "@/config/marketing";
 import { getPublicPlans } from "@/lib/billing/queries";
+import { DOUBTS, doubtPath } from "@/content/duvidas";
 import { faqFacts, toPricingView } from "@/lib/billing/pricing-display";
 import { JsonLd } from "@/components/seo/json-ld";
 import { buildStructuredData } from "@/lib/seo/structured-data";
 
-const HOME_TITLE = "Prime Ges — Sistema de gestão online para pequenos negócios";
+const HOME_TITLE = "Prime Ges — Sistema de gestão para pequenas empresas e MEI";
 const SEO_DESCRIPTION =
-  "Sistema de gestão online para MEI e pequenos negócios: organize vendas, caixa, estoque, clientes e financeiro em um só lugar, direto no navegador.";
+  "Sistema de gestão online para pequenas empresas e MEI: organize vendas, caixa, estoque, clientes e financeiro em um só lugar, direto no navegador.";
 
 // Os planos vêm do banco (get_public_plans): a página é estática e se renova sozinha a cada 60 s; salvar um plano no
 // /admin também chama revalidatePath("/"). Se o catálogo não carregar, a seção mostra "indisponível" — nunca um preço
@@ -46,6 +47,17 @@ const STRUCTURED_DATA = buildStructuredData({
   logoSize: 512,
   featureNames: AVAILABLE_FEATURE_NAMES,
 });
+
+// Perguntas mais buscadas, com link direto da home.
+const HOME_DOUBT_SLUGS = [
+  "como-escolher-sistema-para-pequenas-empresas",
+  "quanto-custa-um-sistema-para-pequenas-empresas",
+  "sistema-gratuito-para-pequenas-empresas",
+  "o-que-e-saas",
+  "como-controlar-estoque",
+  "como-controlar-o-fluxo-de-caixa",
+];
+const HOME_DOUBTS = HOME_DOUBT_SLUGS.flatMap((slug) => DOUBTS.find((doubt) => doubt.slug === slug) ?? []);
 
 // Onde cada anotação "solta" começa antes de se juntar às outras (seção do problema).
 const SCATTERED = [
@@ -85,8 +97,9 @@ export default async function HomePage() {
 
             <h1 id="hero-title" className="site-h1">
               <span className="site-mask">
-                <span>Sistema de gestão para pequenos negócios,</span>
+                <span>Sistema de gestão para pequenas empresas,</span>
               </span>
+              {" "}
               <span className="site-mask text-[hsl(var(--site-accent))]">
                 <span style={{ animationDelay: "160ms" }}>da venda ao caixa, em um só lugar.</span>
               </span>
@@ -272,7 +285,24 @@ export default async function HomePage() {
       {/* FAQ */}
       <section id="faq" className="site-section" aria-labelledby="faq-title">
         <div className="container grid gap-10 lg:grid-cols-[minmax(0,.8fr)_minmax(0,1.2fr)] lg:gap-16">
-          <Heading id="faq-title" title="O que você precisa saber antes de começar." className="lg:sticky lg:top-28 lg:self-start" />
+          <div className="flex flex-col gap-8 lg:sticky lg:top-28 lg:self-start">
+            <Heading id="faq-title" title="O que você precisa saber antes de começar." />
+            <nav aria-label="Dúvidas mais buscadas">
+              <ul className="flex flex-col gap-3">
+                {HOME_DOUBTS.map((doubt) => (
+                  <li key={doubt.slug}>
+                    <Link href={doubtPath(doubt.slug)} className="site-link text-base text-foreground">
+                      {doubt.question}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+            <Link href="/duvidas" className="site-link inline-flex min-h-11 w-fit items-center gap-2 text-base font-semibold text-foreground">
+              Ver todas as dúvidas
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
+          </div>
           <FaqList items={faq} />
         </div>
       </section>

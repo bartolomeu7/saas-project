@@ -67,12 +67,13 @@ describe("FAQ da home (S01) — HTML gerado", { skip: !hasBuild && "rode `npm ru
 
 describe("Títulos e descrições (S05) — páginas estáticas geradas", { skip: !hasBuild && "rode `npm run build` antes" }, () => {
   const pages = {
-    home: ["index.html", "Prime Ges — Sistema de gestão online para pequenos negócios"],
-    "recursos": ["recursos.html", "Recursos | Prime Ges"],
-    "produto": ["produto.html", "Produto | Prime Ges"],
-    "para-quem-e": ["para-quem-e.html", "Para quem é | Prime Ges"],
-    "precos": ["precos.html", "Preços | Prime Ges"],
-    "perguntas": ["perguntas.html", "Perguntas frequentes | Prime Ges"],
+    home: ["index.html", "Prime Ges — Sistema de gestão para pequenas empresas e MEI"],
+    "recursos": ["recursos.html", "Recursos do sistema de gestão | Prime Ges"],
+    "produto": ["produto.html", "Como funciona o sistema de gestão | Prime Ges"],
+    "para-quem-e": ["para-quem-e.html", "Sistema para padaria, mercado e lava-rápido | Prime Ges"],
+    "precos": ["precos.html", "Preços do sistema de gestão | Prime Ges"],
+    "duvidas": ["duvidas.html", "Dúvidas sobre sistema para pequenas empresas | Prime Ges"],
+    "duvida": ["duvidas/o-que-e-saas.html", "O que é SaaS para pequenas empresas | Prime Ges"],
     "termos-de-uso": ["termos-de-uso.html", "Termos de Uso | Prime Ges"],
     "politica-de-privacidade": ["politica-de-privacidade.html", "Política de Privacidade | Prime Ges"],
     "politica-de-reembolso": ["politica-de-reembolso.html", "Política de Reembolso e Cancelamento | Prime Ges"],
@@ -205,13 +206,13 @@ describe("Home — título, descrição, H1, hierarquia e links (Etapa 4) — HT
     assert.deepEqual(all(html, /<meta property="og:description" content="([^"]*)"/g), [EXPECTED_DESCRIPTION]);
     assert.deepEqual(all(html, /<meta name="twitter:title" content="([^"]*)"/g), [EXPECTED_TITLE]);
     assert.ok(EXPECTED_TITLE.length <= 65 && EXPECTED_DESCRIPTION.length >= 110 && EXPECTED_DESCRIPTION.length <= 170);
-    assert.match(EXPECTED_TITLE, /Sistema de gestão online para pequenos negócios/);
+    assert.match(EXPECTED_TITLE, /Sistema de gestão para pequenas empresas/);
   });
 
   it("um único H1, com a proposta de valor, e hierarquia sem saltos (h1 → h2 → h3)", () => {
     const h1s = headings.filter((h) => h.level === 1);
     assert.equal(h1s.length, 1);
-    assert.match(h1s[0].text, /^Sistema de gestão para pequenos negócios,\s*da venda ao caixa, em um só lugar\.$/);
+    assert.match(h1s[0].text, /^Sistema de gestão para pequenas empresas,\s*da venda ao caixa, em um só lugar\.$/);
     assert.equal(headings[0].level, 1);
     for (let i = 1; i < headings.length; i++) {
       assert.ok(headings[i].level <= headings[i - 1].level + 1, `salto de h${headings[i - 1].level} para h${headings[i].level}: "${headings[i].text}"`);
@@ -231,9 +232,9 @@ describe("Home — título, descrição, H1, hierarquia e links (Etapa 4) — HT
     const anchors = hrefs.filter((h) => /^(\/)?#[\w-]+$/.test(h)).map((h) => h.replace(/^\//, "").slice(1));
     assert.ok(new Set(anchors).size >= 2, "âncoras distintas: " + [...new Set(anchors)].join(","));
     for (const id of new Set(anchors)) assert.ok(html.includes(`id="${id}"`), "id ausente: " + id);
-    const KNOWN = new Set(["/", "/recursos", "/produto", "/para-quem-e", "/precos", "/perguntas", "/login", "/register", "/termos-de-uso", "/politica-de-privacidade", "/politica-de-reembolso", "/direitos-do-titular"]);
-    for (const h of hrefs.filter((x) => x.startsWith("/") && !x.startsWith("/#") && !x.startsWith("/_next") && !/\.(png|ico|jpg|svg)/.test(x))) assert.ok(KNOWN.has(h), "rota interna desconhecida: " + h);
-    for (const must of ["#precos", "#produto", "/recursos", "/produto", "/para-quem-e", "/precos", "/perguntas", "/register", "/politica-de-reembolso", "/termos-de-uso", "/politica-de-privacidade", "/direitos-do-titular"]) {
+    const KNOWN = new Set(["/", "/recursos", "/produto", "/para-quem-e", "/precos", "/duvidas", "/login", "/register", "/termos-de-uso", "/politica-de-privacidade", "/politica-de-reembolso", "/direitos-do-titular"]);
+    for (const h of hrefs.filter((x) => x.startsWith("/") && !x.startsWith("/#") && !x.startsWith("/_next") && !/\.(png|ico|jpg|svg)/.test(x))) assert.ok(KNOWN.has(h) || /^\/duvidas\/[a-z0-9-]+$/.test(h), "rota interna desconhecida: " + h);
+    for (const must of ["#precos", "#produto", "/recursos", "/produto", "/para-quem-e", "/precos", "/duvidas", "/register", "/politica-de-reembolso", "/termos-de-uso", "/politica-de-privacidade", "/direitos-do-titular"]) {
       assert.ok(hrefs.some((h) => h === must || h === "/" + must), "link ausente: " + must);
     }
   });
@@ -543,5 +544,19 @@ describe("Rotas dinâmicas (servidor local) — login, cadastro e noindex", { sk
       assert.equal(status, 307, path);
       assert.match(location ?? "", /\/login\?next=/);
     }
+  });
+});
+
+describe("Páginas de dúvidas — HTML gerado", { skip: !hasBuild && "rode `npm run build` antes" }, () => {
+  const html = hasBuild ? readFileSync(built("duvidas/o-que-e-saas.html"), "utf8") : "";
+  const sitemap = hasBuild ? readFileSync(built("sitemap.xml.body"), "utf8") : "";
+
+  it("um H1 com a pergunta, resposta no HTML inicial, canonical próprio, dados estruturados e entrada no sitemap", () => {
+    assert.deepEqual(all(html, /<h1[^>]*>([\s\S]*?)<\/h1>/g).map(text), ["O que é SaaS e como funciona para uma pequena empresa?"]);
+    assert.match(text(html), /software como serviço/);
+    assert.match(one(html, /<link rel="canonical" href="([^"]+)"/), /\/duvidas\/o-que-e-saas$/);
+    const types = JSON.parse(one(html, /<script type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/))["@graph"].map((n) => n["@type"]);
+    assert.deepEqual(types, ["Organization", "BreadcrumbList", "Article"]);
+    assert.match(sitemap, /\/duvidas\/o-que-e-saas<\/loc>/);
   });
 });

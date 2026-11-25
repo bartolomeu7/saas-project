@@ -3,6 +3,29 @@ const nextConfig = {
   // Não anuncia o framework em cada resposta (X-Powered-By: Next.js).
   poweredByHeader: false,
   reactStrictMode: true,
+  async redirects() {
+    return [
+      // A aba "Perguntas" virou "Dúvidas".
+      { source: "/perguntas", destination: "/duvidas", permanent: true },
+      // Um endereço só para o Google: sem www e sempre com https. O Cloudflare informa o protocolo do visitante em
+      // x-forwarded-proto; o acesso local (health check) usa outro host e não é afetado.
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "www.primeges.com.br" }],
+        destination: "https://primeges.com.br/:path*",
+        permanent: true,
+      },
+      {
+        source: "/:path*",
+        has: [
+          { type: "host", value: "primeges.com.br" },
+          { type: "header", key: "x-forwarded-proto", value: "http" },
+        ],
+        destination: "https://primeges.com.br/:path*",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     // Headers de segurança padrão, sem CSP: a aplicação usa fontes/scripts
     // de terceiros pontuais (ex: Google Fonts) e uma CSP mal calibrada

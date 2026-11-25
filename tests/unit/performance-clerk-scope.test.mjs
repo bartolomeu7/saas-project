@@ -40,9 +40,10 @@ function coveringLayouts(page) {
 /** Páginas públicas estáticas que, de propósito, NÃO carregam o Clerk. */
 const WITHOUT_CLERK = [
   "src/app/(public)/direitos-do-titular/page.tsx",
+  "src/app/(public)/duvidas/[slug]/page.tsx",
+  "src/app/(public)/duvidas/page.tsx",
   "src/app/(public)/page.tsx",
   "src/app/(public)/para-quem-e/page.tsx",
-  "src/app/(public)/perguntas/page.tsx",
   "src/app/(public)/politica-de-privacidade/page.tsx",
   "src/app/(public)/politica-de-reembolso/page.tsx",
   "src/app/(public)/precos/page.tsx",

@@ -7,7 +7,7 @@ import { FinalCta, Heading, PageHero, modulesByName } from "@/components/marketi
 import { ProductScreen } from "@/components/marketing/screens";
 import { MODULE_DETAILS, MODULE_GROUPS, type ScreenId } from "@/config/marketing";
 
-const TITLE = "Recursos";
+const TITLE = "Recursos do sistema de gestão";
 const DESCRIPTION =
   "Os módulos do Prime Ges: vendas, agenda, orçamentos, estoque, compras, caixa, financeiro, relatórios, equipe e RH, e o que cada um faz.";
 

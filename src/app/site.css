@@ -225,6 +225,11 @@
   .site-row__arrow { grid-column: 4; }
 }
 
+/* Linha só com a pergunta e a seta (dúvidas). */
+.site-row.site-row--doubt { grid-template-columns: minmax(0, 1fr) auto; }
+.site-row.site-row--doubt .site-row__arrow { grid-column: 2; }
+.site-answer { border: 1px solid hsl(var(--site-accent) / 0.5); border-radius: 1rem; background: hsl(var(--site-accent) / 0.1); padding: 1.5rem; font-size: clamp(1.15rem, 1.6vw, 1.35rem); line-height: 1.7; color: hsl(var(--foreground)); }
+
 .site-cell { background: hsl(var(--background)); padding: 2rem; transition: background-color 300ms ease; }
 .site-cell__icon { color: hsl(var(--site-accent)); transition: transform 300ms var(--prime-ease); }
 @media (hover: hover) {

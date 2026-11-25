@@ -130,9 +130,9 @@ describe("Onde o JSON-LD é usado (código-fonte)", () => {
   });
   const sourceFiles = files(SRC).filter((f) => /\.(tsx?|jsx?)$/.test(f));
 
-  it("só a página inicial importa o componente JsonLd; ele não está no layout raiz, em páginas privadas, login ou cadastro", () => {
+  it("só a home e as páginas de dúvidas importam o componente JsonLd; ele não está no layout raiz, em páginas privadas, login ou cadastro", () => {
     const users = sourceFiles.filter((f) => /seo\/json-ld/.test(readFileSync(f, "utf8"))).map(rel);
-    assert.deepEqual(users, ["app/(public)/page.tsx"]);
+    assert.deepEqual(users, ["app/(public)/duvidas/[slug]/page.tsx", "app/(public)/page.tsx"]);
     const scripts = sourceFiles.filter((f) => /<script type="application\/ld\+json" dangerouslySetInnerHTML/.test(readFileSync(f, "utf8"))).map(rel);
     assert.deepEqual(scripts, ["components/seo/json-ld.tsx"]);
   });

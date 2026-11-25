@@ -5,7 +5,7 @@ import { Reveal } from "@/components/marketing/motion";
 import { FinalCta, PageHero, modulesByName } from "@/components/marketing/sections";
 import { SEGMENTS } from "@/config/marketing";
 
-const TITLE = "Para quem é";
+const TITLE = "Sistema para padaria, mercado e lava-rápido";
 const DESCRIPTION =
   "Como o Prime Ges entra na rotina de padarias, mercadinhos, restaurantes, lanchonetes, lava-rápidos e estética automotiva.";
 

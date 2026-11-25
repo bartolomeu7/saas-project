@@ -7,7 +7,7 @@ import { PAYMENT_FACTS } from "@/config/marketing";
 import { getPublicPlans } from "@/lib/billing/queries";
 import { faqFacts, toPricingView } from "@/lib/billing/pricing-display";
 
-const TITLE = "Preços";
+const TITLE = "Preços do sistema de gestão";
 const DESCRIPTION =
   "Planos do Prime Ges por período, pagos por Pix e sem renovação automática. Veja como funciona a ordem de pagamento e a ajuda.";
 
