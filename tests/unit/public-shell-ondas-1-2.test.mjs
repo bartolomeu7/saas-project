@@ -14,21 +14,12 @@ describe("cabeçalho público (Onda 1)", () => {
   const header = read("src/components/marketing/site-header.tsx");
   const css = read("src/app/globals.css");
 
-  it("o menu mobile rola até a seção depois de fechar o Sheet (âncora Preços)", () => {
-    assert.match(header, /pendingHash\s*=\s*useRef/);
-    assert.match(header, /onCloseAutoFocus=/);
-    assert.match(header, /scrollIntoView\(/);
-    assert.match(header, /prefers-reduced-motion: reduce/);
-    // no menu a navegação nativa por hash é interceptada só na Home; fora dela o link continua `/#secao`
-    assert.match(header, /isHome\s*\?\s*\(event\)/);
-  });
-
-  it("todos os destinos do menu existem como id de seção na Home", () => {
+  it("cada item do menu tem a sua própria página e a atual fica marcada", () => {
     const marketing = read("src/config/marketing.ts");
-    const home = read("src/app/(public)/page.tsx") + read("src/components/marketing/home-product-showcase.tsx");
-    for (const [, hash] of marketing.matchAll(/href:\s*"#([a-z-]+)"/g)) {
-      assert.ok(new RegExp(`id=["'{]+${hash}["'}]`).test(home), `âncora #${hash} sem seção correspondente`);
-    }
+    const hrefs = [...marketing.matchAll(/\{ label: "[^"]+", href: "\/([a-z-]+)" \}/g)].map((m) => m[1]);
+    assert.equal(hrefs.length, 5);
+    for (const slug of hrefs) assert.ok(read(`src/app/(public)/${slug}/page.tsx`).includes("<MarketingShell>"), slug);
+    assert.match(header, /aria-current=\{pathname === item\.href \? "page" : undefined\}/);
   });
 
   it("o cabeçalho é sticky e a classe --scrolled tem regra de CSS", () => {

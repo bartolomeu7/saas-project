@@ -10,6 +10,7 @@ const root = new URL("../../", import.meta.url);
 const read = (p) => readFileSync(new URL(p, root), "utf8");
 const home = read("src/app/(public)/page.tsx");
 const marketing = read("src/config/marketing.ts");
+const sections = read("src/components/marketing/sections.tsx");
 
 const HOME_TITLE = home.match(/const HOME_TITLE = "([^"]+)"/)?.[1] ?? "";
 const HOME_DESCRIPTION = home.match(/const SEO_DESCRIPTION =\s*"([^"]+)"/)?.[1] ?? "";
@@ -78,7 +79,7 @@ describe("Conteúdo comercial: só o que o produto comprovadamente faz", () => {
 
   it("toda menção a nota fiscal é uma NEGAÇÃO (o produto não emite)", () => {
     const sentences = withoutComments.split(/(?<=[.!?"])\s+/);
-    for (const sentence of sentences.filter((s) => /nota fiscal|NF-?e|documentos? fiscais?/i.test(s))) {
+    for (const sentence of sentences.filter((s) => /nota fiscal|\bNF-?e\b|documentos? fiscais?/i.test(s))) {
       assert.match(sentence, /não (emite|substitui)/i, sentence.slice(0, 120));
     }
   });
@@ -88,17 +89,14 @@ describe("Conteúdo comercial: só o que o produto comprovadamente faz", () => {
     for (const t of ["bakery", "car_wash", "automotive_detailing", "grocery", "restaurant", "snack_bar"]) assert.ok(types.includes(`"${t}"`), t);
     for (const name of ["Padarias", "Mercadinhos e mercearias", "Restaurantes", "Lanchonetes", "Lava-rápidos", "Estética automotiva"]) {
       assert.ok(marketing.includes(`name: "${name}"`), name);
-      assert.ok(home.includes(name.includes(" ") ? `"${name}"` : name), "módulos definidos para " + name);
+      assert.match(marketing, new RegExp(`name: "${name}",[\\s\\S]*?modules: \\[[^\\]]+\\]`), "módulos definidos para " + name);
     }
   });
 
-  it("os módulos citados na home são os 8 marcados como disponíveis (nada de agenda, compras, relatórios ou equipe sem confirmação)", () => {
+  it("só divulga módulos que o sistema tem (lista autorizada pelo dono em 25/11/2026)", () => {
     const available = [...marketing.matchAll(/\{ name: "([^"]+)", description: "[^"]+", icon: \w+, available: true \}/g)].map((m) => m[1]);
-    assert.deepEqual(available, ["Clientes", "Produtos", "Serviços", "Vendas", "Fidelidade", "Caixa", "Estoque", "Financeiro"]);
-    const visible = withoutComments.replace(/question:[\s\S]*?\},/g, "");
-    for (const unconfirmed of [/\bagenda\b/i, /\bcompras\b/i, /\bfornecedores?\b/i, /\brelat[óo]rios\b/i, /\bequipe\b/i]) {
-      assert.ok(!unconfirmed.test(visible.replace(/Posso ter outras pessoas[\s\S]*?\},/, "")), "módulo sem confirmação comercial: " + unconfirmed);
-    }
+    assert.deepEqual(available, ["Clientes", "Produtos", "Serviços", "Vendas", "Fidelidade", "Caixa", "Estoque", "Financeiro", "Agenda", "Orçamentos", "Assistente de agenda", "Compras", "Fornecedores", "Relatórios", "Equipe", "RH"]);
+    for (const name of available) assert.ok(marketing.includes(name.includes(" ") ? `"${name}": [` : `  ${name}: [`), "detalhes de " + name);
   });
 
   it("a home não contém preços fixos (planos e valores vêm do catálogo, na seção de planos)", () => {
@@ -109,8 +107,8 @@ describe("Conteúdo comercial: só o que o produto comprovadamente faz", () => {
 
 describe("Links internos úteis", () => {
   it("há atalhos para planos, recursos, cadastro, regras de reembolso, termos e demais documentos", () => {
-    for (const href of ['href="#precos"', 'href="#recursos"', 'href="#como-funciona"', 'href="/politica-de-reembolso"', 'href="/termos-de-uso"', 'href="/politica-de-privacidade"', 'href="/direitos-do-titular"', "siteConfig.links.register"]) {
-      assert.ok(home.includes(href), href);
+    for (const href of ['href="#precos"', 'href="#produto"', 'href="/produto"', 'href="/recursos"', 'href="/para-quem-e"', 'href="/precos"', 'href="/politica-de-reembolso"', 'href="/termos-de-uso"', 'href="/politica-de-privacidade"', 'href="/direitos-do-titular"', "siteConfig.links.register"]) {
+      assert.ok((home + sections).includes(href), href);
     }
   });
 
@@ -119,6 +117,6 @@ describe("Links internos úteis", () => {
   });
 
   it("as chamadas para ação existentes continuam (Criar conta, Ver como funciona, Entrar)", () => {
-    for (const label of ["Criar conta", "Ver como funciona", "Entrar"]) assert.ok(home.includes(label), label);
+    for (const label of ["Criar conta", "Ver como funciona", "Entrar"]) assert.ok((home + sections).includes(label), label);
   });
 });

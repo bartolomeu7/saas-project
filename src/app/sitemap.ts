@@ -25,6 +25,11 @@ function legalPage(path: string, doc: LegalDocument): SitemapPageInput {
 export default function sitemap(): MetadataRoute.Sitemap {
   return buildSitemapEntries(siteConfig.url, [
     { path: "/" },
+    { path: "/recursos" },
+    { path: "/produto" },
+    { path: "/para-quem-e" },
+    { path: "/precos" },
+    { path: "/perguntas" },
     legalPage("/termos-de-uso", getLegalDocument("TERMS_OF_USE")),
     legalPage("/politica-de-privacidade", getLegalDocument("PRIVACY_POLICY")),
     legalPage("/politica-de-reembolso", getRefundPolicyDocument()),

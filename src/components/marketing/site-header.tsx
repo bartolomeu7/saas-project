@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
 import { Logo } from "@/components/shared/logo";
 import { buttonVariants } from "@/components/ui/button";
@@ -19,31 +20,13 @@ import { NAV_LINKS } from "@/config/marketing";
 import { siteConfig } from "@/config/site";
 
 /**
- * Cabeçalho público. Na Home (`isHome`) os links rolam até as seções e o item da seção visível
- * fica marcado (aria-current). Nas outras páginas públicas (Termos, Privacidade) os mesmos links
- * apontam para `/#secao`. O menu mobile é o Sheet do shadcn/ui (foco preso, Escape fecha, rótulos
- * corretos), no lugar do painel manual anterior.
- *
- * Âncoras no menu mobile: o Sheet trava a rolagem enquanto está aberto, então o salto nativo para `#secao`
- * (que acontece no mesmo clique que fecha o menu) não rolava a página. Por isso o clique só marca o destino e a
- * rolagem acontece depois que o Sheet fechou (`onCloseAutoFocus`).
+ * Cabeçalho público. Cada item do menu é uma página própria; a página atual fica marcada (aria-current). O menu
+ * mobile é o Sheet do shadcn/ui (foco preso, Escape fecha, rótulos corretos).
  */
-export function SiteHeader({ isHome = true }: { isHome?: boolean }) {
+export function SiteHeader() {
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [activeHref, setActiveHref] = useState<string | null>(null);
-  const pendingHash = useRef<string | null>(null);
-
-  const hrefFor = (hash: string) => (isHome ? hash : "/" + hash);
-
-  function scrollToSection(hash: string) {
-    const section = document.getElementById(hash.slice(1));
-    if (!section) return;
-    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    section.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
-    window.history.replaceState(null, "", hash);
-    setActiveHref(hash);
-  }
 
   useEffect(() => {
     const update = () => setScrolled(window.scrollY > 16);
@@ -51,37 +34,6 @@ export function SiteHeader({ isHome = true }: { isHome?: boolean }) {
     window.addEventListener("scroll", update, { passive: true });
     return () => window.removeEventListener("scroll", update);
   }, []);
-
-  useEffect(() => {
-    if (!isHome) return;
-
-    const sections = NAV_LINKS.map((item) => document.getElementById(item.href.slice(1))).filter(
-      (section): section is HTMLElement => Boolean(section),
-    );
-    if (!sections.length) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-        if (visible?.target.id) setActiveHref("#" + visible.target.id);
-        // Fora de qualquer seção do menu (hero, painel, faixa de credibilidade, problema), nenhuma fica marcada.
-        else if (
-          !sections.some((section) => {
-            const box = section.getBoundingClientRect();
-            return box.top < window.innerHeight * 0.45 && box.bottom > window.innerHeight * 0.12;
-          })
-        ) {
-          setActiveHref(null);
-        }
-      },
-      { threshold: [0.15, 0.3, 0.55], rootMargin: "-12% 0px -55% 0px" },
-    );
-
-    sections.forEach((section) => observer.observe(section));
-    return () => observer.disconnect();
-  }, [isHome]);
 
   return (
     <header className={cn("prime-site-header", scrolled && "prime-site-header--scrolled")}>
@@ -94,7 +46,7 @@ export function SiteHeader({ isHome = true }: { isHome?: boolean }) {
 
       <div className="container flex h-16 items-center justify-between gap-6">
         <Link
-          href={isHome ? "#topo" : "/"}
+          href="/"
           className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md font-semibold tracking-tight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           aria-label="Prime Ges — início"
         >
@@ -104,15 +56,10 @@ export function SiteHeader({ isHome = true }: { isHome?: boolean }) {
         <nav className="hidden items-center gap-1 lg:flex" aria-label="Menu principal">
           {NAV_LINKS.map((item) => (
             <Link
-              key={item.label}
-              href={hrefFor(item.href)}
-              aria-current={isHome && activeHref === item.href ? "location" : undefined}
-              className={cn(
-                "relative whitespace-nowrap rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none",
-                isHome &&
-                  activeHref === item.href &&
-                  "text-foreground after:absolute after:inset-x-3 after:-bottom-px after:h-0.5 after:rounded-full after:bg-primary-text",
-              )}
+              key={item.href}
+              href={item.href}
+              aria-current={pathname === item.href ? "page" : undefined}
+              className="site-nav-link"
             >
               {item.label}
             </Link>
@@ -146,40 +93,20 @@ export function SiteHeader({ isHome = true }: { isHome?: boolean }) {
               <Menu size={22} aria-hidden="true" />
             </button>
           </SheetTrigger>
-          <SheetContent
-            side="right"
-            className="flex w-[min(88vw,22rem)] flex-col gap-6"
-            onCloseAutoFocus={(event) => {
-              const hash = pendingHash.current;
-              if (!hash) return;
-              pendingHash.current = null;
-              event.preventDefault();
-              window.requestAnimationFrame(() => scrollToSection(hash));
-            }}
-          >
+          <SheetContent side="right" className="flex w-[min(88vw,22rem)] flex-col gap-6">
             <SheetHeader className="text-left">
               <SheetTitle>Menu</SheetTitle>
-              <SheetDescription>Navegue pelas seções ou acesse a sua conta.</SheetDescription>
+              <SheetDescription>Navegue pelas páginas ou acesse a sua conta.</SheetDescription>
             </SheetHeader>
             <nav aria-label="Menu principal" className="flex flex-col gap-1">
               {NAV_LINKS.map((item) => (
-                <SheetClose asChild key={item.label}>
+                <SheetClose asChild key={item.href}>
                   <Link
-                    href={hrefFor(item.href)}
-                    onClick={
-                      isHome
-                        ? (event) => {
-                            // preventDefault também impede o SheetClose de fechar (Radix ignora cliques já cancelados).
-                            event.preventDefault();
-                            pendingHash.current = item.href;
-                            setOpen(false);
-                          }
-                        : undefined
-                    }
-                    aria-current={isHome && activeHref === item.href ? "location" : undefined}
+                    href={item.href}
+                    aria-current={pathname === item.href ? "page" : undefined}
                     className={cn(
                       "rounded-md px-3 py-3 text-base text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                      isHome && activeHref === item.href && "bg-primary/10 text-foreground",
+                      pathname === item.href && "bg-primary/10 text-foreground",
                     )}
                   >
                     {item.label}

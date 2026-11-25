@@ -41,8 +41,13 @@ function coveringLayouts(page) {
 const WITHOUT_CLERK = [
   "src/app/(public)/direitos-do-titular/page.tsx",
   "src/app/(public)/page.tsx",
+  "src/app/(public)/para-quem-e/page.tsx",
+  "src/app/(public)/perguntas/page.tsx",
   "src/app/(public)/politica-de-privacidade/page.tsx",
   "src/app/(public)/politica-de-reembolso/page.tsx",
+  "src/app/(public)/precos/page.tsx",
+  "src/app/(public)/produto/page.tsx",
+  "src/app/(public)/recursos/page.tsx",
   "src/app/(public)/termos-de-uso/page.tsx",
   "src/app/conta-excluida/page.tsx",
   // tela de manutenção: pública e independente do Clerk de propósito (precisa abrir mesmo se o Clerk estiver fora)

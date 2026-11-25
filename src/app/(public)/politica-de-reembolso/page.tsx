@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 export default function RefundPolicyPage() {
   return (
     <>
-      <SiteHeader isHome={false} />
+      <SiteHeader />
       <main id="conteudo" tabIndex={-1} className="outline-none">
         <LegalDocumentView doc={doc} hash={getLegalDocumentHash("TERMS_OF_USE")} />
       </main>

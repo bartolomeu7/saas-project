@@ -35,8 +35,8 @@ describe("FAQ da home (S01) — HTML gerado", { skip: !hasBuild && "rode `npm ru
   const html = hasBuild ? readFileSync(built("index.html"), "utf8") : "";
   const faq = one(html, /<section[^>]*id="faq"[^>]*>([\s\S]*?)<\/section>/) ?? "";
 
-  it("a fonte tem 10 perguntas e todas aparecem no HTML, na ordem", () => {
-    assert.equal(QUESTIONS.length, 10);
+  it("a fonte tem 13 perguntas e todas aparecem no HTML, na ordem", () => {
+    assert.equal(QUESTIONS.length, 13);
     const buttons = [...faq.matchAll(/<button[^>]*id="([^"]+)"[^>]*>([\s\S]*?)<\/button>/g)].map((m) => ({ id: m[1], q: text(m[2]) }));
     assert.deepEqual(buttons.map((b) => b.q), QUESTIONS);
   });
@@ -68,6 +68,11 @@ describe("FAQ da home (S01) — HTML gerado", { skip: !hasBuild && "rode `npm ru
 describe("Títulos e descrições (S05) — páginas estáticas geradas", { skip: !hasBuild && "rode `npm run build` antes" }, () => {
   const pages = {
     home: ["index.html", "Prime Ges — Sistema de gestão online para pequenos negócios"],
+    "recursos": ["recursos.html", "Recursos | Prime Ges"],
+    "produto": ["produto.html", "Produto | Prime Ges"],
+    "para-quem-e": ["para-quem-e.html", "Para quem é | Prime Ges"],
+    "precos": ["precos.html", "Preços | Prime Ges"],
+    "perguntas": ["perguntas.html", "Perguntas frequentes | Prime Ges"],
     "termos-de-uso": ["termos-de-uso.html", "Termos de Uso | Prime Ges"],
     "politica-de-privacidade": ["politica-de-privacidade.html", "Política de Privacidade | Prime Ges"],
     "politica-de-reembolso": ["politica-de-reembolso.html", "Política de Reembolso e Cancelamento | Prime Ges"],
@@ -224,11 +229,11 @@ describe("Home — título, descrição, H1, hierarquia e links (Etapa 4) — HT
   it("links internos: âncoras apontam para ids existentes e as páginas internas são rotas públicas conhecidas", () => {
     const hrefs = [...html.matchAll(/<a [^>]*href="([^"]+)"/g)].map((m) => m[1]);
     const anchors = hrefs.filter((h) => /^(\/)?#[\w-]+$/.test(h)).map((h) => h.replace(/^\//, "").slice(1));
-    assert.ok(new Set(anchors).size >= 6, "âncoras distintas: " + [...new Set(anchors)].join(","));
+    assert.ok(new Set(anchors).size >= 2, "âncoras distintas: " + [...new Set(anchors)].join(","));
     for (const id of new Set(anchors)) assert.ok(html.includes(`id="${id}"`), "id ausente: " + id);
-    const KNOWN = new Set(["/login", "/register", "/termos-de-uso", "/politica-de-privacidade", "/politica-de-reembolso", "/direitos-do-titular"]);
+    const KNOWN = new Set(["/", "/recursos", "/produto", "/para-quem-e", "/precos", "/perguntas", "/login", "/register", "/termos-de-uso", "/politica-de-privacidade", "/politica-de-reembolso", "/direitos-do-titular"]);
     for (const h of hrefs.filter((x) => x.startsWith("/") && !x.startsWith("/#") && !x.startsWith("/_next") && !/\.(png|ico|jpg|svg)/.test(x))) assert.ok(KNOWN.has(h), "rota interna desconhecida: " + h);
-    for (const must of ["#precos", "#recursos", "#como-funciona", "/register", "/politica-de-reembolso", "/termos-de-uso", "/politica-de-privacidade", "/direitos-do-titular"]) {
+    for (const must of ["#precos", "#produto", "/recursos", "/produto", "/para-quem-e", "/precos", "/perguntas", "/register", "/politica-de-reembolso", "/termos-de-uso", "/politica-de-privacidade", "/direitos-do-titular"]) {
       assert.ok(hrefs.some((h) => h === must || h === "/" + must), "link ausente: " + must);
     }
   });
@@ -300,7 +305,7 @@ describe("Dados estruturados JSON-LD (Etapa 5) — HTML gerado", { skip: !hasBui
     assert.equal(byType.WebSite.inLanguage, "pt-BR");
     const visible = text(home.replace(/<script[\s\S]*?<\/script>/g, ""));
     for (const feature of byType.SoftwareApplication.featureList) assert.ok(visible.includes(feature), "módulo exibido na home: " + feature);
-    assert.equal(byType.SoftwareApplication.featureList.length, 8);
+    assert.equal(byType.SoftwareApplication.featureList.length, 16);
   });
 
   it("referências entre objetos apontam para entidades existentes (publisher, isPartOf)", () => {
