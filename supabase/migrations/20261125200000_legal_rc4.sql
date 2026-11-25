@@ -6,8 +6,7 @@
 -- Hashes = SHA-256 do JSON canônico (src/lib/legal/hash.ts); tests/unit/legal.test.mjs (T12) confere.
 -- Mudanças: identificação provisória (Nexora Group) e canal de contato, prestadores atuais, assistente de agenda,
 -- dados de equipe/RH, medição de acessos, prazos e cláusulas de operador.
--- SEM arquivo de volta, de propósito: versão publicada não pode ser apagada nem voltar de "retired", e aposentar a
--- rc.4 deixaria o sistema sem documento vigente. Para voltar o texto, publique uma rc.5 em nova migration.
+-- Só anda para frente: o arquivo em supabase/rollback/ não desfaz nada e explica o motivo e o que fazer.
 
 update public.legal_document_versions
    set status = 'retired'
