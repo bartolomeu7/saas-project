@@ -21,17 +21,27 @@ Uma página para quando algo der errado em produção. Leia de cima para baixo e
 - Só aquele módulo é afetado; o menu e os outros módulos continuam funcionando.
 
 ## 4. Foi depois de uma publicação?
-- Compare a `version` de `/api/health` com o último PR mesclado.
-- Se o problema começou logo após o deploy, volte a versão anterior na Vercel (Deployments → versão anterior → Promote / Rollback). Isso não mexe no banco.
-- Se o deploy também alterou o banco, **não** volte o código sem antes conferir o plano de volta (rollback) da migration em `supabase/rollback/`.
+- Compare a imagem em uso com o último PR mesclado. O `publicar.ps1` guarda a anterior como `primeges-web:prev-<data>-<hora>` e volta sozinho se o teste de fumaça falhar.
+- Se a publicação também alterou o banco, **não** volte o código sem antes conferir o plano de volta da migration em `supabase/rollback/`. Documentos legais não têm volta: publica-se uma versão nova.
 
 ## 5. Pagamento ou assinatura
-- Pagamentos vêm do EvoPay pelo webhook. Se um cliente pagou e não liberou: abra `/admin` → Pagamentos → o pagamento → "Reverificar".
-- Nunca marque pagamento como pago à mão sem conferir no EvoPay.
+- O Pix vem do prestador ativo (MisticPay; SyncPay como opção) pelo webhook. Se um cliente pagou e não liberou: `/admin` → Pagamentos → a ordem de pagamento → "Reverificar".
+- Nunca marque pagamento como pago à mão sem conferir no prestador.
 
 ## 6. Login ou 2FA
 - Login e senha são do Clerk. Problemas de acesso: painel do Clerk (Produção).
-- A 2FA própria só vale depois que a chave `TWO_FACTOR_ENCRYPTION_KEY` existe na Vercel. **Nunca troque nem remova essa chave** depois de colocada: todos os cadastros de 2FA deixariam de funcionar.
+- A 2FA própria só vale depois que a chave `TWO_FACTOR_ENCRYPTION_KEY` existe no servidor. **Nunca troque nem remova essa chave** depois de colocada: todos os cadastros de 2FA deixariam de funcionar.
+
+## Incidente com dados pessoais (LGPD)
+Suspeita de vazamento, acesso indevido, perda ou alteração de dados. O relógio começa quando você **fica sabendo** que dados pessoais foram afetados.
+
+1. **Conter** (na hora): desligar o acesso afetado (modo manutenção, trocar chaves e senhas, encerrar sessões). Não apagar registros: são a prova.
+2. **Anotar:** quando soube, o que aconteceu, quais dados, quantas pessoas, quais empresas, o que já foi feito.
+3. **Avaliar** se pode causar risco ou dano relevante (dados financeiros, de autenticação, de crianças, sensíveis ou em grande escala).
+4. **Se sim, comunicar à ANPD e aos titulares em até 3 dias úteis** (Resolução CD/ANPD nº 15/2024; para agente de pequeno porte o prazo é contado em dobro: confirme o enquadramento antes de contar com isso). Formulário em gov.br/anpd. Informação incompleta é enviada mesmo assim e completada depois.
+5. **Se os dados são de uma empresa cliente** (você é operador), avisar a empresa sem demora, com o que já se sabe.
+6. **Registrar o incidente**, mesmo quando não for comunicado, com a justificativa, e guardar por pelo menos 5 anos.
+7. Procurar um advogado.
 
 ## 7. Depois de resolver
 - Registre: o que aconteceu, desde quando, causa, como resolveu e o que evita a repetição.

@@ -121,6 +121,11 @@ export function RaffleForm({ hasAnySales }: { hasAnySales: boolean }) {
         />
       </div>
 
+      <p className="rounded-md border border-border bg-secondary px-3 py-2 text-xs leading-5 text-muted-foreground">
+        Promoções com sorteio ou prêmios podem exigir autorização prévia (Lei nº 5.768/1971). A autorização e as regras são
+        responsabilidade da sua empresa: esta ferramenta apenas organiza os participantes e registra o resultado.
+      </p>
+
       <SubmitButton state={state} pendingLabel="Sorteando..." className="w-full sm:w-fit">
         Sortear cliente
       </SubmitButton>

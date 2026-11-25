@@ -15,7 +15,7 @@ import { safeAfterConsentPath } from "../../src/lib/legal/safe-path.ts";
 const DOCS = [termsOfUse, privacyPolicy];
 const SECRET = "sk_test_unit_secret";
 const VERSIONS = { terms: "1.0.0-rc.2", privacy: "1.0.0-rc.2" };
-const MIGRATION = ["20261010000000_legal_consent.sql", "20261010000100_legal_rc2.sql", "20261021100000_legal_rc3.sql"]
+const MIGRATION = ["20261010000000_legal_consent.sql", "20261010000100_legal_rc2.sql", "20261021100000_legal_rc3.sql", "20261125200000_legal_rc4.sql"]
   .map((name) => readFileSync(new URL("../../supabase/migrations/" + name, import.meta.url), "utf8"))
   .join("\n");
 
@@ -55,10 +55,52 @@ describe("conteúdo dos documentos legais", () => {
     }
   });
 
-  it("os dados da empresa ainda não fornecidos aparecem como BLOCKED, nunca inventados", () => {
-    const text = JSON.stringify(termsOfUse.sections);
-    assert.ok(text.includes("Razão social: [BLOCKED"));
+  it("identifica a operação (Nexora Group) e o canal, sem marcador pendente, sem CPF e sem CNPJ inventado", () => {
+    for (const doc of DOCS) {
+      assert.deepEqual(markersOf(doc), [], doc.type);
+      const text = JSON.stringify(doc.sections);
+      assert.ok(text.includes("operado pela Nexora Group"), doc.type);
+      assert.ok(text.includes("ainda não tem CNPJ"), doc.type);
+      // nenhum documento de pessoa física é publicado
+      assert.doesNotMatch(text, /\d{3}\.\d{3}\.\d{3}-\d{2}|\bCPF:\s*\d/, doc.type);
+      assert.doesNotMatch(text, /pessoa física, que opera/i, doc.type);
+    }
     assert.ok(!/\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}/.test(JSON.stringify(DOCS)), "nenhum CNPJ no texto");
+  });
+
+  it("os Termos protegem as partes nos pontos que o produto exige, sem afastar o consumidor", () => {
+    const ids = new Set(termsOfUse.sections.map((section) => section.id));
+    for (const id of ["responsabilidades-empresa", "recursos-especificos", "dados-empresa", "mudancas-servico", "responsabilidade", "indenizacao", "comunicacoes-eletronicas", "disposicoes-gerais"]) {
+      assert.ok(ids.has(id), id);
+    }
+    const text = JSON.stringify(termsOfUse.sections);
+    for (const term of ["Lei nº 5.768/1971", "estimativas para controle interno", "vitalício", "pessoa jurídica que vier a ser constituída", "Código de Defesa do Consumidor", "art. 101, I", "Preciso de ajuda com esta ordem"]) {
+      assert.ok(text.includes(term), term);
+    }
+    assert.doesNotMatch(text, /Depois do encerramento da conta, você pode pedir uma cópia/);
+    assert.doesNotMatch(text, /não nos responsabilizamos por (nada|quaisquer)|em hipótese alguma|renuncia a qualquer direito/i);
+  });
+
+  it("a Política diz a origem dos dados, o que é obrigatório, quem vê e quais cookies existem", () => {
+    const ids = new Set(privacyPolicy.sections.map((section) => section.id));
+    for (const id of ["origem", "acesso-interno"]) assert.ok(ids.has(id), id);
+    const text = JSON.stringify(privacyPolicy.sections);
+    for (const term of ["Obrigatórios para ter conta", "ordem legal", "tema claro ou escuro", "1 hora"]) assert.ok(text.includes(term), term);
+  });
+
+  it("o contrato aparece antes do pagamento e o aviso de sorteio aparece na ferramenta", () => {
+    const checkout = readFileSync(new URL("../../src/app/(app)/app/assinatura/checkout/[planId]/page.tsx", import.meta.url), "utf8");
+    assert.match(checkout, /href="\/termos-de-uso"[\s\S]*href="\/politica-de-reembolso"/);
+    assert.match(readFileSync(new URL("../../src/components/app/raffle-form.tsx", import.meta.url), "utf8"), /5\.768\/1971/);
+  });
+
+  it("a política descreve os prestadores e os dados que o sistema usa hoje (sem os antigos)", () => {
+    const text = JSON.stringify(privacyPolicy.sections);
+    for (const term of ["Clerk", "Cloudflare", "MisticPay", "SyncPay", "Web Analytics", "Assistente de agenda", "módulos Equipe e RH", "90 dias", "no Brasil"]) {
+      assert.ok(text.includes(term), term);
+    }
+    for (const old of ["Supabase", "Vercel", "EvoPay"]) assert.ok(!JSON.stringify(DOCS).includes(old), old);
+    assert.ok(termsOfUse.sections.some((section) => section.id === "dados-empresa"), "cláusulas de operador");
   });
 
   it("(opcional, pré-Production) LEGAL_REQUIRE_PUBLISHABLE=1 exige zero marcadores pendentes", (t) => {

@@ -1,6 +1,6 @@
 # Documentos legais e consentimento
 
-Status: implementado e validado **somente em TEST**. Nada disto foi aplicado em Production.
+Versão em preparação: `1.0.0-rc.4` (25/11/2026, migration `20261125200000_legal_rc4.sql`), com identificação provisória (Nexora Group, ainda sem CNPJ) e canal suporte@primeges.com.br. Registro das operações: [legal/registro-de-operacoes.md](legal/registro-de-operacoes.md).
 
 ## O que existe
 
