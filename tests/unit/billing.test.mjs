@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { buildExternalReference, parseExternalReference } from "../../src/types/billing.ts";
 import { amountsMatch, rejectionMessage, toCents } from "../../src/lib/billing/amount.ts";
@@ -63,5 +64,14 @@ describe("comparação de valores (centavos inteiros)", () => {
     }
     assert.match(rejectionMessage("CODIGO_NOVO"), /recusada/);
     assert.match(rejectionMessage(null), /recusada/);
+  });
+});
+
+describe("botão \"Já paguei\"", () => {
+  it("avisa quando a consulta confirma que o pagamento continua pendente", () => {
+    const source = readFileSync(new URL("../../src/components/app/payment-status-poller.tsx", import.meta.url), "utf8");
+    assert.match(source, /setCheckedPending\(result\.status === "pending"\)/);
+    assert.match(source, /role="status"/);
+    assert.match(source, /continua pendente/);
   });
 });

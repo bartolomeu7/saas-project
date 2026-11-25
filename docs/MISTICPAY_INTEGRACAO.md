@@ -37,6 +37,9 @@ ignorados — **não há suspensão automática de acesso por MED** (igual à Sy
 
 - **Valor mínimo (não documentado)**: R$ 1,00 e R$ 2,00 são recusados com HTTP 500 `Erro ao criar transação no adquirente`; R$ 3,00, 4, 5,
   20 e 89 foram criados. A taxa informada num Pix de R$ 5,00 foi R$ 1,40. Plano de teste: use **R$ 5,00**.
+- **Valor máximo por cobrança (não documentado)**: nesta conta, R$ 250,00 é criado e R$ 250,01, 300, 400, 499, 500, 501 e 899 são
+  recusados com o mesmo HTTP 500. Enquanto a MisticPay não aumentar o limite, o plano **Anual (R$ 899,00)** não gera Pix.
+  Mínimo e máximo podem mudar do lado deles: por isso o site não os fixa no código.
 - **CNPJ** como pagador é aceito na criação.
 - O `transactionId` devolvido é o nosso (UUID) e o `check` o encontra; `value` vem em **reais**.
 - Em 22/11, com a conta recém-criada, R$ 5,00 e R$ 10,00 também davam o mesmo erro; em 25/11 passaram sem mudança no pedido.

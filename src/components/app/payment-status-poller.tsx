@@ -21,6 +21,9 @@ const TERMINAL_STATUSES: SubscriptionPaymentStatus[] = [
 
 const CARD_FAILED_MESSAGE = "O pagamento no cartão não foi aprovado. Tente outro cartão ou use o Pix.";
 
+const STILL_PENDING_MESSAGE =
+  "Verificamos agora e o pagamento continua pendente. Se você ainda não pagou, pague o Pix acima para liberar o acesso. Se já pagou, aguarde alguns instantes: a liberação é automática.";
+
 const FRIENDLY_MESSAGES: Partial<Record<SubscriptionPaymentStatus, string>> = {
   paid: "Pagamento confirmado! Sua assinatura já está ativa.",
   expired: "Este Pix expirou. Gere um novo pagamento para continuar.",
@@ -41,6 +44,7 @@ export function PaymentStatusPoller({
   const [status, setStatus] = useState(initialStatus);
   const [checking, setChecking] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [checkedPending, setCheckedPending] = useState(false);
   const pollCountRef = useRef(0);
 
   const isTerminal = TERMINAL_STATUSES.includes(status);
@@ -69,6 +73,7 @@ export function PaymentStatusPoller({
   async function handleCheckNow() {
     setChecking(true);
     setErrorMessage(null);
+    setCheckedPending(false);
 
     const result = await checkPaymentNowAction(paymentId);
     setChecking(false);
@@ -78,6 +83,7 @@ export function PaymentStatusPoller({
       return;
     }
     if (result.status) {
+      setCheckedPending(result.status === "pending");
       setStatus(result.status);
       router.refresh();
     }
@@ -102,6 +108,11 @@ export function PaymentStatusPoller({
       )}
 
       {errorMessage && <p className="text-xs text-destructive">{errorMessage}</p>}
+
+      {/* A região fica sempre montada para o leitor de tela anunciar o resultado da consulta. */}
+      <p role="status" className="text-sm text-foreground empty:sr-only">
+        {checkedPending && status === "pending" ? STILL_PENDING_MESSAGE : null}
+      </p>
 
       {!isTerminal && method === "pix" && (
         <Button onClick={handleCheckNow} disabled={checking} className="w-full">
