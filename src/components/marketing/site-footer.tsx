@@ -28,7 +28,7 @@ const COLUMNS: FooterColumn[] = [
       { label: "Produto", href: "/produto" },
       { label: "Para quem é", href: "/para-quem-e" },
       { label: "Preços", href: "/precos" },
-      { label: "Perguntas frequentes", href: "/perguntas" },
+      { label: "Dúvidas", href: "/duvidas" },
     ],
   },
   {

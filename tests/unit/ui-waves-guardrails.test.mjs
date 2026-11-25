@@ -116,7 +116,7 @@ describe("Onda B2 — Home: Diferenciais, chamada final e rodapé", () => {
   });
 
   it("o rodapé preserva todas as colunas de links legais, o commit publicado e não importa o Clerk", () => {
-    for (const href of ["/termos-de-uso", "/politica-de-privacidade", "/politica-de-reembolso", "/direitos-do-titular", "/precos", "/perguntas"]) {
+    for (const href of ["/termos-de-uso", "/politica-de-privacidade", "/politica-de-reembolso", "/direitos-do-titular", "/precos", "/duvidas"]) {
       assert.ok(footer.includes(href), href);
     }
     assert.match(footer, /data-build-sha=\{BUILD_SHA\}/);

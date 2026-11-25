@@ -9,7 +9,7 @@ import { ProductScreen } from "@/components/marketing/screens";
 import { FinalCta, Heading, PageHero } from "@/components/marketing/sections";
 import { CREDIBILITY_ITEMS, OTHER_FLOWS } from "@/config/marketing";
 
-const TITLE = "Produto";
+const TITLE = "Como funciona o sistema de gestão";
 const DESCRIPTION =
   "Veja por dentro como o Prime Ges liga venda, estoque, caixa, financeiro, agenda, compras e orçamentos, no computador ou no celular.";
 

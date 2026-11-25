@@ -105,3 +105,54 @@ export function serializeJsonLd(data: unknown): string {
   for (const char of JSON.stringify(data)) out += ESCAPES[char] ?? char;
   return out;
 }
+
+export interface ArticleDataInput {
+  /** Origem canônica validada, sem barra final. */
+  origin: string;
+  name: string;
+  logoPath: string;
+  /** Caminho da página, ex.: "/duvidas/o-que-e-saas". */
+  path: string;
+  /** O mesmo texto do H1. */
+  headline: string;
+  description: string;
+  /** Data real de publicação/revisão (AAAA-MM-DD). */
+  date: string;
+  /** Trilha exibida na página, da home até esta (nome + caminho). */
+  breadcrumb: readonly { name: string; path: string }[];
+}
+
+/** Artigo de dúvida: trilha de navegação (BreadcrumbList) e o artigo, publicado pela mesma marca da home. */
+export function buildArticleData(input: ArticleDataInput): StructuredDataGraph {
+  const origin = input.origin.replace(/\/+$/, "");
+  const url = origin + input.path;
+  const ids = structuredDataIds(origin);
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      { "@type": "Organization", "@id": ids.organization, name: input.name, url: origin, logo: origin + input.logoPath },
+      {
+        "@type": "BreadcrumbList",
+        "@id": `${url}#trilha`,
+        itemListElement: input.breadcrumb.map((item, index) => ({
+          "@type": "ListItem",
+          position: index + 1,
+          name: item.name,
+          item: item.path === "/" ? origin : origin + item.path,
+        })),
+      },
+      {
+        "@type": "Article",
+        "@id": `${url}#artigo`,
+        headline: input.headline,
+        description: input.description,
+        inLanguage: "pt-BR",
+        datePublished: input.date,
+        dateModified: input.date,
+        mainEntityOfPage: url,
+        author: { "@id": ids.organization },
+        publisher: { "@id": ids.organization },
+      },
+    ],
+  };
+}

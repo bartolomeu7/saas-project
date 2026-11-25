@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import type { LegalDocument } from "@/content/legal/types";
 import { siteConfig } from "@/config/site";
+import { DOUBTS, DOUBTS_UPDATED_AT, doubtPath } from "@/content/duvidas";
 import {
   findLegalMarkers,
   getDataRightsDocument,
@@ -29,7 +30,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: "/produto" },
     { path: "/para-quem-e" },
     { path: "/precos" },
-    { path: "/perguntas" },
+    { path: "/duvidas", lastModified: DOUBTS_UPDATED_AT },
+    ...DOUBTS.map((doubt) => ({ path: doubtPath(doubt.slug), lastModified: DOUBTS_UPDATED_AT })),
     legalPage("/termos-de-uso", getLegalDocument("TERMS_OF_USE")),
     legalPage("/politica-de-privacidade", getLegalDocument("PRIVACY_POLICY")),
     legalPage("/politica-de-reembolso", getRefundPolicyDocument()),

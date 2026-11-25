@@ -1,5 +1,5 @@
 /**
- * Conteúdo do site público (home, /recursos, /produto, /para-quem-e, /precos e /perguntas).
+ * Conteúdo do site público (home, /recursos, /produto, /para-quem-e, /precos e /duvidas).
  *
  * Centralizado aqui para que textos, segmentos e perguntas possam ser ajustados sem mexer nos componentes. Nenhum
  * dado aqui é lido do banco: é conteúdo de marketing estático. Planos e preços NÃO ficam aqui (vêm do catálogo
@@ -46,7 +46,7 @@ export const NAV_LINKS = [
   { label: "Produto", href: "/produto" },
   { label: "Para quem é", href: "/para-quem-e" },
   { label: "Preços", href: "/precos" },
-  { label: "Perguntas", href: "/perguntas" },
+  { label: "Dúvidas", href: "/duvidas" },
 ] as const;
 
 export interface Segment {

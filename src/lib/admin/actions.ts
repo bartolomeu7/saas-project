@@ -624,7 +624,7 @@ export async function savePlanAction(planId: string | null, input: unknown): Pro
   revalidatePath("/app/assinatura/planos");
   revalidatePath("/"); // a home lê o catálogo público (revalida também por tempo)
   revalidatePath("/precos");
-  revalidatePath("/perguntas");
+  revalidatePath("/duvidas");
   return { success: planId === null ? "Plano criado." : "Plano atualizado.", planId: typeof data === "string" ? data : (planId ?? undefined) };
 }
 
@@ -652,7 +652,7 @@ export async function setPlanStatusAction(planId: string, status: string): Promi
   revalidatePath("/admin/audit");
   revalidatePath("/");
   revalidatePath("/precos");
-  revalidatePath("/perguntas");
+  revalidatePath("/duvidas");
   return { success: parsed.data.status === "active" ? "Plano ativado." : "Plano desativado." };
 }
 

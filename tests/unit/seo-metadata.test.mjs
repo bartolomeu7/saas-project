@@ -29,7 +29,7 @@ describe("S05 — modelo de títulos e descrições", () => {
 
   it("a home usa título absoluto (não duplica a marca) e mantém canonical e Open Graph", () => {
     const src = read("src/app/(public)/page.tsx");
-    assert.match(src, /const HOME_TITLE = "Prime Ges — Sistema de gestão online para pequenos negócios"/);
+    assert.match(src, /const HOME_TITLE = "Prime Ges — Sistema de gestão para pequenas empresas e MEI"/);
     assert.match(src, /title:\s*\{\s*absolute:\s*HOME_TITLE\s*\}/);
     assert.match(src, /alternates:\s*\{\s*canonical:\s*siteConfig\.url\s*\}/);
     assert.match(src, /openGraph:\s*publicOpenGraph\("\/"/);

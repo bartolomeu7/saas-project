@@ -20,13 +20,13 @@ describe("Título e descrição da home (Etapa 4)", () => {
     assert.ok(HOME_TITLE.length > 0);
     assert.match(HOME_TITLE, /Prime Ges/);
     assert.match(HOME_TITLE, /[Ss]istema de gestão/);
-    assert.match(HOME_TITLE, /pequenos negócios/);
+    assert.match(HOME_TITLE, /pequenas empresas/);
     assert.ok(HOME_TITLE.length <= 65, "tamanho " + HOME_TITLE.length);
   });
 
   it("a descrição explica produto, público e benefícios comprovados, sem promessas", () => {
     assert.ok(HOME_DESCRIPTION.length >= 110 && HOME_DESCRIPTION.length <= 170, "tamanho " + HOME_DESCRIPTION.length);
-    for (const term of ["MEI", "pequenos negócios", "vendas", "caixa", "estoque", "clientes", "financeiro"]) assert.ok(HOME_DESCRIPTION.includes(term), term);
+    for (const term of ["MEI", "pequenas empresas", "vendas", "caixa", "estoque", "clientes", "financeiro"]) assert.ok(HOME_DESCRIPTION.includes(term), term);
     assert.ok(!/garant|melhor|menor preço|grátis|aument|lucro|resultado/i.test(HOME_DESCRIPTION), "sem promessa nem condição comercial dinâmica");
     assert.ok(!/\d+[.,]\d{2}|R\$/.test(HOME_DESCRIPTION), "sem preços");
   });
@@ -51,13 +51,13 @@ describe("H1 e hierarquia", () => {
   it("há um único H1 na página e ele diz o que o produto é e para quem", () => {
     assert.equal((home.match(/<h1[\s>]/g) ?? []).length, 1);
     const h1 = home.match(/<h1[^>]*>([\s\S]*?)<\/h1>/)?.[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() ?? "";
-    assert.match(h1, /Sistema de gestão para pequenos negócios/);
+    assert.match(h1, /Sistema de gestão para pequenas empresas/);
     assert.match(h1, /da venda ao caixa/);
   });
 
   it("o H1 não repete a mesma palavra-chave de forma artificial", () => {
     const h1 = (home.match(/<h1[^>]*>([\s\S]*?)<\/h1>/)?.[1] ?? "").replace(/<[^>]+>/g, " ").toLowerCase();
-    for (const term of ["sistema", "gestão", "negócios"]) assert.ok((h1.match(new RegExp(term, "g")) ?? []).length <= 1, term);
+    for (const term of ["sistema", "gestão", "empresas"]) assert.ok((h1.match(new RegExp(term, "g")) ?? []).length <= 1, term);
   });
 });
 
