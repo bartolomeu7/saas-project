@@ -75,6 +75,9 @@ export const termsOfUse: LegalDocument = {
         "O pagamento dos planos pagos é feito por Pix, por meio de um prestador de pagamentos. O acesso do período é liberado depois da confirmação do pagamento. A confirmação pode levar alguns instantes e depende do prestador e do sistema bancário.",
         "Ao fim do período contratado, o acesso às funcionalidades é bloqueado até que um novo período seja contratado. A renovação depende de um novo pagamento: não há cobrança recorrente automática, nem cobrança sem a sua ação.",
         "Podemos alterar preços e condições de planos para períodos futuros. A mudança não afeta um período já pago.",
+        "Cada cobrança gera uma ordem de pagamento com número próprio, que serve de referência para atendimento. Tributos incidentes, quando houver, estão incluídos no preço exibido.",
+        "Se um pagamento for estornado, devolvido, contestado ou obtido por fraude, podemos encerrar o período de acesso correspondente. Cobrança em valor diferente do exibido não libera o acesso e é tratada conforme a seção \"Outros casos de reembolso\".",
+        "Licenças concedidas por nós como cortesia, teste estendido ou acesso \"vitalício\" valem nas condições informadas na concessão. \"Vitalício\" significa sem data de vencimento enquanto o serviço for oferecido, não pela vida da pessoa; é pessoal da empresa que o recebeu, não pode ser vendido ou transferido e pode ser encerrado por violação destes Termos ou pelo encerramento do serviço, na forma destes Termos.",
         "As regras de cancelamento, arrependimento e reembolso estão nas próximas seções e valem para todos os planos pagos.",
       ],
     },
@@ -114,10 +117,40 @@ export const termsOfUse: LegalDocument = {
       id: "reembolso-como",
       title: "Como pedir e como recebemos o reembolso",
       paragraphs: [
-        "Peça pelo canal de atendimento: " + CONTACT + ". Informe o e-mail da conta, o nome da empresa e a data e o valor do pagamento (ou o identificador da cobrança, se tiver). Para o arrependimento, basta dizer que quer desistir.",
+        "Peça na própria ordem de pagamento (Assinatura, Histórico, \"Preciso de ajuda com esta ordem\", assunto reembolso) ou pelo canal de atendimento: " + CONTACT + ". Informe o e-mail da conta, o nome da empresa e a data e o valor do pagamento (ou o identificador da cobrança, se tiver). Para o arrependimento, basta dizer que quer desistir.",
         "Respondemos o pedido em até 5 dias úteis. Aprovado o pedido, devolvemos o valor por Pix, para a conta de origem do pagamento, em 10 a 15 dias úteis contados da aprovação, sem desconto de tarifas. Se a conta de origem não puder receber a devolução, combinamos com você outra forma de pagamento em seu nome.",
         "Guardamos o registro do pedido e do estorno para a sua comprovação e para as obrigações fiscais, conforme a Política de Privacidade.",
         "Se não ficar satisfeito com a resposta, você pode procurar o Procon, a plataforma consumidor.gov.br ou o Poder Judiciário.",
+      ],
+    },
+    {
+      id: "responsabilidades-empresa",
+      title: "Responsabilidades da Empresa e do Usuário",
+      paragraphs: [
+        "A plataforma registra e organiza o que a Empresa informa. Por isso, são de responsabilidade da Empresa:",
+      ],
+      items: [
+        "a veracidade, a legalidade e a atualização das informações cadastradas, e a conferência dos resultados antes de tomar decisões ou fazer pagamentos;",
+        "as obrigações fiscais, contábeis, trabalhistas, previdenciárias, sanitárias e de defesa do consumidor do seu negócio;",
+        "as relações com os seus clientes, fornecedores e funcionários, inclusive preços, orçamentos, entregas, garantias, cobranças e atendimento, das quais a Prime Ges não é parte;",
+        "escolher quem acessa o ambiente e com qual função, retirar o acesso de quem sai e responder pelos atos dessas pessoas na plataforma;",
+        "proteger os próprios aparelhos, e-mails e senhas usados para entrar;",
+        "não registrar na plataforma números completos de cartão, senhas, dados de saúde, biometria ou outros dados pessoais sensíveis, inclusive em campos de anotação, anexos e no assistente.",
+      ],
+    },
+    {
+      id: "recursos-especificos",
+      title: "Regras de recursos específicos",
+      paragraphs: [
+        "Alguns recursos exigem cuidado adicional:",
+      ],
+      items: [
+        "Equipe e RH: cálculos de salário, férias, 13º, encargos, vales e presença são estimativas para controle interno. Não substituem holerite, eSocial, ponto oficial, contrato de trabalho, o contador ou o advogado.",
+        "Financeiro, caixa, estoque e relatórios: refletem os lançamentos feitos. Não são escrituração contábil nem documento fiscal.",
+        "Orçamentos e documentos gerados: são propostas e registros da Empresa, que responde pelo seu conteúdo.",
+        "Fidelidade e sorteios: a Empresa define as regras e responde por elas perante os participantes e as autoridades. Promoções com sorteio ou distribuição de prêmios podem exigir autorização prévia (Lei nº 5.768/1971 e regulamentação): obtê-la é obrigação da Empresa. A ferramenta apenas organiza participantes e registra o resultado e não é uma autorização.",
+        "Assistente de agenda: interpreta texto ou ditado de forma automatizada e pode errar. Confira o resumo antes de confirmar; o que for confirmado vale como lançamento da Empresa.",
+        "Pagamentos dos clientes da Empresa: a plataforma apenas registra a forma e a situação informadas; não recebe, não processa e não garante esses pagamentos.",
       ],
     },
     {
@@ -142,6 +175,8 @@ export const termsOfUse: LegalDocument = {
         "sobrecarregar a plataforma com automações ou acessos abusivos;",
         "usar o serviço para fraudes, lavagem de dinheiro ou qualquer atividade ilícita;",
         "criar várias contas para obter mais de um teste gratuito;",
+        "copiar telas, textos ou funcionamento para construir produto concorrente, ou extrair dados da plataforma em massa por robôs;",
+        "testar vulnerabilidades sem autorização escrita (falhas encontradas por acaso devem ser comunicadas ao canal de atendimento);",
         "compartilhar a conta de forma que prejudique a segurança ou ultrapasse os limites do plano.",
       ],
     },
@@ -151,7 +186,8 @@ export const termsOfUse: LegalDocument = {
       paragraphs: [
         "Os dados e conteúdos que você insere no Prime Ges (por exemplo, cadastros de clientes, produtos, vendas e movimentações) continuam sendo seus. Você nos autoriza a armazená-los e processá-los apenas para prestar o serviço, conforme a Política de Privacidade.",
         "Você é o responsável pelo conteúdo que cadastra e pelas informações de terceiros (como os seus clientes) que inclui na plataforma, inclusive por ter base legal para tratá-las e por atender os pedidos desses titulares. Nesse caso, a empresa usuária é a controladora desses dados e a Prime Ges atua em nome dela, como operadora.",
-        "Recomendamos que você mantenha cópias das informações que considerar críticas para o seu negócio. Depois do encerramento da conta, você pode pedir uma cópia dos seus dados dentro do prazo informado na Política de Privacidade.",
+        "Mantenha cópias próprias das informações críticas para o seu negócio e das que a lei obriga você a guardar: o Prime Ges não é o seu arquivo fiscal, contábil ou trabalhista. A exclusão da conta apaga os dados na hora e não pode ser desfeita; peça a sua cópia antes.",
+        "Podemos produzir estatísticas agregadas e anonimizadas, que não identificam pessoas nem empresas, para operar, proteger e melhorar o serviço.",
       ],
     },
     {
@@ -167,7 +203,10 @@ export const termsOfUse: LegalDocument = {
         "a Prime Ges adota as medidas de segurança descritas na Política de Privacidade e usa os prestadores (suboperadores) ali informados;",
         "se tomar conhecimento de um incidente de segurança que afete os dados da Empresa, a Prime Ges a avisa sem demora injustificada, com as informações disponíveis;",
         "a Prime Ges ajuda a Empresa a atender pedidos de titulares e da ANPD, dentro do que a plataforma permite;",
-        "ao excluir o ambiente, os dados são eliminados conforme a Política de Privacidade; a cópia deve ser pedida antes da exclusão.",
+        "ao excluir o ambiente, os dados são eliminados conforme a Política de Privacidade; a cópia deve ser pedida antes da exclusão;",
+        "a Prime Ges pode recusar instrução que pareça contrária à lei, explicando o motivo;",
+        "a Empresa autoriza o uso dos suboperadores informados na Política de Privacidade; mudanças relevantes na lista serão publicadas em nova versão;",
+        "a pedido, a Prime Ges presta informações razoáveis sobre o tratamento e a segurança, sem expor dados de terceiros nem enfraquecer a proteção da plataforma.",
       ],
     },
     {
@@ -195,6 +234,16 @@ export const termsOfUse: LegalDocument = {
       ],
     },
     {
+      id: "mudancas-servico",
+      title: "Evolução, manutenção e encerramento do serviço",
+      paragraphs: [
+        "Podemos corrigir, melhorar, incluir, alterar ou retirar funcionalidades. Se a retirada de uma funcionalidade essencial prejudicar de forma relevante um período já pago, você pode pedir o reembolso proporcional.",
+        "Manutenções podem deixar o serviço indisponível por algum tempo; quando programadas, procuramos avisar na plataforma. Funcionalidades em teste podem mudar ou ser retiradas sem aviso.",
+        "Se decidirmos encerrar o serviço, avisaremos com pelo menos 30 dias de antecedência, salvo impedimento legal ou de segurança, devolveremos o valor proporcional ao período não usado e atenderemos os pedidos de cópia dos dados feitos dentro desse prazo.",
+        "Não respondemos por indisponibilidade, atraso ou perda causados por caso fortuito ou força maior (art. 393 do Código Civil), falhas de energia ou internet, ataques que não pudessem ser razoavelmente evitados, atos de autoridade ou falhas exclusivas de terceiros, do Usuário ou da Empresa.",
+      ],
+    },
+    {
       id: "suporte",
       title: "Suporte e comunicações",
       paragraphs: [
@@ -218,7 +267,39 @@ export const termsOfUse: LegalDocument = {
       paragraphs: [
         "A Prime Ges responde pelos danos que causar por falha do serviço, nos termos da lei. Nas relações de consumo, nada nestes Termos reduz os direitos previstos no Código de Defesa do Consumidor.",
         "Nas demais relações, na extensão permitida pela lei e exceto em caso de dolo ou culpa grave, a Prime Ges não responde por lucros cessantes, perda de oportunidade ou danos indiretos decorrentes do uso ou da impossibilidade de uso da plataforma, nem por decisões de negócio tomadas com base nas informações nela registradas. A responsabilidade total fica limitada ao valor pago pela Empresa nos 12 meses anteriores ao fato.",
+        "Na extensão permitida pela lei, a Prime Ges também não responde por prejuízos causados por informações erradas ou incompletas cadastradas pelo Usuário, pelo descumprimento de obrigações fiscais, trabalhistas ou legais da Empresa, pelo uso de senhas ou aparelhos do Usuário por terceiros, por exclusões feitas pelo próprio Usuário ou pelo uso em desacordo com estes Termos.",
         "Nada nestes Termos exclui responsabilidades que a lei não permita limitar.",
+      ],
+    },
+    {
+      id: "indenizacao",
+      title: "Indenização",
+      paragraphs: [
+        "Na extensão permitida pela lei, e sem prejuízo dos direitos do consumidor, a Empresa deve ressarcir a Prime Ges por prejuízos, condenações, multas e despesas razoáveis, inclusive honorários, causados por reclamação de terceiro ou de autoridade que decorra de:",
+      ],
+      items: [
+        "dados cadastrados sem base legal ou em desacordo com a lei;",
+        "violação destes Termos ou da lei pela Empresa ou por pessoas a quem ela deu acesso;",
+        "relações da Empresa com os seus clientes, fornecedores e funcionários, inclusive promoções, sorteios e cobranças.",
+      ],
+    },
+    {
+      id: "comunicacoes-eletronicas",
+      title: "Comunicações e provas eletrônicas",
+      paragraphs: [
+        "O aceite eletrônico destes Termos, os registros de acesso, de operações, de pagamentos e de chamados mantidos pela plataforma são meios válidos de comprovação, admitida a prova em contrário.",
+        "Avisos podem ser feitos na própria plataforma ou no e-mail da conta, que você deve manter atualizado. Você fala conosco pelo canal indicado na seção \"Identificação do prestador\".",
+      ],
+    },
+    {
+      id: "disposicoes-gerais",
+      title: "Disposições gerais",
+      paragraphs: [
+        "A Prime Ges pode transferir estes Termos, com os direitos e deveres deles, à pessoa jurídica que vier a ser constituída para operar o serviço ou a quem a suceder na operação, avisando os Usuários e mantendo as condições do período já pago. O Usuário não pode transferir a conta sem autorização.",
+        "Se uma cláusula for considerada inválida, as demais continuam valendo. Deixar de exigir um direito não significa renunciar a ele.",
+        "Estes Termos não criam sociedade, vínculo de trabalho, representação ou franquia entre as partes. Junto com a Política de Privacidade e as condições exibidas na contratação, formam o acordo entre elas sobre o serviço.",
+        "Obrigações que por natureza continuam depois do fim do contrato, como propriedade intelectual, proteção de dados, responsabilidade, indenização e foro, permanecem válidas.",
+        "Antes de uma disputa, procure o canal de atendimento: tentaremos resolver de forma amigável. Isso não impede o consumidor de procurar o Procon, o consumidor.gov.br ou o Poder Judiciário.",
       ],
     },
     {

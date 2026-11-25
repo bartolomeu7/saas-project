@@ -15,6 +15,6 @@ update public.legal_document_versions
 
 insert into public.legal_document_versions (document_type, version, effective_at, content_hash, status)
 values
-  ('TERMS_OF_USE', '1.0.0-rc.4', '2026-11-25T00:00:00-03:00', 'd2832848e5aabbe2eb2394b2d8a020064f2809d1d32b69c41364f6531d7ac748', 'published'),
-  ('PRIVACY_POLICY', '1.0.0-rc.4', '2026-11-25T00:00:00-03:00', '490d7cc743ece66ec166b9130cf74ce16dd42170ccaafd0d7b0fb21ce4584c89', 'published')
+  ('TERMS_OF_USE', '1.0.0-rc.4', '2026-11-25T00:00:00-03:00', 'a8689c58edf09eed45d73aa21c02edd49a6e4f64d17a771c9e447fb5eecff3bf', 'published'),
+  ('PRIVACY_POLICY', '1.0.0-rc.4', '2026-11-25T00:00:00-03:00', '93fc9f74fe1ada4cc6891c1d275512da5cfcdd6228c99dbe28231fdee6cbc898', 'published')
 on conflict (document_type, version) do nothing;

@@ -61,6 +61,18 @@ export const privacyPolicy: LegalDocument = {
       ],
     },
     {
+      id: "origem",
+      title: "De onde vêm os dados e o que é obrigatório",
+      paragraphs: [
+        "Recebemos os dados de você; da empresa que cadastrou ou convidou você; do provedor de login social, quando você o escolhe; do prestador de pagamentos, depois de um Pix; e automaticamente, pelo uso do site e da plataforma.",
+      ],
+      items: [
+        "Obrigatórios para ter conta: nome, e-mail e aceite dos documentos. Sem eles não é possível criar o acesso.",
+        "Obrigatórios para contratar plano pago: CPF ou CNPJ do pagador e os dados que o prestador de pagamentos exigir. Sem eles a cobrança não é gerada.",
+        "Os demais campos são opcionais ou escolhidos pela empresa usuária; deixar de informar apenas limita o recurso correspondente.",
+      ],
+    },
+    {
       id: "finalidades",
       title: "Para que usamos os dados e em que base legal",
       paragraphs: [
@@ -96,6 +108,15 @@ export const privacyPolicy: LegalDocument = {
       ],
     },
     {
+      id: "acesso-interno",
+      title: "Quem pode ver os dados",
+      paragraphs: [
+        "Dentro de uma empresa, cada pessoa vê o que a sua função permite (proprietário, administrador ou funcionário).",
+        "Quem opera o Prime Ges pode consultar e ajustar dados de conta, empresa, assinatura, pagamento e chamados. O acesso a dados do ambiente de uma empresa se limita ao necessário para suporte, segurança, correção de falhas ou cumprimento de ordem legal, sob sigilo. Ações administrativas relevantes ficam registradas em auditoria.",
+        "Se a operação do Prime Ges passar a uma pessoa jurídica constituída para isso, ou a quem a suceder, os dados seguem junto, protegidos por esta Política, e os usuários serão avisados.",
+      ],
+    },
+    {
       id: "transferencias",
       title: "Transferências internacionais",
       paragraphs: [
@@ -107,7 +128,7 @@ export const privacyPolicy: LegalDocument = {
       id: "cookies",
       title: "Cookies e tecnologias semelhantes",
       paragraphs: [
-        "Usamos apenas cookies e armazenamento necessários ao funcionamento: cookies de sessão e segurança do provedor de login (Clerk) e uma preferência de interface (estado do menu lateral). Esses itens não dependem de consentimento porque são indispensáveis ao serviço que você pediu. Não usamos cookies de publicidade.",
+        "Usamos apenas cookies e armazenamento do navegador necessários ao funcionamento ou às preferências que você escolhe: cookies de sessão e segurança do provedor de login (Clerk), um cookie temporário (1 hora) que leva o seu aceite durante o cadastro, o estado do menu lateral, o tema claro ou escuro, a forma de recebimento usada na agenda e a marcação de avisos já vistos. Eles não dependem de consentimento porque são indispensáveis ao serviço que você pediu ou guardam uma escolha sua. Não usamos cookies de publicidade. Você pode apagá-los no navegador; sem os de login não é possível entrar.",
         "Para medir acessos e desempenho, o site usa o Cloudflare Web Analytics, que, segundo o fornecedor, não usa cookies nem armazenamento no seu navegador para isso.",
         "A fonte de texto é entregue pelo próprio site. A página inicial não carrega imagens de serviços externos.",
         "Se passarmos a usar cookies não essenciais, pediremos o seu consentimento antes, com opção de recusar, e atualizaremos esta Política.",
@@ -119,6 +140,7 @@ export const privacyPolicy: LegalDocument = {
       paragraphs: [
         "Adotamos medidas técnicas e organizacionais para proteger os dados, incluindo separação dos dados de cada empresa com regras de acesso no banco de dados, controle de acesso por funções, autenticação por provedor especializado, conexão criptografada (HTTPS), cabeçalhos de segurança no site e cópias de segurança diárias, com uma cópia criptografada.",
         "Nenhuma medida elimina todo o risco. Em caso de incidente de segurança que possa causar risco ou dano relevante, comunicaremos a Autoridade Nacional de Proteção de Dados (ANPD) e os titulares afetados, nos termos do art. 48 da LGPD e da regulamentação da ANPD, descrevendo o que aconteceu, os dados envolvidos e as medidas adotadas.",
+        "Você também protege os dados: use um e-mail seguro, não compartilhe o acesso, retire quem saiu da equipe e não registre em campos de anotação ou no assistente números de cartão, senhas ou dados sensíveis, como os de saúde.",
         "Se você encontrar uma falha de segurança, fale conosco pelo canal de contato de privacidade e não explore a falha além do necessário para demonstrá-la.",
       ],
     },

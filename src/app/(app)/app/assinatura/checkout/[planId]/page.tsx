@@ -122,6 +122,18 @@ export default async function CheckoutPage({
         />
       )}
 
+      <p className="text-center text-xs leading-5 text-muted-foreground">
+        Ao gerar o pagamento você concorda com os{" "}
+        <Link href="/termos-de-uso" target="_blank" className="font-medium text-foreground underline underline-offset-4">
+          Termos de Uso
+        </Link>
+        . Você pode desistir em até 7 dias, com reembolso integral:{" "}
+        <Link href="/politica-de-reembolso" target="_blank" className="font-medium text-foreground underline underline-offset-4">
+          Política de Reembolso
+        </Link>
+        .
+      </p>
+
       <Link href="/app/assinatura/planos" className="text-center text-sm text-muted-foreground underline-offset-4 hover:underline">
         ← Voltar para os planos
       </Link>

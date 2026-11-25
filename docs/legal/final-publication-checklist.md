@@ -12,6 +12,18 @@ Hashes publicados (SHA-256 do conteúdo), conferidos contra o repositório:
 > nome do encarregado, se houver, e a revisão jurídica (bases legais, transferência internacional, cláusulas de operador, foro).
 > O e-mail precisa **receber** mensagens: conferir o registro MX do domínio.
 
+## Reforço de 25/11/2026 (levar ao advogado)
+
+Cláusulas novas na rc.4, escritas sem revisão jurídica. Confirmar:
+- limites e exclusões de responsabilidade e o teto de 12 meses (nas relações de consumo, o CDC prevalece);
+- indenização pela Empresa e se alcança MEI tratado como consumidor;
+- definição de acesso "vitalício" e das licenças de cortesia;
+- transferência do contrato à pessoa jurídica que for constituída;
+- encerramento do serviço com 30 dias de aviso;
+- sorteios e fidelidade (Lei nº 5.768/1971): se a ferramenta de sorteio deve continuar disponível;
+- prazos que o suporte se compromete a cumprir (reembolso em 5 dias úteis, devolução em 10 a 15, liberação em 2): precisam ser cumpridos na prática;
+- guarda de registros de acesso (Marco Civil) e mecanismo de transferência internacional.
+
 ## 1. Dados empresariais que faltam (preencher com dado real, nunca estimado)
 
 | # | Campo | Onde aparece | Situação |
