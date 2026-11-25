@@ -5,6 +5,7 @@ import { createSessionClient } from "@/lib/supabase/server";
 import { getCurrentCompany } from "@/lib/companies/queries";
 import { confirmPaymentFromProvider } from "@/lib/billing/confirm-payment";
 import { checkBillingProfile, type BillingProfileInput } from "@/lib/billing/checkout-profile";
+import { paymentTicketSchema } from "@/lib/validations/billing";
 import type { SubscriptionPaymentStatus } from "@/types/billing";
 
 export interface PaymentStatusResult {
@@ -129,5 +130,39 @@ export async function saveBillingProfileAction(input: BillingProfileInput): Prom
   }
 
   revalidatePath("/app/configuracoes/empresa");
+  return { ok: true };
+}
+
+export interface OpenTicketResult {
+  ok: boolean;
+  error?: string;
+}
+
+/**
+ * Abre um chamado sobre uma ordem de pagamento. A autoridade é a função de banco open_payment_ticket (confere a empresa,
+ * o assunto, o tamanho, um chamado aberto por ordem e o limite diário) e grava a auditoria. Não muda pagamento nem acesso.
+ */
+export async function openPaymentTicketAction(input: { paymentId: string; reason: string; message: string }): Promise<OpenTicketResult> {
+  if (!(await getCurrentCompany())) return { ok: false, error: "Não autenticado." };
+
+  const parsed = paymentTicketSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+
+  const supabase = await createSessionClient();
+  const { error } = await supabase.rpc("open_payment_ticket", {
+    p_payment_id: parsed.data.paymentId,
+    p_reason: parsed.data.reason,
+    p_message: parsed.data.message,
+  });
+  if (error) {
+    // P0001 = recusa escrita por nós, em português; o resto não é mostrado ao cliente.
+    if (error.code === "P0001" && error.message !== "not authorized") return { ok: false, error: error.message };
+    console.error("[billing] não foi possível abrir o chamado:", error.message);
+    return { ok: false, error: "Não foi possível abrir o chamado agora. Tente novamente." };
+  }
+
+  revalidatePath(`/app/assinatura/pagamento/${parsed.data.paymentId}`);
+  revalidatePath("/admin");
+  revalidatePath("/admin/support");
   return { ok: true };
 }

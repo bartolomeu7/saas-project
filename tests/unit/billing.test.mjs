@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
-import { buildExternalReference, parseExternalReference } from "../../src/types/billing.ts";
+import { buildExternalReference, formatOrderCode, parseExternalReference } from "../../src/types/billing.ts";
+import { paymentTicketSchema } from "../../src/lib/validations/billing.ts";
 import { amountsMatch, rejectionMessage, toCents } from "../../src/lib/billing/amount.ts";
 
 /**
@@ -73,5 +74,32 @@ describe("botão \"Já paguei\"", () => {
     assert.match(source, /setCheckedPending\(result\.status === "pending"\)/);
     assert.match(source, /role="status"/);
     assert.match(source, /continua pendente/);
+  });
+});
+
+describe("ordem de pagamento e chamado", () => {
+  const paymentId = "82938e7a-b47e-4291-b9d1-29c01345c6a7";
+
+  it("mostra o código com seis dígitos sem cortar números grandes", () => {
+    assert.equal(formatOrderCode(7), "OP-000007");
+    assert.equal(formatOrderCode(12345678), "OP-12345678");
+  });
+
+  it("valida assunto, tamanho da mensagem e o id da ordem", () => {
+    assert.equal(paymentTicketSchema.safeParse({ paymentId, reason: "paid_not_released", message: "Paguei e não liberou." }).success, true);
+    for (const bad of [
+      { paymentId, reason: "hack", message: "mensagem com tamanho ok" },
+      { paymentId, reason: "other", message: "   curta   " },
+      { paymentId, reason: "other", message: "a".repeat(1001) },
+      { paymentId: "1", reason: "other", message: "mensagem com tamanho ok" },
+    ]) assert.equal(paymentTicketSchema.safeParse(bad).success, false, JSON.stringify(bad).slice(0, 60));
+  });
+
+  it("a ordem e o suporte aparecem na tela do pagamento e o histórico leva até elas", () => {
+    const page = readFileSync(new URL("../../src/app/(app)/app/assinatura/pagamento/[id]/page.tsx", import.meta.url), "utf8");
+    assert.match(page, /Ordem de pagamento/);
+    assert.match(page, /<PaymentSupport /);
+    const history = readFileSync(new URL("../../src/app/(app)/app/assinatura/historico/page.tsx", import.meta.url), "utf8");
+    assert.match(history, /Ver ordem/);
   });
 });

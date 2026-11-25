@@ -28,6 +28,7 @@ import {
 } from "@/lib/admin/queries";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { PAYMENT_METHOD_LABELS, PAYMENT_PROVIDER_LABELS, PAYMENT_STATUS_LABELS } from "@/types/admin";
+import { formatOrderCode } from "@/types/billing";
 
 export const metadata = { title: "Pagamentos" };
 
@@ -153,7 +154,7 @@ export default async function AdminPaymentsPage({
       <AdminFilters
         basePath="/admin/payments"
         search={search}
-        searchPlaceholder="Buscar por empresa ou referência"
+        searchPlaceholder="Buscar por ordem, empresa ou referência"
         selects={[
           {
             name: "status",
@@ -222,6 +223,7 @@ export default async function AdminPaymentsPage({
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Ordem</TableHead>
                 <TableHead>Data</TableHead>
                 <TableHead>Empresa</TableHead>
                 <TableHead>Plano</TableHead>
@@ -234,6 +236,14 @@ export default async function AdminPaymentsPage({
             <TableBody>
               {rows.map((payment) => (
                 <TableRow key={payment.payment_id}>
+                  <TableCell className="whitespace-nowrap">
+                    <Link
+                      href={`/admin/payments/${payment.payment_id}`}
+                      className="font-mono underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      {formatOrderCode(payment.order_number)}
+                    </Link>
+                  </TableCell>
                   <TableCell className="whitespace-nowrap">
                     <Link
                       href={`/admin/payments/${payment.payment_id}`}

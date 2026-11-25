@@ -395,6 +395,37 @@ export async function recordManualPaymentAction(companyId: string, formData: For
   };
 }
 
+/** ADMIN: responde e encerra um chamado sobre uma ordem de pagamento. Não muda pagamento nem acesso. */
+export async function resolvePaymentTicketAction(ticketId: string, paymentId: string, formData: FormData): Promise<ActionResult> {
+  await requirePlatformAdmin();
+
+  const parsed = z
+    .object({
+      ticketId: uuid,
+      paymentId: uuid,
+      reply: z.string({ required_error: "Escreva a resposta." }).min(3, "Escreva a resposta com pelo menos 3 caracteres.").max(1000, "Use no máximo 1000 caracteres."),
+    })
+    .safeParse({ ticketId, paymentId, reply: formString(formData, "reply") });
+  if (!parsed.success) return invalid(parsed.error.issues[0]);
+
+  const supabase = await createSessionClient();
+  const { error } = await supabase.rpc("resolve_platform_payment_ticket", {
+    p_ticket_id: parsed.data.ticketId,
+    p_reply: parsed.data.reply,
+  });
+
+  if (error) {
+    console.error("[admin] resolve_platform_payment_ticket() falhou:", error.message);
+    return { error: toUserMessage(error) };
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/support");
+  revalidatePath(`/admin/payments/${parsed.data.paymentId}`);
+  revalidatePath(`/app/assinatura/pagamento/${parsed.data.paymentId}`);
+  return { success: "Resposta enviada. O cliente vê na tela da ordem." };
+}
+
 /** SUPER_ADMIN: anula um pagamento manual (não apaga a linha e não reverte o acesso). */
 export async function voidManualPaymentAction(paymentId: string, formData: FormData): Promise<ActionResult> {
   await requireSuperAdmin();

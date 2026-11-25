@@ -22,6 +22,7 @@ import type {
   PlatformPlanHistoryRow,
   PlatformSettingRow,
   PlatformSubscriptionRow,
+  PlatformTicketRow,
   PlatformUserDetail,
   PlatformUserRow,
   PresenceState,
@@ -311,6 +312,21 @@ export async function getPlatformPaymentDetail(paymentId: string): Promise<Platf
     fail("get_platform_payment_detail", error.message, "Não foi possível carregar o pagamento.");
   }
   return data as unknown as PlatformPaymentDetail;
+}
+
+export async function listPlatformTickets(status: "open" | "resolved" | null, page = 1): Promise<PlatformListResult<PlatformTicketRow>> {
+  const supabase = await createSessionClient();
+  const { data, error } = await supabase.rpc("list_platform_payment_tickets", {
+    // O SQL aceita NULL (= todos); o gerador de tipos não expressa nullability de argumentos.
+    p_status: status as unknown as string,
+    p_limit: ADMIN_PAGE_SIZE,
+    p_offset: offsetFor(page),
+  });
+
+  if (error) fail("list_platform_payment_tickets", error.message, "Não foi possível carregar os chamados.");
+
+  const rows = (data ?? []) as unknown as PlatformTicketRow[];
+  return { rows, total: rows[0]?.total_count ?? 0 };
 }
 
 export async function listPlatformPlans(): Promise<PlatformPlanRow[]> {

@@ -1421,6 +1421,77 @@ export type Database = {
           },
         ]
       }
+      payment_support_tickets: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          message: string
+          opened_by: string | null
+          payment_id: string
+          reason: string
+          reply: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          message: string
+          opened_by?: string | null
+          payment_id: string
+          reason: string
+          reply?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          message?: string
+          opened_by?: string | null
+          payment_id?: string
+          reason?: string
+          reply?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_support_tickets_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_support_tickets_opened_by_fkey"
+            columns: ["opened_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "payment_support_tickets_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_support_tickets_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       payment_events: {
         Row: {
           created_at: string
@@ -2728,6 +2799,7 @@ export type Database = {
           id: string
           method: string | null
           notes: string | null
+          order_number: number
           paid_at: string | null
           payer_document: string | null
           payer_name: string | null
@@ -4334,6 +4406,33 @@ export type Database = {
           total_count: number
         }[]
       }
+      list_platform_payment_tickets: {
+        Args: { p_limit?: number; p_offset?: number; p_status?: string }
+        Returns: {
+          amount: number
+          company_id: string
+          company_name: string
+          created_at: string
+          message: string
+          opened_by_email: string
+          order_number: number
+          payment_id: string
+          payment_status: Database["public"]["Enums"]["subscription_payment_status"]
+          plan_name: string
+          reason: string
+          status: string
+          ticket_id: string
+          total_count: number
+        }[]
+      }
+      open_payment_ticket: {
+        Args: { p_message: string; p_payment_id: string; p_reason: string }
+        Returns: string
+      }
+      resolve_platform_payment_ticket: {
+        Args: { p_reply: string; p_ticket_id: string }
+        Returns: undefined
+      }
       list_platform_payments: {
         Args: {
           p_from?: string
@@ -4355,6 +4454,7 @@ export type Database = {
           currency: string
           external_reference: string
           method: string
+          order_number: number
           paid_at: string
           payment_id: string
           plan_code: string

@@ -5,6 +5,7 @@ import {
   CreditCard,
   LayoutDashboard,
   Layers,
+  LifeBuoy,
   Plug,
   ReceiptText,
   ScrollText,
@@ -52,6 +53,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     items: [
       { label: "Assinaturas", href: "/admin/subscriptions", icon: CreditCard },
       { label: "Pagamentos", href: "/admin/payments", icon: ReceiptText },
+      { label: "Suporte", href: "/admin/support", icon: LifeBuoy },
     ],
   },
   {

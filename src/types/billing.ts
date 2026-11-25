@@ -47,6 +47,36 @@ export const SUBSCRIPTION_PAYMENT_STATUS_LABELS: Record<SubscriptionPaymentStatu
   refunded: "Estornado",
 };
 
+/** Código da ordem de pagamento mostrado ao cliente e à equipe (espelha a função SQL payment_order_code). */
+export function formatOrderCode(orderNumber: number): string {
+  return `OP-${String(orderNumber).padStart(6, "0")}`;
+}
+
+export const TICKET_REASONS = ["paid_not_released", "pix_problem", "wrong_charge", "refund", "other"] as const;
+export type TicketReason = (typeof TICKET_REASONS)[number];
+
+export const TICKET_REASON_LABELS: Record<TicketReason, string> = {
+  paid_not_released: "Paguei e o acesso não foi liberado",
+  pix_problem: "Não consigo pagar o Pix",
+  wrong_charge: "Valor ou plano errado",
+  refund: "Quero o estorno",
+  other: "Outro assunto",
+};
+
+export const TICKET_MESSAGE_MIN = 10;
+export const TICKET_MESSAGE_MAX = 1000;
+
+/** O que o cliente lê de payment_support_tickets (sem os identificadores internos de quem abriu/resolveu). */
+export interface PaymentTicket {
+  id: string;
+  reason: TicketReason;
+  message: string;
+  status: "open" | "resolved";
+  reply: string | null;
+  resolved_at: string | null;
+  created_at: string;
+}
+
 /** Espelha a tabela public.plans. */
 export interface Plan {
   id: string;
@@ -154,6 +184,8 @@ export interface CompanyEntitlements {
 /** Espelha a tabela public.subscription_payments. */
 export interface SubscriptionPayment {
   id: string;
+  /** Número da ordem de pagamento (sequencial, gerado e protegido pelo banco). */
+  order_number: number;
   company_id: string;
   subscription_id: string | null;
   plan_id: string;
