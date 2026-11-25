@@ -15,9 +15,11 @@
 
 ## O que só o dono da conta faz
 
-1. **Google Search Console** (search.google.com/search-console): adicionar a propriedade do tipo *Domínio* `primeges.com.br`, confirmar pelo registro TXT no DNS do Cloudflare, enviar `https://primeges.com.br/sitemap.xml` em *Sitemaps* e pedir a indexação da home e de `/duvidas` em *Inspeção de URL*.
+1. **Google Search Console** (search.google.com/search-console): propriedade *Prefixo do URL* `https://primeges.com.br/`, verificada por *Arquivo HTML* (já está no site). Depois, enviar `sitemap.xml` em *Sitemaps* e pedir a indexação da home e de `/duvidas` em *Inspeção de URL*.
 2. **Cloudflare**: domínio → *Security* → *Settings* → filtro *Bot traffic* → *AI Crawler and Agent access policies* → deixar **Agent** e **Search** como *Allow* e salvar. Depois, conferir que o `robots.txt` não tem mais o bloco "AI Agents". *Training* é escolha do dono (usar ou não o conteúdo para treinar modelos).
 3. **Bing Webmaster Tools** (bing.com/webmasters): importar do Search Console. O Bing também alimenta buscas de assistentes de IA.
+
+A verificação usa o arquivo `public/google73ccdd603c590fb0.html` (propriedade "Prefixo do URL" `https://primeges.com.br/`). Ele precisa continuar no site.
 
 ## O que esperar
 
