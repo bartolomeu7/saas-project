@@ -6,7 +6,7 @@ import { MetricCard } from "@/components/app/metric-card";
 import { PageHeader } from "@/components/app/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { getPlatformDashboard, requirePlatformAdmin } from "@/lib/admin/queries";
+import { getPlatformDashboard, listPlatformTickets, requirePlatformAdmin } from "@/lib/admin/queries";
 import { formatCurrency, formatDateTime } from "@/lib/format";
 
 export const metadata = { title: "Dashboard" };
@@ -31,7 +31,11 @@ function deltaLabel(current: number, previous: number): string {
  * ativas) e vem rotulada como estimativa. Nada é fictício.
  */
 export default async function AdminDashboardPage() {
-  const [admin, dashboard] = await Promise.all([requirePlatformAdmin(), getPlatformDashboard()]);
+  const [admin, dashboard, openTickets] = await Promise.all([
+    requirePlatformAdmin(),
+    getPlatformDashboard(),
+    listPlatformTickets("open"),
+  ]);
   const { users, presence, companies, subscriptions, revenue, webhooks_24h: webhooks } = dashboard;
 
   return (
@@ -158,6 +162,13 @@ export default async function AdminDashboardPage() {
             <CardDescription>Itens que pedem ação do time.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-2 text-sm">
+            <Link
+              href="/admin/support"
+              className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2 hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <span>Chamados de suporte abertos</span>
+              <Badge variant={openTickets.total > 0 ? "danger" : "muted"}>{openTickets.total}</Badge>
+            </Link>
             <Link
               href="/admin/subscriptions?expiring=7&sort=expires_asc"
               className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2 hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"

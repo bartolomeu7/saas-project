@@ -6,7 +6,9 @@ import { notFound } from "next/navigation";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getCurrentCompany } from "@/lib/companies/queries";
-import { getSubscriptionPaymentById } from "@/lib/billing/queries";
+import { getPaymentTickets, getSubscriptionPaymentById } from "@/lib/billing/queries";
+import { PaymentSupport } from "@/components/app/payment-support";
+import { formatOrderCode } from "@/types/billing";
 import { CopyPixButton } from "@/components/app/copy-pix-button";
 import { PaymentStatusPoller } from "@/components/app/payment-status-poller";
 import { CardCheckout } from "@/components/app/card-checkout";
@@ -42,6 +44,9 @@ export default async function PaymentPage({ params: paramsPromise }: { params: P
   }
 
   const isCard = payment.charge_method === "card";
+  const title = isCard ? "Pagamento com cartão" : payment.provider === "manual" ? "Pagamento registrado" : "Pagamento via Pix";
+  const orderCode = formatOrderCode(payment.order_number);
+  const tickets = await getPaymentTickets(current.company.id, payment.id);
   const open = payment.status === "pending";
   const showPix = !isCard && open;
 
@@ -54,8 +59,11 @@ export default async function PaymentPage({ params: paramsPromise }: { params: P
 
   return (
     <div className="mx-auto flex max-w-lg flex-col gap-6 px-4 py-6 sm:px-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">{isCard ? "Pagamento com cartão" : "Pagamento via Pix"}</h1>
+      <div className="flex flex-col gap-2">
+        <p className="w-fit rounded-md border border-border bg-secondary px-3 py-1.5 text-sm text-foreground">
+          Ordem de pagamento <span className="select-all font-mono font-semibold">{orderCode}</span>
+        </p>
+        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
         <p className="text-sm text-muted-foreground">{payment.plan_name}</p>
       </div>
 
@@ -92,6 +100,8 @@ export default async function PaymentPage({ params: paramsPromise }: { params: P
           </Link>
         )}
       </div>
+
+      <PaymentSupport paymentId={payment.id} orderCode={orderCode} tickets={tickets} />
     </div>
   );
 }

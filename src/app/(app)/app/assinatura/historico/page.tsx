@@ -3,6 +3,7 @@ import { formatDate } from "@/lib/format";
 import Link from "next/link";
 import { getCurrentCompany } from "@/lib/companies/queries";
 import { getSubscriptionPayments } from "@/lib/billing/queries";
+import { formatOrderCode } from "@/types/billing";
 import { SubscriptionPaymentStatusBadge } from "@/components/app/subscription-payment-status-badge";
 import { EmptyState } from "@/components/app/empty-state";
 import { PageHeader } from "@/components/app/page-header";
@@ -49,6 +50,7 @@ export default async function BillingHistoryPage() {
                 <TableRow key={payment.id} className="border-b border-border last:border-0">
                   <TableCell className="px-4 py-3 font-medium text-foreground">
                     {payment.plan_name}
+                    <span className="block font-mono text-xs font-normal text-muted-foreground">{formatOrderCode(payment.order_number)}</span>
                     <span className="block text-xs font-normal text-muted-foreground sm:hidden">
                       {formatDate(payment.created_at)}
                     </span>
@@ -63,14 +65,13 @@ export default async function BillingHistoryPage() {
                     {formatDate(payment.created_at)}
                   </TableCell>
                   <TableCell className="px-4 py-3 text-right">
-                    {payment.status === "pending" && (
-                      <Link
-                        href={`/app/assinatura/pagamento/${payment.id}`}
-                        className="text-sm font-medium text-primary hover:underline"
-                      >
-                        Ver Pix
-                      </Link>
-                    )}
+                    <Link
+                      href={`/app/assinatura/pagamento/${payment.id}`}
+                      className="text-sm font-medium text-primary hover:underline"
+                    >
+                      {payment.status === "pending" ? "Ver Pix" : "Ver ordem"}
+                      <span className="sr-only"> {formatOrderCode(payment.order_number)}</span>
+                    </Link>
                   </TableCell>
                 </TableRow>
               ))}

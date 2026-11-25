@@ -9,12 +9,13 @@ import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { voidManualPaymentAction } from "@/lib/admin/actions";
+import { resolvePaymentTicketAction, voidManualPaymentAction } from "@/lib/admin/actions";
 import { parseUuid } from "@/lib/admin/params";
 import { getPlatformPaymentDetail, requirePlatformAdmin } from "@/lib/admin/queries";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { PAYMENT_METHOD_LABELS } from "@/types/admin";
+import { formatOrderCode, TICKET_REASON_LABELS } from "@/types/billing";
 import { ReverifyPaymentButton } from "./reverify-button";
 
 export const metadata = { title: "Pagamento" };
@@ -39,7 +40,8 @@ export default async function AdminPaymentDetailPage({ params }: { params: Promi
   const detail = await getPlatformPaymentDetail(paymentId);
   if (!detail) notFound();
 
-  const { payment, events, deliveries } = detail;
+  const { payment, events, deliveries, tickets } = detail;
+  const orderCode = formatOrderCode(payment.order_number);
   const canVoid = admin.role === "super_admin" && payment.provider === "manual" && payment.status === "paid";
   const canReverify = (payment.provider === "syncpay" || payment.provider === "misticpay") && payment.status !== "paid";
 
@@ -48,7 +50,7 @@ export default async function AdminPaymentDetailPage({ params }: { params: Promi
       <PageHeader
         eyebrow="Financeiro"
         title={formatCurrency(payment.amount)}
-        description={`${payment.company_name} · ${payment.plan_name}`}
+        description={`Ordem ${orderCode} · ${payment.company_name} · ${payment.plan_name}`}
         actions={
           <Link href="/admin/payments" className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "gap-1.5")}>
             <ArrowLeft className="size-4" strokeWidth={1.75} /> Pagamentos
@@ -63,6 +65,9 @@ export default async function AdminPaymentDetailPage({ params }: { params: Promi
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <dl className="flex flex-col gap-2">
+            <DetailRow label="Ordem de pagamento">
+              <span className="select-all font-mono font-medium">{orderCode}</span>
+            </DetailRow>
             <DetailRow label="Status">
               <PaymentStatusBadge status={payment.status} />
             </DetailRow>
@@ -122,6 +127,44 @@ export default async function AdminPaymentDetailPage({ params }: { params: Promi
           )}
         </CardContent>
       </Card>
+
+      {tickets.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Chamados desta ordem</CardTitle>
+            <CardDescription>Responder encerra o chamado. Não altera o pagamento nem o acesso: use “Reverificar” ou os ajustes da empresa.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            {tickets.map((ticket) => (
+              <div key={ticket.id} className="flex flex-col gap-2 rounded-md border border-border p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-medium text-foreground">{TICKET_REASON_LABELS[ticket.reason] ?? ticket.reason}</p>
+                  <Badge variant={ticket.status === "open" ? "warning" : "success"}>{ticket.status === "open" ? "Aberto" : "Resolvido"}</Badge>
+                </div>
+                <p className="whitespace-pre-wrap break-words text-sm text-foreground">{ticket.message}</p>
+                <p className="text-xs text-muted-foreground">
+                  {formatDateTime(ticket.created_at)}
+                  {ticket.opened_by_email ? ` · ${ticket.opened_by_email}` : ""}
+                </p>
+                {ticket.reply && (
+                  <p className="whitespace-pre-wrap break-words rounded-md bg-secondary px-3 py-2 text-sm text-foreground">{ticket.reply}</p>
+                )}
+                {ticket.status === "open" && (
+                  <AdminActionDialog
+                    triggerLabel="Responder e resolver"
+                    triggerClassName="w-fit"
+                    title={`Responder chamado da ordem ${orderCode}`}
+                    description="O cliente lê a resposta na tela da ordem de pagamento."
+                    submitLabel="Enviar resposta"
+                    action={resolvePaymentTicketAction.bind(null, ticket.id, payment.id)}
+                    fields={[{ type: "textarea", name: "reply", label: "Resposta", required: true, maxLength: 1000 }]}
+                  />
+                )}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="overflow-hidden">

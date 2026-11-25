@@ -1,5 +1,5 @@
 import type { BusinessType, CompanyRole, CompanyStatus } from "@/types/company";
-import type { SubscriptionStatus } from "@/types/billing";
+import type { PaymentTicket, SubscriptionStatus, TicketReason } from "@/types/billing";
 import type { UserRole, UserStatus } from "@/types/profile";
 
 /**
@@ -182,6 +182,7 @@ export interface PlatformPaymentRow {
   created_at: string;
   recorded_by_email: string | null;
   total_count: number;
+  order_number: number;
 }
 
 export interface PaymentsSummary {
@@ -353,6 +354,7 @@ export interface PlatformCompanyDetail {
 export interface PlatformPaymentDetail {
   payment: {
     id: string;
+    order_number: number;
     company_id: string;
     company_name: string;
     plan_code: string;
@@ -377,7 +379,26 @@ export interface PlatformPaymentDetail {
   };
   events: { event_id: string; event_type: string; processed: boolean; processed_at: string | null; created_at: string }[];
   deliveries: { provider: string; outcome: string; detail: string | null; received_at: string }[];
+  tickets: (PaymentTicket & { opened_by_email: string | null })[];
   audit: AuditEntry[];
+}
+
+/** Linha de list_platform_payment_tickets(). */
+export interface PlatformTicketRow {
+  ticket_id: string;
+  payment_id: string;
+  order_number: number;
+  company_id: string;
+  company_name: string;
+  plan_name: string;
+  amount: number;
+  payment_status: string;
+  reason: TicketReason;
+  message: string;
+  status: "open" | "resolved";
+  opened_by_email: string | null;
+  created_at: string;
+  total_count: number;
 }
 
 export interface PlatformPlanRow {

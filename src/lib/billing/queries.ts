@@ -5,6 +5,7 @@ import { createPublicClient } from "@/lib/supabase/public";
 import { normalizePublicPlan } from "@/lib/billing/pricing-display";
 import type {
   CompanyEntitlements,
+  PaymentTicket,
   Plan,
   PublicPlan,
   Subscription,
@@ -136,4 +137,18 @@ export async function getSubscriptionPaymentById(
 
   if (error || !data) return null;
   return mapPaymentRow(data as SubscriptionPaymentRow);
+}
+
+/** Chamados da empresa sobre uma ordem de pagamento, do mais novo para o mais antigo. `null` = não deu para ler. */
+export async function getPaymentTickets(companyId: string, paymentId: string): Promise<PaymentTicket[] | null> {
+  const supabase = await createSessionClient();
+  const { data, error } = await supabase
+    .from("payment_support_tickets")
+    .select("id, reason, message, status, reply, resolved_at, created_at")
+    .eq("company_id", companyId)
+    .eq("payment_id", paymentId)
+    .order("created_at", { ascending: false });
+
+  if (error) return null;
+  return (data ?? []) as PaymentTicket[];
 }
