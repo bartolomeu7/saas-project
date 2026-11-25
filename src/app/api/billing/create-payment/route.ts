@@ -193,6 +193,7 @@ export async function POST(request: Request) {
       console.error(`[billing] ${gateway} recusou a criação do Pix${code}. ${note}`);
     }
     const message = providerError ? "Não foi possível gerar o Pix agora. Tente novamente em instantes." : "Erro inesperado ao gerar o pagamento.";
-    return NextResponse.json({ error: message }, { status: 502 });
+    // 503, nunca 502/504: a Cloudflare troca o corpo desses dois pela página dela e o cliente perde a mensagem.
+    return NextResponse.json({ error: message }, { status: 503 });
   }
 }

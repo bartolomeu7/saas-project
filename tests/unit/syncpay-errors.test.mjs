@@ -32,6 +32,10 @@ describe("motivo da recusa da SyncPay (log e observações do pagamento)", () =>
     assert.equal(safeProviderMessage(null), "");
   });
 
+  it("as rotas de pagamento não respondem 502/504 (a Cloudflare descartaria a mensagem de erro)", () => {
+    for (const route of ["create-payment", "pay-card"]) assert.equal(/status: 50[24]\b/.test(read(`src/app/api/billing/${route}/route.ts`)), false, route);
+  });
+
   it("as rotas registram o motivo e a falha de Pix fica nas observações do pagamento", () => {
     const create = read("src/app/api/billing/create-payment/route.ts");
     const card = read("src/app/api/billing/pay-card/route.ts");

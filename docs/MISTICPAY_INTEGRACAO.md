@@ -33,15 +33,17 @@ ignorados — **não há suspensão automática de acesso por MED** (igual à Sy
 4. Recriar o container web para ler as variáveis (`docker compose up -d web`).
 5. Em **/admin/integrations** o cartão da MisticPay deve sair de “Sem credenciais”. Teste com um plano de R$ 1,00 (não há sandbox).
 
-## Pendências e riscos conhecidos (não verificáveis sem uma cobrança real)
+## Verificado com a conta real (25/11/2026)
 
-- **CNPJ**: a documentação diz “Documento **CPF** do pagador”. Empresas com CNPJ podem ser recusadas (`VALIDATION_ERROR`); o motivo exato
-  fica nas observações do pagamento (/admin/payments). Se recusar, decidir entre pedir o CPF do responsável ou outro gateway.
-- **Identificador**: o webhook de exemplo traz o id numérico da MisticPay; o de reembolso, o `transactionId` do cliente. A rota aceita os
-  dois (busca pelo id gravado e, se for um UUID, pelo id do pagamento) e a consulta tenta os dois identificadores.
-- **Unidade do valor**: o `check` documenta reais (`value: 1.12`); a criação devolve `transactionAmount: 455` (centavos). O código compara o
-  valor do `check` em reais: se a conta devolver centavos, a confirmação é **recusada com AMOUNT_MISMATCH** (nunca concede errado) e aparece
-  no painel — corrigir então.
+- **Valor mínimo (não documentado)**: R$ 1,00 e R$ 2,00 são recusados com HTTP 500 `Erro ao criar transação no adquirente`; R$ 3,00, 4, 5,
+  20 e 89 foram criados. A taxa informada num Pix de R$ 5,00 foi R$ 1,40. Plano de teste: use **R$ 5,00**.
+- **CNPJ** como pagador é aceito na criação.
+- O `transactionId` devolvido é o nosso (UUID) e o `check` o encontra; `value` vem em **reais**.
+- Em 22/11, com a conta recém-criada, R$ 5,00 e R$ 10,00 também davam o mesmo erro; em 25/11 passaram sem mudança no pedido.
+
+## Pendências (só um pagamento real prova)
+
+- **Webhook** de pagamento confirmado até a liberação do acesso.
 - **Retentativas**: a documentação não diz se a MisticPay repete o webhook em caso de erro. Se perder um aviso, “Já paguei” e “Reconciliar
   pendentes” confirmam pela consulta.
 - **Taxa**: a MisticPay desconta `fee` do saldo da conta; o plano é cobrado pelo valor cheio.
