@@ -119,15 +119,15 @@ describe("S14 — noindex nas áreas privadas", () => {
 
 describe("S01 — FAQ renderizado no servidor", () => {
   it("as respostas usam forceMount e o componente as esconde só por CSS", () => {
-    assert.match(read("src/app/(public)/page.tsx"), /<AccordionContent forceMount /);
+    assert.match(read("src/components/marketing/sections.tsx"), /<AccordionContent forceMount /);
     const acc = read("src/components/ui/accordion.tsx");
     assert.match(acc, /props\.forceMount && "data-\[state=closed\]:hidden"/);
   });
 
-  it("o FAQ mantém as 9 perguntas originais e tem 1 nova (para quem é indicado), todas únicas", () => {
+  it("o FAQ mantém as 9 perguntas originais e as novas (público, agenda e orçamentos, RH, ordem de pagamento), todas únicas", () => {
     const questions = [...read("src/config/marketing.ts").matchAll(/question:\s*"([^"]+)"/g)].map((m) => m[1]);
-    assert.equal(questions.length, 10);
-    assert.equal(new Set(questions).size, 10);
+    assert.equal(questions.length, 13);
+    assert.equal(new Set(questions).size, 13);
     for (const original of ["O que é o Prime Ges?", "Preciso instalar algum programa?", "Como funciona o teste grátis?", "Como é feito o pagamento?", "O que acontece quando o período do plano termina?", "Posso ter outras pessoas usando a minha empresa?", "Os dados da minha empresa ficam separados dos de outras?", "Há suporte?", "Onde leio os Termos de Uso e a Política de Privacidade?"]) {
       assert.ok(questions.includes(original), original);
     }

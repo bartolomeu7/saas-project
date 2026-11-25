@@ -1,30 +1,17 @@
 import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Check, Sparkles } from "lucide-react";
+import { ArrowRight, Check } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
 import { publicOpenGraph, siteConfig } from "@/config/site";
-import { SiteHeader } from "@/components/marketing/site-header";
-import { SiteFooter } from "@/components/marketing/site-footer";
-import { PricingCard } from "@/components/marketing/pricing-card";
-import { SectionHeading } from "@/components/marketing/section-heading";
-import { Reveal, ScrollProgress } from "@/components/marketing/motion";
-import {
-  BENTO_CELLS,
-  CREDIBILITY_ITEMS,
-  DIFFERENTIALS,
-  FEATURES,
-  type FeatureModule,
-  HOW_IT_WORKS_STEPS,
-  PROBLEMS,
-  SEGMENTS,
-  buildFaq,
-} from "@/config/marketing";
-import { HomeHeroMockup, HomeProductShowcase } from "@/components/marketing/home-product-showcase";
+import { MarketingShell } from "@/components/marketing/shell";
+import { Reveal } from "@/components/marketing/motion";
+import { MarketingPhoto } from "@/components/marketing/photo";
+import { HeroLive } from "@/components/marketing/hero-live";
+import { SaleFlow } from "@/components/marketing/sale-flow";
+import { FaqList, FinalCta, Heading, ModuleTabs, PricingGrid, PrimaryCta, modulesByName } from "@/components/marketing/sections";
+import { DIFFERENTIALS, FEATURES, HOW_IT_WORKS_STEPS, PROBLEMS, SEGMENTS, buildFaq } from "@/config/marketing";
 import { getPublicPlans } from "@/lib/billing/queries";
 import { faqFacts, toPricingView } from "@/lib/billing/pricing-display";
 import { JsonLd } from "@/components/seo/json-ld";
@@ -47,20 +34,9 @@ export const metadata: Metadata = {
   openGraph: publicOpenGraph("/", { title: HOME_TITLE, description: SEO_DESCRIPTION }),
 };
 
-const SEGMENT_MODULES: Record<string, string[]> = {
-  Padarias: ["Produtos", "Estoque", "Vendas", "Caixa"],
-  "Mercadinhos e mercearias": ["Produtos", "Estoque", "Vendas", "Caixa"],
-  Restaurantes: ["Clientes", "Vendas", "Produtos", "Caixa"],
-  Lanchonetes: ["Clientes", "Vendas", "Produtos", "Caixa"],
-  "Lava-rápidos": ["Clientes", "Serviços", "Vendas", "Caixa"],
-  "Estética automotiva": ["Clientes", "Serviços", "Fidelidade", "Caixa"],
-};
-
 const AVAILABLE_FEATURE_NAMES = FEATURES.filter((feature) => feature.available).map((feature) => feature.name);
-// Só módulos disponíveis aparecem nos cartões da home (nunca um "em breve" apresentado como pronto).
-const FEATURE_BY_NAME = new Map(FEATURES.filter((feature) => feature.available).map((feature) => [feature.name, feature]));
 
-// Dados estruturados (JSON-LD) só aqui: a home é a única página pública com a apresentação do produto. Sem `offers`,
+// Dados estruturados (JSON-LD) só aqui: a home é a página de apresentação do produto. Sem `offers`,
 // avaliações nem dados da empresa pendentes (ver src/lib/seo/structured-data.ts).
 const STRUCTURED_DATA = buildStructuredData({
   origin: siteConfig.url,
@@ -70,519 +46,238 @@ const STRUCTURED_DATA = buildStructuredData({
   logoSize: 512,
   featureNames: AVAILABLE_FEATURE_NAMES,
 });
-const SECTION = "py-16 sm:py-24";
-const iconTile = "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/20";
 
-function enter(delayMs: number): CSSProperties {
-  return { "--enter-delay": delayMs + "ms" } as CSSProperties;
+// Onde cada anotação "solta" começa antes de se juntar às outras (seção do problema).
+const SCATTERED = [
+  { x: "-34px", y: "-18px", r: "-5deg" },
+  { x: "46px", y: "4px", r: "4deg" },
+  { x: "-22px", y: "30px", r: "-3deg" },
+];
+
+function MoreLink({ href, children }: { href: string; children: string }) {
+  return (
+    <Link href={href} className="site-link mt-10 inline-flex min-h-11 items-center gap-2 text-base font-semibold text-foreground">
+      {children}
+      <ArrowRight className="h-4 w-4" aria-hidden="true" />
+    </Link>
+  );
 }
 
 export default async function HomePage() {
   const catalog = await getPublicPlans();
   const views = catalog.map(toPricingView);
-  const gridPlans = views.filter((view) => view.kind !== "custom" && view.kind !== "lifetime");
-  const customPlan = views.find((view) => view.kind === "custom") ?? null;
   const trialPlan = catalog.find((plan) => plan.kind === "trial");
   const trialLabel = trialPlan ? faqFacts(catalog).trialLabel : null;
   const faq = buildFaq(faqFacts(catalog));
+  const facts = [trialLabel ? "Teste grátis de " + trialLabel : null, "Pagamento por Pix", "Sem instalar nada"].filter(
+    (fact): fact is string => Boolean(fact),
+  );
 
   return (
-    <>
+    <MarketingShell>
       <JsonLd data={STRUCTURED_DATA} />
-      <ScrollProgress />
-      <SiteHeader />
 
-      <main id="conteudo" tabIndex={-1} className="outline-none">
-        {/* HERO — o que é, para quem, que problema resolve e qual a ação */}
-        <section id="topo" className="home-v2-hero" aria-labelledby="hero-title">
-          <div className="home-v2-hero__grid" aria-hidden="true" />
-          <div className="home-v2-hero__orb home-v2-hero__orb--one" aria-hidden="true" />
-          <div className="home-v2-hero__orb home-v2-hero__orb--two" aria-hidden="true" />
+      {/* HERO — o que é, para quem, que problema resolve e qual a ação */}
+      <section id="topo" className="site-hero" aria-labelledby="hero-title">
+        <div className="container grid items-center gap-14 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,.95fr)]">
+          <div className="flex flex-col items-start gap-7">
+            <p className="prime-enter text-sm font-semibold text-[hsl(var(--site-accent))]">Para MEI, microempresas e pequenos negócios</p>
 
-          <div className="container relative z-10">
-            <div className="home-v2-hero__layout">
-              <div className="home-v2-hero__copy">
-                <span className="home-v2-kicker prime-enter" style={enter(0)}>
-                  <i />
-                  Para MEI, microempresas e pequenos negócios
-                  <Sparkles size={13} aria-hidden="true" />
-                </span>
+            <h1 id="hero-title" className="site-h1">
+              <span className="site-mask">
+                <span>Sistema de gestão para pequenos negócios,</span>
+              </span>
+              <span className="site-mask text-[hsl(var(--site-accent))]">
+                <span style={{ animationDelay: "160ms" }}>da venda ao caixa, em um só lugar.</span>
+              </span>
+            </h1>
 
-                <h1 id="hero-title" className="prime-enter" style={enter(70)}>
-                  Sistema de gestão para pequenos negócios,
-                  <span>da venda ao caixa, em um só lugar.</span>
-                </h1>
-
-                <p className="prime-enter" style={enter(140)}>
-                  O Prime Ges é um sistema online que reúne clientes, produtos, serviços, vendas, fidelidade, caixa,
-                  estoque e financeiro, feito para a rotina de lava-rápidos, estética automotiva, padarias, mercadinhos
-                  e outros pequenos negócios.
-                </p>
-
-                <div className="home-v2-hero__actions prime-enter" style={enter(210)}>
-                  <Link
-                    href={siteConfig.links.register}
-                    className={cn(buttonVariants({ size: "lg" }), "home-v2-primary-btn prime-cta")}
-                  >
-                    Criar conta
-                    <ArrowRight size={17} aria-hidden="true" />
-                  </Link>
-                  <a
-                    href="#produto"
-                    className={cn(buttonVariants({ variant: "outline", size: "lg" }), "home-v2-secondary-btn")}
-                  >
-                    Ver como funciona
-                  </a>
-                  <a
-                    href="#precos"
-                    className="inline-flex items-center rounded-md px-2 py-2 text-sm font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    Ver planos e preços
-                  </a>
-                </div>
-
-                <ul className="home-v2-hero__trust prime-enter" style={enter(280)}>
-                  {trialLabel && (
-                    <li>
-                      <Check size={13} aria-hidden="true" /> Teste grátis de {trialLabel}
-                    </li>
-                  )}
-                  <li>
-                    <Check size={13} aria-hidden="true" /> Pagamento por Pix
-                  </li>
-                  <li>
-                    <Check size={13} aria-hidden="true" /> Sem instalar nada
-                  </li>
-                </ul>
-              </div>
-
-              <div className="prime-enter" style={enter(180)}>
-                <HomeHeroMockup />
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* CREDIBILIDADE REAL — só fatos verificáveis do produto */}
-        <section aria-labelledby="credibilidade-title" className="border-y border-border home-v3-band py-10">
-          <div className="container">
-            <h2 id="credibilidade-title" className="sr-only">
-              Como o Prime Ges funciona por baixo
-            </h2>
-            <Reveal>
-              <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-5">
-                {CREDIBILITY_ITEMS.map((item) => (
-                  <li key={item.title} className="flex gap-3">
-                    <span className={iconTile}>
-                      <item.icon size={18} aria-hidden="true" />
-                    </span>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-foreground">{item.title}</p>
-                      <p className="mt-0.5 text-sm text-muted-foreground">{item.detail}</p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </Reveal>
-          </div>
-        </section>
-
-        {/* PROBLEMA — título à esquerda (fixo ao rolar no desktop) e os três pontos empilhados à direita */}
-        <section id="problema" className={SECTION} aria-labelledby="problema-title">
-          <div className="container">
-            <div className="grid gap-10 lg:grid-cols-[minmax(0,.9fr)_minmax(0,1.1fr)] lg:gap-16">
-              <Reveal className="lg:sticky lg:top-28 lg:self-start">
-                <SectionHeading
-                  align="left"
-                  eyebrow="O problema"
-                  title={<span id="problema-title">Administrar sem um lugar único toma tempo e esconde o que importa.</span>}
-                  description="Quando cada informação mora num lugar, o dia a dia vira busca, retrabalho e decisão no escuro."
-                />
-              </Reveal>
-              <ul className="flex flex-col gap-4">
-                {PROBLEMS.map((problem, index) => (
-                  <li key={problem.title}>
-                    <Reveal delay={index * 60}>
-                      <Card className="prime-card flex gap-5 p-6">
-                        <span className={iconTile}>
-                          <problem.icon size={20} aria-hidden="true" />
-                        </span>
-                        <div className="min-w-0">
-                          <h3 className="text-lg font-semibold text-foreground">{problem.title}</h3>
-                          <p className="mt-2 text-sm leading-6 text-muted-foreground">{problem.description}</p>
-                        </div>
-                      </Card>
-                    </Reveal>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </section>
-
-        {/* SOLUÇÃO — bento com os módulos reais */}
-        <section id="recursos" className={cn(SECTION, "border-y border-border home-v3-band")} aria-labelledby="solucao-title">
-          <div className="container">
-            <Reveal>
-              <SectionHeading
-                eyebrow="A solução"
-                title={<span id="solucao-title">Controle de vendas, caixa, estoque e financeiro no mesmo lugar.</span>}
-                description="Oito módulos já disponíveis, organizados pela rotina do negócio."
-              />
-            </Reveal>
-            <div className="mt-10 grid gap-4 lg:grid-cols-6">
-              {BENTO_CELLS.map((cell, index) => (
-                <Reveal key={cell.id} delay={index * 60} className={cell.size === "lg" ? "lg:col-span-4" : "lg:col-span-2"}>
-                  <Card className="prime-card home-v4-feature h-full p-6 sm:p-7">
-                    <div className="flex items-start justify-between gap-4">
-                      <span className="home-v4-feature__icon">
-                        <cell.icon size={22} aria-hidden="true" />
-                      </span>
-                      <span className="home-v4-feature__index" aria-hidden="true">
-                        {String(index + 1).padStart(2, "0")}
-                      </span>
-                    </div>
-                    <h3 className="mt-5 text-xl font-semibold text-foreground">{cell.title}</h3>
-                    <p className="mt-2 text-sm leading-6 text-muted-foreground">{cell.description}</p>
-                    <ul
-                      className={cn("home-v4-feature__modules", cell.size === "lg" && "sm:grid-cols-2")}
-                      aria-label={"Módulos de " + cell.title}
-                    >
-                      {cell.modules
-                        .map((name) => FEATURE_BY_NAME.get(name))
-                        .filter((feature): feature is FeatureModule => Boolean(feature))
-                        .map((feature) => (
-                          <li key={feature.name}>
-                            <feature.icon size={16} aria-hidden="true" />
-                            <span>
-                              <strong>{feature.name}</strong>
-                              {cell.size === "lg" && <small>{feature.description}</small>}
-                            </span>
-                          </li>
-                        ))}
-                    </ul>
-                  </Card>
-                </Reveal>
-              ))}
-            </div>
-            <p className="mt-8 text-center text-sm text-muted-foreground">
-              Quer saber quanto custa?{" "}
-              <a href="#precos" className="font-medium text-foreground underline underline-offset-4">
-                Consulte os planos
-              </a>{" "}
-              ou{" "}
-              <Link href={siteConfig.links.register} className="font-medium text-foreground underline underline-offset-4">
-                crie a sua conta
-              </Link>{" "}
-              e conheça o sistema.
+            <p className="site-lead prime-enter max-w-xl" style={{ animationDelay: "260ms" }}>
+              O Prime Ges reúne vendas, clientes, agenda, orçamentos, estoque, caixa e financeiro em um só lugar. Feito para a
+              rotina de padarias, mercadinhos, lanchonetes, lava-rápidos e estética automotiva.
             </p>
-          </div>
-        </section>
 
-        {/* FUNCIONALIDADES — prévia ilustrativa (dados demonstrativos, identificados como tal) */}
-        <section id="produto" className={SECTION} aria-labelledby="produto-title">
-          <div className="container">
-            <Reveal>
-              <SectionHeading
-                eyebrow="Veja por dentro"
-                title={<span id="produto-title">Uma interface simples para cada parte da rotina.</span>}
-                description="Prévia ilustrativa dos módulos. Os dados exibidos nas telas abaixo são demonstrativos."
-              />
-            </Reveal>
-            <Reveal delay={80} className="mt-10">
-              <HomeProductShowcase />
-            </Reveal>
-          </div>
-        </section>
+            <div className="prime-enter flex flex-wrap items-center gap-3" style={{ animationDelay: "340ms" }}>
+              <PrimaryCta />
+              <a href="#produto" className={cn(buttonVariants({ variant: "outline", size: "lg" }), "h-12 px-6 text-base")}>
+                Ver como funciona
+              </a>
+              <a href="#precos" className="site-link inline-flex min-h-11 items-center px-2 text-sm font-medium text-muted-foreground hover:text-foreground">
+                Ver planos e preços
+              </a>
+            </div>
 
-        {/* PARA QUEM É */}
-        <section id="segmentos" className={cn(SECTION, "border-y border-border home-v3-band")} aria-labelledby="segmentos-title">
-          <div className="container">
-            <Reveal>
-              <SectionHeading
-                eyebrow="Para quem é"
-                title={<span id="segmentos-title">Sistema para pequenos negócios que vendem produtos, prestam serviços ou os dois.</span>}
-                description="MEIs, microempresas e pequenos negócios usam a mesma base e escolhem os módulos que fazem sentido para a rotina."
-              />
-            </Reveal>
-            <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {SEGMENTS.map((segment, index) => (
-                <li key={segment.name}>
-                  <Reveal delay={index * 45} className="h-full">
-                    <Card className="prime-card home-v4-segment h-full p-6">
-                      <span className="home-v4-segment__icon">
-                        <segment.icon size={26} aria-hidden="true" />
-                      </span>
-                      <h3 className="mt-5 text-lg font-semibold text-foreground">{segment.name}</h3>
-                      <p className="mt-2 text-sm leading-6 text-muted-foreground">{segment.description}</p>
-                      <p className="home-v4-segment__label">Módulos indicados</p>
-                      <ul className="home-v4-segment__modules" aria-label={"Módulos para " + segment.name}>
-                        {(SEGMENT_MODULES[segment.name] ?? []).map((module) => (
-                          <li key={module}>
-                            <Check size={14} aria-hidden="true" />
-                            {module}
-                          </li>
-                        ))}
-                      </ul>
-                    </Card>
-                  </Reveal>
+            <ul className="prime-enter flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground" style={{ animationDelay: "420ms" }}>
+              {facts.map((fact) => (
+                <li key={fact} className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-success" aria-hidden="true" />
+                  {fact}
                 </li>
               ))}
             </ul>
-            <p className="mt-8 text-center text-sm text-muted-foreground">
-              Veja o que cada módulo faz em{" "}
-              <a href="#recursos" className="font-medium text-foreground underline underline-offset-4">
-                recursos
-              </a>{" "}
-              e como começar em{" "}
-              <a href="#como-funciona" className="font-medium text-foreground underline underline-offset-4">
-                como funciona
-              </a>
-              .
-            </p>
           </div>
-        </section>
 
-        {/* COMO FUNCIONA */}
-        <section id="como-funciona" className={SECTION} aria-labelledby="como-title">
-          <div className="container">
-            <Reveal>
-              <SectionHeading
-                eyebrow="Como funciona"
-                title={<span id="como-title">Da conta criada à rotina organizada em três passos.</span>}
-                description="Sem fluxo complicado: você entra, configura o essencial e começa a administrar."
-              />
-            </Reveal>
-            <ol className="mt-10 grid gap-4 md:grid-cols-3">
+          <div className="site-stage relative">
+            <MarketingPhoto slot="balcao" priority className="aspect-[4/5] lg:aspect-[5/6]" />
+            <div className="site-hero__panel">
+              <HeroLive />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* PROBLEMA — as anotações espalhadas se juntam quando a seção entra na tela */}
+      <section id="problema" className="site-section site-band" aria-labelledby="problema-title">
+        <div className="container grid items-center gap-14 lg:grid-cols-2">
+          <Heading id="problema-title" title="Administrar sem um lugar único toma tempo e esconde o que importa.">
+            Quando cada informação mora num lugar, o dia a dia vira busca, retrabalho e decisão no escuro.
+          </Heading>
+          <Reveal>
+            <ul className="flex flex-col gap-4">
+              {PROBLEMS.map((problem, index) => (
+                <li
+                  key={problem.title}
+                  className="site-note"
+                  style={{ "--x": SCATTERED[index]!.x, "--y": SCATTERED[index]!.y, "--r": SCATTERED[index]!.r, transitionDelay: `${index * 110}ms` } as CSSProperties}
+                >
+                  <problem.icon className="h-6 w-6 shrink-0 text-[hsl(var(--site-accent))]" aria-hidden="true" />
+                  <div>
+                    <h3 className="text-lg font-semibold text-foreground">{problem.title}</h3>
+                    <p className="mt-1 text-sm leading-6 text-muted-foreground">{problem.description}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* PRODUTO — uma venda atravessando o sistema */}
+      <section id="produto" className="site-section" aria-labelledby="produto-title">
+        <div className="container">
+          <Heading id="produto-title" title="Registre uma venda e o resto se atualiza.">
+            Estoque, caixa, financeiro e fidelidade conversam entre si. As telas abaixo usam dados demonstrativos.
+          </Heading>
+          <div className="mt-14">
+            <SaleFlow />
+          </div>
+          <MoreLink href="/produto">Conhecer o produto por dentro</MoreLink>
+        </div>
+      </section>
+
+      {/* RECURSOS — todos os módulos, por rotina */}
+      <section id="recursos" className="site-section site-band" aria-labelledby="solucao-title">
+        <div className="container">
+          <div className="grid items-end gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,.8fr)]">
+            <Heading id="solucao-title" title="Controle de vendas, caixa, estoque e financeiro no mesmo lugar.">
+              {AVAILABLE_FEATURE_NAMES.length} módulos, organizados pela rotina do negócio.
+            </Heading>
+            <MarketingPhoto slot="tablet" className="hidden aspect-[3/2] lg:block" sizes="40vw" />
+          </div>
+          <ModuleTabs />
+          <MoreLink href="/recursos">Ver o que cada módulo faz</MoreLink>
+        </div>
+      </section>
+
+      {/* PARA QUEM É */}
+      <section id="segmentos" className="site-section" aria-labelledby="segmentos-title">
+        <div className="container">
+          <Heading id="segmentos-title" title="Sistema para pequenos negócios que vendem produtos, prestam serviços ou os dois.">
+            A base é a mesma, e cada negócio usa os módulos que fazem sentido para a rotina.
+          </Heading>
+          <ul className="mt-12 border-t border-border">
+            {SEGMENTS.map((segment, index) => (
+              <li key={segment.name}>
+                <Reveal delay={index * 50}>
+                  <Link href="/para-quem-e" className="site-row">
+                    <segment.icon className="site-row__icon h-7 w-7 shrink-0" aria-hidden="true" />
+                    <h3 className="site-row__name">{segment.name}</h3>
+                    <div className="site-row__info">
+                      <p className="text-sm text-muted-foreground">{segment.description}</p>
+                      <p className="mt-1 text-sm text-foreground">
+                        <span className="text-muted-foreground">Módulos indicados: </span>
+                        {modulesByName(segment.modules)
+                          .map((feature) => feature.name)
+                          .join(", ")}
+                      </p>
+                    </div>
+                    <ArrowRight className="site-row__arrow h-5 w-5 shrink-0" aria-hidden="true" />
+                  </Link>
+                </Reveal>
+              </li>
+            ))}
+          </ul>
+          <MoreLink href="/para-quem-e">Ver a rotina de cada negócio</MoreLink>
+        </div>
+      </section>
+
+      {/* COMO FUNCIONA */}
+      <section id="como-funciona" className="site-section site-band" aria-labelledby="como-title">
+        <div className="container">
+          <Heading id="como-title" title="Da conta criada à rotina organizada em três passos.">
+            Você entra, configura o essencial e começa a administrar.
+          </Heading>
+          <Reveal className="mt-14">
+            <ol className="grid gap-10 md:grid-cols-3">
               {HOW_IT_WORKS_STEPS.map((step, index) => (
                 <li key={step.number}>
-                  <Reveal delay={index * 70} className="h-full">
-                    <Card className="h-full p-6">
-                      <span
-                        className="flex h-11 w-11 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-sm font-semibold text-primary-text"
-                        aria-hidden="true"
-                      >
-                        {step.number}
-                      </span>
-                      <h3 className="mt-4 text-lg font-semibold text-foreground">
-                        <span className="sr-only">Passo {index + 1}: </span>
-                        {step.title}
-                      </h3>
-                      <p className="mt-2 text-sm leading-6 text-muted-foreground">{step.description}</p>
-                    </Card>
-                  </Reveal>
+                  <span className="site-draw" style={{ transitionDelay: `${index * 250}ms` }} aria-hidden="true" />
+                  <p className="site-big-number" aria-hidden="true">
+                    {index + 1}
+                  </p>
+                  <h3 className="mt-2 text-xl font-semibold text-foreground">
+                    <span className="sr-only">Passo {index + 1}: </span>
+                    {step.title}
+                  </h3>
+                  <p className="mt-2 text-sm leading-6 text-muted-foreground">{step.description}</p>
                 </li>
               ))}
             </ol>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* DIFERENCIAIS REAIS */}
+      <section id="diferenciais" className="site-section" aria-labelledby="dif-title">
+        <div className="container grid gap-14 lg:grid-cols-[minmax(0,.8fr)_minmax(0,1.2fr)]">
+          <div className="flex flex-col gap-8">
+            <Heading id="dif-title" title="O que torna o Prime Ges diferente na prática." />
+            <MarketingPhoto slot="pagamento" className="aspect-[3/2]" sizes="40vw" />
           </div>
-        </section>
+          <ul className="grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-2">
+            {DIFFERENTIALS.map((item, index) => (
+              <li key={item.title} className="site-cell">
+                <Reveal delay={index * 80}>
+                  <item.icon className="site-cell__icon h-7 w-7" aria-hidden="true" />
+                  <h3 className="mt-6 text-lg font-semibold text-foreground">{item.title}</h3>
+                  <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.description}</p>
+                </Reveal>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
 
-        {/* DIFERENCIAIS REAIS */}
-        <section id="diferenciais" className={cn(SECTION, "border-y border-border home-v3-band")} aria-labelledby="dif-title">
-          <div className="container">
-            <Reveal>
-              <SectionHeading
-                eyebrow="Diferenciais"
-                title={<span id="dif-title">O que torna o Prime Ges diferente na prática.</span>}
-              />
-            </Reveal>
-            <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {DIFFERENTIALS.map((item, index) => (
-                <li key={item.title}>
-                  <Reveal delay={index * 60} className="h-full">
-                    <Card className="prime-card home-v4-diff h-full p-6">
-                      <span className="home-v4-feature__icon">
-                        <item.icon size={22} aria-hidden="true" />
-                      </span>
-                      <h3 className="mt-5 text-base font-semibold text-foreground">{item.title}</h3>
-                      <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.description}</p>
-                    </Card>
-                  </Reveal>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </section>
+      {/* PLANOS — catálogo do banco */}
+      <section id="precos" className="site-section site-band" aria-labelledby="precos-title">
+        <div className="container">
+          <Heading id="precos-title" title="Escolha o período que faz sentido para o seu negócio.">
+            Comece com o teste e avance para o plano que acompanha a sua operação.
+          </Heading>
+          <PricingGrid views={views} />
+          <MoreLink href="/precos">Entender o pagamento e a ordem de pagamento</MoreLink>
+        </div>
+      </section>
 
-        {/* PLANOS — mesma fonte única (PRICING_PLANS) e o mesmo PricingCard */}
-        <section id="precos" className={SECTION} aria-labelledby="precos-title">
-          <div className="container">
-            <Reveal>
-              <SectionHeading
-                eyebrow="Planos"
-                title={<span id="precos-title">Escolha o período que faz sentido para o seu negócio.</span>}
-                description="Comece com o teste e avance para o plano que acompanha a sua operação."
-              />
-            </Reveal>
+      {/* FAQ */}
+      <section id="faq" className="site-section" aria-labelledby="faq-title">
+        <div className="container grid gap-10 lg:grid-cols-[minmax(0,.8fr)_minmax(0,1.2fr)] lg:gap-16">
+          <Heading id="faq-title" title="O que você precisa saber antes de começar." className="lg:sticky lg:top-28 lg:self-start" />
+          <FaqList items={faq} />
+        </div>
+      </section>
 
-            {gridPlans.length > 0 ? (
-              <div className="mt-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                {gridPlans.map((plan, index) => (
-                  <Reveal key={plan.id} delay={index * 55} className="h-full [&>div]:h-full">
-                    <PricingCard plan={plan} />
-                  </Reveal>
-                ))}
-              </div>
-            ) : (
-              <Card className="mt-10 p-6 text-center text-sm text-muted-foreground">
-                Os planos estão indisponíveis no momento. Tente novamente em instantes ou{" "}
-                <Link href={siteConfig.links.register} className="font-medium text-foreground underline underline-offset-4">
-                  crie a sua conta
-                </Link>{" "}
-                para conhecer a plataforma.
-              </Card>
-            )}
-
-            <p className="mt-8 text-center text-sm text-muted-foreground">
-              Pagamento por Pix, sem renovação automática. Veja as regras de cancelamento e reembolso na{" "}
-              <Link href="/politica-de-reembolso" className="font-medium text-foreground underline underline-offset-4">
-                Política de Reembolso
-              </Link>{" "}
-              e as condições gerais nos{" "}
-              <Link href="/termos-de-uso" className="font-medium text-foreground underline underline-offset-4">
-                Termos de Uso
-              </Link>
-              .
-            </p>
-
-            {customPlan && (
-              <Reveal delay={120} className="mt-6">
-                <Card className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    {customPlan.tagline && <Badge variant="muted">{customPlan.tagline}</Badge>}
-                    <h3 className="mt-3 text-lg font-semibold text-foreground">{customPlan.benefitsTitle ?? customPlan.name}</h3>
-                    {customPlan.description && <p className="mt-1 text-sm text-muted-foreground">{customPlan.description}</p>}
-                    {customPlan.lines.length > 0 && (
-                      <ul className="mt-3 flex flex-col gap-1.5">
-                        {customPlan.lines.map((line, index) => (
-                          <li key={`${index}-${line.text}`} className="flex items-start gap-2 text-sm text-foreground">
-                            <Check className="mt-0.5 h-4 w-4 shrink-0 text-success" strokeWidth={2.25} aria-hidden="true" />
-                            {line.text}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                  {customPlan.ctaHref ? (
-                    customPlan.ctaExternal ? (
-                      <a
-                        href={customPlan.ctaHref}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={cn(buttonVariants({ variant: "outline" }), "sm:self-center")}
-                      >
-                        {customPlan.ctaLabel}
-                      </a>
-                    ) : (
-                      <Link href={customPlan.ctaHref} className={cn(buttonVariants({ variant: "outline" }), "sm:self-center")}>
-                        {customPlan.ctaLabel}
-                      </Link>
-                    )
-                  ) : (
-                    <p className="text-sm text-muted-foreground sm:max-w-[16rem]">O canal comercial para este plano ainda não está disponível.</p>
-                  )}
-                </Card>
-              </Reveal>
-            )}
-          </div>
-        </section>
-
-        {/* FAQ */}
-        <section id="faq" className={cn(SECTION, "border-t border-border home-v3-band")} aria-labelledby="faq-title">
-          <div className="container">
-            <div className="grid gap-10 lg:grid-cols-[minmax(0,.8fr)_minmax(0,1.2fr)] lg:gap-16">
-            <Reveal className="lg:sticky lg:top-28 lg:self-start">
-              <SectionHeading
-                align="left"
-                eyebrow="Perguntas frequentes"
-                title={<span id="faq-title">O que você precisa saber antes de começar.</span>}
-              />
-            </Reveal>
-            <Reveal delay={80}>
-              <Accordion type="single" collapsible className="w-full">
-                {faq.map((item, index) => (
-                  <AccordionItem key={item.question} value={"faq-" + index}>
-                    <AccordionTrigger className="text-left text-base">{item.question}</AccordionTrigger>
-                    <AccordionContent forceMount className="text-sm leading-6 text-muted-foreground">
-                      {item.answer}
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
-              <p className="mt-6 text-center text-sm text-muted-foreground">
-                Documentos:{" "}
-                <Link href="/termos-de-uso" className="font-medium text-foreground underline underline-offset-4">
-                  Termos de Uso
-                </Link>
-                ,{" "}
-                <Link href="/politica-de-privacidade" className="font-medium text-foreground underline underline-offset-4">
-                  Política de Privacidade
-                </Link>
-                ,{" "}
-                <Link href="/politica-de-reembolso" className="font-medium text-foreground underline underline-offset-4">
-                  Política de Reembolso
-                </Link>{" "}
-                e{" "}
-                <Link href="/direitos-do-titular" className="font-medium text-foreground underline underline-offset-4">
-                  Direitos do Titular
-                </Link>
-                .
-              </p>
-            </Reveal>
-            </div>
-          </div>
-        </section>
-
-        {/* CTA FINAL */}
-        <section className="home-v2-final" aria-labelledby="cta-title">
-          <div className="home-v2-final__glow home-v2-final__glow--one" aria-hidden="true" />
-          <div className="home-v2-final__glow home-v2-final__glow--two" aria-hidden="true" />
-          <div className="container relative">
-            <Reveal>
-              <div className="home-v2-final__inner home-v4-cta">
-                <span className="home-v2-final__badge">
-                  <Sparkles size={13} aria-hidden="true" /> Prime Ges
-                </span>
-                <h2 id="cta-title">Comece a organizar o seu negócio hoje.</h2>
-                <p>
-                  Crie a conta, aceite os documentos e use o teste grátis
-                  {trialLabel ? " de " + trialLabel : ""} para conhecer a plataforma.
-                </p>
-                <div className="home-v2-final__actions">
-                  <Link
-                    href={siteConfig.links.register}
-                    className={cn(buttonVariants({ size: "lg" }), "home-v2-primary-btn prime-cta")}
-                  >
-                    Criar conta
-                    <ArrowRight size={17} aria-hidden="true" />
-                  </Link>
-                  <Link
-                    href={siteConfig.links.login}
-                    className={cn(buttonVariants({ variant: "outline", size: "lg" }), "home-v2-secondary-btn")}
-                  >
-                    Entrar
-                  </Link>
-                </div>
-                <ul className="home-v4-cta__trust">
-                  {trialLabel && (
-                    <li>
-                      <Check size={14} aria-hidden="true" /> Teste grátis de {trialLabel}
-                    </li>
-                  )}
-                  <li>
-                    <Check size={14} aria-hidden="true" /> Pagamento por Pix
-                  </li>
-                  <li>
-                    <Check size={14} aria-hidden="true" /> Sem renovação automática
-                  </li>
-                </ul>
-              </div>
-            </Reveal>
-          </div>
-        </section>
-      </main>
-
-      <SiteFooter />
-    </>
+      <FinalCta trialLabel={trialLabel} />
+    </MarketingShell>
   );
 }

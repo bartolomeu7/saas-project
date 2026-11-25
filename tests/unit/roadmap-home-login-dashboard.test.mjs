@@ -12,6 +12,7 @@ const read = (p) => readFileSync(new URL(p, base), "utf8");
 
 describe("Home — composição (entrega A)", () => {
   const page = read("src/app/(public)/page.tsx");
+  const sections = read("src/components/marketing/sections.tsx");
 
   it("mantém todas as âncoras e os destinos dos CTAs", () => {
     for (const id of ["topo", "problema", "recursos", "produto", "segmentos", "como-funciona", "diferenciais", "precos", "faq"]) {
@@ -19,8 +20,9 @@ describe("Home — composição (entrega A)", () => {
     }
     assert.match(page, /href="#produto"/);
     assert.match(page, /href="#precos"/);
-    assert.match(page, /siteConfig\.links\.register/);
-    assert.match(page, /siteConfig\.links\.login/);
+    assert.match(page, /<PrimaryCta/);
+    assert.match(sections, /siteConfig\.links\.register/);
+    assert.match(sections, /siteConfig\.links\.login/);
   });
 
   it("não carrega o Clerk e mantém JSON-LD, ISR e planos reais do banco", () => {
@@ -30,12 +32,12 @@ describe("Home — composição (entrega A)", () => {
     assert.match(page, /getPublicPlans\(\)/);
   });
 
-  it("Problema e FAQ usam duas colunas (título à esquerda) e o hero é centralizado em CSS", () => {
-    assert.match(page, /lg:grid-cols-\[minmax\(0,\.9fr\)_minmax\(0,1\.1fr\)\]/);
-    assert.match(page, /lg:grid-cols-\[minmax\(0,\.8fr\)_minmax\(0,1\.2fr\)\]/);
-    const css = read("src/app/home-v2.css");
-    assert.match(css, /\.home-v2-hero__layout\s*\{\s*grid-template-columns:\s*minmax\(0,\s*1fr\)/);
-    assert.match(css, /\.home-v3-band\s*\{/);
+  it("o site tem tema próprio e toda animação respeita 'reduzir movimento'", () => {
+    const css = read("src/app/site.css");
+    assert.match(css, /\.site\s*\{/);
+    assert.match(css, /\.site-band\s*\{/);
+    assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
+    assert.match(read("src/components/marketing/hero-live.tsx"), /prefers-reduced-motion: reduce[\s\S]*Pausar demonstração/);
   });
 });
 

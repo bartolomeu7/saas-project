@@ -3,6 +3,7 @@ import { Logo } from "@/components/shared/logo";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { siteConfig } from "@/config/site";
+import { MARKETING_PHOTOS } from "@/config/marketing-photos";
 
 interface FooterLink {
   label: string;
@@ -23,11 +24,11 @@ const COLUMNS: FooterColumn[] = [
   {
     title: "Produto",
     links: [
-      { label: "Recursos", href: "/#recursos" },
-      { label: "Produto", href: "/#produto" },
-      { label: "Para quem é", href: "/#segmentos" },
-      { label: "Preços", href: "/#precos" },
-      { label: "Perguntas frequentes", href: "/#faq" },
+      { label: "Recursos", href: "/recursos" },
+      { label: "Produto", href: "/produto" },
+      { label: "Para quem é", href: "/para-quem-e" },
+      { label: "Preços", href: "/precos" },
+      { label: "Perguntas frequentes", href: "/perguntas" },
     ],
   },
   {
@@ -54,10 +55,12 @@ const COLUMNS: FooterColumn[] = [
  * variável desligada) nada é exibido.
  */
 const BUILD_SHA = process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7);
+// A modelo das fotos é gerada por IA: o rodapé avisa assim que houver foto publicada.
+const HAS_PHOTOS = Object.keys(MARKETING_PHOTOS).length > 0;
 
 export function SiteFooter() {
   return (
-    <footer className="home-v4-footer">
+    <footer className="site-footer">
       <div className="container flex flex-col gap-10 py-12 sm:py-14">
         <div className="grid grid-cols-2 gap-8 sm:grid-cols-3 lg:grid-cols-[1.6fr_1fr_1fr_1fr]">
           <div className="col-span-2 flex flex-col gap-4 sm:col-span-3 lg:col-span-1">
@@ -102,6 +105,7 @@ export function SiteFooter() {
               {BUILD_SHA}
             </span>
           )}
+          {HAS_PHOTOS && " · Imagens ilustrativas geradas por inteligência artificial."}
         </p>
       </div>
     </footer>

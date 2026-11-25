@@ -75,7 +75,7 @@ export function Reveal({
   );
 }
 
-/** Barra fina de progresso de leitura no topo (estilo em home-v2.css; some com reduced motion). */
+/** Barra fina de progresso de leitura no topo (estilo em site.css; some com reduced motion). */
 export function ScrollProgress() {
   const [value, setValue] = useState(0);
 

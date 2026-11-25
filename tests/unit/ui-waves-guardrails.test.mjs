@@ -83,8 +83,9 @@ describe("Onda B1 — Home: Funcionalidades e Segmentos sem conteúdo inventado"
   const home = read("src/app/(public)/page.tsx");
 
   it("os cartões só mostram módulos disponíveis (nunca 'em breve' como pronto)", () => {
-    assert.match(home, /FEATURES\.filter\(\(feature\) => feature\.available\)\.map\(\(feature\) => \[feature\.name, feature\]\)/);
-    assert.match(home, /FEATURE_BY_NAME\.get\(name\)/);
+    const sections = read("src/components/marketing/sections.tsx");
+    assert.match(sections, /FEATURES\.filter\(\(feature\) => feature\.available\)\.map\(\(feature\) => \[feature\.name, feature\]\)/);
+    assert.match(sections, /FEATURE_BY_NAME\.get\(name\)/);
   });
 
   it("não há depoimentos, logos de clientes nem números de uso na home (D6)", () => {
@@ -106,14 +107,16 @@ describe("Onda B2 — Home: Diferenciais, chamada final e rodapé", () => {
   });
 
   it("a chamada final mantém os links de cadastro e login e só cita fatos já existentes na home", () => {
-    assert.match(home, /siteConfig\.links\.register/);
-    assert.match(home, /siteConfig\.links\.login/);
-    assert.match(home, /home-v4-cta__trust/);
-    assert.match(home, /Sem renovação automática/);
+    const sections = read("src/components/marketing/sections.tsx");
+    assert.match(home, /<FinalCta /);
+    assert.match(sections, /siteConfig\.links\.register/);
+    assert.match(sections, /siteConfig\.links\.login/);
+    assert.match(sections, /site-final__trust/);
+    assert.match(sections, /Sem renovação automática/);
   });
 
   it("o rodapé preserva todas as colunas de links legais, o commit publicado e não importa o Clerk", () => {
-    for (const href of ["/termos-de-uso", "/politica-de-privacidade", "/politica-de-reembolso", "/direitos-do-titular", "/#precos", "/#faq"]) {
+    for (const href of ["/termos-de-uso", "/politica-de-privacidade", "/politica-de-reembolso", "/direitos-do-titular", "/precos", "/perguntas"]) {
       assert.ok(footer.includes(href), href);
     }
     assert.match(footer, /data-build-sha=\{BUILD_SHA\}/);
