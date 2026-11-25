@@ -188,3 +188,10 @@ describe("Open Graph das páginas legais e da home", () => {
     assert.match(site, /images:\s*\[ogImage\]/);
   });
 });
+
+describe("Google Search Console", () => {
+  it("o arquivo de verificação continua publicado (apagar faz o Google perder o acesso à propriedade)", () => {
+    const name = "google73ccdd603c590fb0.html";
+    assert.equal(read("public/" + name).trim(), "google-site-verification: " + name);
+  });
+});
