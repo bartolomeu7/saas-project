@@ -643,6 +643,12 @@ export type Database = {
           },
         ]
       }
+      customer_document_files: {
+        Row: { company_id: string; data_base64: string; document_id: string }
+        Insert: { company_id: string; data_base64: string; document_id: string }
+        Update: { company_id?: string; data_base64?: string; document_id?: string }
+        Relationships: []
+      }
       customer_documents: {
         Row: {
           company_id: string
@@ -5014,6 +5020,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      run_daily_maintenance: { Args: Record<PropertyKey, never>; Returns: boolean }
       touch_presence: { Args: never; Returns: undefined }
       undo_loyalty_redemption_for_draft_sale: {
         Args: { p_sale_id: string }

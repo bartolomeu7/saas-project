@@ -6,12 +6,12 @@ import { FileText, Download, Trash2 } from "lucide-react";
 import {
   uploadCustomerDocumentAction,
   deleteCustomerDocumentAction,
-  getCustomerDocumentUrlAction,
 } from "@/lib/customer-documents/actions";
 import type { ActionResult } from "@/lib/auth/actions";
 import type { CustomerDocument } from "@/types/customer-document";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { SubmitButton } from "@/components/shared/auth/submit-button";
 import { FormMessage } from "@/components/shared/auth/form-message";
 import { EmptyState } from "@/components/app/empty-state";
@@ -61,7 +61,7 @@ function UploadDocumentForm({ customerId }: { customerId: string }) {
           onChange={(event) => setSelectedName(event.target.files?.[0]?.name ?? null)}
         />
         <p className="text-xs text-muted-foreground">
-          PDF, JPEG, PNG ou WEBP — até 10 MB.
+          PDF, JPEG, PNG ou WEBP — até 5 MB.
           {selectedName && ` Selecionado: ${selectedName}`}
         </p>
       </div>
@@ -76,34 +76,11 @@ function UploadDocumentForm({ customerId }: { customerId: string }) {
 }
 
 function DownloadDocumentButton({ documentId }: { documentId: string }) {
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-
   return (
-    <div className="flex flex-col items-end gap-1">
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="gap-1.5"
-        disabled={loading}
-        onClick={async () => {
-          setError(null);
-          setLoading(true);
-          const result = await getCustomerDocumentUrlAction(documentId);
-          setLoading(false);
-          if (result.error || !result.url) {
-            setError(result.error ?? "Não foi possível gerar o link.");
-            return;
-          }
-          window.open(result.url, "_blank", "noopener,noreferrer");
-        }}
-      >
-        <Download className="h-3.5 w-3.5" />
-        {loading ? "Gerando..." : "Visualizar"}
-      </Button>
-      {error && <p className="text-xs text-destructive">{error}</p>}
-    </div>
+    <a href={`/api/clientes/documentos/${documentId}`} className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-1.5")}>
+      <Download className="h-3.5 w-3.5" aria-hidden="true" />
+      Baixar
+    </a>
   );
 }
 

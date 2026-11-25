@@ -14,7 +14,6 @@ import {
 } from "@/lib/account/deletion-core";
 import { sendAccountDeletedEmail } from "@/lib/account/email";
 
-const DOCUMENTS_BUCKET = "customer-documents";
 
 /** Clientes das RPCs novas (ainda fora do types/supabase.ts gerado). */
 type DeletionRpcClient = {
@@ -28,32 +27,9 @@ export interface DeleteAccountResult extends ActionResult {
   emailSent?: boolean;
 }
 
-/** Apaga do Storage os arquivos dos clientes das empresas que serão excluídas (a cascata do banco não alcança o Storage). */
-async function removeCompanyFiles(companyIds: string[]): Promise<boolean> {
-  if (companyIds.length === 0) return true;
-  const admin = createAdminClient();
-  const PAGE = 1000;
-  for (let from = 0; from < 500 * PAGE; from += PAGE) {
-    const { data, error } = await admin
-      .from("customer_documents")
-      .select("file_path")
-      .in("company_id", companyIds)
-      .order("id")
-      .range(from, from + PAGE - 1);
-    if (error) return false;
-    const paths = (data ?? []).map((row) => row.file_path);
-    for (let i = 0; i < paths.length; i += 100) {
-      const removed = await admin.storage.from(DOCUMENTS_BUCKET).remove(paths.slice(i, i + 100));
-      if (removed.error) return false;
-    }
-    if (paths.length < PAGE) return true;
-  }
-  return false;
-}
-
 /**
  * Exclui a conta de QUEM ESTÁ LOGADO (nunca um id vindo do formulário): confirma a palavra digitada, confere os impedimentos,
- * apaga os arquivos do Storage, executa a exclusão no banco (transação), remove o usuário no Clerk e envia o e-mail de
+ * executa a exclusão no banco (transação; os anexos saem junto), remove o usuário no Clerk e envia o e-mail de
  * confirmação (se configurado). A regra do que é apagado e do que a lei manda guardar está na migration.
  */
 export async function deleteMyAccountAction(_prev: DeleteAccountResult, formData: FormData): Promise<DeleteAccountResult> {
@@ -74,11 +50,6 @@ export async function deleteMyAccountAction(_prev: DeleteAccountResult, formData
   const preview = previewError ? null : parseDeletionPreview(rawPreview);
   if (!preview) return { error: "Não foi possível verificar a sua conta agora. Nada foi apagado. Tente novamente em instantes." };
   if (preview.blockedReason) return { error: BLOCKED_MESSAGES[preview.blockedReason], code: preview.blockedReason };
-
-  const summary = summarizeDeletion(preview);
-  if (!(await removeCompanyFiles(summary.toDelete.map((c) => c.companyId)))) {
-    return { error: "Não foi possível apagar os arquivos anexados agora. Nada foi apagado. Tente novamente em instantes." };
-  }
 
   const { data: deleted, error: deleteError } = await admin.rpc("delete_account_data", { p_user_id: user.id });
   if (deleteError) {
