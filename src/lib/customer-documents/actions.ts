@@ -10,8 +10,8 @@ import { AUDIT_ACTIONS } from "@/types/audit";
 import { detectRealMimeType, MIME_EXTENSIONS } from "@/lib/customer-documents/mime-detection";
 import type { ActionResult } from "@/lib/auth/actions";
 
-const BUCKET = "customer-documents";
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB — mesmo limite do bucket e da constraint da tabela.
+// O conteúdo vai para o banco (o servidor não tem serviço de arquivos). Acompanha next.config.js (bodySizeLimit).
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
 /**
  * Envia um documento para o cliente informado. `customerId` é passado por
@@ -29,7 +29,7 @@ export async function uploadCustomerDocumentAction(
     return { error: "Selecione um arquivo." };
   }
   if (file.size > MAX_FILE_SIZE) {
-    return { error: "O arquivo excede o limite de 10 MB." };
+    return { error: "O arquivo excede o limite de 5 MB." };
   }
 
   const current = await getCurrentCompany();
@@ -58,15 +58,8 @@ export async function uploadCustomerDocumentAction(
   }
 
   const extension = MIME_EXTENSIONS[realType];
+  // file_path continua único por documento (a coluna é obrigatória); o arquivo em si fica em customer_document_files.
   const path = `${current.company.id}/${customerId}/${randomUUID()}.${extension}`;
-
-  const { error: uploadError } = await supabase.storage
-    .from(BUCKET)
-    .upload(path, buffer, { contentType: realType, upsert: false });
-
-  if (uploadError) {
-    return { error: "Não foi possível enviar o arquivo. Tente novamente." };
-  }
 
   const user = await getCurrentUser();
   const fileName = file.name.slice(0, 255);
@@ -86,9 +79,17 @@ export async function uploadCustomerDocumentAction(
     .single();
 
   if (insertError || !inserted) {
-    // Registro não foi criado — remove o objeto órfão do Storage.
-    await supabase.storage.from(BUCKET).remove([path]);
     return { error: "Não foi possível salvar o documento. Tente novamente." };
+  }
+
+  const { error: contentError } = await supabase
+    .from("customer_document_files")
+    .insert({ document_id: inserted.id, company_id: current.company.id, data_base64: buffer.toString("base64") });
+
+  if (contentError) {
+    // Sem o conteúdo, o registro não serve para nada: desfaz.
+    await supabase.from("customer_documents").delete().eq("id", inserted.id).eq("company_id", current.company.id);
+    return { error: "Não foi possível enviar o arquivo. Tente novamente." };
   }
 
   await writeAuditLog(supabase, {
@@ -104,12 +105,7 @@ export async function uploadCustomerDocumentAction(
   return { success: "Documento enviado." };
 }
 
-/**
- * Remove um documento: primeiro o objeto no Storage, só depois o
- * registro na tabela. Se a remoção do Storage falhar, o registro NÃO é
- * removido — nunca fica um registro apontando para um arquivo já
- * removido silenciosamente.
- */
+/** Remove um documento; o conteúdo sai junto (cascata no banco). */
 export async function deleteCustomerDocumentAction(
   documentId: string,
   customerId: string,
@@ -133,14 +129,6 @@ export async function deleteCustomerDocumentAction(
     return { error: "Documento não encontrado." };
   }
 
-  const { error: storageError } = await supabase.storage
-    .from(BUCKET)
-    .remove([document.file_path]);
-
-  if (storageError) {
-    return { error: "Não foi possível remover o arquivo. Tente novamente." };
-  }
-
   const { error: deleteError } = await supabase
     .from("customer_documents")
     .delete()
@@ -148,10 +136,7 @@ export async function deleteCustomerDocumentAction(
     .eq("company_id", current.company.id);
 
   if (deleteError) {
-    return {
-      error:
-        "O arquivo foi removido, mas houve um problema ao remover o registro. Contate o suporte.",
-    };
+    return { error: "Não foi possível remover o documento. Tente novamente." };
   }
 
   const user = await getCurrentUser();
@@ -171,42 +156,4 @@ export async function deleteCustomerDocumentAction(
 
   revalidatePath(`/app/clientes/${customerId}`);
   return { success: "Documento removido." };
-}
-
-/**
- * Gera uma URL assinada de curta duração para visualizar/baixar um
- * documento — nunca uma URL pública. Chamada diretamente por um Client
- * Component (Server Action invocada fora de um <form>), sem expor o
- * client de service_role.
- */
-export async function getCustomerDocumentUrlAction(
-  documentId: string
-): Promise<{ url?: string; error?: string }> {
-  const current = await getCurrentCompany();
-  if (!current) {
-    return { error: "Nenhuma empresa encontrada para o usuário atual." };
-  }
-
-  const supabase = await createSessionClient();
-
-  const { data: document } = await supabase
-    .from("customer_documents")
-    .select("file_path")
-    .eq("id", documentId)
-    .eq("company_id", current.company.id)
-    .maybeSingle();
-
-  if (!document) {
-    return { error: "Documento não encontrado." };
-  }
-
-  const { data: signed, error } = await supabase.storage
-    .from(BUCKET)
-    .createSignedUrl(document.file_path, 60);
-
-  if (error || !signed) {
-    return { error: "Não foi possível gerar o link de acesso. Tente novamente." };
-  }
-
-  return { url: signed.signedUrl };
 }

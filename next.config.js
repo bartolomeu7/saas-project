@@ -3,6 +3,8 @@ const nextConfig = {
   // Não anuncia o framework em cada resposta (X-Powered-By: Next.js).
   poweredByHeader: false,
   reactStrictMode: true,
+  // Anexo de cliente (até 5 MB) vai por Server Action; o padrão do Next é 1 MB.
+  experimental: { serverActions: { bodySizeLimit: "6mb" } },
   async redirects() {
     return [
       // A aba "Perguntas" virou "Dúvidas".

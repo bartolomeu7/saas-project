@@ -11,6 +11,8 @@ export async function POST() {
   try {
     const supabase = await createSessionClient();
     await supabase.rpc("touch_presence");
+    // Rotinas diárias (validade dos pontos, limpeza do assistente): o banco só trabalha na 1ª chamada de cada dia.
+    await supabase.rpc("run_daily_maintenance");
   } catch {
     // presença é melhor-esforço
   }
