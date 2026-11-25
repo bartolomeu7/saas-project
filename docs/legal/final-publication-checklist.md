@@ -7,6 +7,11 @@ Hashes publicados (SHA-256 do conteúdo), conferidos contra o repositório:
 - `TERMS_OF_USE` 1.0.0-rc.2: `62ade40650d70b490835e8eebc94917eca7554b733cf91d2e9096400cba9cb69`
 - `PRIVACY_POLICY` 1.0.0-rc.2: `d43afbdf5a04c5f3258ad394b6a6824758f6f00860d0729cfbd67a756ced3bc9`
 
+> **Situação em 25/11/2026 (rc.4):** publicados "operado pela Nexora Group" e o e-mail suporte@primeges.com.br; por decisão do dono, nenhum nome ou CPF de pessoa é publicado.
+> **Continuam faltando:** CNPJ e identificação legal do responsável (exigidos pela LGPD e pelo Decreto nº 7.962/2013; ainda não existem), endereço físico (exigido para venda pela internet pelo Decreto nº 7.962/2013),
+> nome do encarregado, se houver, e a revisão jurídica (bases legais, transferência internacional, cláusulas de operador, foro).
+> O e-mail precisa **receber** mensagens: conferir o registro MX do domínio.
+
 ## 1. Dados empresariais que faltam (preencher com dado real, nunca estimado)
 
 | # | Campo | Onde aparece | Situação |

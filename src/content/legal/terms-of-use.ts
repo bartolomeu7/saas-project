@@ -1,6 +1,6 @@
 import type { LegalDocument } from "./types";
 
-const BLOCKED = "[BLOCKED — DADO EMPRESARIAL NECESSÁRIO]";
+const CONTACT = "suporte@primeges.com.br";
 
 /**
  * Termos de Uso do Prime Ges — texto ORIGINAL, escrito a partir do funcionamento real do
@@ -12,14 +12,15 @@ const BLOCKED = "[BLOCKED — DADO EMPRESARIAL NECESSÁRIO]";
  * também alimentam a página pública /politica-de-reembolso (ver src/lib/legal/documents.ts):
  * uma única fonte, um único hash.
  *
- * Os únicos marcadores pendentes são dados da empresa (BLOCKED). Eles não podem ser inventados.
+ * Identificação PROVISÓRIA (Nexora Group, definida pelo dono em 25/11/2026; nenhum nome ou CPF de pessoa é publicado): ainda não há CNPJ nem endereço
+ * publicado. Ao abrir a empresa, publicar nova versão. Dados que faltam não são inventados.
  */
 export const termsOfUse: LegalDocument = {
   type: "TERMS_OF_USE",
   slug: "termos-de-uso",
   title: "Termos de Uso",
-  version: "1.0.0-rc.3",
-  effectiveAt: "2026-10-21",
+  version: "1.0.0-rc.4",
+  effectiveAt: "2026-11-25",
   summary:
     "Regras para usar o Prime Ges: conta, planos e pagamento, cancelamento e reembolso, uso permitido, responsabilidades e encerramento.",
   sections: [
@@ -27,7 +28,7 @@ export const termsOfUse: LegalDocument = {
       id: "objeto",
       title: "Objeto e aceite",
       paragraphs: [
-        "Estes Termos de Uso regulam o acesso e o uso do Prime Ges, plataforma online de gestão para pequenos negócios, oferecida pela pessoa jurídica identificada na seção \"Identificação do prestador\" (a \"Prime Ges\").",
+        "Estes Termos de Uso regulam o acesso e o uso do Prime Ges, plataforma online de gestão para pequenos negócios, oferecida pelo responsável identificado na seção \"Identificação do prestador\" (a \"Prime Ges\").",
         "Ao criar uma conta ou continuar usando a plataforma, você declara que leu e aceita estes Termos. O aceite é registrado de forma versionada: guardamos qual versão deste documento estava vigente, a data e o contexto do aceite.",
         "A Política de Privacidade, publicada separadamente, explica como os dados são tratados. Ela é lida em conjunto com estes Termos, mas é um documento distinto.",
       ],
@@ -113,7 +114,7 @@ export const termsOfUse: LegalDocument = {
       id: "reembolso-como",
       title: "Como pedir e como recebemos o reembolso",
       paragraphs: [
-        "Peça pelo canal de atendimento: " + BLOCKED + ". Informe o e-mail da conta, o nome da empresa e a data e o valor do pagamento (ou o identificador da cobrança, se tiver). Para o arrependimento, basta dizer que quer desistir.",
+        "Peça pelo canal de atendimento: " + CONTACT + ". Informe o e-mail da conta, o nome da empresa e a data e o valor do pagamento (ou o identificador da cobrança, se tiver). Para o arrependimento, basta dizer que quer desistir.",
         "Respondemos o pedido em até 5 dias úteis. Aprovado o pedido, devolvemos o valor por Pix, para a conta de origem do pagamento, em 10 a 15 dias úteis contados da aprovação, sem desconto de tarifas. Se a conta de origem não puder receber a devolução, combinamos com você outra forma de pagamento em seu nome.",
         "Guardamos o registro do pedido e do estorno para a sua comprovação e para as obrigações fiscais, conforme a Política de Privacidade.",
         "Se não ficar satisfeito com a resposta, você pode procurar o Procon, a plataforma consumidor.gov.br ou o Poder Judiciário.",
@@ -154,6 +155,22 @@ export const termsOfUse: LegalDocument = {
       ],
     },
     {
+      id: "dados-empresa",
+      title: "Tratamento de dados em nome da Empresa",
+      paragraphs: [
+        "Quanto aos dados pessoais que a Empresa cadastra (de clientes, fornecedores e equipe), a Empresa é a controladora e a Prime Ges é a operadora (art. 5º, VI e VII, e art. 39 da LGPD).",
+        "A Empresa deve ter base legal para tratar esses dados, informar as pessoas, inclusive os seus funcionários, e cadastrar somente o necessário.",
+      ],
+      items: [
+        "a Prime Ges trata esses dados apenas para prestar o serviço, conforme estes Termos e as instruções da Empresa dadas pelo uso da plataforma;",
+        "quem tiver acesso a eles pela Prime Ges deve manter sigilo;",
+        "a Prime Ges adota as medidas de segurança descritas na Política de Privacidade e usa os prestadores (suboperadores) ali informados;",
+        "se tomar conhecimento de um incidente de segurança que afete os dados da Empresa, a Prime Ges a avisa sem demora injustificada, com as informações disponíveis;",
+        "a Prime Ges ajuda a Empresa a atender pedidos de titulares e da ANPD, dentro do que a plataforma permite;",
+        "ao excluir o ambiente, os dados são eliminados conforme a Política de Privacidade; a cópia deve ser pedida antes da exclusão.",
+      ],
+    },
+    {
       id: "propriedade",
       title: "Propriedade intelectual",
       paragraphs: [
@@ -173,7 +190,7 @@ export const termsOfUse: LegalDocument = {
       id: "terceiros",
       title: "Serviços de terceiros",
       paragraphs: [
-        "O Prime Ges depende de prestadores como o Clerk (autenticação), o Supabase (banco de dados), a Vercel (hospedagem) e um prestador de pagamentos Pix. Esses serviços têm termos próprios e podem sofrer interrupções ou mudanças que afetem a plataforma.",
+        "A aplicação e o banco de dados ficam em servidor operado pelo responsável. O Prime Ges também depende de prestadores como a Clerk (autenticação), a Cloudflare (rede, proteção e acesso ao site) e prestadores de pagamentos Pix. Esses serviços têm termos próprios e podem sofrer interrupções ou mudanças que afetem a plataforma.",
         "A Prime Ges responde pela escolha e pela contratação desses prestadores, mas não responde por falhas exclusivamente atribuíveis a eles quando não houver falha nossa, nos limites permitidos em lei.",
       ],
     },
@@ -183,7 +200,7 @@ export const termsOfUse: LegalDocument = {
       paragraphs: [
         "Os planos pagos incluem suporte por e-mail, conforme descrito na página de planos. O teste gratuito não inclui suporte.",
         "Podemos enviar comunicações necessárias ao serviço (avisos de segurança, de cobrança, de alteração destes Termos). Comunicações de marketing, se existirem, dependerão de consentimento próprio e opcional, separado destes Termos.",
-        "Canal oficial de suporte e de atendimento: " + BLOCKED + ".",
+        "Canal oficial de suporte e de atendimento: " + CONTACT + ".",
       ],
     },
     {
@@ -223,17 +240,16 @@ export const termsOfUse: LegalDocument = {
       title: "Lei aplicável e foro",
       paragraphs: [
         "Estes Termos são regidos pelas leis da República Federativa do Brasil.",
-        "Quando o Usuário for consumidor, o foro competente é o do seu domicílio (art. 101, I, do CDC). Nos demais casos, as controvérsias serão resolvidas no foro da comarca de " + BLOCKED + ".",
+        "Quando o Usuário for consumidor, o foro competente é o do seu domicílio (art. 101, I, do CDC). Nos demais casos, vale o foro definido pela legislação processual.",
       ],
     },
     {
       id: "identificacao",
       title: "Identificação do prestador",
       paragraphs: [
-        "Razão social: " + BLOCKED + ".",
-        "CNPJ: " + BLOCKED + ".",
-        "Endereço: " + BLOCKED + ".",
-        "E-mail de contato: " + BLOCKED + ".",
+        "Responsável: o Prime Ges é operado pela Nexora Group.",
+        "E-mail de contato e suporte: " + CONTACT + ".",
+        "A Nexora Group ainda não tem CNPJ: esta identificação é provisória e será completada quando houver.",
       ],
     },
   ],

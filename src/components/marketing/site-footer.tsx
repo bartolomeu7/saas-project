@@ -16,9 +16,8 @@ interface FooterColumn {
 }
 
 /**
- * Todos os links do rodapé têm destino real. Canal de contato e dados da empresa (razão social,
- * CNPJ, endereço) só entram aqui quando forem confirmados: hoje estão pendentes e aparecem como
- * [BLOCKED — DADO EMPRESARIAL NECESSÁRIO] nos documentos legais, não como texto inventado.
+ * Todos os links do rodapé têm destino real. Operação (Nexora Group) e canal de contato são os definidos pelo dono; nenhum
+ * nome ou CPF de pessoa aparece no site, e CNPJ e endereço entram quando existirem (nunca texto inventado).
  */
 const COLUMNS: FooterColumn[] = [
   {
@@ -96,6 +95,13 @@ export function SiteFooter() {
             </nav>
           ))}
         </div>
+
+        <p className="text-xs text-muted-foreground">
+          Prime Ges é operado pela Nexora Group ·{" "}
+          <a href="mailto:suporte@primeges.com.br" className="underline underline-offset-4 hover:text-foreground">
+            suporte@primeges.com.br
+          </a>
+        </p>
 
         <p className="border-t border-border pt-6 text-xs text-muted-foreground">
           © {new Date().getFullYear()} {siteConfig.name}
