@@ -15,6 +15,7 @@ import { ReportSales } from "@/components/app/report-sales";
 import { ReportCustomers } from "@/components/app/report-customers";
 import { ReportAgenda } from "@/components/app/report-agenda";
 import { ReportQuotes } from "@/components/app/report-quotes";
+import { ReportCommission } from "@/components/app/report-commission";
 import { ReportPrintButton } from "@/components/app/report-print-button";
 import { RevenueGoalForm } from "@/components/app/revenue-goal-form";
 import { RevenueGoalProgress } from "@/components/app/revenue-goal-progress";
@@ -165,6 +166,7 @@ export default async function ReportsPage({
         {tab === "clientes" ? <ReportCustomers companyId={companyId} range={range} inactiveDays={inactiveDays} /> : null}
         {tab === "agenda" ? <ReportAgenda companyId={companyId} range={range} /> : null}
         {tab === "orcamentos" ? <ReportQuotes companyId={companyId} range={range} /> : null}
+        {tab === "comissao" ? <ReportCommission companyId={companyId} range={range} /> : null}
       </div>
     );
   }
