@@ -7,6 +7,23 @@ import { buildReportCsv } from "@/lib/reports/csv";
 import { resolveReportRange } from "@/lib/reports/period";
 import { buildSalesCsv, parseSalesFilters } from "@/lib/reports/sales";
 import { getSalesReport } from "@/lib/reports/sales-queries";
+import { getAgendaReport, getCustomersReport, getQuotesReport } from "@/lib/reports/people-queries";
+import { parseInactiveDays, parseReportTab } from "@/lib/reports/people";
+import {
+  agendaDocument,
+  customersDocument,
+  documentCsv,
+  overviewDocument,
+  quotesDocument,
+  salesDocument,
+  type ReportDocument,
+} from "@/lib/reports/document";
+import { renderReportPdf } from "@/lib/reports/pdf-document";
+import { formatDateTime } from "@/lib/format";
+import { todayDateSaoPaulo } from "@/lib/timezone";
+
+// o desenho do PDF usa APIs do Node
+export const runtime = "nodejs";
 
 export async function GET(request: Request) {
   let current;
@@ -24,37 +41,61 @@ export async function GET(request: Request) {
   }
 
   const url = new URL(request.url);
-  const period = url.searchParams.get("period") ?? "month";
-  const from = url.searchParams.get("from") ?? undefined;
-  const to = url.searchParams.get("to") ?? undefined;
-  let csv: string;
+  const query = (name: string) => url.searchParams.get(name) ?? undefined;
+  const pdf = query("format") === "pdf";
+  const tab = parseReportTab(query("aba"));
+  const period = query("period") ?? "month";
+  const from = query("from");
+  const to = query("to");
+
+  let body: string | Buffer;
   let name: string;
   try {
     const range = resolveReportRange(period, from, to);
     const dates = range.period === "custom" ? `${range.fromDate}_${range.toDate}` : range.period;
-    if (url.searchParams.get("aba") === "vendas") {
-      const filters = parseSalesFilters({
-        item: url.searchParams.get("item") ?? undefined,
-        cliente: url.searchParams.get("cliente") ?? undefined,
-        quem: url.searchParams.get("quem") ?? undefined,
-      });
-      csv = buildSalesCsv(await getSalesReport(current.company.id, range, filters), range, filters);
-      name = `prime-ges-vendas-${dates}.csv`;
+    const companyId = current.company.id;
+    let csv: (() => string) | null = null;
+    let document: () => ReportDocument;
+    if (tab === "vendas") {
+      const filters = parseSalesFilters({ item: query("item"), cliente: query("cliente"), quem: query("quem") });
+      const report = await getSalesReport(companyId, range, filters);
+      csv = () => buildSalesCsv(report, range, filters);
+      document = () => salesDocument(report, range, filters);
+    } else if (tab === "clientes") {
+      const days = parseInactiveDays(query("sumidos"));
+      const report = await getCustomersReport(companyId, range, days);
+      document = () => customersDocument(report, range, days);
+    } else if (tab === "agenda") {
+      const report = await getAgendaReport(companyId, range);
+      document = () => agendaDocument(report, range, todayDateSaoPaulo(new Date(report.until)));
+    } else if (tab === "orcamentos") {
+      const report = await getQuotesReport(companyId, range);
+      document = () => quotesDocument(report, range);
     } else {
-      csv = buildReportCsv(await getReportsWorkspace(current.company.id, period, from, to));
-      name = `prime-ges-relatorio-${dates}.csv`;
+      const report = await getReportsWorkspace(companyId, period, from, to);
+      csv = () => buildReportCsv(report);
+      document = () => overviewDocument(report);
     }
+    const slug = tab === "geral" ? "relatorio" : tab;
+    name = `prime-ges-${slug}-${dates}.${pdf ? "pdf" : "csv"}`;
+    // Visão geral e Vendas mantêm o CSV que já tinham; as demais saem do mesmo documento do PDF
+    body = pdf
+      ? await renderReportPdf(document(), current.company.name, formatDateTime(new Date().toISOString()))
+      : csv
+        ? csv()
+        : documentCsv(document());
   } catch (error) {
     console.error("[relatorios] exportação falhou:", error instanceof Error ? error.message : error);
     return NextResponse.json({ error: "Não foi possível gerar o relatório agora. Tente novamente." }, { status: 503 });
   }
 
-  return new NextResponse(csv, {
+  return new NextResponse(typeof body === "string" ? body : new Uint8Array(body), {
     status: 200,
     headers: {
-      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Type": pdf ? "application/pdf" : "text/csv; charset=utf-8",
       "Content-Disposition": `attachment; filename="${name}"`,
-      "Cache-Control": "no-store",
+      "Cache-Control": "private, no-store",
+      "X-Content-Type-Options": "nosniff",
     },
   });
 }

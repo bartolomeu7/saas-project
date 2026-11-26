@@ -151,7 +151,7 @@ test("Relatórios: agenda de Este mês/Este ano conta também o que ainda vai ac
   assert.ok(q.includes("export function appointmentsWindowEnd"));
   assert.ok(q.includes("p_appointments_to: appointmentsWindowEnd(range)"));
   assert.ok(read("src/lib/reports/summary.ts").includes("allItems"));
-  assert.ok(read("src/app/(app)/app/relatorios/export/route.ts").includes("buildReportCsv(await getReportsWorkspace("));
+  assert.ok(read("src/app/(app)/app/relatorios/export/route.ts").includes("csv = () => buildReportCsv(report);"));
 });
 
 test("Financeiro, Caixa e Estoque: estornar lançamento, histórico de fechamentos e movimentações", () => {

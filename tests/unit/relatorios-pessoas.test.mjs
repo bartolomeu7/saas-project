@@ -58,14 +58,13 @@ test("orçamentos: aprovação ignora rascunho e enviado no prazo; conversão é
   assert.deepEqual([empty.issued, empty.approvalRate, empty.conversionRate], [0, null, null]);
 });
 
-test("abas novas: erro visível, isolamento no banco e sem botão que exporte outra coisa", () => {
+test("abas novas: erro visível, isolamento no banco e permissão antes de tudo", () => {
   const queries = read("src/lib/reports/people-queries.ts");
   assert.equal((queries.match(/required\(result, /g) ?? []).length, 3);
   const sql = read("supabase/migrations/20261126200000_relatorios_clientes_agenda_orcamentos.sql");
   assert.equal((sql.match(/security invoker/g) ?? []).length, 3);
   assert.equal((sql.match(/from public, anon;/g) ?? []).length, 3);
   const page = read("src/app/(app)/app/relatorios/page.tsx");
-  assert.ok(page.includes('{tab === "geral" || tab === "vendas" ? ('));
   for (const component of ["<ReportCustomers ", "<ReportAgenda ", "<ReportQuotes "]) {
     assert.ok(page.indexOf('can(current.role, "reports.view")') < page.indexOf(component), component);
   }

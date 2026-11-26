@@ -864,3 +864,37 @@
     radial-gradient(900px 320px at 85% -80px, hsl(var(--primary) / 0.09), transparent 62%),
     hsl(var(--background));
 }
+
+/* Impressão dos Relatórios: só o conteúdo, em preto sobre branco. */
+@media print {
+  body:has(.prime-report) { background: #fff !important; }
+  body:has(.prime-report) .group.peer,
+  body:has(.prime-report) .prime-app-main > :not(#conteudo-principal) { display: none !important; }
+  .prime-report,
+  .prime-report * {
+    color: #111 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    border-color: #d1d5db !important;
+    animation: none !important;
+    transition: none !important;
+  }
+  .prime-report article,
+  .prime-report .prime-kpi-card { opacity: 1 !important; transform: none !important; }
+  .prime-report .prime-kpi-card::after { display: none !important; }
+  /* as barras continuam aparecendo */
+  .prime-report .prime-bar,
+  .prime-report .prime-meter,
+  .prime-report [style*="width"].rounded-full {
+    background: #2563eb !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  /* no papel não há o que clicar: somem os links de ação */
+  .prime-report a.text-primary { display: none !important; }
+  .prime-report .overflow-x-auto,
+  .prime-report .overflow-auto { overflow: visible !important; }
+  .prime-report table { min-width: 0 !important; font-size: 11px; }
+  .prime-report tr,
+  .prime-report article { break-inside: avoid; }
+}

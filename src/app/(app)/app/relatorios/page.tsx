@@ -15,6 +15,7 @@ import { ReportSales } from "@/components/app/report-sales";
 import { ReportCustomers } from "@/components/app/report-customers";
 import { ReportAgenda } from "@/components/app/report-agenda";
 import { ReportQuotes } from "@/components/app/report-quotes";
+import { ReportPrintButton } from "@/components/app/report-print-button";
 import { parseInactiveDays, parseReportTab, REPORT_TABS } from "@/lib/reports/people";
 import { parseSalesFilters, salesQuery } from "@/lib/reports/sales";
 
@@ -70,6 +71,8 @@ export default async function ReportsPage({
   // a aba e os filtros acompanham a troca de período e a exportação
   const tabQuery =
     tab === "vendas" ? salesQuery(filters) : tab === "geral" ? "" : tab === "clientes" ? `aba=clientes&sumidos=${inactiveDays}` : `aba=${tab}`;
+  const exportHref = "/app/relatorios/export?period=" + period + customQuery + (tabQuery ? "&" + tabQuery : "");
+  const tabLabel = REPORT_TABS.find((item) => item.key === tab)!.label;
   const periodHref = (value: ReportPeriod, extra: string) => {
     const query = [value === "month" ? "" : "period=" + value, extra].filter(Boolean).join("&");
     return query ? "/app/relatorios?" + query : "/app/relatorios";
@@ -82,7 +85,7 @@ export default async function ReportsPage({
         description="Leitura operacional baseada nos dados reais da empresa."
         className="sm:flex-col sm:items-start xl:flex-row xl:items-end"
         actions={
-          <nav aria-label="Período do relatório" className="flex flex-wrap gap-2">
+          <nav aria-label="Período do relatório" className="flex flex-wrap gap-2 print:hidden">
             {PERIODS.map((item) => (
               <Link
                 key={item.value}
@@ -93,17 +96,25 @@ export default async function ReportsPage({
                 {item.label}
               </Link>
             ))}
-            {tab === "geral" || tab === "vendas" ? (
-              <a href={"/app/relatorios/export?period=" + period + customQuery + (tabQuery ? "&" + tabQuery : "")} className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium hover:bg-muted">
-                <ArrowDownToLine className="h-3.5 w-3.5" />
-                Exportar CSV
-              </a>
-            ) : null}
+            <a href={exportHref} className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium hover:bg-muted">
+              <ArrowDownToLine className="h-3.5 w-3.5" />
+              Exportar CSV
+            </a>
+            <a href={exportHref + "&format=pdf"} className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium hover:bg-muted">
+              <FileText className="h-3.5 w-3.5" />
+              Baixar PDF
+            </a>
+            <ReportPrintButton />
           </nav>
         }
       />
 
-      <nav aria-label="Visões do relatório" className="flex flex-wrap gap-2 border-b border-border pb-3">
+      {/* só na folha impressa: sem os botões, é preciso dizer qual aba e qual período */}
+      <p className="hidden text-sm print:block">
+        {current.company.name} · {tabLabel} · {formatDay(range.fromDate)} a {formatDay(range.toDate)}
+      </p>
+
+      <nav aria-label="Visões do relatório" className="flex flex-wrap gap-2 border-b border-border pb-3 print:hidden">
         {REPORT_TABS.map(({ key, label }) => (
           <Link
             key={key}
@@ -116,7 +127,7 @@ export default async function ReportsPage({
         ))}
       </nav>
 
-      <div className="flex flex-col gap-3 empty:hidden">
+      <div className="flex flex-col gap-3 empty:hidden print:hidden">
         {period === "custom" ? (
           <form key={range.fromDate + range.toDate} method="get" action="/app/relatorios" className="flex flex-wrap items-end gap-3">
             <input type="hidden" name="period" value="custom" />
@@ -144,7 +155,7 @@ export default async function ReportsPage({
   if (tab !== "geral") {
     const companyId = current.company.id;
     return (
-      <div className="prime-module-page flex flex-col gap-6 px-4 py-6 sm:px-6">
+      <div className="prime-module-page prime-report flex flex-col gap-6 px-4 py-6 sm:px-6">
         {header}
         {tab === "vendas" ? <ReportSales companyId={companyId} range={range} filters={filters} /> : null}
         {tab === "clientes" ? <ReportCustomers companyId={companyId} range={range} inactiveDays={inactiveDays} /> : null}
@@ -167,7 +178,7 @@ export default async function ReportsPage({
   const maxPayment = Math.max(...report.paymentMethods.map((item) => item.amount), 1);
 
   return (
-    <div className="prime-module-page flex flex-col gap-6 px-4 py-6 sm:px-6">
+    <div className="prime-module-page prime-report flex flex-col gap-6 px-4 py-6 sm:px-6">
       {header}
 
       <div className="flex flex-col gap-3">
