@@ -8,6 +8,7 @@ import {
   NON_OPERATING_EXPENSE_SOURCES,
   sumOperatingExpenses,
   sumOtherIncome,
+  sumPayableBalance,
 } from "@/lib/finance/dre";
 import type {
   AccountReceivable,
@@ -202,10 +203,7 @@ export const getFinanceDashboard = cache(async function getFinanceDashboard(
     .filter((row) => row.direction === "expense")
     .reduce((sum, row) => sum + money(row.amount), 0);
 
-  const accountsPayable = (payableResult.data ?? []).reduce(
-    (sum, row) => sum + Math.max(0, money(row.amount) - money(row.paid_amount)),
-    0
-  );
+  const accountsPayable = sumPayableBalance(payableResult.data ?? []);
   const today = todayDateSaoPaulo();
   const overduePayableCount = (payableResult.data ?? []).filter(
     (row) => row.due_date && row.due_date < today

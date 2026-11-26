@@ -42,6 +42,11 @@ export function sumOtherIncome(rows: readonly FinancialEntryAmountRow[]): number
   );
 }
 
+/** Quanto ainda se deve: valor menos o que já foi pago, nas contas em aberto e parciais. */
+export function sumPayableBalance(rows: ReadonlyArray<{ amount: unknown; paid_amount?: unknown }>): number {
+  return rows.reduce((sum, row) => sum + Math.max(0, money(row.amount) - money(row.paid_amount)), 0);
+}
+
 /** Resultado = faturamento − custo das vendas + outras receitas − despesas operacionais. */
 export function computeNetResult(input: {
   revenue: number;

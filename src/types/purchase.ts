@@ -74,6 +74,7 @@ export interface AccountPayable {
   purchase_receipt_id: string | null;
   description: string;
   amount: number;
+  paid_amount: number | null;
   issue_date: string;
   due_date: string | null;
   status: AccountsPayableStatus;

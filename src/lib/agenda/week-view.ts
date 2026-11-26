@@ -1,7 +1,7 @@
 import type { AppointmentStatus } from "@/types/appointment";
 
 /**
- * Lógica pura (sem banco, sem React) da agenda em 3 semanas: semana passada, atual e próxima.
+ * Lógica pura (sem banco, sem React) da agenda: semana da data escolhida, com atalhos para a passada, a atual e a próxima.
  * Todas as datas são "YYYY-MM-DD" no calendário de São Paulo. A semana vai de domingo a sábado
  * (calendário brasileiro): hoje, domingo 08/11, abre a semana atual.
  *
@@ -42,10 +42,6 @@ export const AGENDA_WEEK_LABELS: Record<AgendaWeekKey, string> = {
 
 const WEEK_OFFSETS: Record<AgendaWeekKey, number> = { passada: -1, atual: 0, proxima: 1 };
 
-export function resolveWeekKey(raw: string | undefined | null): AgendaWeekKey {
-  return AGENDA_WEEK_KEYS.find((key) => key === raw) ?? "atual";
-}
-
 export function addDaysToDateString(dateValue: string, amount: number): string {
   const [year = 1970, month = 1, day = 1] = dateValue.split("-").map(Number);
   const date = new Date(Date.UTC(year, month - 1, day));
@@ -60,8 +56,18 @@ export function weekStartSunday(dateValue: string): string {
   return addDaysToDateString(dateValue, -weekday);
 }
 
+/** Dia para onde o atalho leva: o mesmo dia da semana de hoje, uma semana antes, nesta ou depois. */
+export function weekShortcutDate(key: AgendaWeekKey, today: string = dateKeyOf()): string {
+  return addDaysToDateString(today, WEEK_OFFSETS[key] * 7);
+}
+
+/** Qual atalho corresponde à semana da data, ou null para qualquer outra semana. */
+export function weekKeyOf(dateValue: string, today: string = dateKeyOf()): AgendaWeekKey | null {
+  const start = weekStartSunday(dateValue);
+  return AGENDA_WEEK_KEYS.find((key) => weekStartSunday(weekShortcutDate(key, today)) === start) ?? null;
+}
+
 export interface AgendaWeekBounds {
-  key: AgendaWeekKey;
   /** Domingo. */
   start: string;
   /** Sábado. */
@@ -72,13 +78,14 @@ export interface AgendaWeekBounds {
   toIso: string;
 }
 
-export function getWeekBounds(key: AgendaWeekKey, today: string = dateKeyOf()): AgendaWeekBounds {
-  const start = addDaysToDateString(weekStartSunday(today), WEEK_OFFSETS[key] * 7);
+/** A semana (domingo a sábado) que contém a data. */
+export function getWeekBounds(dateValue: string = dateKeyOf()): AgendaWeekBounds {
+  const start = weekStartSunday(dateValue);
   const days = Array.from({ length: 7 }, (_, index) => addDaysToDateString(start, index));
   const end = days[6] ?? start;
   const from = startOfDayFromDateString(start);
   const to = endOfDayFromDateString(end);
-  return { key, start, end, days, fromIso: from.toISOString(), toIso: to.toISOString() };
+  return { start, end, days, fromIso: from.toISOString(), toIso: to.toISOString() };
 }
 
 /** Dia (YYYY-MM-DD) de São Paulo em que o instante cai. */

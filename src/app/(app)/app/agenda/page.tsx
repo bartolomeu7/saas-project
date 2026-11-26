@@ -6,7 +6,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getCurrentCompany } from "@/lib/companies/queries";
 import {
-  getAgendaStats,
   listAgendaCustomers,
   listAgendaProfessionals,
   listAgendaServices,
@@ -28,10 +27,11 @@ import {
   getWeekBounds,
   monthGrid,
   monthLabel,
-  resolveWeekKey,
   shortDateLabel,
-  type AgendaWeekKey,
+  weekKeyOf,
+  weekShortcutDate,
 } from "@/lib/agenda/week-view";
+import { countByStatus } from "@/lib/agenda/stats";
 import { APPOINTMENT_STATUS_LABELS } from "@/types/appointment";
 import { cn } from "@/lib/utils";
 
@@ -81,33 +81,30 @@ function statusBadge(status: string) {
 export default async function AgendaPage({
   searchParams: searchParamsPromise,
 }: {
-  searchParams: Promise<{ date?: string | string[]; professional?: string | string[]; semana?: string | string[]; visao?: string | string[] }>;
+  searchParams: Promise<{ date?: string | string[]; professional?: string | string[]; visao?: string | string[] }>;
 }) {
   const searchParams = await searchParamsPromise;
   const current = (await getCurrentCompany())!;
   const rawDate = searchParams?.date;
   const rawProfessional = searchParams?.professional;
-  const rawWeek = searchParams?.semana;
   const rawView = searchParams?.visao;
   const requestedDate = Array.isArray(rawDate) ? rawDate[0] : rawDate;
   const professional = Array.isArray(rawProfessional) ? rawProfessional[0] : rawProfessional;
   const date = requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate) ? requestedDate : isoTodaySaoPaulo();
-  const weekKey = resolveWeekKey(Array.isArray(rawWeek) ? rawWeek[0] : rawWeek);
   // "Dia": o dia escolhido em grade de horas, uma coluna por profissional. "Mês": o mês do dia escolhido.
-  // "Semana" (padrão): as 3 semanas.
+  // "Semana" (padrão): a semana do dia escolhido.
   const requestedView = Array.isArray(rawView) ? rawView[0] : rawView;
   const view: "semana" | "dia" | "mes" = requestedView === "dia" ? "dia" : requestedView === "mes" ? "mes" : "semana";
   const month = monthGrid(date);
   const monthRange = dateRangeIso(month.gridStart, month.gridEnd);
   const today = isoTodaySaoPaulo();
-  const week = getWeekBounds(weekKey, today);
+  const week = getWeekBounds(date);
+  const weekKey = weekKeyOf(date, today);
 
-  // Mantém semana, dia e profissional escolhidos ao navegar.
-  function agendaHref(next: { date?: string; semana?: AgendaWeekKey; professional?: string | null; visao?: "semana" | "dia" | "mes" }) {
+  // Mantém dia, visão e profissional escolhidos ao navegar.
+  function agendaHref(next: { date?: string; professional?: string | null; visao?: "semana" | "dia" | "mes" }) {
     const params = new URLSearchParams();
     params.set("date", next.date ?? date);
-    const semana = next.semana ?? weekKey;
-    if (semana !== "atual") params.set("semana", semana);
     const visao = next.visao ?? view;
     if (visao !== "semana") params.set("visao", visao);
     const person = next.professional === undefined ? professional : next.professional;
@@ -115,7 +112,7 @@ export default async function AgendaPage({
     return "/app/agenda?" + params.toString();
   }
 
-  const [appointments, calendarAppointments, professionals, customers, services, stats] = await Promise.all([
+  const [appointments, calendarAppointments, professionals, customers, services] = await Promise.all([
     listAppointments(current.company.id, date, professional),
     // A visão "Dia" usa a lista do próprio dia; só a visão "Semana" precisa dos atendimentos da semana inteira.
     view === "semana"
@@ -126,8 +123,9 @@ export default async function AgendaPage({
     listAgendaProfessionals(current.company.id),
     listAgendaCustomers(current.company.id),
     listAgendaServices(current.company.id),
-    getAgendaStats(current.company.id, date),
   ]);
+  // Os cartões contam a mesma lista da tela, já filtrada pelo profissional.
+  const stats = countByStatus(appointments);
 
   return (
     <div className="prime-module-page prime-module-page--agenda flex flex-col gap-6 px-4 py-6 sm:px-6">
@@ -188,7 +186,7 @@ export default async function AgendaPage({
                 {AGENDA_WEEK_KEYS.map((key) => (
                   <Link
                     key={key}
-                    href={agendaHref({ semana: key })}
+                    href={agendaHref({ date: weekShortcutDate(key, today) })}
                     aria-current={key === weekKey ? "true" : undefined}
                     className={cn("rounded-full border px-3 py-1.5 text-xs", key === weekKey && "bg-primary text-primary-foreground")}
                   >
@@ -208,7 +206,6 @@ export default async function AgendaPage({
             dayDate={date}
             todayDate={today}
             nowIso={new Date().toISOString()}
-            weekKey={weekKey}
             professionalId={professional}
           />
         </div>

@@ -400,7 +400,7 @@ describe("Onda E (lote 5): Agenda, Equipe e Fidelidade, só apresentação", () 
   const loyaltyTabs = read("src/components/app/loyalty-tabs.tsx");
 
   it("Agenda mantém as consultas, a navegação por data/profissional e os formulários de ação", () => {
-    for (const query of [/listAppointments\(current\.company\.id, date, professional\)/, /getAgendaStats\(current\.company\.id, date\)/, /listAgendaServices\(current\.company\.id\)/]) {
+    for (const query of [/listAppointments\(current\.company\.id, date, professional\)/, /countByStatus\(appointments\)/, /listAgendaServices\(current\.company\.id\)/]) {
       assert.match(agenda, query);
     }
     assert.match(agenda, /shiftDate\(date, -1\)/);

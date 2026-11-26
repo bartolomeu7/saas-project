@@ -9,6 +9,7 @@ import { StockLevelBadge } from "@/components/app/stock-level-badge";
 import { DeactivateProductButton } from "@/components/app/deactivate-product-button";
 import { ReactivateProductButton } from "@/components/app/reactivate-product-button";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { formatQuantity } from "@/lib/products/stock-labels";
 
 function formatMoney(value: number): string {
   return value.toLocaleString("pt-BR", {
@@ -75,7 +76,7 @@ export function ProductTable({ products }: { products: ProductWithCategory[] }) 
                         {product.name}
                       </Link>
                       <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground sm:hidden">
-                        {formatMoney(product.sale_price)} · {product.stock_quantity} {product.unit}
+                        {formatMoney(product.sale_price)} · {formatQuantity(product.stock_quantity)} {product.unit}
                         <StockLevelBadge product={product} />
                       </span>
                       <div className="mt-2 flex flex-wrap items-center gap-2 sm:hidden">{actions}</div>
@@ -94,7 +95,7 @@ export function ProductTable({ products }: { products: ProductWithCategory[] }) 
                 <TableCell className="hidden px-4 py-3 sm:table-cell">
                   <div className="flex flex-col gap-1">
                     <span className="text-foreground">
-                      {product.stock_quantity} {product.unit}
+                      {formatQuantity(product.stock_quantity)} {product.unit}
                     </span>
                     <StockLevelBadge product={product} />
                   </div>

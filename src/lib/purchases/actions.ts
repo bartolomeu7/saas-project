@@ -10,6 +10,7 @@ import type { ActionResult } from "@/lib/auth/actions";
 import type { Json } from "@/types/supabase";
 import { cleanText, MAX_MONEY, MAX_QUANTITY } from "@/lib/validations/common";
 import { purchaseDatesError } from "@/lib/validations/purchase-dates";
+import { checkOrderItems } from "@/lib/validations/purchase-items";
 
 const MAX_NOTES = 2000;
 
@@ -66,6 +67,8 @@ export async function createPurchaseOrderAction(
   if (!items) return { error: "Adicione pelo menos um produto ao pedido." };
   const limitsError = itemLimitsError(items);
   if (limitsError) return { error: limitsError };
+  const checked = checkOrderItems(items);
+  if ("error" in checked) return checked;
   if (notes.length > MAX_NOTES) return { error: `Observações: máximo de ${MAX_NOTES} caracteres.` };
   const datesProblem = purchaseDatesError(String(formData.get("expectedAt") ?? ""), String(formData.get("dueDate") ?? ""), new Date().getFullYear());
   if (datesProblem) return { error: datesProblem };
@@ -76,7 +79,7 @@ export async function createPurchaseOrderAction(
   const supabase = await createSessionClient();
   const { data, error } = await supabase.rpc("create_purchase_order", {
     p_supplier_id: supplierId,
-    p_items: items,
+    p_items: checked.items,
     p_expected_at: parseDateValue(formData.get("expectedAt")) ?? undefined,
     p_due_date: String(formData.get("dueDate") ?? "").trim() || undefined,
     p_notes: notes || undefined,

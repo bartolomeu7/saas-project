@@ -11,6 +11,7 @@ import { SubmitButton } from "@/components/shared/auth/submit-button";
 import { FormMessage } from "@/components/shared/auth/form-message";
 import { NativeSelect } from "@/components/ui/native-select";
 import { useKeepInputOnError } from "@/hooks/use-keep-input-on-error";
+import { formatQuantity } from "@/lib/products/stock-labels";
 
 type DraftItem = { productId: string; quantity: string; unitCost: string };
 const initialState: ActionResult = {};
@@ -43,21 +44,13 @@ export function PurchaseOrderForm({
     [items]
   );
 
+  // todas as linhas vão para o servidor, que recusa a incompleta pelo número (nada é descartado aqui)
   const payload = JSON.stringify(
-    items
-      .filter((item) => item.productId)
-      .map((item) => ({
-        product_id: item.productId,
-        quantity: Number(item.quantity.replace(",", ".")),
-        unit_cost: Number(item.unitCost.replace(",", ".")),
-      }))
-      .filter(
-        (item) =>
-          Number.isFinite(item.quantity) &&
-          item.quantity > 0 &&
-          Number.isFinite(item.unit_cost) &&
-          item.unit_cost >= 0
-      )
+    items.map((item) => ({
+      product_id: item.productId,
+      quantity: Number(item.quantity.replace(",", ".")),
+      unit_cost: Number(item.unitCost.replace(",", ".")),
+    }))
   );
 
   function patchItem(index: number, patch: Partial<DraftItem>) {
@@ -158,7 +151,7 @@ export function PurchaseOrderForm({
                   <option value="">Selecione...</option>
                   {products.map((product) => (
                     <option key={product.id} value={product.id}>
-                      {product.name} — estoque {product.stock_quantity}
+                      {product.name} — estoque {formatQuantity(product.stock_quantity)}
                     </option>
                   ))}
                 </NativeSelect>

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { searchProductsAction, addSaleItemAction } from "@/lib/sales/actions";
 import { Input } from "@/components/ui/input";
 import type { ProductPick } from "@/types/sale";
+import { formatQuantity } from "@/lib/products/stock-labels";
 
 function formatMoney(value: number): string {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -140,7 +141,7 @@ function ProductResultRow({
         <span className="text-sm text-foreground">{product.name}</span>
         <span className="text-xs text-muted-foreground">
           {product.sku ? `SKU ${product.sku} · ` : ""}
-          {formatMoney(product.sale_price)} · estoque {product.stock_quantity} {product.unit}
+          {formatMoney(product.sale_price)} · estoque {formatQuantity(product.stock_quantity)} {product.unit}
         </span>
       </div>
       <div className="flex items-center gap-2">

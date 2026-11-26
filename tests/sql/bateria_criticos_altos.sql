@@ -129,7 +129,7 @@ select pg_temp.chk('v3 pagamento de concluída não é removido', $q$select publ
 select pg_temp.chk('v3 paga 10 em dinheiro', $q$select (public.add_sale_payment('abababab-4000-0000-0000-000000000004', 'cash', 10, null)).status::text$q$, 'OK=paid');
 select pg_temp.chk('v3 fecha caixa', $q$select (public.close_cash_register((select id from public.cash_registers where company_id = 'abababab-1000-0000-0000-000000000001' and status = 'open'), 0, null)).status::text$q$, 'OK=closed');
 select pg_temp.chk('v3 dinheiro do caixa exige caixa aberto', $q$select public.remove_draft_sale_payment((select id from public.sale_payments where sale_id = 'abababab-4000-0000-0000-000000000004'))::text$q$, 'ERR=Abra o caixa');
-select pg_temp.chk('v3 reabre caixa', $q$select (public.open_cash_register(0, null)).status::text$q$, 'OK=open');
+select pg_temp.chk('v3 reabre caixa com troco', $q$select (public.open_cash_register(10, null)).status::text$q$, 'OK=open');
 select pg_temp.chk('v3 remove dinheiro', $q$select public.remove_draft_sale_payment((select id from public.sale_payments where sale_id = 'abababab-4000-0000-0000-000000000004'))::text$q$, 'OK=');
 select pg_temp.chk('v3 saiu uma vez do caixa', $q$select pg_temp.caixa('out')$q$, 'OK=2:40.00');
 
@@ -150,6 +150,7 @@ insert into public.hr_employees (id, company_id, full_name, base_amount, rate_ki
 set local role authenticated;
 select pg_temp.dono();
 select pg_temp.chk('rh vale pix', $q$select (public.hr_add_adjustment('abababab-6000-0000-0000-000000000001', 'advance', 5000, null, 'bc-pix', 'pix')).kind::text$q$, 'OK=advance');
+select pg_temp.chk('rh troco para o vale', $q$select (public.create_cash_movement('in', 70, 'cash', 'troco')).direction::text$q$, 'OK=in');
 select pg_temp.chk('rh vale dinheiro', $q$select (public.hr_add_adjustment('abababab-6000-0000-0000-000000000001', 'advance', 70, null, 'bc-cash', 'cash')).kind::text$q$, 'OK=advance');
 select pg_temp.chk('rh desconto', $q$select (public.hr_add_adjustment('abababab-6000-0000-0000-000000000001', 'deduction', 5, null, 'bc-desc', null)).kind::text$q$, 'OK=deduction');
 reset role;

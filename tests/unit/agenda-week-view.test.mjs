@@ -9,8 +9,9 @@ import {
   getWeekBounds,
   hourOf,
   hourRangeFor,
-  resolveWeekKey,
   timeLabel,
+  weekKeyOf,
+  weekShortcutDate,
   weekStartSunday,
   weekdayShort,
 } from "../../src/lib/agenda/week-view.ts";
@@ -27,9 +28,10 @@ test("a semana vai de domingo a sábado e hoje (domingo 08/11) abre a semana atu
 });
 
 test("três semanas relativas a hoje: passada, atual e próxima", () => {
-  const passada = getWeekBounds("passada", "2026-11-08");
-  const atual = getWeekBounds("atual", "2026-11-08");
-  const proxima = getWeekBounds("proxima", "2026-11-08");
+  const semana = (key) => getWeekBounds(weekShortcutDate(key, "2026-11-08"));
+  const passada = semana("passada");
+  const atual = semana("atual");
+  const proxima = semana("proxima");
   assert.deepEqual([passada.start, passada.end], ["2026-11-01", "2026-11-07"]);
   assert.deepEqual([atual.start, atual.end], ["2026-11-08", "2026-11-14"]);
   assert.deepEqual([proxima.start, proxima.end], ["2026-11-15", "2026-11-21"]);
@@ -39,23 +41,25 @@ test("três semanas relativas a hoje: passada, atual e próxima", () => {
 });
 
 test("os limites da consulta são o dia inteiro em São Paulo (UTC-3)", () => {
-  const atual = getWeekBounds("atual", "2026-11-08");
+  const atual = getWeekBounds("2026-11-08");
   assert.equal(atual.fromIso, "2026-11-08T03:00:00.000Z");
   assert.equal(atual.toIso, "2026-11-15T02:59:59.999Z");
 });
 
 test("a semana vira de mês e de ano sem erro", () => {
   assert.equal(addDaysToDateString("2026-12-31", 1), "2027-01-01");
-  const atual = getWeekBounds("atual", "2026-12-30");
+  const atual = getWeekBounds("2026-12-30");
   assert.equal(atual.start, "2026-12-27");
   assert.equal(atual.end, "2027-01-02");
 });
 
-test("semana desconhecida cai na semana atual", () => {
-  assert.equal(resolveWeekKey(undefined), "atual");
-  assert.equal(resolveWeekKey("xyz"), "atual");
-  assert.equal(resolveWeekKey("passada"), "passada");
-  assert.equal(resolveWeekKey("proxima"), "proxima");
+test("a semana mostrada é a da data escolhida, mesmo longe de hoje", () => {
+  const outra = getWeekBounds("2026-12-07");
+  assert.deepEqual([outra.start, outra.end], ["2026-12-06", "2026-12-12"]);
+  assert.equal(weekKeyOf("2026-12-07", "2026-11-08"), null);
+  assert.equal(weekKeyOf("2026-11-10", "2026-11-08"), "atual");
+  assert.equal(weekKeyOf("2026-11-01", "2026-11-08"), "passada");
+  assert.equal(weekKeyOf("2026-11-21", "2026-11-08"), "proxima");
 });
 
 const NOW = new Date("2026-11-08T15:00:00Z"); // 12:00 em São Paulo
@@ -85,10 +89,10 @@ test("a grade mostra 8h–18h e se amplia para atendimentos fora disso", () => {
   assert.deepEqual(hourRangeFor(["2026-11-09T09:00:00Z", "2026-11-10T01:00:00Z"]), { first: 6, last: 22 });
 });
 
-test("a página usa a agenda em 3 semanas com consulta por período e cores pedidas", () => {
+test("a página usa a semana da data com consulta por período e cores pedidas", () => {
   const page = read("src/app/(app)/app/agenda/page.tsx");
   assert.ok(page.includes("AgendaWeekCalendar") && page.includes("listAppointmentsBetween"));
-  assert.ok(page.includes('semana'));
+  assert.ok(page.includes("getWeekBounds(date)") && page.includes("countByStatus(appointments)"));
   const calendar = read("src/components/app/agenda-week-calendar.tsx");
   const visual = read("src/components/app/agenda-visual.ts");
   assert.ok(visual.includes("bg-emerald") && visual.includes("bg-white") && visual.includes("bg-sky"));

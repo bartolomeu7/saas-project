@@ -17,6 +17,7 @@ import { DashboardCard } from "@/components/app/dashboard-card";
 import { StockAdjustForm } from "@/components/app/stock-adjust-form";
 import { ProductHistoryList } from "@/components/app/product-history-list";
 import { formatDate, formatPercent } from "@/lib/format";
+import { formatQuantity } from "@/lib/products/stock-labels";
 
 export const metadata: Metadata = {
   title: "Produto",
@@ -92,7 +93,7 @@ export default async function ProductDetailPage({
           )}
           <DashboardCard
             label="Estoque atual"
-            value={`${product.stock_quantity} ${product.unit}`}
+            value={`${formatQuantity(product.stock_quantity)} ${product.unit}`}
             icon={Package}
           />
           <DashboardCard

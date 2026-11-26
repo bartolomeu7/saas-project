@@ -9,7 +9,7 @@ import { ListAvatar } from "@/components/app/list-toolbar";
 import { getCurrentCompany } from "@/lib/companies/queries";
 import { listProducts } from "@/lib/products/queries";
 import { listRecentStockMovements } from "@/lib/products/stock-movements";
-import { formatStockDelta, stockMovementDelta, stockSourceLabel } from "@/lib/products/stock-labels";
+import { formatQuantity, formatStockDelta, stockMovementDelta, stockSourceLabel } from "@/lib/products/stock-labels";
 import { formatDateTime } from "@/lib/format";
 import type { StockLevel } from "@/types/product";
 import { getStockLevel } from "@/types/product";
@@ -88,7 +88,7 @@ export default async function StockPage({
                     {p.name}
                   </Link>
                   <p className="text-xs text-muted-foreground">
-                    Atual: {p.stock_quantity} · Mínimo: {p.minimum_stock}
+                    Atual: {formatQuantity(p.stock_quantity)} · Mínimo: {formatQuantity(p.minimum_stock)}
                   </p>
                   {minimum > 0 && (
                     <div className="mt-1.5 h-1.5 max-w-xs overflow-hidden rounded-full bg-secondary" aria-hidden="true">
@@ -162,8 +162,8 @@ export default async function StockPage({
                         <Link href={`/app/produtos/${p.id}`} className="font-medium hover:underline">{p.name}</Link>
                         {p.sku && <span className="ml-2 text-xs text-muted-foreground">{p.sku}</span>}
                       </td>
-                      <td className="px-3 py-2 text-right tabular-nums">{p.stock_quantity}</td>
-                      <td className="px-3 py-2 text-right tabular-nums">{p.minimum_stock}</td>
+                      <td className="px-3 py-2 text-right tabular-nums">{formatQuantity(p.stock_quantity)}</td>
+                      <td className="px-3 py-2 text-right tabular-nums">{formatQuantity(p.minimum_stock)}</td>
                       <td className="px-4 py-2">
                         <Badge variant={level === "out" ? "danger" : level === "low" ? "warning" : "success"}>
                           {level === "out" ? "Sem estoque" : level === "low" ? "Estoque baixo" : "Normal"}
@@ -212,7 +212,7 @@ export default async function StockPage({
                       <td className="px-3 py-2"><Link href={`/app/produtos/${m.product_id}`} className="hover:underline">{m.product_name}</Link></td>
                       <td className="px-3 py-2">{stockSourceLabel(m.source)}</td>
                       <td className={cn("px-3 py-2 text-right font-medium tabular-nums", delta > 0 ? "text-emerald-700 dark:text-emerald-500" : delta < 0 ? "text-destructive" : "")}>{formatStockDelta(delta)}</td>
-                      <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums text-muted-foreground">{m.stock_before} → {m.stock_after}</td>
+                      <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums text-muted-foreground">{formatQuantity(m.stock_before)} → {formatQuantity(m.stock_after)}</td>
                       <td className="max-w-[16rem] truncate px-4 py-2 text-muted-foreground" title={m.reason}>{m.reason}</td>
                     </tr>
                   );

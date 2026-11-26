@@ -50,7 +50,7 @@ test("clientes e fornecedores usam os validadores; fornecedor/cliente com docume
 
 test("Caixa: saída em dinheiro maior que o saldo é recusada; fechar caixa pede confirmação; valores em formato BR", () => {
   const cash = read("src/lib/cash-register/actions.ts");
-  assert.ok(cash.includes("Saída maior que o dinheiro disponível"));
+  assert.ok(read("supabase/migrations/20261126120000_operacao_caixa_compras.sql").includes("cash_movements_guard_drawer"));
   assert.ok(cash.includes("parseMoneyInput"));
   assert.ok(read("src/components/app/cash-register-close-form.tsx").includes("ConfirmDialog"));
   assert.ok(read("src/lib/finance/actions.ts").includes("parseMoneyInput"));
