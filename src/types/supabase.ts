@@ -4896,6 +4896,18 @@ export type Database = {
         Args: { p_member_id: string }
         Returns: undefined
       }
+      report_sales: {
+        Args: {
+          p_company_id: string
+          p_customer_id?: string
+          p_from: string
+          p_item?: string
+          p_to: string
+          p_user_id?: string
+          p_without_customer?: boolean
+        }
+        Returns: Json
+      }
       report_summary: {
         Args: {
           p_appointments_to: string

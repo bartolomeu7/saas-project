@@ -7,10 +7,12 @@ import { can } from "@/lib/permissions/matrix";
 import { NoAccess } from "@/components/app/no-access";
 import { getReportsWorkspace } from "@/lib/reports/queries";
 import type { ReportPeriod } from "@/types/report";
-import { describeChange, entriesDetailHref, formatDay, parseReportPeriod, salesDetailHref } from "@/lib/reports/period";
+import { describeChange, entriesDetailHref, formatDay, parseReportPeriod, resolveReportRange, salesDetailHref } from "@/lib/reports/period";
 import { formatQuantity } from "@/lib/products/stock-labels";
 import { groupByMonth } from "@/lib/reports/summary";
 import { BarChart, BreakdownBars } from "@/components/admin/admin-charts";
+import { ReportSales } from "@/components/app/report-sales";
+import { parseSalesFilters, salesQuery } from "@/lib/reports/sales";
 
 export const metadata: Metadata = { title: "Relatórios" };
 
@@ -48,7 +50,7 @@ const PERIODS: Array<{ value: ReportPeriod; label: string }> = [
 export default async function ReportsPage({
   searchParams: searchParamsPromise,
 }: {
-  searchParams: Promise<{ period?: string | string[]; from?: string | string[]; to?: string | string[] }>;
+  searchParams: Promise<Record<"period" | "from" | "to" | "aba" | "item" | "cliente" | "quem", string | string[] | undefined>>;
 }) {
   const searchParams = await searchParamsPromise;
   const current = (await getCurrentCompany())!;
@@ -56,21 +58,18 @@ export default async function ReportsPage({
   const period = parseReportPeriod(first(searchParams?.period));
   const from = first(searchParams?.from);
   const to = first(searchParams?.to);
-  const report = await getReportsWorkspace(current.company.id, period, from, to);
-  const { range, previous } = report;
+  const tab = first(searchParams?.aba) === "vendas" ? "vendas" : "geral";
+  const filters = parseSalesFilters({ item: first(searchParams?.item), cliente: first(searchParams?.cliente), quem: first(searchParams?.quem) });
+  const range = resolveReportRange(period, from, to);
   const customQuery = period === "custom" ? `&from=${range.fromDate}&to=${range.toDate}` : "";
-  const salesHref = salesDetailHref(range);
-  const byMonth = period === "year" || report.salesTrend.length > 62;
-  const trend = byMonth ? groupByMonth(report.salesTrend) : report.salesTrend;
-  const hasSales = report.summary.completedSales > 0;
-  // até 12 pontos, uma linha por ponto com o valor; acima disso, gráfico compacto. Nenhum dos dois rola de lado
-  const compactTrend = trend.length > 12;
-  const bestPoint = trend.reduce<(typeof trend)[number] | null>((best, point) => (point.value > (best?.value ?? 0) ? point : best), null);
-  const maxItem = Math.max(...report.topItems.map((item) => item.revenue), 1);
-  const maxPayment = Math.max(...report.paymentMethods.map((item) => item.amount), 1);
-
-  return (
-    <div className="prime-module-page flex flex-col gap-6 px-4 py-6 sm:px-6">
+  // a aba e os filtros acompanham a troca de período e a exportação
+  const tabQuery = tab === "vendas" ? salesQuery(filters) : "";
+  const periodHref = (value: ReportPeriod, extra: string) => {
+    const query = [value === "month" ? "" : "period=" + value, extra].filter(Boolean).join("&");
+    return query ? "/app/relatorios?" + query : "/app/relatorios";
+  };
+  const header = (
+    <>
       <PageHeader
         eyebrow="Análises"
         title="Relatórios"
@@ -81,14 +80,14 @@ export default async function ReportsPage({
             {PERIODS.map((item) => (
               <Link
                 key={item.value}
-                href={item.value === "month" ? "/app/relatorios" : "/app/relatorios?period=" + item.value}
+                href={periodHref(item.value, tabQuery)}
                 aria-current={period === item.value ? "true" : undefined}
                 className={"rounded-full border px-3 py-1.5 text-xs " + (period === item.value ? "bg-primary text-primary-foreground" : "hover:bg-muted")}
               >
                 {item.label}
               </Link>
             ))}
-            <a href={"/app/relatorios/export?period=" + period + customQuery} className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium hover:bg-muted">
+            <a href={"/app/relatorios/export?period=" + period + customQuery + (tabQuery ? "&" + tabQuery : "")} className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium hover:bg-muted">
               <ArrowDownToLine className="h-3.5 w-3.5" />
               Exportar CSV
             </a>
@@ -96,10 +95,24 @@ export default async function ReportsPage({
         }
       />
 
+      <nav aria-label="Visões do relatório" className="flex flex-wrap gap-2 border-b border-border pb-3">
+        {([["geral", "Visão geral", ""], ["vendas", "Vendas", "aba=vendas"]] as const).map(([key, label, extra]) => (
+          <Link
+            key={key}
+            href={periodHref(period, [extra, period === "custom" ? `from=${range.fromDate}&to=${range.toDate}` : ""].filter(Boolean).join("&"))}
+            aria-current={tab === key ? "page" : undefined}
+            className={"rounded-md px-3 py-1.5 text-sm font-medium " + (tab === key ? "bg-secondary text-secondary-foreground" : "text-muted-foreground hover:text-foreground")}
+          >
+            {label}
+          </Link>
+        ))}
+      </nav>
+
       <div className="flex flex-col gap-3">
         {period === "custom" ? (
           <form key={range.fromDate + range.toDate} method="get" action="/app/relatorios" className="flex flex-wrap items-end gap-3">
             <input type="hidden" name="period" value="custom" />
+            {Array.from(new URLSearchParams(tabQuery)).map(([name, value]) => <input key={name} type="hidden" name={name} value={value} />)}
             <label className="grid gap-1 text-xs text-muted-foreground">
               De
               <input type="date" name="from" required defaultValue={range.fromDate} className="h-9 w-40 rounded-md border border-input bg-background px-3 text-sm text-foreground" />
@@ -116,6 +129,36 @@ export default async function ReportsPage({
             Datas não aceitas: o início precisa vir antes do fim e o intervalo vai até 5 anos. Mostrando o mês atual.
           </p>
         ) : null}
+      </div>
+    </>
+  );
+
+  if (tab === "vendas") {
+    return (
+      <div className="prime-module-page flex flex-col gap-6 px-4 py-6 sm:px-6">
+        {header}
+        <ReportSales companyId={current.company.id} range={range} filters={filters} />
+      </div>
+    );
+  }
+
+  const report = await getReportsWorkspace(current.company.id, period, from, to);
+  const { previous } = report;
+  const salesHref = salesDetailHref(range);
+  const byMonth = period === "year" || report.salesTrend.length > 62;
+  const trend = byMonth ? groupByMonth(report.salesTrend) : report.salesTrend;
+  const hasSales = report.summary.completedSales > 0;
+  // até 12 pontos, uma linha por ponto com o valor; acima disso, gráfico compacto. Nenhum dos dois rola de lado
+  const compactTrend = trend.length > 12;
+  const bestPoint = trend.reduce<(typeof trend)[number] | null>((best, point) => (point.value > (best?.value ?? 0) ? point : best), null);
+  const maxItem = Math.max(...report.topItems.map((item) => item.revenue), 1);
+  const maxPayment = Math.max(...report.paymentMethods.map((item) => item.amount), 1);
+
+  return (
+    <div className="prime-module-page flex flex-col gap-6 px-4 py-6 sm:px-6">
+      {header}
+
+      <div className="flex flex-col gap-3">
         {previous ? (
           <p className="text-xs text-muted-foreground">
             {formatDay(range.fromDate)} a {formatDay(range.toDate)}, comparado com {formatDay(previous.fromDate)} a {formatDay(previous.toDate)}.

@@ -4,6 +4,9 @@ import { can } from "@/lib/permissions/matrix";
 import { ACCOUNT_BLOCKED_MESSAGE, AccountInactiveError } from "@/lib/auth/account-status";
 import { getReportsWorkspace } from "@/lib/reports/queries";
 import { buildReportCsv } from "@/lib/reports/csv";
+import { resolveReportRange } from "@/lib/reports/period";
+import { buildSalesCsv, parseSalesFilters } from "@/lib/reports/sales";
+import { getSalesReport } from "@/lib/reports/sales-queries";
 
 export async function GET(request: Request) {
   let current;
@@ -22,20 +25,35 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const period = url.searchParams.get("period") ?? "month";
-  let report;
+  const from = url.searchParams.get("from") ?? undefined;
+  const to = url.searchParams.get("to") ?? undefined;
+  let csv: string;
+  let name: string;
   try {
-    report = await getReportsWorkspace(current.company.id, period, url.searchParams.get("from") ?? undefined, url.searchParams.get("to") ?? undefined);
+    const range = resolveReportRange(period, from, to);
+    const dates = range.period === "custom" ? `${range.fromDate}_${range.toDate}` : range.period;
+    if (url.searchParams.get("aba") === "vendas") {
+      const filters = parseSalesFilters({
+        item: url.searchParams.get("item") ?? undefined,
+        cliente: url.searchParams.get("cliente") ?? undefined,
+        quem: url.searchParams.get("quem") ?? undefined,
+      });
+      csv = buildSalesCsv(await getSalesReport(current.company.id, range, filters), range, filters);
+      name = `prime-ges-vendas-${dates}.csv`;
+    } else {
+      csv = buildReportCsv(await getReportsWorkspace(current.company.id, period, from, to));
+      name = `prime-ges-relatorio-${dates}.csv`;
+    }
   } catch (error) {
     console.error("[relatorios] exportação falhou:", error instanceof Error ? error.message : error);
     return NextResponse.json({ error: "Não foi possível gerar o relatório agora. Tente novamente." }, { status: 503 });
   }
 
-  return new NextResponse(buildReportCsv(report), {
+  return new NextResponse(csv, {
     status: 200,
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": "attachment; filename=\"prime-ges-relatorio-" +
-        (report.range.period === "custom" ? `${report.range.fromDate}_${report.range.toDate}` : report.range.period) + ".csv\"",
+      "Content-Disposition": `attachment; filename="${name}"`,
       "Cache-Control": "no-store",
     },
   });
