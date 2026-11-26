@@ -42,16 +42,18 @@ export function buildReportCsv(report: ReportsWorkspace): string {
     ["Outras receitas", csvNumber(summary.otherIncome)],
     ["Despesas operacionais", csvNumber(summary.operatingExpenses)],
     ["Resultado operacional", csvNumber(summary.netResult)],
-    ["Contas a receber", csvNumber(summary.accountsReceivable)],
-    ["Contas a pagar", csvNumber(summary.accountsPayable)],
-    ["Recebíveis em aberto há mais de 1 dia", String(summary.overdueReceivables)],
-    ["Pagamentos vencidos", String(summary.overduePayables)],
+    ["Recebido no período (já descontados os estornos)", csvNumber(summary.received)],
+    ["Estornos no período", csvNumber(summary.refunds)],
+    ["Contas a receber (hoje)", csvNumber(summary.accountsReceivable)],
+    ["Contas a pagar (hoje)", csvNumber(summary.accountsPayable)],
+    ["Vendas de dias anteriores a receber (hoje)", String(summary.overdueReceivables)],
+    ["Contas a pagar vencidas (hoje)", String(summary.overduePayables)],
     ["Agendamentos", String(appointments.total)],
     ["Agendamentos concluídos", String(appointments.completed)],
     ["Agendamentos cancelados", String(appointments.cancelled)],
     ["No-show", String(appointments.noShow)],
-    ["Produtos com estoque baixo", String(inventory.lowStock)],
-    ["Produtos sem estoque", String(inventory.outOfStock)],
+    ["Produtos com estoque baixo (hoje)", String(inventory.lowStock)],
+    ["Produtos sem estoque (hoje)", String(inventory.outOfStock)],
   ];
   for (const [label, value] of indicators) lines.push(row([csvText(label), value]));
 
@@ -60,7 +62,7 @@ export function buildReportCsv(report: ReportsWorkspace): string {
   for (const point of report.salesTrend) lines.push(row([csvText(point.date), csvNumber(point.value)]));
 
   lines.push("");
-  lines.push(row([csvText("forma de pagamento"), csvText("valor")]));
+  lines.push(row([csvText("forma de pagamento"), csvText("recebido no período")]));
   for (const method of report.paymentMethods) lines.push(row([csvText(method.label), csvNumber(method.amount)]));
 
   lines.push("");

@@ -47,7 +47,7 @@ test("resultado = faturamento − custo + outras receitas − despesas (números
 
 test("Financeiro, Relatórios e CSV usam as mesmas regras e mostram 'Outras receitas'", () => {
   const finance = read("src/lib/finance/queries.ts");
-  const reports = read("src/lib/reports/queries.ts");
+  const reports = read("src/lib/reports/summary.ts");
   assert.ok(finance.includes("sumOtherIncome") && finance.includes("computeNetResult"));
   assert.ok(reports.includes("sumOtherIncome") && reports.includes("computeNetResult"));
   assert.ok(read("src/app/(app)/app/financeiro/page.tsx").includes("Outras receitas"));

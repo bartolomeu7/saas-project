@@ -8,6 +8,8 @@ import { NoAccess } from "@/components/app/no-access";
 import { getReportsWorkspace } from "@/lib/reports/queries";
 import type { ReportPeriod } from "@/types/report";
 import { formatQuantity } from "@/lib/products/stock-labels";
+import { groupByMonth } from "@/lib/reports/summary";
+import { BarChart } from "@/components/admin/admin-charts";
 
 export const metadata: Metadata = { title: "Relatórios" };
 
@@ -39,7 +41,13 @@ export default async function ReportsPage({
   if (!can(current.role, "reports.view")) return <NoAccess area="os Relatórios" />;
   const period = periodFromSearch(searchParams?.period);
   const report = await getReportsWorkspace(current.company.id, period);
-  const maxTrend = Math.max(...report.salesTrend.map((point) => point.value), 1);
+  const byMonth = period === "year";
+  const trend = byMonth ? groupByMonth(report.salesTrend) : report.salesTrend;
+  const maxTrend = Math.max(...trend.map((point) => point.value), 1);
+  const hasSales = report.summary.completedSales > 0;
+  // até 12 pontos cabe o valor em cima de cada barra; acima disso, gráfico compacto sem rolagem lateral
+  const compactTrend = trend.length > 12;
+  const bestPoint = trend.reduce<(typeof trend)[number] | null>((best, point) => (point.value > (best?.value ?? 0) ? point : best), null);
   const maxItem = Math.max(...report.topItems.map((item) => item.revenue), 1);
   const maxPayment = Math.max(...report.paymentMethods.map((item) => item.amount), 1);
 
@@ -49,7 +57,7 @@ export default async function ReportsPage({
         eyebrow="Análises"
         title="Relatórios"
         description="Leitura operacional baseada nos dados reais da empresa."
-        className="xl:items-end"
+        className="sm:flex-col sm:items-start xl:flex-row xl:items-end"
         actions={
           <nav aria-label="Período do relatório" className="flex flex-wrap gap-2">
             {PERIODS.map((item) => (
@@ -70,7 +78,7 @@ export default async function ReportsPage({
         }
       />
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-3 sm:grid-cols-3">
         <article className="prime-kpi-card">
           <div className="prime-kpi-icon"><CircleDollarSign className="h-4 w-4" /></div>
           <p>Faturamento</p>
@@ -89,42 +97,53 @@ export default async function ReportsPage({
           <strong>{money(report.summary.netResult)}</strong>
           <span>receita menos custo das vendas, mais outras receitas, menos despesas operacionais</span>
         </article>
-        <article className="prime-kpi-card" data-alert={report.inventory.lowStock + report.inventory.outOfStock > 0 ? "true" : "false"}>
-          <div className="prime-kpi-icon"><Package className="h-4 w-4" /></div>
-          <p>Estoque crítico</p>
-          <strong>{report.inventory.lowStock + report.inventory.outOfStock}</strong>
-          <span>{report.inventory.outOfStock} sem estoque · {report.inventory.lowStock} baixo</span>
-        </article>
       </section>
 
       <section className="grid gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(300px,.8fr)]">
         <div className="prime-dashboard-panel">
           <div className="prime-panel-heading">
-            <div><p className="prime-panel-eyebrow">Vendas</p><h2>Faturamento por dia</h2></div>
+            <div><p className="prime-panel-eyebrow">Vendas</p><h2>{byMonth ? "Faturamento por mês" : "Faturamento por dia"}</h2></div>
             <BarChart3 className="h-4 w-4 text-muted-foreground" />
           </div>
-          <div className="mt-5 flex min-h-[220px] items-end gap-2 overflow-x-auto pb-2">
-            {report.salesTrend.length ? report.salesTrend.map((point) => (
-              <div key={point.date} className="flex min-w-12 flex-1 flex-col items-center justify-end gap-2">
-                <span className="text-[10px] font-medium text-muted-foreground">{money(point.value)}</span>
-                <div className="flex h-36 w-full max-w-14 items-end rounded-md bg-muted/60 p-1">
-                  <div className="w-full rounded-sm bg-primary" style={{ height: Math.max(8, (point.value / maxTrend) * 100) + "%" }} title={point.label + ": " + money(point.value)} />
+          {!hasSales ? (
+            <div className="mt-5 flex min-h-[220px] w-full items-center justify-center rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">Ainda não há vendas concluídas no período selecionado.</div>
+          ) : compactTrend ? (
+            <>
+              <BarChart
+                className="mt-5"
+                height={180}
+                title="Faturamento por dia no período"
+                valueLabel="Faturamento"
+                data={trend.map((point) => ({ label: point.label, value: point.value, detail: money(point.value) }))}
+              />
+              {bestPoint ? <p className="mt-3 text-xs text-muted-foreground">Melhor dia: {bestPoint.label}, com {money(bestPoint.value)}.</p> : null}
+            </>
+          ) : (
+            <div className="mt-5 flex min-h-[220px] items-end gap-2 overflow-x-auto pb-2">
+              {trend.map((point) => (
+                <div key={point.date} className="flex min-w-12 flex-1 flex-col items-center justify-end gap-2">
+                  <span className="text-[10px] font-medium text-muted-foreground">{point.value > 0 ? money(point.value) : "—"}</span>
+                  <div className="flex h-36 w-full max-w-14 items-end rounded-md bg-muted/60 p-1">
+                    <div className="w-full rounded-sm bg-primary" style={{ height: (point.value > 0 ? Math.max(8, (point.value / maxTrend) * 100) : 0) + "%" }} title={point.label + ": " + money(point.value)} />
+                  </div>
+                  <span className="text-[10px] text-muted-foreground">{point.label}</span>
                 </div>
-                <span className="text-[10px] text-muted-foreground">{point.label}</span>
-              </div>
-            )) : (
-              <div className="flex w-full items-center justify-center rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">Ainda não há vendas concluídas no período selecionado.</div>
-            )}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="prime-dashboard-panel">
           <div className="prime-panel-heading"><div><p className="prime-panel-eyebrow">Pagamentos</p><h2>Recebimentos por método</h2></div></div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            {money(report.summary.received)} recebidos no período, pela data do recebimento
+            {report.summary.refunds > 0 ? `, já descontados ${money(report.summary.refunds)} de estornos.` : "."}
+          </p>
           <div className="mt-4 space-y-4">
             {report.paymentMethods.length ? report.paymentMethods.map((payment) => (
               <div key={payment.method}>
                 <div className="mb-1 flex items-center justify-between text-xs"><span>{payment.label}</span><strong>{money(payment.amount)}</strong></div>
-                <div className="h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-primary" style={{ width: Math.max(4, (payment.amount / maxPayment) * 100) + "%" }} /></div>
+                <div className="h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-primary" style={{ width: (payment.amount > 0 ? Math.max(4, (payment.amount / maxPayment) * 100) : 0) + "%" }} /></div>
               </div>
             )) : (
               <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">Nenhum recebimento confirmado no período.</div>
@@ -163,18 +182,23 @@ export default async function ReportsPage({
         </div>
       </section>
 
-      <section className="grid gap-4 sm:grid-cols-2">
+      <section className="grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(320px,.85fr)]">
         <div className="prime-dashboard-panel">
-          <div className="prime-panel-heading"><div><p className="prime-panel-eyebrow">Financeiro</p><h2>Valores em aberto</h2></div></div>
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <div className="prime-mini-stat"><span>A receber</span><strong>{money(report.summary.accountsReceivable)}</strong><small>{report.summary.overdueReceivables} em aberto há mais de 1 dia</small></div>
-            <div className="prime-mini-stat"><span>A pagar</span><strong>{money(report.summary.accountsPayable)}</strong><small>{report.summary.overduePayables} vencido(s)</small></div>
+          <div className="prime-panel-heading"><div><p className="prime-panel-eyebrow">Posição de hoje</p><h2>Em aberto e estoque</h2></div><Package className="h-4 w-4 text-muted-foreground" /></div>
+          <p className="mt-2 text-xs text-muted-foreground">Situação atual da empresa: não muda com o período escolhido.</p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <div className="prime-mini-stat"><span>A receber</span><strong>{money(report.summary.accountsReceivable)}</strong><small>{report.summary.overdueReceivables} venda(s) de dias anteriores</small></div>
+            <div className="prime-mini-stat"><span>A pagar</span><strong>{money(report.summary.accountsPayable)}</strong><small>{report.summary.overduePayables} vencida(s)</small></div>
+            <div className="prime-mini-stat"><span>Estoque crítico</span><strong>{report.inventory.lowStock + report.inventory.outOfStock}</strong><small>{report.inventory.outOfStock} sem estoque · {report.inventory.lowStock} baixo</small></div>
           </div>
-          <Link href="/app/financeiro" className="mt-4 inline-flex items-center gap-2 text-xs font-medium text-primary hover:underline">Abrir financeiro</Link>
+          <div className="mt-4 flex flex-wrap gap-4">
+            <Link href="/app/financeiro" className="text-xs font-medium text-primary hover:underline">Abrir financeiro</Link>
+            <Link href="/app/estoque" className="text-xs font-medium text-primary hover:underline">Abrir estoque</Link>
+          </div>
         </div>
         <div className="prime-dashboard-panel">
           <div className="prime-panel-heading"><div><p className="prime-panel-eyebrow">Escopo</p><h2>{report.range.label}</h2></div><FileText className="h-4 w-4 text-muted-foreground" /></div>
-          <p className="mt-3 text-sm text-muted-foreground">Este relatório consolida vendas concluídas, recebimentos confirmados, despesas operacionais, agenda e alertas de estoque. Os valores “a receber” e “a pagar” representam o saldo em aberto atual da empresa.</p>
+          <p className="mt-3 text-sm text-muted-foreground">No período: vendas concluídas, recebimentos pela data em que entraram, despesas operacionais e agenda. Contas em aberto e estoque mostram a posição de hoje.</p>
           <p className="mt-3 text-xs text-muted-foreground">Fonte: dados transacionais reais do Prime Ges. Nenhuma métrica fictícia é criada para preencher o painel.</p>
         </div>
       </section>

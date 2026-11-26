@@ -4896,6 +4896,15 @@ export type Database = {
         Args: { p_member_id: string }
         Returns: undefined
       }
+      report_summary: {
+        Args: {
+          p_appointments_to: string
+          p_company_id: string
+          p_from: string
+          p_to: string
+        }
+        Returns: Json
+      }
       reschedule_appointment: {
         Args: { p_appointment_id: string; p_starts_at: string }
         Returns: {

@@ -1,10 +1,10 @@
 import "server-only";
 import { cache } from "react";
 import { createSessionClient } from "@/lib/supabase/server";
-import { startOfDaySaoPaulo, endOfDaySaoPaulo, startOfMonthSaoPaulo, startOfYearSaoPaulo, todayDateSaoPaulo } from "@/lib/timezone";
+import { startOfDaySaoPaulo, endOfDaySaoPaulo, startOfMonthSaoPaulo, startOfYearSaoPaulo } from "@/lib/timezone";
 import { getStockLevel } from "@/types/product";
-import { computeNetResult, sumOperatingExpenses, sumOtherIncome } from "@/lib/finance/dre";
-import type { ReportPeriod, ReportRange, ReportTrendPoint, ReportTopItem, ReportPaymentMethod, ReportsWorkspace } from "@/types/report";
+import { buildReportWorkspace, type ReportSummaryRow } from "@/lib/reports/summary";
+import type { ReportPeriod, ReportRange, ReportsWorkspace } from "@/types/report";
 
 const PERIOD_LABELS: Record<ReportPeriod, string> = {
   today: "Hoje",
@@ -13,24 +13,6 @@ const PERIOD_LABELS: Record<ReportPeriod, string> = {
   month: "Este mês",
   year: "Este ano",
 };
-
-const PAYMENT_LABELS: Record<string, string> = {
-  cash: "Dinheiro",
-  pix: "Pix",
-  debit: "Débito",
-  credit: "Crédito",
-  other: "Outro",
-};
-
-const money = (value: unknown) => Number(value ?? 0);
-
-/** Lista de ids em blocos: um `.in(...)` com milhares de ids estoura o tamanho da URL da consulta. */
-const ID_CHUNK = 150;
-function chunkIds(ids: string[]): string[][] {
-  const chunks: string[][] = [];
-  for (let i = 0; i < ids.length; i += ID_CHUNK) chunks.push(ids.slice(i, i + ID_CHUNK));
-  return chunks;
-}
 
 function safePeriod(value: string | undefined): ReportPeriod {
   return value && value in PERIOD_LABELS ? (value as ReportPeriod) : "month";
@@ -51,104 +33,6 @@ export function resolveReportRange(periodInput?: string): ReportRange {
   return { period, from: from.toISOString(), to: to.toISOString(), label: PERIOD_LABELS[period] };
 }
 
-function dayKey(value: string) {
-  return new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Sao_Paulo" }).format(new Date(value));
-}
-
-function dayLabel(value: string) {
-  return new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit" }).format(new Date(value));
-}
-
-async function getSalesLayer(companyId: string, range: ReportRange) {
-  const supabase = await createSessionClient();
-  const { data: sales } = await supabase.from("sales").select("id, total_amount, total_cost, completed_at").eq("company_id", companyId).eq("status", "completed").gte("completed_at", range.from).lte("completed_at", range.to).order("completed_at", { ascending: true });
-  const rows = sales ?? [];
-  const saleIds = rows.map((row) => row.id);
-  let items: Array<{ description: string; quantity: number; total_amount: number; item_type: string }> = [];
-  let payments: Array<{ sale_id: string; amount: number; method: string }> = [];
-
-  if (saleIds.length) {
-    for (const ids of chunkIds(saleIds)) {
-      const [itemResult, paymentResult] = await Promise.all([
-        supabase.from("sale_items").select("description, quantity, total_amount, item_type").eq("company_id", companyId).in("sale_id", ids),
-        supabase.from("sale_payments").select("sale_id, amount, method").eq("company_id", companyId).eq("status", "paid").in("sale_id", ids),
-      ]);
-      items = items.concat((itemResult.data ?? []) as typeof items);
-      payments = payments.concat((paymentResult.data ?? []) as typeof payments);
-    }
-  }
-
-  const revenue = rows.reduce((sum, row) => sum + money(row.total_amount), 0);
-  const costOfGoods = rows.reduce((sum, row) => sum + money(row.total_cost), 0);
-  const trendMap = new Map<string, number>();
-  for (const row of rows) {
-    if (!row.completed_at) continue;
-    const key = dayKey(row.completed_at);
-    trendMap.set(key, (trendMap.get(key) ?? 0) + money(row.total_amount));
-  }
-
-  const salesTrend: ReportTrendPoint[] = Array.from(trendMap.entries()).map(([date, value]) => ({ date, label: dayLabel(date + "T12:00:00"), value }));
-
-  const itemMap = new Map<string, ReportTopItem>();
-  for (const row of items) {
-    const key = row.item_type + ":" + row.description;
-    const item = itemMap.get(key) ?? { description: row.description, quantity: 0, revenue: 0, itemType: row.item_type === "service" ? "service" : "product" };
-    item.quantity += money(row.quantity);
-    item.revenue += money(row.total_amount);
-    itemMap.set(key, item);
-  }
-  const allItems = Array.from(itemMap.values()).sort((a, b) => b.revenue - a.revenue);
-  const topItems = allItems.slice(0, 8);
-
-  const paymentMap = new Map<string, number>();
-  for (const row of payments) paymentMap.set(row.method, (paymentMap.get(row.method) ?? 0) + money(row.amount));
-  const paymentMethods: ReportPaymentMethod[] = Array.from(paymentMap.entries()).map(([method, amount]) => ({ method, label: PAYMENT_LABELS[method] ?? method, amount })).sort((a, b) => b.amount - a.amount);
-
-  return { revenue, costOfGoods, completedSales: rows.length, averageTicket: rows.length ? revenue / rows.length : null, salesTrend, topItems, allItems, paymentMethods };
-}
-
-async function getFinanceLayer(companyId: string, range: ReportRange) {
-  const supabase = await createSessionClient();
-  // `occurred_on` é data-calendário de São Paulo: os limites também (não o dia UTC do instante).
-  const fromDate = todayDateSaoPaulo(new Date(range.from));
-  const toDate = todayDateSaoPaulo(new Date(range.to));
-  const [expenseResult, incomeResult, receivableSalesResult, payableResult] = await Promise.all([
-    supabase.from("financial_entries").select("amount, source_type").eq("company_id", companyId).eq("direction", "expense").eq("status", "posted").gte("occurred_on", fromDate).lte("occurred_on", toDate),
-    supabase.from("financial_entries").select("amount, source_type").eq("company_id", companyId).eq("direction", "income").eq("status", "posted").gte("occurred_on", fromDate).lte("occurred_on", toDate),
-    supabase.from("sales").select("id, total_amount, sold_at").eq("company_id", companyId).eq("status", "completed").eq("payment_status", "pending"),
-    supabase.from("accounts_payable").select("amount, paid_amount, due_date, status").eq("company_id", companyId).in("status", ["open", "partial"]),
-  ]);
-
-  const operatingExpenses = sumOperatingExpenses(expenseResult.data ?? []);
-  const otherIncome = sumOtherIncome(incomeResult.data ?? []);
-  const receivableSales = receivableSalesResult.data ?? [];
-  let accountsReceivable = 0;
-  let overdueReceivables = 0;
-  if (receivableSales.length) {
-    const paidBySale = new Map<string, number>();
-    for (const ids of chunkIds(receivableSales.map((row) => row.id))) {
-      const { data: payments } = await supabase.from("sale_payments").select("sale_id, amount").eq("company_id", companyId).eq("status", "paid").in("sale_id", ids);
-      for (const payment of payments ?? []) paidBySale.set(payment.sale_id, (paidBySale.get(payment.sale_id) ?? 0) + money(payment.amount));
-    }
-    const today = todayDateSaoPaulo();
-    for (const sale of receivableSales) {
-      const outstanding = Math.max(0, money(sale.total_amount) - (paidBySale.get(sale.id) ?? 0));
-      accountsReceivable += outstanding;
-      if (dayKey(sale.sold_at) < today && outstanding > 0) overdueReceivables += 1;
-    }
-  }
-
-  let accountsPayable = 0;
-  let overduePayables = 0;
-  const today = todayDateSaoPaulo();
-  for (const row of payableResult.data ?? []) {
-    const outstanding = Math.max(0, money(row.amount) - money(row.paid_amount));
-    accountsPayable += outstanding;
-    if (row.due_date && row.due_date < today && outstanding > 0) overduePayables += 1;
-  }
-  return { operatingExpenses, otherIncome, accountsReceivable, accountsPayable, overdueReceivables, overduePayables };
-}
-
 /**
  * Fim da janela de agendamentos. Em "Este mês" e "Este ano" a agenda também conta o que ainda vai acontecer
  * até o fim do mês/ano (os agendamentos futuros ficavam de fora, e o relatório do mês escondia a agenda da semana que vem).
@@ -164,38 +48,29 @@ export function appointmentsWindowEnd(range: ReportRange): string {
   return range.to;
 }
 
-async function getAppointmentsLayer(companyId: string, range: ReportRange) {
+/** Falha de consulta nunca vira zero na tela: o erro sobe e a página mostra "tentar de novo". */
+async function getSummaryRow(companyId: string, range: ReportRange): Promise<ReportSummaryRow> {
   const supabase = await createSessionClient();
-  const { data } = await supabase.from("appointments").select("status").eq("company_id", companyId).gte("starts_at", range.from).lte("starts_at", appointmentsWindowEnd(range));
-  const rows = data ?? [];
-  return {
-    total: rows.length,
-    scheduled: rows.filter((row) => row.status === "scheduled").length,
-    confirmed: rows.filter((row) => row.status === "confirmed").length,
-    completed: rows.filter((row) => row.status === "completed").length,
-    cancelled: rows.filter((row) => row.status === "cancelled").length,
-    noShow: rows.filter((row) => row.status === "no_show").length,
-  };
+  const { data, error } = await supabase.rpc("report_summary", {
+    p_company_id: companyId,
+    p_from: range.from,
+    p_to: range.to,
+    p_appointments_to: appointmentsWindowEnd(range),
+  });
+  if (error || !data) throw new Error("Não foi possível calcular o relatório: " + (error?.message ?? "sem resposta"));
+  return data as unknown as ReportSummaryRow;
 }
 
 async function getInventoryLayer(companyId: string) {
   const supabase = await createSessionClient();
-  const { data } = await supabase.from("products").select("stock_quantity, minimum_stock").eq("company_id", companyId).eq("status", "active");
+  const { data, error } = await supabase.from("products").select("stock_quantity, minimum_stock").eq("company_id", companyId).eq("status", "active");
+  if (error) throw new Error("Não foi possível consultar o estoque: " + error.message);
   const rows = data ?? [];
   return { lowStock: rows.filter((row) => getStockLevel(row) === "low").length, outOfStock: rows.filter((row) => getStockLevel(row) === "out").length };
 }
 
 export const getReportsWorkspace = cache(async function getReportsWorkspace(companyId: string, periodInput?: string): Promise<ReportsWorkspace> {
   const range = resolveReportRange(periodInput);
-  const [sales, finance, appointments, inventory] = await Promise.all([getSalesLayer(companyId, range), getFinanceLayer(companyId, range), getAppointmentsLayer(companyId, range), getInventoryLayer(companyId)]);
-  return {
-    range,
-    summary: { revenue: sales.revenue, costOfGoods: sales.costOfGoods, completedSales: sales.completedSales, averageTicket: sales.averageTicket, otherIncome: finance.otherIncome, operatingExpenses: finance.operatingExpenses, netResult: computeNetResult({ revenue: sales.revenue, costOfGoods: sales.costOfGoods, otherIncome: finance.otherIncome, operatingExpenses: finance.operatingExpenses }), accountsReceivable: finance.accountsReceivable, accountsPayable: finance.accountsPayable, overdueReceivables: finance.overdueReceivables, overduePayables: finance.overduePayables },
-    salesTrend: sales.salesTrend,
-    topItems: sales.topItems,
-    allItems: sales.allItems,
-    paymentMethods: sales.paymentMethods,
-    appointments,
-    inventory,
-  };
+  const [row, inventory] = await Promise.all([getSummaryRow(companyId, range), getInventoryLayer(companyId)]);
+  return buildReportWorkspace(row, range, inventory);
 });

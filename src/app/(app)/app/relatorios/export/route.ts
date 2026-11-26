@@ -22,7 +22,13 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const period = url.searchParams.get("period") ?? "month";
-  const report = await getReportsWorkspace(current.company.id, period);
+  let report;
+  try {
+    report = await getReportsWorkspace(current.company.id, period);
+  } catch (error) {
+    console.error("[relatorios] exportação falhou:", error instanceof Error ? error.message : error);
+    return NextResponse.json({ error: "Não foi possível gerar o relatório agora. Tente novamente." }, { status: 503 });
+  }
 
   return new NextResponse(buildReportCsv(report), {
     status: 200,
