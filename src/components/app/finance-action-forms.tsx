@@ -66,6 +66,7 @@ export function AccountsPayablePaymentForm({
         name="paymentDate"
         type="date"
         defaultValue={today()}
+        max={today()}
         className="h-9 rounded-md border bg-background px-2 text-sm"
         aria-label="Data do pagamento"
       />

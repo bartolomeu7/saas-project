@@ -98,14 +98,3 @@ export async function listAgendaServices(companyId: string) {
 
   return data ?? [];
 }
-
-export async function getAgendaStats(companyId: string, dateValue: string) {
-  const rows = await listAppointments(companyId, dateValue);
-  return {
-    total: rows.length,
-    scheduled: rows.filter((row) => row.status === "scheduled").length,
-    confirmed: rows.filter((row) => row.status === "confirmed").length,
-    completed: rows.filter((row) => row.status === "completed").length,
-    cancelled: rows.filter((row) => row.status === "cancelled").length,
-  };
-}

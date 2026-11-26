@@ -50,7 +50,7 @@ export interface AgendaProfessional {
 interface AgendaWeekCalendarProps {
   /**
    * "hours": semana em grade de horas, atendimentos do tamanho da duração (semana atual).
-   * "days": lista por dia (semana passada e próxima).
+   * "days": lista por dia (qualquer outra semana).
    * "day": um dia só, em grade de horas, uma coluna por profissional.
    * "month": o mês inteiro, semanas de domingo a sábado.
    */
@@ -59,7 +59,6 @@ interface AgendaWeekCalendarProps {
   appointments: Appointment[];
   todayDate: string;
   nowIso: string;
-  weekKey: string;
   professionalId?: string;
   /** Profissionais ativos (colunas da visão "Dia"). */
   professionals?: AgendaProfessional[];
@@ -73,7 +72,6 @@ export function AgendaWeekCalendar({
   appointments,
   todayDate,
   nowIso,
-  weekKey,
   professionalId,
   professionals = [],
   dayDate,
@@ -107,9 +105,9 @@ export function AgendaWeekCalendar({
         href: dayHref(day),
         items: byDay.get(day) ?? [],
       })),
-    // dayHref depende só de weekKey e professionalId
+    // dayHref depende só de professionalId
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [days, byDay, weekKey, professionalId]
+    [days, byDay, professionalId]
   );
 
   const professionalColumns = useMemo<TimeGridColumn[]>(() => {
@@ -132,7 +130,7 @@ export function AgendaWeekCalendar({
   }, [visible, professionals, professionalId, dayDate, todayDate]);
 
   function dayHref(day: string) {
-    const params = new URLSearchParams({ date: day, semana: weekKey });
+    const params = new URLSearchParams({ date: day });
     if (professionalId) params.set("professional", professionalId);
     return `/app/agenda?${params.toString()}#atendimentos-do-dia`;
   }

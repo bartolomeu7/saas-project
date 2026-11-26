@@ -6,7 +6,6 @@ import { getCurrentCompany } from "@/lib/companies/queries";
 import type { ActionResult } from "@/lib/auth/actions";
 import { isMoneyTooLarge, MONEY_TOO_LARGE_MESSAGE, parseMoneyInput } from "@/lib/parse-money";
 import { readText, tooLongMessage } from "@/lib/text-input";
-import { getCurrentOpenCashRegister, listCashMovements, summarizeCashMovements } from "@/lib/cash-register/queries";
 import type { CashMovementDirection } from "@/types/cash-register";
 import type { SalePaymentMethod } from "@/types/sale";
 
@@ -147,20 +146,6 @@ export async function createCashMovementAction(
   const current = await getCurrentCompany();
   if (!current) {
     return { error: "Nenhuma empresa encontrada para o usuário atual." };
-  }
-
-  // Uma saída em dinheiro não pode passar do que há na gaveta (senão o saldo esperado fica negativo e o
-  // fechamento mostra uma diferença impossível). O banco não confere isso; a conferência fica aqui.
-  if (direction === "out" && method === "cash") {
-    const register = await getCurrentOpenCashRegister(current.company.id);
-    if (register) {
-      const summary = summarizeCashMovements(Number(register.opening_balance), await listCashMovements(register.id));
-      if (amount > summary.expectedCashBalance + 0.0001) {
-        return {
-          error: `Saída maior que o dinheiro disponível no caixa (${summary.expectedCashBalance.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}).`,
-        };
-      }
-    }
   }
 
   const supabase = await createSessionClient();

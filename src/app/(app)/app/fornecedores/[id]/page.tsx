@@ -6,6 +6,8 @@ import { NoAccess } from "@/components/app/no-access";
 import { getSupplierById } from "@/lib/suppliers/queries";
 import { updateSupplierAction, toggleSupplierAction } from "@/lib/suppliers/actions";
 import { SupplierForm } from "@/components/app/supplier-form";
+import { SupplierPurchases } from "@/components/app/supplier-purchases";
+import { getSupplierPurchases } from "@/lib/purchases/queries";
 import { ConfirmActionForm } from "@/components/app/confirm-dialog";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -18,6 +20,8 @@ export default async function SupplierDetailPage({ params: paramsPromise }: { pa
   if (!can(current.role, "suppliers.view")) return <NoAccess area="os Fornecedores" />;
   const supplier = await getSupplierById(current.company.id, params.id);
   if (!supplier) return <div className="px-4 py-10 text-center">Fornecedor não encontrado.</div>;
+
+  const purchases = can(current.role, "purchases.view") ? await getSupplierPurchases(current.company.id, supplier.id) : undefined;
 
   const defaultValues = {
     name: supplier.name,
@@ -60,6 +64,7 @@ export default async function SupplierDetailPage({ params: paramsPromise }: { pa
           }}
         />
       </div>
+      {purchases !== undefined && <SupplierPurchases data={purchases} />}
       <div className="max-w-4xl">
         <SupplierForm action={updateSupplierAction.bind(null, supplier.id)} defaultValues={defaultValues} submitLabel="Salvar alterações" />
       </div>

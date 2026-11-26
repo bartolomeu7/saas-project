@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createSessionClient } from "@/lib/supabase/server";
+import { sumPayableBalance } from "@/lib/finance/dre";
 import type {
   AccountPayable,
   PurchaseOrder,
@@ -80,23 +81,33 @@ export async function listPurchaseReceipts(
   return (data ?? []) as PurchaseReceiptWithItems[];
 }
 
-export async function listOpenPayables(
-  companyId: string,
-  limit = 8
-): Promise<Array<AccountPayable & { suppliers: { name: string } | null }>> {
+/** Compras de um fornecedor para a ficha: os 10 pedidos mais recentes, o total de pedidos e as contas ainda em aberto. */
+export async function getSupplierPurchases(companyId: string, supplierId: string) {
   const supabase = await createSessionClient();
-  const { data, error } = await supabase
-    .from("accounts_payable")
-    .select("*, suppliers(name)")
-    .eq("company_id", companyId)
-    .eq("status", "open")
-    .order("due_date", { ascending: true, nullsFirst: false })
-    .limit(limit);
-
-  if (error) return [];
-  return (data ?? []) as Array<
-    AccountPayable & { suppliers: { name: string } | null }
-  >;
+  const [orders, payables] = await Promise.all([
+    supabase
+      .from("purchase_orders")
+      .select("*", { count: "exact" })
+      .eq("company_id", companyId)
+      .eq("supplier_id", supplierId)
+      .order("created_at", { ascending: false })
+      .limit(10),
+    supabase
+      .from("accounts_payable")
+      .select("*")
+      .eq("company_id", companyId)
+      .eq("supplier_id", supplierId)
+      .in("status", ["open", "partial"])
+      .order("due_date", { ascending: true, nullsFirst: false }),
+  ]);
+  if (orders.error || payables.error) return null; // erro nunca aparece como "nada a pagar"
+  const open = (payables.data ?? []) as AccountPayable[];
+  return {
+    orders: (orders.data ?? []) as PurchaseOrder[],
+    totalOrders: orders.count ?? 0,
+    openPayables: open,
+    openBalance: sumPayableBalance(open),
+  };
 }
 
 export async function getPurchaseStats(companyId: string) {
@@ -125,15 +136,12 @@ export async function getPurchaseStats(companyId: string) {
         .eq("status", "received"),
       supabase
         .from("accounts_payable")
-        .select("amount")
+        .select("amount, paid_amount")
         .eq("company_id", companyId)
-        .eq("status", "open"),
+        .in("status", ["open", "partial"]),
     ]);
 
-  const openPayables = (payableResult.data ?? []).reduce(
-    (sum, row) => sum + Number(row.amount),
-    0
-  );
+  const openPayables = sumPayableBalance(payableResult.data ?? []);
 
   return {
     totalOrders: ordersResult.count ?? 0,

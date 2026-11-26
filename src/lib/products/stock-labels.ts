@@ -25,7 +25,12 @@ export function stockMovementDelta(movement: { direction: string; quantity: numb
   return Math.round((movement.stock_after - movement.stock_before) * 1000) / 1000;
 }
 
+/** "9.001" do banco se lê nove mil: mostra "9,001" (e nove mil como "9.000"). */
+export function formatQuantity(value: number | string): string {
+  return Number(value).toLocaleString("pt-BR", { maximumFractionDigits: 3 });
+}
+
 export function formatStockDelta(delta: number): string {
-  const text = Math.abs(delta).toLocaleString("pt-BR", { maximumFractionDigits: 3 });
+  const text = formatQuantity(Math.abs(delta));
   return (delta > 0 ? "+" : delta < 0 ? "−" : "") + text;
 }

@@ -247,7 +247,7 @@ select pg_temp.chk('pagar', 'forma de pagamento inválida (cartão) é recusada'
 select pg_temp.chk('pagar', 'data futura é recusada',
   $q$select (public.hr_pay_payment((select v::uuid from ctx where k = 'pay1'), 'pix', public.today_sao_paulo() + 1)).status::text$q$, 'ERR=não pode ser futura');
 select pg_temp.chk('pagar', 'abre o caixa',
-  $q$select (public.open_cash_register(100, 'teste RH')).status::text$q$, 'OK=open');
+  $q$select (public.open_cash_register(300, 'teste RH')).status::text$q$, 'OK=open');
 select pg_temp.chk('pagar', 'pagar em dinheiro com o caixa aberto',
   $q$select (public.hr_pay_payment((select v::uuid from ctx where k = 'pay1'), 'cash')).status::text$q$, 'OK=paid');
 select pg_temp.chk('pagar', 'virou despesa de 205 em Pessoal, ligada ao pagamento',

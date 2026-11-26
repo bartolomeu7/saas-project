@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import type { AuditLog } from "@/types/audit";
 import { EmptyState } from "@/components/app/empty-state";
+import { formatQuantity } from "@/lib/products/stock-labels";
 
 const ACTION_META: Record<string, { label: string; icon: LucideIcon }> = {
   "sale.created": { label: "Venda criada", icon: ShoppingCart },
@@ -39,7 +40,7 @@ function describeMetadata(log: AuditLog): string | null {
   const metadata = log.metadata as Record<string, unknown>;
 
   if (log.action === "sale.stock_adjusted" && "stock_before" in metadata) {
-    return `${metadata.stock_before} → ${metadata.stock_after}`;
+    return `${formatQuantity(Number(metadata.stock_before))} → ${formatQuantity(Number(metadata.stock_after))}`;
   }
   if ((log.action === "sale.payment_added" || log.action === "sale.payment_removed") && "amount" in metadata) {
     const method = String(metadata.method ?? "");
