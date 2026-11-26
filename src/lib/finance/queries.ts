@@ -2,6 +2,7 @@ import "server-only";
 
 import { cache } from "react";
 import { createSessionClient } from "@/lib/supabase/server";
+import { required } from "@/lib/supabase/required";
 import { endOfDaySaoPaulo, startOfMonthSaoPaulo, todayDateSaoPaulo } from "@/lib/timezone";
 import {
   computeNetResult,
@@ -34,7 +35,7 @@ export function resolveFinanceMonthRange(now = new Date()): { from: string; to: 
 
 export async function listFinancialCategories(companyId: string): Promise<FinancialCategory[]> {
   const supabase = await createSessionClient();
-  const { data } = await supabase
+  const result = await supabase
     .from("financial_categories")
     .select("*")
     .eq("company_id", companyId)
@@ -42,19 +43,19 @@ export async function listFinancialCategories(companyId: string): Promise<Financ
     .order("kind", { ascending: true })
     .order("name", { ascending: true });
 
-  return (data ?? []) as FinancialCategory[];
+  return required(result, "listar as categorias") as FinancialCategory[];
 }
 
 export async function listCostCenters(companyId: string): Promise<CostCenter[]> {
   const supabase = await createSessionClient();
-  const { data } = await supabase
+  const result = await supabase
     .from("cost_centers")
     .select("*")
     .eq("company_id", companyId)
     .eq("active", true)
     .order("name", { ascending: true });
 
-  return (data ?? []) as CostCenter[];
+  return required(result, "listar os centros de custo") as CostCenter[];
 }
 
 export async function listAccountsPayable(
@@ -74,14 +75,13 @@ export async function listAccountsPayable(
     query = query.in("status", ["open", "partial"]);
   }
 
-  const { data } = await query;
-  return (data ?? []) as AccountsPayable[];
+  return required(await query, "listar as contas a pagar") as AccountsPayable[];
 }
 
 export async function listAccountsReceivable(companyId: string): Promise<AccountReceivable[]> {
   const supabase = await createSessionClient();
 
-  const { data: sales } = await supabase
+  const salesResult = await supabase
     .from("sales")
     .select("id, customer_id, sold_at, total_amount, payment_status, customers(name)")
     .eq("company_id", companyId)
@@ -90,10 +90,10 @@ export async function listAccountsReceivable(companyId: string): Promise<Account
     .order("sold_at", { ascending: true })
     .limit(100);
 
-  const rows = sales ?? [];
+  const rows = required(salesResult, "listar as vendas a receber");
   if (!rows.length) return [];
 
-  const { data: payments } = await supabase
+  const paymentsResult = await supabase
     .from("sale_payments")
     .select("sale_id, amount")
     .eq("company_id", companyId)
@@ -101,7 +101,7 @@ export async function listAccountsReceivable(companyId: string): Promise<Account
     .in("sale_id", rows.map((row) => row.id));
 
   const paidBySale = new Map<string, number>();
-  for (const payment of payments ?? []) {
+  for (const payment of required(paymentsResult, "somar os recebimentos das vendas")) {
     paidBySale.set(payment.sale_id, (paidBySale.get(payment.sale_id) ?? 0) + money(payment.amount));
   }
 
@@ -132,7 +132,7 @@ export async function listRecentFinancialEntries(
   limit = 20
 ): Promise<FinancialEntry[]> {
   const supabase = await createSessionClient();
-  const { data } = await supabase
+  const result = await supabase
     .from("financial_entries")
     .select("*")
     .eq("company_id", companyId)
@@ -141,7 +141,7 @@ export async function listRecentFinancialEntries(
     .order("created_at", { ascending: false })
     .limit(limit);
 
-  return (data ?? []) as FinancialEntry[];
+  return required(result, "listar os lançamentos") as FinancialEntry[];
 }
 
 /** Teto da lista de detalhe; acima disso a tela avisa que o total mostrado é parcial. */
@@ -159,9 +159,8 @@ export async function listEntriesForComposition(companyId: string, composition: 
   if (composition === "despesas") query = query.eq("direction", "expense");
   else if (composition === "outras-receitas") query = query.eq("direction", "income");
   else query = query.in("source_type", ["sale_payment", "sale_payment_refund"]);
-  const { data, error } = await query.order("occurred_on", { ascending: false }).order("created_at", { ascending: false }).limit(COMPOSITION_LIMIT);
-  if (error) throw new Error("Não foi possível listar os lançamentos: " + error.message);
-  const rows = data ?? [];
+  const result = await query.order("occurred_on", { ascending: false }).order("created_at", { ascending: false }).limit(COMPOSITION_LIMIT);
+  const rows = required(result, "listar os lançamentos");
   return { entries: entriesOfComposition(rows, composition), truncated: rows.length >= COMPOSITION_LIMIT };
 }
 
@@ -206,12 +205,11 @@ export const getFinanceDashboard = cache(async function getFinanceDashboard(
     supabase.rpc("report_summary", { p_company_id: companyId, p_from: from, p_to: to, p_appointments_to: to }),
   ]);
 
-  if (summaryResult.error || !summaryResult.data) {
-    throw new Error("Não foi possível somar as contas a receber: " + (summaryResult.error?.message ?? "sem resposta"));
-  }
-  const summary = summaryResult.data as unknown as { receivable: number | string; receivable_overdue: number | string };
-
-  const sales = salesResult.data ?? [];
+  const summary = required(summaryResult, "somar as contas a receber") as unknown as { receivable: number | string; receivable_overdue: number | string };
+  const sales = required(salesResult, "somar o faturamento");
+  const expenses = required(expensesResult, "somar as despesas");
+  const cash = required(cashResult, "somar o caixa do período");
+  const payables = required(payableResult, "somar as contas a pagar");
   const revenue = sales.reduce((sum, row) => sum + money(row.total_amount), 0);
   const costOfGoods = sales.reduce((sum, row) => sum + money(row.total_cost), 0);
   const grossProfit = revenue - costOfGoods;
@@ -219,21 +217,21 @@ export const getFinanceDashboard = cache(async function getFinanceDashboard(
   // Compra de estoque é caixa/contas a pagar, mas não é despesa de DRE: o custo entra no resultado
   // quando o produto é vendido. Estorno de venda cancelada também fica fora: a venda cancelada já
   // não entra na receita, então o estorno não pode virar despesa (ver ./dre).
-  const operatingExpenses = sumOperatingExpenses(expensesResult.data ?? []);
+  const operatingExpenses = sumOperatingExpenses(expenses);
 
   // Receita lançada à mão no Financeiro (sem venda): entra no resultado como "Outras receitas".
   // O recebimento de vendas fica de fora porque o faturamento já vem das próprias vendas.
-  const incomeRows = (cashResult.data ?? []).filter((row) => row.direction === "income");
+  const incomeRows = cash.filter((row) => row.direction === "income");
   const otherIncome = sumOtherIncome(incomeRows);
 
   const cashIn = incomeRows.reduce((sum, row) => sum + money(row.amount), 0);
-  const cashOut = (cashResult.data ?? [])
+  const cashOut = cash
     .filter((row) => row.direction === "expense")
     .reduce((sum, row) => sum + money(row.amount), 0);
 
-  const accountsPayable = sumPayableBalance(payableResult.data ?? []);
+  const accountsPayable = sumPayableBalance(payables);
   const today = todayDateSaoPaulo();
-  const overduePayableCount = (payableResult.data ?? []).filter(
+  const overduePayableCount = payables.filter(
     (row) => row.due_date && row.due_date < today
   ).length;
 

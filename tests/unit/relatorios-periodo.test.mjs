@@ -102,6 +102,6 @@ test("A receber do Financeiro soma todas as vendas, no banco, e erro não vira z
   const dashboard = queries.slice(queries.indexOf("export const getFinanceDashboard"), queries.indexOf("export async function getFinanceWorkspace"));
   assert.ok(dashboard.includes('rpc("report_summary"'));
   assert.ok(!dashboard.includes("listAccountsReceivable"));
-  assert.ok(dashboard.includes("if (summaryResult.error || !summaryResult.data)"));
+  assert.ok(dashboard.includes('required(summaryResult, "somar as contas a receber")'));
   assert.ok(read("src/app/(app)/app/financeiro/page.tsx").includes("< dashboard.accountsReceivable - 0.005"));
 });
