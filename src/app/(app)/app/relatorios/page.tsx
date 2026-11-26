@@ -12,6 +12,10 @@ import { formatQuantity } from "@/lib/products/stock-labels";
 import { groupByMonth } from "@/lib/reports/summary";
 import { BarChart, BreakdownBars } from "@/components/admin/admin-charts";
 import { ReportSales } from "@/components/app/report-sales";
+import { ReportCustomers } from "@/components/app/report-customers";
+import { ReportAgenda } from "@/components/app/report-agenda";
+import { ReportQuotes } from "@/components/app/report-quotes";
+import { parseInactiveDays, parseReportTab, REPORT_TABS } from "@/lib/reports/people";
 import { parseSalesFilters, salesQuery } from "@/lib/reports/sales";
 
 export const metadata: Metadata = { title: "Relatórios" };
@@ -50,7 +54,7 @@ const PERIODS: Array<{ value: ReportPeriod; label: string }> = [
 export default async function ReportsPage({
   searchParams: searchParamsPromise,
 }: {
-  searchParams: Promise<Record<"period" | "from" | "to" | "aba" | "item" | "cliente" | "quem", string | string[] | undefined>>;
+  searchParams: Promise<Record<"period" | "from" | "to" | "aba" | "item" | "cliente" | "quem" | "sumidos", string | string[] | undefined>>;
 }) {
   const searchParams = await searchParamsPromise;
   const current = (await getCurrentCompany())!;
@@ -58,12 +62,14 @@ export default async function ReportsPage({
   const period = parseReportPeriod(first(searchParams?.period));
   const from = first(searchParams?.from);
   const to = first(searchParams?.to);
-  const tab = first(searchParams?.aba) === "vendas" ? "vendas" : "geral";
+  const tab = parseReportTab(first(searchParams?.aba));
+  const inactiveDays = parseInactiveDays(first(searchParams?.sumidos));
   const filters = parseSalesFilters({ item: first(searchParams?.item), cliente: first(searchParams?.cliente), quem: first(searchParams?.quem) });
   const range = resolveReportRange(period, from, to);
   const customQuery = period === "custom" ? `&from=${range.fromDate}&to=${range.toDate}` : "";
   // a aba e os filtros acompanham a troca de período e a exportação
-  const tabQuery = tab === "vendas" ? salesQuery(filters) : "";
+  const tabQuery =
+    tab === "vendas" ? salesQuery(filters) : tab === "geral" ? "" : tab === "clientes" ? `aba=clientes&sumidos=${inactiveDays}` : `aba=${tab}`;
   const periodHref = (value: ReportPeriod, extra: string) => {
     const query = [value === "month" ? "" : "period=" + value, extra].filter(Boolean).join("&");
     return query ? "/app/relatorios?" + query : "/app/relatorios";
@@ -87,19 +93,21 @@ export default async function ReportsPage({
                 {item.label}
               </Link>
             ))}
-            <a href={"/app/relatorios/export?period=" + period + customQuery + (tabQuery ? "&" + tabQuery : "")} className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium hover:bg-muted">
-              <ArrowDownToLine className="h-3.5 w-3.5" />
-              Exportar CSV
-            </a>
+            {tab === "geral" || tab === "vendas" ? (
+              <a href={"/app/relatorios/export?period=" + period + customQuery + (tabQuery ? "&" + tabQuery : "")} className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium hover:bg-muted">
+                <ArrowDownToLine className="h-3.5 w-3.5" />
+                Exportar CSV
+              </a>
+            ) : null}
           </nav>
         }
       />
 
       <nav aria-label="Visões do relatório" className="flex flex-wrap gap-2 border-b border-border pb-3">
-        {([["geral", "Visão geral", ""], ["vendas", "Vendas", "aba=vendas"]] as const).map(([key, label, extra]) => (
+        {REPORT_TABS.map(({ key, label }) => (
           <Link
             key={key}
-            href={periodHref(period, [extra, period === "custom" ? `from=${range.fromDate}&to=${range.toDate}` : ""].filter(Boolean).join("&"))}
+            href={periodHref(period, [key === "geral" ? "" : "aba=" + key, period === "custom" ? `from=${range.fromDate}&to=${range.toDate}` : ""].filter(Boolean).join("&"))}
             aria-current={tab === key ? "page" : undefined}
             className={"rounded-md px-3 py-1.5 text-sm font-medium " + (tab === key ? "bg-secondary text-secondary-foreground" : "text-muted-foreground hover:text-foreground")}
           >
@@ -133,11 +141,15 @@ export default async function ReportsPage({
     </>
   );
 
-  if (tab === "vendas") {
+  if (tab !== "geral") {
+    const companyId = current.company.id;
     return (
       <div className="prime-module-page flex flex-col gap-6 px-4 py-6 sm:px-6">
         {header}
-        <ReportSales companyId={current.company.id} range={range} filters={filters} />
+        {tab === "vendas" ? <ReportSales companyId={companyId} range={range} filters={filters} /> : null}
+        {tab === "clientes" ? <ReportCustomers companyId={companyId} range={range} inactiveDays={inactiveDays} /> : null}
+        {tab === "agenda" ? <ReportAgenda companyId={companyId} range={range} /> : null}
+        {tab === "orcamentos" ? <ReportQuotes companyId={companyId} range={range} /> : null}
       </div>
     );
   }

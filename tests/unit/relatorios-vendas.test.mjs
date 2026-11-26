@@ -50,7 +50,7 @@ test("CSV da aba Vendas: filtros, itens, quem registrou e texto sem virar fórmu
 
 test("aba Vendas: mesma permissão, erro visível e função que respeita o isolamento", () => {
   const page = read("src/app/(app)/app/relatorios/page.tsx");
-  assert.ok(page.indexOf('can(current.role, "reports.view")') < page.indexOf("<ReportSales"));
+  assert.ok(page.indexOf('can(current.role, "reports.view")') < page.indexOf("<ReportSales "));
   const route = read("src/app/(app)/app/relatorios/export/route.ts");
   assert.ok(route.indexOf('can(current.role, "reports.view")') < route.indexOf("getSalesReport("));
   assert.ok(read("src/lib/reports/sales-queries.ts").includes('required(result, "calcular o relatório de vendas")'));
