@@ -898,7 +898,13 @@
   .prime-report a.text-primary { display: none !important; }
   .prime-report .overflow-x-auto,
   .prime-report .overflow-auto { overflow: visible !important; }
-  .prime-report table { min-width: 0 !important; font-size: 11px; }
+  .prime-report table { min-width: 0 !important; }
+  /* tabela inteira na largura da folha (a da Agenda tem nove colunas); a tabela só para leitor de tela fica fora */
+  .prime-report table:not(.sr-only) { width: 100% !important; font-size: 9.5px !important; }
+  .prime-report table:not(.sr-only) th,
+  .prime-report table:not(.sr-only) td { padding: 5px 3px !important; height: auto !important; white-space: normal !important; letter-spacing: 0 !important; }
+  .prime-report table:not(.sr-only) th { font-size: 8px !important; }
+  .prime-report table:not(.sr-only) td * { font-size: 9.5px !important; }
   .prime-report tr,
   .prime-report article { break-inside: avoid; }
 }

@@ -95,3 +95,10 @@ test("impressão: o fundo do painel também fica branco", () => {
   assert.ok(print.includes("body:has(.prime-report) .prime-app-main,"));
   assert.ok(print.includes("color-scheme: light !important"));
 });
+
+// Achado no reteste: a coluna "Vendas" da Agenda saía cortada na largura de uma folha.
+test("impressão: as tabelas cabem na folha, sem mexer na tabela de leitor de tela", () => {
+  const print = read("src/app/globals.css").split("/* Impressão dos Relatórios")[1];
+  assert.ok(print.includes(".prime-report table:not(.sr-only) { width: 100% !important;"));
+  assert.ok(print.includes("white-space: normal !important"));
+});
