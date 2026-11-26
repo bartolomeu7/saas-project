@@ -59,7 +59,7 @@ export default async function AdminToolsPage({
   return (
     <div className="flex flex-col gap-6 px-4 py-6 sm:px-6">
       <PageHeader
-        eyebrow="Sistema"
+        eyebrow="Operação"
         title="Ferramentas"
         description="Busca global, diagnósticos de consistência e ações rápidas seguras."
       />

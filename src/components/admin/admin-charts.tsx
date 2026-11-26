@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { cn } from "@/lib/utils";
 
 export interface ChartPoint {
@@ -37,12 +38,12 @@ export function BarChart({
         </p>
       ) : (
         <div className="flex items-end gap-[3px]" style={{ height }} aria-hidden="true">
-          {data.map((point) => (
+          {data.map((point, index) => (
             <div
               key={point.label}
               title={`${point.label}: ${point.detail ?? point.value}`}
-              className="min-w-0 flex-1 rounded-t-sm bg-primary/70 transition-colors hover:bg-primary motion-reduce:transition-none"
-              style={{ height: `${max === 0 ? 0 : Math.max(point.value > 0 ? 4 : 0, (point.value / max) * 100)}%` }}
+              className="prime-bar min-w-0 flex-1 rounded-t-sm bg-gradient-to-t from-primary/50 to-primary/90 transition-[filter] hover:brightness-125 motion-reduce:transition-none"
+              style={{ "--i": index, height: `${max === 0 ? 0 : Math.max(point.value > 0 ? 4 : 0, (point.value / max) * 100)}%` } as CSSProperties}
             />
           ))}
         </div>
@@ -102,7 +103,7 @@ export function BreakdownBars({
             aria-valuemax={max}
             aria-valuenow={item.value}
           >
-            <div className="h-full rounded-full bg-primary" style={{ width: `${(item.value / max) * 100}%` }} />
+            <div className="prime-meter h-full rounded-full bg-primary" style={{ width: `${(item.value / max) * 100}%` }} />
           </div>
         </li>
       ))}

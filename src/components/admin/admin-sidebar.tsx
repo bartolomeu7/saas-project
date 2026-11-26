@@ -3,8 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useLinkStatus } from "next/link";
 import { ArrowLeft, UserCircle } from "lucide-react";
-import { ADMIN_NAV_GROUPS } from "@/components/admin/admin-nav-items";
+import { visibleAdminNavGroups } from "@/components/admin/admin-nav-items";
+import { IntentLink } from "@/components/admin/intent-link";
 import { UserMenu } from "@/components/app/user-menu";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -16,6 +18,7 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
@@ -29,6 +32,12 @@ const ADMIN_USER_LINKS = [
   { href: "/app", label: "Voltar ao Prime Ges", icon: ArrowLeft },
 ];
 
+/** Girador no item clicado enquanto a aba ainda não abriu. */
+function NavPending() {
+  const { pending } = useLinkStatus();
+  return <span aria-hidden="true" className={pending ? "prime-admin-pending is-pending" : "prime-admin-pending"} />;
+}
+
 /**
  * Sidebar do painel da plataforma. Estrutura do bloco `sidebar-07` do shadcn/ui
  * (recolhe para ícones; drawer no mobile) — a mesma base do AppSidebar da
@@ -38,19 +47,17 @@ export function AdminSidebar({
   userName,
   userEmail,
   role,
+  badges = {},
 }: {
   userName?: string | null;
   userEmail?: string | null;
   role: UserRole;
+  badges?: Record<string, number>;
 }) {
   const pathname = usePathname();
   const { isMobile, setOpenMobile } = useSidebar();
 
-  // Esconde o que o papel não pode usar (UX). A autorização real é do banco.
-  const groups = ADMIN_NAV_GROUPS.map((group) => ({
-    ...group,
-    items: group.items.filter((item) => !item.superAdminOnly || role === "super_admin"),
-  })).filter((group) => group.items.length > 0);
+  const groups = visibleAdminNavGroups(role);
 
   return (
     <Sidebar collapsible="icon" className="prime-app-sidebar border-sidebar-border">
@@ -101,17 +108,24 @@ export function AdminSidebar({
                         asChild
                         isActive={isActive}
                         tooltip={item.label}
-                        className="prime-app-nav-item text-sidebar-foreground/75 data-[active=true]:bg-gradient-to-r data-[active=true]:from-primary/25 data-[active=true]:to-primary/5 data-[active=true]:font-medium data-[active=true]:text-[hsl(207_100%_68%)]"
+                        className="prime-app-nav-item text-sidebar-foreground/75 data-[active=true]:bg-gradient-to-r data-[active=true]:from-primary/25 data-[active=true]:to-primary/5 data-[active=true]:font-medium data-[active=true]:text-primary dark:data-[active=true]:text-[hsl(207_100%_68%)]"
                       >
-                        <Link
+                        <IntentLink
                           href={item.href}
                           aria-current={isActive ? "page" : undefined}
                           onClick={() => isMobile && setOpenMobile(false)}
                         >
                           <Icon strokeWidth={1.75} />
                           <span>{item.label}</span>
-                        </Link>
+                          <NavPending />
+                        </IntentLink>
                       </SidebarMenuButton>
+                      {(badges[item.href] ?? 0) > 0 && (
+                        <SidebarMenuBadge className="rounded-full bg-destructive/20 text-foreground">
+                          {badges[item.href]}
+                          <span className="sr-only"> pendente(s)</span>
+                        </SidebarMenuBadge>
+                      )}
                     </SidebarMenuItem>
                   );
                 })}

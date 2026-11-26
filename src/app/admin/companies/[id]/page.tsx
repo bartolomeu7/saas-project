@@ -43,7 +43,7 @@ export default async function AdminCompanyDetailPage({ params }: { params: Promi
   return (
     <div className="flex flex-col gap-6 px-4 py-6 sm:px-6">
       <PageHeader
-        eyebrow="Gestão"
+        eyebrow="Clientes"
         title={company.name}
         description={`${BUSINESS_TYPE_LABELS[company.business_type]} · criada em ${formatDate(company.created_at)}`}
         actions={

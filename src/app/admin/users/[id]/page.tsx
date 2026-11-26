@@ -41,7 +41,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
   return (
     <div className="flex flex-col gap-6 px-4 py-6 sm:px-6">
       <PageHeader
-        eyebrow="Gestão"
+        eyebrow="Clientes"
         title={displayName}
         description={profile.email ?? "Sem e-mail"}
         actions={

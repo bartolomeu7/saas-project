@@ -1,0 +1,223 @@
+/* Painel da plataforma (/admin): movimento e efeitos. Tudo sob .prime-admin; só opacidade e transform se movem.
+   Quem pede menos movimento (prefers-reduced-motion) vê a mesma tela parada: ver o bloco no fim. */
+
+.prime-admin-enter { animation: prime-admin-in .28s cubic-bezier(.2, .8, .2, 1) backwards; }
+
+.prime-admin-rise {
+  animation: prime-admin-in .45s cubic-bezier(.2, .8, .2, 1) backwards;
+  animation-delay: calc(var(--i, 0) * 45ms);
+}
+
+/* Faixa de abertura do dashboard, com um brilho azul que se desloca devagar. */
+.prime-admin-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  border: 1px solid hsl(var(--primary) / .28);
+  border-radius: 18px;
+  padding: 22px;
+  background: linear-gradient(135deg, hsl(var(--primary) / .14), hsl(var(--card)) 55%);
+}
+
+.prime-admin-hero::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: -80% -20% auto auto;
+  width: 60%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, hsl(var(--primary) / .32), transparent 65%);
+  animation: prime-admin-drift 11s ease-in-out infinite alternate;
+}
+
+.prime-admin-live {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: hsl(var(--success));
+}
+
+.prime-admin-live::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: inherit;
+  animation: prime-admin-ping 1.8s cubic-bezier(0, 0, .2, 1) infinite;
+}
+
+/* Indicadores clicáveis. */
+.prime-admin-stat {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  min-height: 132px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 14px;
+  padding: 16px;
+  background: linear-gradient(160deg, hsl(var(--card)), hsl(var(--primary) / .05));
+  transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease;
+}
+
+.prime-admin-stat::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 35%, hsl(var(--primary) / .12) 50%, transparent 65%);
+  transform: translateX(-100%);
+  transition: transform .6s ease;
+}
+
+.prime-admin-stat:hover {
+  transform: translateY(-3px);
+  border-color: hsl(var(--primary) / .55);
+  box-shadow: 0 18px 34px -22px hsl(var(--primary) / .65);
+}
+
+.prime-admin-stat:hover::after { transform: translateX(100%); }
+.prime-admin-stat:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+
+.prime-admin-stat__icon {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: hsl(var(--primary) / .14);
+  color: hsl(var(--primary));
+  transition: transform .25s ease;
+}
+
+.prime-admin-stat:hover .prime-admin-stat__icon { transform: scale(1.12) rotate(-6deg); }
+
+.prime-admin-spark { display: block; width: 100%; height: 30px; margin-top: 8px; animation: prime-admin-draw 1.1s .25s ease backwards; }
+
+.prime-admin-spark polyline {
+  fill: none;
+  stroke: hsl(var(--primary) / .85);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Lista "Precisa de atenção". */
+.prime-admin-attention {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid hsl(var(--border));
+  border-left: 3px solid hsl(var(--tone));
+  border-radius: 10px;
+  padding: 9px 10px;
+  transition: transform .18s ease, background-color .18s ease;
+}
+
+.prime-admin-attention--danger { --tone: var(--destructive); }
+.prime-admin-attention--warning { --tone: var(--warning); }
+.prime-admin-attention:hover { transform: translateX(3px); background: hsl(var(--tone) / .08); }
+.prime-admin-attention:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+.prime-admin-attention__icon { display: grid; place-items: center; color: hsl(var(--tone)); }
+.prime-admin-attention__arrow { transition: transform .18s ease; }
+.prime-admin-attention:hover .prime-admin-attention__arrow { transform: translateX(3px); }
+
+/* Atividade recente em linha do tempo. */
+.prime-admin-timeline { border-left: 1px solid hsl(var(--border)); margin-left: 4px; }
+.prime-admin-timeline li { position: relative; padding: 9px 0 9px 18px; }
+
+.prime-admin-timeline li::before {
+  content: "";
+  position: absolute;
+  top: 17px;
+  left: -4.5px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: hsl(var(--primary));
+  box-shadow: 0 0 0 3px hsl(var(--card));
+}
+
+/* Cartões, gráficos e tabelas de todas as abas. */
+.prime-admin .prime-admin-card { transition: border-color .22s ease, box-shadow .22s ease; }
+.prime-admin .prime-admin-card:hover { border-color: hsl(var(--primary) / .35); box-shadow: 0 16px 32px -26px hsl(var(--primary) / .55); }
+
+.prime-admin .prime-bar {
+  transform-origin: bottom;
+  animation: prime-admin-grow .6s cubic-bezier(.2, .8, .2, 1) backwards;
+  animation-delay: calc(var(--i, 0) * 14ms);
+}
+
+.prime-admin .prime-meter { transform-origin: left; animation: prime-admin-fill .8s cubic-bezier(.2, .8, .2, 1) backwards; }
+
+.prime-admin tbody tr { animation: prime-admin-fade .35s ease backwards; transition: background-color .15s ease, box-shadow .15s ease; }
+.prime-admin tbody tr:nth-child(2) { animation-delay: 30ms; }
+.prime-admin tbody tr:nth-child(3) { animation-delay: 60ms; }
+.prime-admin tbody tr:nth-child(4) { animation-delay: 90ms; }
+.prime-admin tbody tr:nth-child(5) { animation-delay: 120ms; }
+.prime-admin tbody tr:nth-child(n + 6) { animation-delay: 150ms; }
+.prime-admin tbody tr:hover { background: hsl(var(--primary) / .05); box-shadow: inset 3px 0 0 hsl(var(--primary) / .55); }
+
+/* Botões de ação recolhidos nas listas. */
+.prime-admin-actions summary { cursor: pointer; list-style: none; }
+.prime-admin-actions summary::-webkit-details-marker { display: none; }
+.prime-admin-actions__arrow { transition: transform .2s ease; }
+.prime-admin-actions[open] .prime-admin-actions__arrow { transform: rotate(180deg); }
+.prime-admin-actions[open] > div { animation: prime-admin-in .22s ease backwards; }
+
+/* Aviso no item do menu enquanto a aba clicada ainda carrega (só aparece se passar de 120 ms). */
+.prime-admin-pending {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  margin-left: auto;
+  border: 2px solid hsl(var(--primary) / .3);
+  border-top-color: hsl(var(--primary));
+  border-radius: 50%;
+  opacity: 0;
+}
+
+.prime-admin-pending.is-pending { animation: prime-admin-spin .7s linear infinite, prime-admin-fade .1s .12s ease forwards; }
+
+@keyframes prime-admin-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes prime-admin-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes prime-admin-grow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes prime-admin-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes prime-admin-draw { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes prime-admin-ping { 75%, 100% { opacity: 0; transform: scale(2.6); } }
+@keyframes prime-admin-drift { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(-35%, 18%, 0); } }
+@keyframes prime-admin-spin { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .prime-admin-enter,
+  .prime-admin-rise,
+  .prime-admin-hero::before,
+  .prime-admin-live::after,
+  .prime-admin-spark,
+  .prime-admin .prime-bar,
+  .prime-admin .prime-meter,
+  .prime-admin tbody tr,
+  .prime-admin-actions[open] > div { animation: none; }
+
+  .prime-admin-pending.is-pending { animation: none; opacity: 1; }
+
+  .prime-admin-stat,
+  .prime-admin-stat::after,
+  .prime-admin-stat__icon,
+  .prime-admin-attention,
+  .prime-admin-attention__arrow,
+  .prime-admin-actions__arrow,
+  .prime-admin .prime-admin-card,
+  .prime-admin tbody tr { transition: none; }
+
+  .prime-admin-stat:hover,
+  .prime-admin-stat:hover .prime-admin-stat__icon,
+  .prime-admin-attention:hover,
+  .prime-admin-attention:hover .prime-admin-attention__arrow { transform: none; }
+}

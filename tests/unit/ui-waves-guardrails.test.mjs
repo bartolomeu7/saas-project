@@ -500,12 +500,14 @@ describe("Onda F1: casca do painel admin no novo visual, guardas intactas", () =
   it("o layout continua exigindo administrador da plataforma e respeitando o limite de sessões", () => {
     assert.match(layout, /await requirePlatformAdmin\(\)/);
     assert.match(layout, /evaluateSessionGate\(user\.id\)/);
+    assert.match(layout, /const user = \{ id: admin\.userId \}/);
     assert.match(layout, /robots: \{ index: false, follow: false \}/);
     assert.match(layout, /export const dynamic = "force-dynamic"/);
   });
 
   it("a barra lateral continua escondendo o que é só de super_admin e marcando o item ativo", () => {
-    assert.match(sidebar, /item\.superAdminOnly \|\| role === "super_admin"/);
+    assert.match(sidebar, /visibleAdminNavGroups\(role\)/);
+    assert.match(read("src/components/admin/admin-nav-items.ts"), /item\.superAdminOnly \|\| role === "super_admin"/);
     assert.match(sidebar, /aria-current=\{isActive \? "page" : undefined\}/);
     assert.match(sidebar, /\/app/);
   });

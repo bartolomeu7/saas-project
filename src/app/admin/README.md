@@ -49,6 +49,14 @@ Ninguém altera o próprio papel/status, e a plataforma sempre mantém ao menos 
 super_admin ativo (inclusive sob concorrência). `admin` e `super_admin`
 suspensos/inativos perdem o acesso em todas as camadas (middleware, layout, RPCs, RLS).
 
+## Menu, velocidade e visual
+
+- Menu em 5 grupos: Visão geral, Clientes, Financeiro, Operação e Acesso (`admin-nav-items.ts`).
+- Ctrl/⌘ + K abre a busca do painel (abas, usuários, empresas, pagamentos).
+- Nenhuma aba chama a API do Clerk para validar o admin (só o banco). Links do menu carregam a aba inteira ao passar o
+  mouse/focar (`intent-link.tsx`), com validade de 30 s (`staleTimes` em `next.config.js`).
+- Animações em `admin.css`, desligadas com `prefers-reduced-motion`.
+
 ## Rotas
 
 | Rota | O que faz |

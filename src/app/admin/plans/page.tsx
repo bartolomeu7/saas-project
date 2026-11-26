@@ -65,7 +65,7 @@ export default async function AdminPlansPage() {
   return (
     <div className="flex flex-col gap-6 px-4 py-6 sm:px-6">
       <PageHeader
-        eyebrow="Gestão"
+        eyebrow="Financeiro"
         title="Planos"
         description="Catálogo comercial do Prime Ges: preço, desconto, duração, limites de usuários e benefícios. O site público lê esta mesma fonte."
         actions={

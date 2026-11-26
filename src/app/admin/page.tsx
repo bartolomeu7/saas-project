@@ -1,13 +1,13 @@
-import Link from "next/link";
-import { Activity, Building2, Clock, CreditCard, TrendingUp, Users, Wallet, Wifi } from "lucide-react";
+import { Activity, Building2, CalendarClock, CircleAlert, Clock, CreditCard, LifeBuoy, ReceiptText, Server, TrendingUp, Users, Wallet, Webhook, Wifi } from "lucide-react";
 import { AuditCategoryBadge } from "@/components/admin/admin-badges";
-import { BarChart, BreakdownBars } from "@/components/admin/admin-charts";
-import { MetricCard } from "@/components/app/metric-card";
-import { PageHeader } from "@/components/app/page-header";
-import { Badge } from "@/components/ui/badge";
+import { BreakdownBars } from "@/components/admin/admin-charts";
+import { CountUp, LiveRefresh, OpenSearchButton, PeriodChart } from "@/components/admin/dashboard/dashboard-client";
+import { AttentionList, StatCard, rise } from "@/components/admin/dashboard/dashboard-parts";
+import { IntentLink } from "@/components/admin/intent-link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getPlatformDashboard, listPlatformTickets, requirePlatformAdmin } from "@/lib/admin/queries";
-import { formatCurrency, formatDateTime } from "@/lib/format";
+import { readServerHealth, timed } from "@/lib/admin/server-health";
+import { formatCurrency, formatDateTime, formatRelative } from "@/lib/format";
 
 export const metadata = { title: "Dashboard" };
 
@@ -28,118 +28,150 @@ function deltaLabel(current: number, previous: number): string {
  * assinaturas, receita (gateway + manual), séries de 30 dias, distribuição por plano,
  * saúde do webhook e auditoria recente (admin vê só as próprias ações). A “receita
  * recorrente estimada” é derivada (preço ÷ duração × 30 das assinaturas pagas
- * ativas) e vem rotulada como estimativa. Nada é fictício.
+ * ativas) e vem rotulada como estimativa. O cartão "Servidor" mede o próprio
+ * processo do site e o tempo dessa consulta. Nada é fictício.
  */
 export default async function AdminDashboardPage() {
-  const [admin, dashboard, openTickets] = await Promise.all([
+  const [admin, [dashboard, databaseMs], openTickets] = await Promise.all([
     requirePlatformAdmin(),
-    getPlatformDashboard(),
+    timed(getPlatformDashboard),
     listPlatformTickets("open"),
   ]);
   const { users, presence, companies, subscriptions, revenue, webhooks_24h: webhooks } = dashboard;
+  const server = readServerHealth();
+  const firstName = admin.fullName?.trim().split(/\s+/)[0];
 
   return (
     <div className="flex flex-col gap-6 px-4 py-6 sm:px-6">
-      <PageHeader
-        eyebrow="Plataforma"
-        title="Dashboard"
-        description={`Visão geral do Prime Ges. Atualizado em ${formatDateTime(dashboard.generated_at)}.`}
-      />
+      <section className="prime-admin-rise prime-admin-hero" style={rise(0)}>
+        <div className="min-w-0">
+          <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+            <span className="prime-admin-live" aria-hidden="true" /> Plataforma ao vivo
+          </p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-foreground">
+            {firstName ? `Olá, ${firstName}` : "Dashboard"}
+          </h1>
+          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+            {presence.online_now} pessoa(s) online agora · {presence.seen_24h} nas últimas 24 h. Atualizado em{" "}
+            {formatDateTime(dashboard.generated_at)}.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <OpenSearchButton />
+          <LiveRefresh />
+        </div>
+      </section>
 
       <section aria-label="Indicadores principais" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard
+        <StatCard
+          index={1}
+          href="/admin/users"
           label="Usuários"
-          value={users.total}
+          value={<CountUp value={users.total} />}
           icon={Users}
           detail={`${users.active} ativos · ${users.suspended} suspensos · +${users.new_7d} na semana`}
+          trend={dashboard.signups_by_day.map((point) => point.users)}
         />
-        <MetricCard
+        <StatCard
+          index={2}
+          href="/admin/users?presence=online"
           label="Online agora"
-          value={presence.online_now}
+          value={<CountUp value={presence.online_now} />}
           icon={Wifi}
           detail={`${presence.recent} ativos nos últimos ${presence.recent_minutes} min · ${presence.seen_24h} em 24 h`}
         />
-        <MetricCard
+        <StatCard
+          index={3}
+          href="/admin/companies"
           label="Empresas"
-          value={companies.total}
+          value={<CountUp value={companies.total} />}
           icon={Building2}
           detail={`${companies.active} ativas · ${companies.inactive} inativas · +${companies.new_30d} em 30 dias`}
+          trend={dashboard.signups_by_day.map((point) => point.companies)}
         />
-        <MetricCard
+        <StatCard
+          index={4}
+          href="/admin/subscriptions"
           label="Assinaturas com acesso"
-          value={subscriptions.active + subscriptions.trialing}
+          value={<CountUp value={subscriptions.active + subscriptions.trialing} />}
           icon={CreditCard}
           detail={`${subscriptions.active} pagas/concedidas (${subscriptions.lifetime} vitalícia(s)) · ${subscriptions.trialing} em teste grátis`}
         />
       </section>
 
       <section aria-label="Financeiro" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard
+        <StatCard
+          index={5}
+          href="/admin/payments?status=paid"
           label="Receita (30 dias)"
-          value={formatCurrency(revenue.paid_30d)}
+          value={<CountUp value={revenue.paid_30d} format="currency" />}
           icon={Wallet}
           detail={`${deltaLabel(revenue.paid_30d, revenue.paid_prev_30d)} · ${revenue.paid_count_30d} pagamento(s)`}
+          trend={dashboard.payments_by_day.map((point) => point.total)}
         />
-        <MetricCard
+        <StatCard
+          index={6}
+          href="/admin/payments"
           label="Receita total"
-          value={formatCurrency(revenue.paid_total)}
+          value={<CountUp value={revenue.paid_total} format="currency" />}
           icon={TrendingUp}
           detail={`30 dias: gateway ${formatCurrency(revenue.gateway_30d ?? revenue.evopay_30d)} · manual ${formatCurrency(revenue.manual_30d)} · estornado (total) ${formatCurrency(revenue.refunded_total)}`}
         />
-        <MetricCard
+        <StatCard
+          index={7}
+          href="/admin/subscriptions?state=active"
           label="Recorrente estimada (mensal)"
-          value={formatCurrency(dashboard.mrr_estimate)}
+          value={<CountUp value={dashboard.mrr_estimate} format="currency" />}
           icon={Activity}
           detail="Estimativa: assinaturas pagas ativas com prazo, preço ÷ duração × 30 (vitalícias e testes não entram)"
         />
-        <MetricCard
+        <StatCard
+          index={8}
+          href="/admin/payments?status=pending"
           label="Pagamentos pendentes"
-          value={revenue.pending_count}
+          value={<CountUp value={revenue.pending_count} />}
           icon={Clock}
           detail={`${formatCurrency(revenue.pending_total)} aguardando`}
         />
       </section>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Receita por dia</CardTitle>
-            <CardDescription>Pagamentos confirmados nos últimos 30 dias.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <BarChart
-              title="Receita por dia nos últimos 30 dias"
-              valueLabel="Receita"
-              data={dashboard.payments_by_day.map((point) => ({
-                label: shortDay(point.day),
-                value: point.total,
-                detail: `${formatCurrency(point.total)} · ${point.count} pagamento(s)`,
-              }))}
-            />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Novos usuários por dia</CardTitle>
-            <CardDescription>Cadastros nos últimos 30 dias ({users.new_30d} no total).</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <BarChart
-              title="Novos usuários por dia nos últimos 30 dias"
-              valueLabel="Novos usuários"
-              data={dashboard.signups_by_day.map((point) => ({
-                label: shortDay(point.day),
-                value: point.users,
-                detail: `${point.users} usuário(s) · ${point.companies} empresa(s)`,
-              }))}
-            />
-          </CardContent>
-        </Card>
+        <PeriodChart
+          title="Receita por dia"
+          description="Pagamentos confirmados."
+          valueLabel="Receita"
+          format="currency"
+          data={dashboard.payments_by_day.map((point) => ({
+            label: shortDay(point.day),
+            value: point.total,
+            detail: `${formatCurrency(point.total)} · ${point.count} pagamento(s)`,
+          }))}
+        />
+        <PeriodChart
+          title="Novos usuários por dia"
+          description="Cadastros."
+          valueLabel="Novos usuários"
+          data={dashboard.signups_by_day.map((point) => ({
+            label: shortDay(point.day),
+            value: point.users,
+            detail: `${point.users} usuário(s) · ${point.companies} empresa(s)`,
+          }))}
+        />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <Card>
+        <AttentionList
+          items={[
+            { label: "Chamados de suporte abertos", href: "/admin/support", count: openTickets.total, tone: "danger", icon: LifeBuoy },
+            { label: "Webhooks com erro (24 h)", href: "/admin/integrations", count: webhooks.error, tone: "danger", icon: Webhook },
+            { label: "Assinaturas expiradas", href: "/admin/subscriptions?state=expired", count: subscriptions.expired, tone: "danger", icon: CircleAlert },
+            { label: "Vencem em até 7 dias", href: "/admin/subscriptions?expiring=7&sort=expires_asc", count: subscriptions.expiring_7d, tone: "warning", icon: CalendarClock },
+            { label: "Empresas sem assinatura", href: "/admin/companies?subscription=none", count: subscriptions.companies_without_subscription, tone: "warning", icon: Building2 },
+            { label: "Pagamentos pendentes", href: "/admin/payments?status=pending", count: revenue.pending_count, tone: "warning", icon: ReceiptText },
+          ]}
+        />
+
+        <Card className="prime-admin-card">
           <CardHeader>
             <CardTitle className="text-base">Assinaturas por plano</CardTitle>
             <CardDescription>Apenas as que têm acesso liberado agora.</CardDescription>
@@ -156,105 +188,79 @@ export default async function AdminDashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Atenção</CardTitle>
-            <CardDescription>Itens que pedem ação do time.</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-2 text-sm">
-            <Link
-              href="/admin/support"
-              className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2 hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <span>Chamados de suporte abertos</span>
-              <Badge variant={openTickets.total > 0 ? "danger" : "muted"}>{openTickets.total}</Badge>
-            </Link>
-            <Link
-              href="/admin/subscriptions?expiring=7&sort=expires_asc"
-              className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2 hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <span>Vencem em até 7 dias</span>
-              <Badge variant={subscriptions.expiring_7d > 0 ? "warning" : "muted"}>{subscriptions.expiring_7d}</Badge>
-            </Link>
-            <Link
-              href="/admin/subscriptions?state=expired"
-              className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2 hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <span>Assinaturas expiradas</span>
-              <Badge variant={subscriptions.expired > 0 ? "danger" : "muted"}>{subscriptions.expired}</Badge>
-            </Link>
-            <Link
-              href="/admin/companies?subscription=none"
-              className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2 hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <span>Empresas sem assinatura</span>
-              <Badge variant={subscriptions.companies_without_subscription > 0 ? "warning" : "muted"}>
-                {subscriptions.companies_without_subscription}
-              </Badge>
-            </Link>
-            <Link
-              href="/admin/payments?status=pending"
-              className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2 hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <span>Pagamentos pendentes</span>
-              <Badge variant={revenue.pending_count > 0 ? "warning" : "muted"}>{revenue.pending_count}</Badge>
-            </Link>
-            <Link
-              href="/admin/integrations"
-              className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2 hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <span>Webhooks com erro (24 h)</span>
-              <Badge variant={webhooks.error > 0 ? "danger" : "muted"}>{webhooks.error}</Badge>
-            </Link>
-          </CardContent>
-        </Card>
+        <div className="flex flex-col gap-4">
+          <Card className="prime-admin-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Server className="size-4 text-primary" strokeWidth={1.75} aria-hidden="true" /> Servidor
+              </CardTitle>
+              <CardDescription>Medido agora, ao abrir esta tela.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <dl className="grid grid-cols-3 gap-3 text-sm">
+                <div>
+                  <dt className="text-xs text-muted-foreground">Site ligado há</dt>
+                  <dd className="mt-1 font-semibold text-foreground">{server.uptime}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted-foreground">Memória do site</dt>
+                  <dd className="mt-1 font-semibold tabular-nums text-foreground">{server.memoryMb} MB</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted-foreground">Resposta do banco</dt>
+                  <dd className="mt-1 font-semibold tabular-nums text-foreground">{databaseMs} ms</dd>
+                </div>
+              </dl>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Webhooks (24 h)</CardTitle>
-            <CardDescription>Entregas recebidas dos gateways de pagamento.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <BreakdownBars
-              emptyLabel="Nenhuma entrega nas últimas 24 horas."
-              items={[
-                { label: "Processadas", value: webhooks.processed },
-                { label: "Ignoradas", value: webhooks.ignored },
-                { label: "Sem pagamento", value: webhooks.payment_not_found },
-                { label: "Com erro", value: webhooks.error },
-              ]}
-            />
-          </CardContent>
-        </Card>
+          <Card className="prime-admin-card">
+            <CardHeader>
+              <CardTitle className="text-base">Webhooks (24 h)</CardTitle>
+              <CardDescription>Entregas recebidas dos gateways de pagamento.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <BreakdownBars
+                emptyLabel="Nenhuma entrega nas últimas 24 horas."
+                items={[
+                  { label: "Processadas", value: webhooks.processed },
+                  { label: "Ignoradas", value: webhooks.ignored },
+                  { label: "Sem pagamento", value: webhooks.payment_not_found },
+                  { label: "Com erro", value: webhooks.error },
+                ]}
+              />
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
-      <Card>
+      <Card className="prime-admin-card">
         <CardHeader>
           <CardTitle className="text-base">Atividade administrativa recente</CardTitle>
           <CardDescription>
             {admin.role === "super_admin" ? "Últimas operações de toda a plataforma." : "Suas últimas operações."}{" "}
-            <Link href="/admin/audit" className="underline-offset-4 hover:underline">
+            <IntentLink href="/admin/audit" className="underline-offset-4 hover:underline">
               Ver auditoria completa
-            </Link>
+            </IntentLink>
           </CardDescription>
         </CardHeader>
         <CardContent>
           {dashboard.recent_audit.length === 0 ? (
             <p className="text-sm text-muted-foreground">Nenhuma operação registrada ainda.</p>
           ) : (
-            <ul className="flex flex-col divide-y divide-border">
-              {dashboard.recent_audit.map((entry) => (
-                <li key={entry.id} className="flex flex-col gap-1 py-2.5 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between">
+            <ol className="prime-admin-timeline">
+              {dashboard.recent_audit.map((entry, index) => (
+                <li key={entry.id} className="prime-admin-rise flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between" style={rise(index)}>
                   <div className="flex flex-wrap items-center gap-2">
                     <AuditCategoryBadge category={entry.category} />
                     <code className="text-xs text-muted-foreground">{entry.action}</code>
                   </div>
-                  <span className="text-xs text-muted-foreground">
-                    {formatDateTime(entry.created_at)} · {entry.actor_email ?? "sistema"}
+                  <span className="text-xs text-muted-foreground" title={formatDateTime(entry.created_at)}>
+                    {formatRelative(entry.created_at)} · {entry.actor_email ?? "sistema"}
                   </span>
                 </li>
               ))}
-            </ul>
+            </ol>
           )}
         </CardContent>
       </Card>

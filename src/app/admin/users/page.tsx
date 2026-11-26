@@ -83,7 +83,7 @@ export default async function AdminUsersPage({
   return (
     <div className="flex flex-col gap-6 px-4 py-6 sm:px-6">
       <PageHeader
-        eyebrow="Gestão"
+        eyebrow="Clientes"
         title="Usuários"
         description="Todos os usuários da plataforma, com empresa, assinatura e presença."
       />
@@ -164,8 +164,7 @@ export default async function AdminUsersPage({
             <TableHeader>
               <TableRow>
                 <TableHead>Usuário</TableHead>
-                <TableHead>Papel</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead>Conta</TableHead>
                 <TableHead>Empresa</TableHead>
                 <TableHead>Plano / assinatura</TableHead>
                 <TableHead>Cadastro</TableHead>
@@ -191,10 +190,10 @@ export default async function AdminUsersPage({
                     </div>
                   </TableCell>
                   <TableCell>
-                    <UserRoleBadge role={user.role} />
-                  </TableCell>
-                  <TableCell>
-                    <UserStatusBadge status={user.status} />
+                    <div className="flex flex-col items-start gap-1">
+                      <UserStatusBadge status={user.status} />
+                      <UserRoleBadge role={user.role} />
+                    </div>
                   </TableCell>
                   <TableCell>
                     {user.company_name ? (
@@ -246,6 +245,7 @@ export default async function AdminUsersPage({
                       targetStatus={user.status}
                       actorRole={admin.role}
                       isSelf={user.user_id === admin.userId}
+                      compact
                     />
                   </TableCell>
                 </TableRow>
