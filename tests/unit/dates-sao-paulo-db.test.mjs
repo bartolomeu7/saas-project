@@ -18,12 +18,13 @@ test("limites de data do período são o dia de São Paulo, não o dia UTC do in
 
 test("Financeiro e Relatórios filtram occurred_on pelos limites de São Paulo", () => {
   const finance = read("src/lib/finance/queries.ts");
-  const reports = read("src/lib/reports/queries.ts");
-  for (const [name, src] of [["finance", finance], ["reports", reports]]) {
-    assert.ok(!/occurred_on",\s*(range\.)?(from|to)\.slice\(0, ?10\)/.test(src), `${name} ainda usa o dia UTC nos limites`);
-    assert.ok(src.includes("todayDateSaoPaulo(new Date("), `${name} não converte os limites para São Paulo`);
-  }
+  assert.ok(!/occurred_on",\s*(range\.)?(from|to)\.slice\(0, ?10\)/.test(finance), "finance ainda usa o dia UTC nos limites");
+  assert.ok(finance.includes("todayDateSaoPaulo(new Date("), "finance não converte os limites para São Paulo");
   assert.ok(!finance.includes("row.sold_at.slice(0, 10)"), "vencimento do a receber ainda usa o dia UTC");
+  // nos Relatórios a conta é feita no banco: os limites viram data-calendário de São Paulo lá
+  const reports = read("supabase/migrations/20261126160000_relatorios_resumo.sql");
+  assert.ok(reports.includes("(p_from at time zone 'America/Sao_Paulo')::date") && reports.includes("(p_to at time zone 'America/Sao_Paulo')::date"));
+  assert.ok(reports.includes("f.occurred_on between l.de and l.ate"));
 });
 
 test("migração troca current_date/::date por São Paulo, aborta se não achar o trecho e tem rollback", () => {

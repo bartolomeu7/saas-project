@@ -94,7 +94,7 @@ test("CSV do relatório: texto que parece fórmula é neutralizado e números sa
 test("CSV do relatório: separador ponto e vírgula, BOM, todos os itens, dias e formas de pagamento", () => {
   const report = {
     range: { period: "month", from: "", to: "", label: "Este mês" },
-    summary: { revenue: 1234.5, costOfGoods: 100, completedSales: 3, averageTicket: 411.5, otherIncome: 0, operatingExpenses: 50, netResult: 1084.5, accountsReceivable: 0, accountsPayable: 20, overdueReceivables: 0, overduePayables: 1 },
+    summary: { revenue: 1234.5, costOfGoods: 100, completedSales: 3, averageTicket: 411.5, otherIncome: 0, operatingExpenses: 50, netResult: 1084.5, received: 1234.5, refunds: 0, accountsReceivable: 0, accountsPayable: 20, overdueReceivables: 0, overduePayables: 1 },
     salesTrend: [{ date: "2026-11-20", label: "20/11", value: 1234.5 }],
     topItems: [],
     allItems: Array.from({ length: 12 }, (_, i) => ({ description: i === 0 ? "=CMD()" : `Item ${i}`, quantity: 1.5, revenue: 100 - i, itemType: i % 2 ? "service" : "product" })),
@@ -149,9 +149,8 @@ test("Chat: valor negativo ou absurdo avisa em vez de ser ignorado em silêncio"
 test("Relatórios: agenda de Este mês/Este ano conta também o que ainda vai acontecer; exportação com todos os itens", () => {
   const q = read("src/lib/reports/queries.ts");
   assert.ok(q.includes("export function appointmentsWindowEnd"));
-  assert.ok(q.includes('lte("starts_at", appointmentsWindowEnd(range))'));
-  assert.ok(q.includes("chunkIds(saleIds)"));
-  assert.ok(q.includes("allItems"));
+  assert.ok(q.includes("p_appointments_to: appointmentsWindowEnd(range)"));
+  assert.ok(read("src/lib/reports/summary.ts").includes("allItems"));
   assert.ok(read("src/app/(app)/app/relatorios/export/route.ts").includes("buildReportCsv(report)"));
 });
 

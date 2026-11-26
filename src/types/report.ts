@@ -16,6 +16,9 @@ export interface ReportSummary {
   otherIncome: number;
   operatingExpenses: number;
   netResult: number;
+  /** Recebido de vendas no período (pela data do recebimento), já descontados os estornos. */
+  received: number;
+  refunds: number;
   accountsReceivable: number;
   accountsPayable: number;
   overdueReceivables: number;
@@ -58,6 +61,7 @@ export interface ReportInventoryAlerts {
 export interface ReportsWorkspace {
   range: ReportRange;
   summary: ReportSummary;
+  /** Um ponto por dia do período, inclusive os dias sem venda. */
   salesTrend: ReportTrendPoint[];
   /** Os 8 itens de maior faturamento (gráfico da tela). */
   topItems: ReportTopItem[];
