@@ -15,7 +15,7 @@ export function Sparkline({ values }: { values: number[] }) {
 
   return (
     <svg className="prime-admin-spark" viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden="true">
-      <polyline points={points} pathLength={1} vectorEffect="non-scaling-stroke" />
+      <polyline points={points} vectorEffect="non-scaling-stroke" />
     </svg>
   );
 }

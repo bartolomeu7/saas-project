@@ -98,7 +98,7 @@
 
 .prime-admin-stat:hover .prime-admin-stat__icon { transform: scale(1.12) rotate(-6deg); }
 
-.prime-admin-spark { display: block; width: 100%; height: 30px; margin-top: 8px; }
+.prime-admin-spark { display: block; width: 100%; height: 30px; margin-top: 8px; animation: prime-admin-draw 1.1s .25s ease backwards; }
 
 .prime-admin-spark polyline {
   fill: none;
@@ -106,8 +106,6 @@
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-dasharray: 1;
-  animation: prime-admin-draw 1.1s .25s ease both;
 }
 
 /* Lista "Precisa de atenção". */
@@ -166,6 +164,13 @@
 .prime-admin tbody tr:nth-child(n + 6) { animation-delay: 150ms; }
 .prime-admin tbody tr:hover { background: hsl(var(--primary) / .05); box-shadow: inset 3px 0 0 hsl(var(--primary) / .55); }
 
+/* Botões de ação recolhidos nas listas. */
+.prime-admin-actions summary { cursor: pointer; list-style: none; }
+.prime-admin-actions summary::-webkit-details-marker { display: none; }
+.prime-admin-actions__arrow { transition: transform .2s ease; }
+.prime-admin-actions[open] .prime-admin-actions__arrow { transform: rotate(180deg); }
+.prime-admin-actions[open] > div { animation: prime-admin-in .22s ease backwards; }
+
 /* Aviso no item do menu enquanto a aba clicada ainda carrega (só aparece se passar de 120 ms). */
 .prime-admin-pending {
   flex: none;
@@ -184,7 +189,7 @@
 @keyframes prime-admin-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes prime-admin-grow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
 @keyframes prime-admin-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
-@keyframes prime-admin-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes prime-admin-draw { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
 @keyframes prime-admin-ping { 75%, 100% { opacity: 0; transform: scale(2.6); } }
 @keyframes prime-admin-drift { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(-35%, 18%, 0); } }
 @keyframes prime-admin-spin { to { transform: rotate(360deg); } }
@@ -194,10 +199,11 @@
   .prime-admin-rise,
   .prime-admin-hero::before,
   .prime-admin-live::after,
-  .prime-admin-spark polyline,
+  .prime-admin-spark,
   .prime-admin .prime-bar,
   .prime-admin .prime-meter,
-  .prime-admin tbody tr { animation: none; }
+  .prime-admin tbody tr,
+  .prime-admin-actions[open] > div { animation: none; }
 
   .prime-admin-pending.is-pending { animation: none; opacity: 1; }
 
@@ -206,6 +212,7 @@
   .prime-admin-stat__icon,
   .prime-admin-attention,
   .prime-admin-attention__arrow,
+  .prime-admin-actions__arrow,
   .prime-admin .prime-admin-card,
   .prime-admin tbody tr { transition: none; }
 

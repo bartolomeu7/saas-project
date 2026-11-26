@@ -1,7 +1,9 @@
 "use client";
 
+import { ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { ConfirmActionForm } from "@/components/app/confirm-dialog";
+import { buttonVariants } from "@/components/ui/button";
 import { resetUserTwoFactorAction, setUserRoleAction, setUserStatusAction } from "@/lib/admin/actions";
 import { canChangeUserRole, canChangeUserStatus } from "@/lib/admin/permissions";
 import { USER_ROLE_LABELS } from "@/types/admin";
@@ -35,6 +37,7 @@ export function AdminUserActions({
   targetStatus,
   actorRole,
   isSelf,
+  compact = false,
 }: {
   userId: string;
   userName: string;
@@ -42,6 +45,8 @@ export function AdminUserActions({
   targetStatus: UserStatus;
   actorRole: UserRole;
   isSelf: boolean;
+  /** Na lista: os botões ficam recolhidos sob "Ações", para a tabela caber na tela. */
+  compact?: boolean;
 }) {
   const showStatus = canChangeUserStatus(actorRole, targetRole, isSelf);
   const showRole = canChangeUserRole(actorRole, isSelf);
@@ -54,7 +59,7 @@ export function AdminUserActions({
 
   const suspend = targetStatus === "active";
 
-  return (
+  const buttons = (
     <div className="flex min-w-[9rem] flex-col items-start gap-1.5">
       {showStatus && (
         <ConfirmActionForm
@@ -99,5 +104,18 @@ export function AdminUserActions({
         />
       )}
     </div>
+  );
+
+  if (!compact) return buttons;
+
+  // <details> mantém o conteúdo montado: os diálogos de confirmação não fecham junto com o menu.
+  return (
+    <details className="prime-admin-actions">
+      <summary className={buttonVariants({ variant: "outline", size: "sm" })} aria-label={`Ações para ${userName}`}>
+        Ações
+        <ChevronDown className="prime-admin-actions__arrow ml-1 size-3.5" strokeWidth={1.75} aria-hidden="true" />
+      </summary>
+      <div className="mt-2">{buttons}</div>
+    </details>
   );
 }

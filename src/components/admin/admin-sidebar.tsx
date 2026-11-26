@@ -108,7 +108,7 @@ export function AdminSidebar({
                         asChild
                         isActive={isActive}
                         tooltip={item.label}
-                        className="prime-app-nav-item text-sidebar-foreground/75 data-[active=true]:bg-gradient-to-r data-[active=true]:from-primary/25 data-[active=true]:to-primary/5 data-[active=true]:font-medium data-[active=true]:text-[hsl(207_100%_68%)]"
+                        className="prime-app-nav-item text-sidebar-foreground/75 data-[active=true]:bg-gradient-to-r data-[active=true]:from-primary/25 data-[active=true]:to-primary/5 data-[active=true]:font-medium data-[active=true]:text-primary dark:data-[active=true]:text-[hsl(207_100%_68%)]"
                       >
                         <IntentLink
                           href={item.href}
