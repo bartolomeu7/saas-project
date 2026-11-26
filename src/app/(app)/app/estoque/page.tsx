@@ -9,7 +9,7 @@ import { ListAvatar } from "@/components/app/list-toolbar";
 import { getCurrentCompany } from "@/lib/companies/queries";
 import { listProducts } from "@/lib/products/queries";
 import { listRecentStockMovements } from "@/lib/products/stock-movements";
-import { formatQuantity, formatStockDelta, stockMovementDelta, stockSourceLabel } from "@/lib/products/stock-labels";
+import { formatQuantity, formatStockDelta, stockMovementDelta, stockReasonLabel, stockSourceLabel } from "@/lib/products/stock-labels";
 import { formatDateTime } from "@/lib/format";
 import type { StockLevel } from "@/types/product";
 import { getStockLevel } from "@/types/product";
@@ -213,7 +213,7 @@ export default async function StockPage({
                       <td className="px-3 py-2">{stockSourceLabel(m.source)}</td>
                       <td className={cn("px-3 py-2 text-right font-medium tabular-nums", delta > 0 ? "text-emerald-700 dark:text-emerald-500" : delta < 0 ? "text-destructive" : "")}>{formatStockDelta(delta)}</td>
                       <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums text-muted-foreground">{formatQuantity(m.stock_before)} → {formatQuantity(m.stock_after)}</td>
-                      <td className="max-w-[16rem] truncate px-4 py-2 text-muted-foreground" title={m.reason}>{m.reason}</td>
+                      <td className="max-w-[16rem] truncate px-4 py-2 text-muted-foreground" title={stockReasonLabel(m.reason)}>{stockReasonLabel(m.reason)}</td>
                     </tr>
                   );
                 })}

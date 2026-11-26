@@ -32,7 +32,8 @@ export const productCategorySchema = z.object({
 export type ProductCategoryInput = z.infer<typeof productCategorySchema>;
 
 export const stockAdjustmentSchema = z.object({
-  newQuantity: boundedQuantity("o novo estoque"),
+  // vazio não é zero: sem isso um envio sem valor zerava o estoque
+  newQuantity: z.preprocess((value) => (String(value ?? "").trim() === "" ? Number.NaN : value), boundedQuantity("o novo estoque")),
   reason: requiredText("Informe o motivo do ajuste.", 200, "Motivo muito longo."),
 });
 export type StockAdjustmentInput = z.infer<typeof stockAdjustmentSchema>;

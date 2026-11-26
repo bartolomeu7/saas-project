@@ -10,11 +10,13 @@ export function checkOrderItems(raw: unknown): { error: string } | { items: Orde
     const line = (row ?? {}) as { product_id?: unknown; quantity?: unknown; unit_cost?: unknown };
     const productId = String(line.product_id ?? "");
     const quantity = Number(line.quantity ?? 0);
+    const noCost = line.unit_cost === null || line.unit_cost === undefined || line.unit_cost === "";
     const unitCost = Number(line.unit_cost ?? 0);
     if (!productId && unitCost === 0 && (quantity === 1 || quantity === 0)) continue;
     const label = `Item ${index + 1}`;
     if (!productId) return { error: `${label}: selecione o produto.` };
     if (!(quantity > 0)) return { error: `${label}: informe uma quantidade maior que zero.` };
+    if (noCost) return { error: `${label}: informe o custo (use 0 se não houve custo).` };
     if (!(unitCost >= 0)) return { error: `${label}: o custo não pode ser negativo.` };
     items.push({ product_id: productId, quantity, unit_cost: unitCost });
   }

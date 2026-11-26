@@ -98,7 +98,7 @@ function PageShell({
         eyebrow="Financeiro"
         title="Visão financeira da empresa"
         description="Caixa, contas, resultado e lançamentos conectados às vendas e compras reais."
-        className="lg:items-end"
+        className="sm:flex-col sm:items-start xl:flex-row xl:items-end"
         actions={<NavTabs current={current} />}
       />
       {children}

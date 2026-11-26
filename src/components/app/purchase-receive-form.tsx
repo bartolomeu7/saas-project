@@ -10,6 +10,7 @@ import { SubmitButton } from "@/components/shared/auth/submit-button";
 import { FormMessage } from "@/components/shared/auth/form-message";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { useKeepInputOnError } from "@/hooks/use-keep-input-on-error";
+import { formatQuantity } from "@/lib/products/stock-labels";
 
 const initialState: ActionResult = {};
 
@@ -30,7 +31,7 @@ export function PurchaseReceiveForm({
     Object.fromEntries(
       receivableItems.map((item) => [
         item.id,
-        String(item.quantity - item.received_quantity),
+        String(Math.round((item.quantity - item.received_quantity) * 1000) / 1000),
       ])
     )
   );
@@ -66,9 +67,9 @@ export function PurchaseReceiveForm({
             {receivableItems.map((item) => (
               <TableRow key={item.id} className="border-b last:border-0">
                 <TableCell className="p-3 font-medium">{item.description}</TableCell>
-                <TableCell className="p-3">{item.quantity}</TableCell>
-                <TableCell className="p-3">{item.received_quantity}</TableCell>
-                <TableCell className="p-3">{item.quantity - item.received_quantity}</TableCell>
+                <TableCell className="p-3">{formatQuantity(item.quantity)}</TableCell>
+                <TableCell className="p-3">{formatQuantity(item.received_quantity)}</TableCell>
+                <TableCell className="p-3">{formatQuantity(item.quantity - item.received_quantity)}</TableCell>
                 <TableCell className="p-3">
                   <Input
                     type="number"

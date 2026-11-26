@@ -39,5 +39,5 @@ test("o rollback restaura o cálculo antigo", () => {
 });
 
 test("a tela do caixa identifica o estorno", () => {
-  assert.ok(read("src/components/app/cash-movements-table.tsx").includes("Estorno de venda"));
+  assert.ok(read("src/components/app/cash-movements-table.tsx").includes("cashMovementOrigin(movement)") && read("src/lib/cash-register/origin.ts").includes("Estorno de venda"));
 });

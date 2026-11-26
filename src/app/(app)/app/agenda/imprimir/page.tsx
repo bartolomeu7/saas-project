@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { AgendaPrintActions } from "@/components/app/agenda-print-actions";
 import { getCurrentCompany } from "@/lib/companies/queries";
 import { listAgendaProfessionals, listAppointments } from "@/lib/agenda/queries";
-import { timeLabel } from "@/lib/agenda/week-view";
+import { isCalendarDate, timeLabel } from "@/lib/agenda/week-view";
 import { todayDateSaoPaulo } from "@/lib/timezone";
 import { APPOINTMENT_STATUS_LABELS } from "@/types/appointment";
 
@@ -35,7 +35,7 @@ export default async function AgendaPrintPage({
   const current = (await getCurrentCompany())!;
   const rawDate = Array.isArray(searchParams?.date) ? searchParams.date[0] : searchParams?.date;
   const rawProfessional = Array.isArray(searchParams?.professional) ? searchParams.professional[0] : searchParams?.professional;
-  const date = rawDate && /^\d{4}-\d{2}-\d{2}$/.test(rawDate) ? rawDate : todayDateSaoPaulo();
+  const date = rawDate && isCalendarDate(rawDate) ? rawDate : todayDateSaoPaulo();
 
   const [appointments, professionals] = await Promise.all([
     listAppointments(current.company.id, date, rawProfessional),

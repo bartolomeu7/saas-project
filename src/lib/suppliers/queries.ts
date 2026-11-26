@@ -6,11 +6,12 @@ import type { Supplier } from "@/types/supplier";
 
 const db = (client: Awaited<ReturnType<typeof createSessionClient>>) => client as any;
 
-export async function listSuppliers(companyId: string, search = ""): Promise<Supplier[]> {
+export async function listSuppliers(companyId: string, search = "", status?: "active" | "inactive"): Promise<Supplier[]> {
   const supabase = db(await createSessionClient());
   let query = supabase.from("suppliers").select("*").eq("company_id", companyId).order("name");
-  const searchFilter = buildSearchOr(search, ["name", "legal_name"], ["document"]);
+  const searchFilter = buildSearchOr(search, ["name", "legal_name", "email"], ["document", "phone", "whatsapp"]);
   if (searchFilter) query = query.or(searchFilter);
+  if (status) query = query.eq("status", status);
   const { data, error } = await query;
   return error ? [] : ((data ?? []) as Supplier[]);
 }

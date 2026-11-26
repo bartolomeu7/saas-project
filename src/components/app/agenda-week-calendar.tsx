@@ -60,6 +60,8 @@ interface AgendaWeekCalendarProps {
   todayDate: string;
   nowIso: string;
   professionalId?: string;
+  /** Há caixa aberto? (concluir em dinheiro avisa quando não há) */
+  registerOpen: boolean;
   /** Profissionais ativos (colunas da visão "Dia"). */
   professionals?: AgendaProfessional[];
   /** Dia mostrado na visão "Dia" (YYYY-MM-DD) ou qualquer dia do mês na visão "Mês". */
@@ -73,6 +75,7 @@ export function AgendaWeekCalendar({
   todayDate,
   nowIso,
   professionalId,
+  registerOpen,
   professionals = [],
   dayDate,
 }: AgendaWeekCalendarProps) {
@@ -190,7 +193,7 @@ export function AgendaWeekCalendar({
 
       <Dialog open={selected !== null} onOpenChange={(open) => { if (!open) setSelectedId(null); }}>
         <DialogContent>
-          {selected ? <AppointmentDetails appointment={selected} now={now} /> : null}
+          {selected ? <AppointmentDetails appointment={selected} now={now} registerOpen={registerOpen} /> : null}
         </DialogContent>
       </Dialog>
     </div>
@@ -266,7 +269,7 @@ function DayList({ days, byDay, todayDate, now, dayHref, onSelect }: ViewProps) 
   );
 }
 
-function AppointmentDetails({ appointment, now }: { appointment: Appointment; now: Date }) {
+function AppointmentDetails({ appointment, now, registerOpen }: { appointment: Appointment; now: Date; registerOpen: boolean }) {
   const state = appointmentVisualState(appointment, now);
   const open = appointment.status === "scheduled" || appointment.status === "confirmed";
   const date = dayKeyOf(appointment.starts_at);
@@ -306,7 +309,7 @@ function AppointmentDetails({ appointment, now }: { appointment: Appointment; no
         <div className="flex flex-col gap-3 border-t pt-4">
           <div className="rounded-lg border bg-muted/30 p-3">
             <p className="mb-2 text-sm font-medium">Concluir e cobrar</p>
-            <CompleteAppointmentForm appointment={appointment} />
+            <CompleteAppointmentForm appointment={appointment} registerOpen={registerOpen} />
           </div>
           <div className="flex flex-wrap gap-2">
             {appointment.status === "scheduled" ? (

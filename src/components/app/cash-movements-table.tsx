@@ -2,6 +2,7 @@ import { ArrowUpCircle, ArrowDownCircle, ShoppingCart, PenLine } from "lucide-re
 import { SALE_PAYMENT_METHOD_LABELS } from "@/types/sale";
 import type { CashMovementWithName } from "@/types/cash-register";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { cashMovementOrigin, type CashOrigin } from "@/lib/cash-register/origin";
 
 const dateTimeFormatter = new Intl.DateTimeFormat("pt-BR", {
   dateStyle: "short",
@@ -11,6 +12,11 @@ const dateTimeFormatter = new Intl.DateTimeFormat("pt-BR", {
 
 function formatMoney(value: number): string {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+function OriginIcon({ origin }: { origin: CashOrigin }) {
+  const Icon = origin.endsWith("venda") ? ShoppingCart : PenLine;
+  return <Icon className="h-3.5 w-3.5" />;
 }
 
 /**
@@ -69,19 +75,7 @@ export function CashMovementsTable({ movements }: { movements: CashMovementWithN
               <TableCell className="px-4 py-3 text-muted-foreground">{movement.description}</TableCell>
               <TableCell className="hidden px-4 py-3 lg:table-cell">
                 <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-                  {movement.source === "sale_payment" ? (
-                    <>
-                      <ShoppingCart className="h-3.5 w-3.5" /> Pagamento de venda
-                    </>
-                  ) : movement.description.startsWith("Estorno de pagamento de venda") ? (
-                    <>
-                      <ShoppingCart className="h-3.5 w-3.5" /> Estorno de venda
-                    </>
-                  ) : (
-                    <>
-                      <PenLine className="h-3.5 w-3.5" /> Lançamento manual
-                    </>
-                  )}
+                  <OriginIcon origin={cashMovementOrigin(movement)} /> {cashMovementOrigin(movement)}
                 </span>
               </TableCell>
               <TableCell className="hidden px-4 py-3 text-muted-foreground lg:table-cell">{movement.created_by_name ?? "—"}</TableCell>

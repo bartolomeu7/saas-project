@@ -5,6 +5,7 @@ import type { Customer } from "@/types/customer";
 import type { CustomerSalesStats, CustomerTopProduct } from "@/lib/sales/queries";
 import type { CustomerClassification } from "@/lib/customers/classification";
 import { formatDate } from "@/lib/format";
+import { formatQuantity } from "@/lib/products/stock-labels";
 
 const EMPTY_HINT = "Esse indicador estará disponível quando houver vendas registradas.";
 
@@ -173,7 +174,7 @@ export function CustomerSummaryTab({
                   {product.description}
                 </span>
                 <span className="shrink-0 text-muted-foreground">
-                  {product.totalQuantity}x · {formatMoney(product.totalSpent)}
+                  {formatQuantity(product.totalQuantity)}x · {formatMoney(product.totalSpent)}
                 </span>
               </div>
             ))}

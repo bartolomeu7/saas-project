@@ -8,6 +8,11 @@ export const STOCK_SOURCE_LABELS: Record<string, string> = {
   purchase_cancellation: "Recebimento estornado",
 };
 
+/** Motivos que o próprio sistema grava em código; texto digitado pela pessoa aparece como está. */
+export function stockReasonLabel(reason: string): string {
+  return reason === "sale" ? "Venda" : reason === "sale_cancelled" ? "Venda cancelada" : reason;
+}
+
 export const STOCK_DIRECTION_LABELS: Record<string, string> = {
   in: "Entrada",
   out: "Saída",

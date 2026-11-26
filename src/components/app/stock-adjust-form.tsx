@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { SubmitButton } from "@/components/shared/auth/submit-button";
 import { FormMessage } from "@/components/shared/auth/form-message";
 import { useKeepInputOnError } from "@/hooks/use-keep-input-on-error";
+import { formatQuantity } from "@/lib/products/stock-labels";
 
 const initialState: ActionResult = {};
 
@@ -28,7 +29,7 @@ export function StockAdjustForm({
     <form action={formAction} onReset={keepInput} className="flex flex-col gap-4">
       <FormMessage state={state} />
       <p className="text-xs text-muted-foreground">
-        Estoque atual: {currentStock} {unit}
+        Estoque atual: {formatQuantity(currentStock)} {unit}
       </p>
       <div className="flex flex-col gap-2">
         <Label htmlFor="newQuantity">Novo estoque</Label>
