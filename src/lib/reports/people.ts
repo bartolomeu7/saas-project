@@ -9,6 +9,7 @@ export const REPORT_TABS = [
   { key: "clientes", label: "Clientes" },
   { key: "agenda", label: "Agenda" },
   { key: "orcamentos", label: "Orçamentos" },
+  { key: "comissao", label: "Comissão" },
 ] as const;
 
 export type ReportTab = (typeof REPORT_TABS)[number]["key"];

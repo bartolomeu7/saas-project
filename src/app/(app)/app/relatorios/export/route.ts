@@ -11,6 +11,7 @@ import { getAgendaReport, getCustomersReport, getQuotesReport } from "@/lib/repo
 import { parseInactiveDays, parseReportTab } from "@/lib/reports/people";
 import {
   agendaDocument,
+  commissionDocument,
   customersDocument,
   documentCsv,
   overviewDocument,
@@ -20,6 +21,7 @@ import {
 } from "@/lib/reports/document";
 import { renderReportPdf } from "@/lib/reports/pdf-document";
 import { getCurrentRevenueGoal } from "@/lib/reports/goal-queries";
+import { getCommissionReport } from "@/lib/reports/commission-queries";
 import { formatDateTime } from "@/lib/format";
 import { todayDateSaoPaulo } from "@/lib/timezone";
 
@@ -69,6 +71,9 @@ export async function GET(request: Request) {
     } else if (tab === "agenda") {
       const report = await getAgendaReport(companyId, range);
       document = () => agendaDocument(report, range, todayDateSaoPaulo(new Date(report.until)));
+    } else if (tab === "comissao") {
+      const report = await getCommissionReport(companyId, range);
+      document = () => commissionDocument(report, range);
     } else if (tab === "orcamentos") {
       const report = await getQuotesReport(companyId, range);
       document = () => quotesDocument(report, range);

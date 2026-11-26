@@ -8,6 +8,7 @@ import { groupByMonth } from "./summary.ts";
 import { goalProgress, monthName } from "./goal.ts";
 import type { SalesFilters, SalesReport } from "./sales.ts";
 import type { buildAgendaReport, buildCustomersReport, buildQuotesReport } from "./people.ts";
+import type { CommissionReport } from "./commission.ts";
 import type { ReportRange, ReportsWorkspace } from "../../types/report.ts";
 
 export type Cell = string | number | { money: number } | { quantity: number } | { percent: number | null };
@@ -264,6 +265,34 @@ export function quotesDocument(report: ReturnType<typeof buildQuotesReport>, ran
         ["Vendido", money(report.sold)],
       ], "Aprovação conta aprovados e convertidos sobre os que já têm resposta ou venceram sem ela."),
       { title: "Por situação", columns: ["Situação", "Quantidade", "Valor"], rows: report.rows.map((row) => [row.label, row.count, money(row.amount)]) },
+    ],
+  };
+}
+
+export function commissionDocument(report: CommissionReport, range: ReportRange): ReportDocument {
+  return {
+    slug: "comissao",
+    title: "Comissão",
+    subtitle: `Serviços de vendas recebidas de ${period(range)}`,
+    sections: [
+      indicators("Resumo", [
+        ["Comissão do período", money(report.commission)],
+        ["Recebido em serviços", money(report.base)],
+        ["Comissão prevista a receber", money(report.pendingCommission)],
+        ["Serviços a receber", money(report.pendingBase)],
+        ["Serviços sem profissional", report.unassigned.services],
+      ], "Sobre o valor do serviço já com descontos, quando a venda é totalmente recebida. Produtos não entram."),
+      {
+        title: "Por profissional",
+        columns: ["Profissional", "Serviços", "Recebido", "Comissão", "A receber", "Prevista"],
+        rows: report.professionals.map((row) => [row.name, row.services, money(row.base), money(row.commission), money(row.pendingBase), money(row.pendingCommission)]),
+      },
+      {
+        title: "Serviços recebidos",
+        columns: ["Serviço", "Recebido em", "Valor", "Profissional", "%", "Comissão"],
+        rows: report.items.map((item) => [item.description, formatDay(item.date), money(item.base), item.professional ?? "Sem profissional", percent(item.percent), money(item.commission)]),
+        note: report.itemsTotal > report.items.length ? `Mostrando ${report.items.length} de ${report.itemsTotal}; os totais consideram todos.` : undefined,
+      },
     ],
   };
 }

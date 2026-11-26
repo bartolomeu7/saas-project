@@ -1997,6 +1997,33 @@ export type Database = {
           },
         ]
       }
+      professional_commission_rates: {
+        Row: {
+          company_id: string
+          percent: number
+          professional_id: string
+          updated_at: string
+          updated_by: string | null
+          valid_from: string
+        }
+        Insert: {
+          company_id?: string
+          percent?: number
+          professional_id?: string
+          updated_at?: string
+          updated_by?: string | null
+          valid_from?: string
+        }
+        Update: {
+          company_id?: string
+          percent?: number
+          professional_id?: string
+          updated_at?: string
+          updated_by?: string | null
+          valid_from?: string
+        }
+        Relationships: []
+      }
       professional_profiles: {
         Row: {
           active: boolean
@@ -2413,6 +2440,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      sale_item_professionals: {
+        Row: {
+          company_id: string
+          professional_id: string
+          sale_item_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          company_id?: string
+          professional_id?: string
+          sale_item_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          company_id?: string
+          professional_id?: string
+          sale_item_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
       }
       sale_items: {
         Row: {
@@ -4924,6 +4975,10 @@ export type Database = {
         Args: { p_company_id: string; p_from: string; p_to: string }
         Returns: Json
       }
+      report_commission: {
+        Args: { p_company_id: string; p_from: string; p_to: string }
+        Returns: Json
+      }
       report_customers: {
         Args: {
           p_company_id: string
@@ -4994,6 +5049,14 @@ export type Database = {
         Returns: undefined
       }
       session_slot_status: { Args: { p_session_id?: string }; Returns: Json }
+      set_commission_rate: {
+        Args: { p_from: string; p_percent: number; p_professional_id: string }
+        Returns: undefined
+      }
+      set_sale_item_professional: {
+        Args: { p_professional_id: string; p_sale_item_id: string }
+        Returns: undefined
+      }
       set_revenue_goal: {
         Args: { p_company_id: string; p_target: number }
         Returns: {
