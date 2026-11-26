@@ -57,3 +57,8 @@ test("aba Vendas: mesma permissão, erro visível e função que respeita o isol
   const sql = read("supabase/migrations/20261126180000_relatorios_vendas.sql");
   assert.ok(sql.includes("security invoker") && sql.includes("from public, anon"));
 });
+
+// Achado no reteste: ao escolher uma pessoa pela tabela, o campo continuava em "Todos" e o próximo filtro a perdia.
+test("o formulário de filtros é refeito quando o filtro muda por link", () => {
+  assert.ok(read("src/components/app/report-sales.tsx").includes('<form key={href({})} method="get"'));
+});
