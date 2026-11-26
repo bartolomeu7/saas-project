@@ -6,10 +6,10 @@ function formatMoney(value: number): string {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-export function SaleStats({ stats }: { stats: SaleStatsData }) {
+export function SaleStats({ stats, totalLabel = "Vendas no período" }: { stats: SaleStatsData; totalLabel?: string }) {
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-5">
-      <StatCard label="Vendas no período" value={stats.totalInPeriod} icon={Receipt} />
+      <StatCard label={totalLabel} value={stats.totalInPeriod} icon={Receipt} />
       <StatCard label="Faturamento" value={formatMoney(stats.revenue)} icon={DollarSign} />
       <StatCard
         label="Ticket médio"

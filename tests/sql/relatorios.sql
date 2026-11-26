@@ -102,6 +102,17 @@ select set_config('request.jwt.claims', '{"sub":"rl_func","role":"authenticated"
 select pg_temp.chk('funcionário não recebe lançamentos do Financeiro', $q$select (r->'payments')::text || ' ' || (r->'entries')::text from (select pg_temp.resumo() r) x$q$, 'OK=[] []');
 
 reset role;
+
+-- mais de 100 vendas pendentes (o teto da lista do Financeiro): o total conta todas
+insert into public.sales (id, company_id, user_id, status, subtotal, total_amount, sold_at)
+  select ('abababab-7000-0000-0000-' || lpad(g::text, 12, '0'))::uuid, 'abababab-1000-0000-0000-000000000001',
+         'abababab-0000-0000-0000-000000000001', 'draft', 1, 1, '2019-06-01 15:00+00' from generate_series(1, 120) g;
+update public.sales set status = 'completed', completed_at = sold_at where id::text like 'abababab-7000-%';
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"rl_owner","role":"authenticated"}', true);
+select pg_temp.chk('a receber com mais de 100 vendas', $q$select (r->>'receivable') || ' ' || (r->>'receivable_overdue') from (select pg_temp.resumo() r) x$q$, 'OK=170.00 121');
+
+reset role;
 set local role anon;
 select pg_temp.chk('visitante não executa', $q$select pg_temp.resumo()::text$q$, 'ERR=permission denied');
 reset role;

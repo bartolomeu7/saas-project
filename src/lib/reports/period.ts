@@ -88,7 +88,8 @@ function sameDayIn(year: number, month: number, day: number): string {
  */
 export function previousRange(range: ReportRange): ReportRange {
   const [year, month, day] = range.toDate.split("-").map(Number) as [number, number, number];
-  if (range.period === "month") {
+  // datas recusadas mostram o mês atual: a comparação também é a do mês
+  if (range.period === "month" || range.invalid) {
     return buildRange("custom", sameDayIn(year, month - 2, 1), sameDayIn(year, month - 2, day));
   }
   if (range.period === "year") {
