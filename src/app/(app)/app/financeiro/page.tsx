@@ -8,6 +8,8 @@ import { getCurrentCompany } from "@/lib/companies/queries";
 import { can } from "@/lib/permissions/matrix";
 import { NoAccess } from "@/components/app/no-access";
 import { getFinanceWorkspace } from "@/lib/finance/queries";
+import { resolveReportRange } from "@/lib/reports/period";
+import { parseComposition, ReportEntries } from "@/components/app/report-entries";
 import {
   AccountsPayablePaymentForm,
   CostCenterForm,
@@ -114,10 +116,23 @@ export default async function FinancePage({
   const searchParams = await searchParamsPromise;
   const current = (await getCurrentCompany())!;
   if (!can(current.role, "finance.view")) return <NoAccess area="o Financeiro" />;
+  const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
+  const view = first(searchParams?.view) ?? "visao";
+
+  // detalhe de um número dos Relatórios: só a lista daquele período
+  const composition = parseComposition(first(searchParams?.composicao));
+  if (view === "lancamentos" && composition) {
+    const range = resolveReportRange("custom", first(searchParams?.de), first(searchParams?.ate));
+    if (!range.invalid && searchParams?.de && searchParams?.ate) {
+      return (
+        <PageShell current="lancamentos">
+          <ReportEntries companyId={current.company.id} composition={composition} fromDate={range.fromDate} toDate={range.toDate} />
+        </PageShell>
+      );
+    }
+  }
+
   const workspace = await getFinanceWorkspace(current.company.id);
-  const rawView = searchParams?.view;
-  const requestedView = Array.isArray(rawView) ? rawView[0] : rawView;
-  const view = requestedView ?? "visao";
   const { dashboard, payables, receivables, entries, categories, costCenters } = workspace;
   const canOperate = current.role === "owner" || current.role === "admin";
 

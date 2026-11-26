@@ -126,6 +126,8 @@ export interface ListSalesParams {
   paymentStatus?: SalePaymentStatus | "all";
   from?: string | null;
   to?: string | null;
+  /** Data usada no filtro de período: abertura (padrão) ou conclusão, como nos Relatórios. */
+  dateField?: "sold_at" | "completed_at";
   page?: number;
   pageSize?: number;
 }
@@ -149,6 +151,7 @@ export async function listSales(params: ListSalesParams): Promise<ListSalesResul
     paymentStatus = "all",
     from,
     to,
+    dateField = "sold_at",
     page = 1,
     pageSize = DEFAULT_PAGE_SIZE,
   } = params;
@@ -167,10 +170,10 @@ export async function listSales(params: ListSalesParams): Promise<ListSalesResul
     query = query.eq("payment_status", paymentStatus);
   }
   if (from) {
-    query = query.gte("sold_at", from);
+    query = query.gte(dateField, from);
   }
   if (to) {
-    query = query.lte("sold_at", to);
+    query = query.lte(dateField, to);
   }
 
   const trimmedSearch = search?.trim();

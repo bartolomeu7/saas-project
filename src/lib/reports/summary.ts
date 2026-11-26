@@ -103,12 +103,15 @@ export function buildReportWorkspace(
 
 const MONTHS = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 
-/** No período "Ano" o gráfico mostra um ponto por mês, inclusive os meses sem venda. */
+/** Em períodos longos o gráfico mostra um ponto por mês, inclusive os meses sem venda. */
 export function groupByMonth(days: ReportTrendPoint[]): ReportTrendPoint[] {
   const months = new Map<string, ReportTrendPoint>();
+  // atravessando anos, "jan" sozinho não diz qual
+  const severalYears = new Set(days.map((day) => day.date.slice(0, 4))).size > 1;
   for (const day of days) {
     const date = day.date.slice(0, 7);
-    const month = months.get(date) ?? { date, label: MONTHS[Number(date.slice(5)) - 1] ?? date, value: 0 };
+    const name = MONTHS[Number(date.slice(5)) - 1] ?? date;
+    const month = months.get(date) ?? { date, label: severalYears ? `${name}/${date.slice(2, 4)}` : name, value: 0 };
     month.value = cents(month.value + day.value);
     months.set(date, month);
   }

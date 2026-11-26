@@ -7,6 +7,7 @@ import { getCurrentCompany } from "@/lib/companies/queries";
 import { getCurrentUser } from "@/lib/auth/session";
 import { listSales, getSaleStats, resolveSalePeriodRange } from "@/lib/sales/queries";
 import { getSaleSegmentHints } from "@/config/sale-segments";
+import { formatDate } from "@/lib/format";
 import { SaleSearch } from "@/components/app/sale-search";
 import { SaleFilters } from "@/components/app/sale-filters";
 import { SaleStats } from "@/components/app/sale-stats";
@@ -50,6 +51,7 @@ export default async function SalesPage({
     period?: string;
     from?: string;
     to?: string;
+    base?: string;
     page?: string;
   }>;
 }) {
@@ -65,6 +67,8 @@ export default async function SalesPage({
   const period = parsePeriod(searchParams?.period);
   const range = resolveSalePeriodRange(period, searchParams?.from, searchParams?.to);
   const page = Math.max(1, Number(searchParams?.page) || 1);
+  // vindo dos Relatórios: o total precisa bater, então vale a data da conclusão (só faz sentido para concluídas)
+  const byCompletion = searchParams?.base === "conclusao" && status === "completed";
 
   const [stats, result] = await Promise.all([
     getSaleStats(companyId, range.from, range.to),
@@ -75,6 +79,7 @@ export default async function SalesPage({
       paymentStatus,
       from: range.from,
       to: range.to,
+      dateField: byCompletion ? "completed_at" : "sold_at",
       page,
     }),
   ]);
@@ -103,6 +108,13 @@ export default async function SalesPage({
       ) : (
         <>
           <SaleStats stats={stats} />
+
+          {byCompletion && range.from && range.to ? (
+            <p role="status" className="rounded-lg border border-border bg-card/40 px-4 py-3 text-sm text-muted-foreground">
+              Vendas concluídas de {formatDate(range.from)} a {formatDate(range.to)}, pela data da conclusão.{" "}
+              <Link href="/app/vendas" className="font-medium text-primary hover:underline">Limpar filtro</Link>
+            </p>
+          ) : null}
 
           <ListToolbar className="sm:flex-col sm:items-stretch">
             <SaleSearch />
@@ -135,6 +147,7 @@ export default async function SalesPage({
                   period: searchParams?.period,
                   from: searchParams?.from,
                   to: searchParams?.to,
+                  base: searchParams?.base,
                 }}
               />
             </>

@@ -24,7 +24,7 @@ export async function GET(request: Request) {
   const period = url.searchParams.get("period") ?? "month";
   let report;
   try {
-    report = await getReportsWorkspace(current.company.id, period);
+    report = await getReportsWorkspace(current.company.id, period, url.searchParams.get("from") ?? undefined, url.searchParams.get("to") ?? undefined);
   } catch (error) {
     console.error("[relatorios] exportação falhou:", error instanceof Error ? error.message : error);
     return NextResponse.json({ error: "Não foi possível gerar o relatório agora. Tente novamente." }, { status: 503 });
@@ -34,7 +34,8 @@ export async function GET(request: Request) {
     status: 200,
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": "attachment; filename=\"prime-ges-relatorio-" + report.range.period + ".csv\"",
+      "Content-Disposition": "attachment; filename=\"prime-ges-relatorio-" +
+        (report.range.period === "custom" ? `${report.range.fromDate}_${report.range.toDate}` : report.range.period) + ".csv\"",
       "Cache-Control": "no-store",
     },
   });

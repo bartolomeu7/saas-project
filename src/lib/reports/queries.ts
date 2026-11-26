@@ -1,37 +1,11 @@
 import "server-only";
 import { cache } from "react";
 import { createSessionClient } from "@/lib/supabase/server";
-import { startOfDaySaoPaulo, endOfDaySaoPaulo, startOfMonthSaoPaulo, startOfYearSaoPaulo } from "@/lib/timezone";
+import { startOfMonthSaoPaulo, startOfYearSaoPaulo } from "@/lib/timezone";
 import { getStockLevel } from "@/types/product";
 import { buildReportWorkspace, type ReportSummaryRow } from "@/lib/reports/summary";
-import type { ReportPeriod, ReportRange, ReportsWorkspace } from "@/types/report";
-
-const PERIOD_LABELS: Record<ReportPeriod, string> = {
-  today: "Hoje",
-  "7d": "Últimos 7 dias",
-  "30d": "Últimos 30 dias",
-  month: "Este mês",
-  year: "Este ano",
-};
-
-function safePeriod(value: string | undefined): ReportPeriod {
-  return value && value in PERIOD_LABELS ? (value as ReportPeriod) : "month";
-}
-
-export function resolveReportRange(periodInput?: string): ReportRange {
-  const period = safePeriod(periodInput);
-  const now = new Date();
-  const to = endOfDaySaoPaulo(now);
-  let from: Date;
-  switch (period) {
-    case "today": from = startOfDaySaoPaulo(now); break;
-    case "7d": from = startOfDaySaoPaulo(new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000)); break;
-    case "30d": from = startOfDaySaoPaulo(new Date(now.getTime() - 29 * 24 * 60 * 60 * 1000)); break;
-    case "month": from = startOfMonthSaoPaulo(0, now); break;
-    case "year": from = startOfYearSaoPaulo(now); break;
-  }
-  return { period, from: from.toISOString(), to: to.toISOString(), label: PERIOD_LABELS[period] };
-}
+import { previousRange, resolveReportRange } from "@/lib/reports/period";
+import type { ReportRange, ReportsWorkspace } from "@/types/report";
 
 /**
  * Fim da janela de agendamentos. Em "Este mês" e "Este ano" a agenda também conta o que ainda vai acontecer
@@ -69,8 +43,30 @@ async function getInventoryLayer(companyId: string) {
   return { lowStock: rows.filter((row) => getStockLevel(row) === "low").length, outOfStock: rows.filter((row) => getStockLevel(row) === "out").length };
 }
 
-export const getReportsWorkspace = cache(async function getReportsWorkspace(companyId: string, periodInput?: string): Promise<ReportsWorkspace> {
-  const range = resolveReportRange(periodInput);
-  const [row, inventory] = await Promise.all([getSummaryRow(companyId, range), getInventoryLayer(companyId)]);
-  return buildReportWorkspace(row, range, inventory);
+export const getReportsWorkspace = cache(async function getReportsWorkspace(
+  companyId: string,
+  periodInput?: string,
+  fromInput?: string,
+  toInput?: string
+): Promise<ReportsWorkspace> {
+  const range = resolveReportRange(periodInput, fromInput, toInput);
+  const before = previousRange(range);
+  const [row, previousRow, inventory] = await Promise.all([
+    getSummaryRow(companyId, range),
+    getSummaryRow(companyId, before),
+    getInventoryLayer(companyId),
+  ]);
+  const { summary } = buildReportWorkspace(previousRow, before, inventory);
+  return {
+    ...buildReportWorkspace(row, range, inventory),
+    previous: {
+      fromDate: before.fromDate,
+      toDate: before.toDate,
+      revenue: summary.revenue,
+      completedSales: summary.completedSales,
+      averageTicket: summary.averageTicket,
+      netResult: summary.netResult,
+      received: summary.received,
+    },
+  };
 });

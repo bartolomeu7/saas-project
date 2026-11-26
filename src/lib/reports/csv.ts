@@ -1,4 +1,5 @@
 import type { ReportsWorkspace } from "@/types/report";
+import { formatDay } from "./period.ts";
 
 const SEPARATOR = ";";
 
@@ -35,6 +36,7 @@ export function buildReportCsv(report: ReportsWorkspace): string {
   lines.push(row([csvText("indicador"), csvText("valor")]));
   const indicators: Array<[string, string]> = [
     ["Período", csvText(report.range.label)],
+    ["Datas", csvText(`${formatDay(report.range.fromDate)} a ${formatDay(report.range.toDate)}`)],
     ["Faturamento", csvNumber(summary.revenue)],
     ["Vendas concluídas", String(summary.completedSales)],
     ["Ticket médio", summary.averageTicket === null ? "" : csvNumber(summary.averageTicket)],
@@ -55,6 +57,17 @@ export function buildReportCsv(report: ReportsWorkspace): string {
     ["Produtos com estoque baixo (hoje)", String(inventory.lowStock)],
     ["Produtos sem estoque (hoje)", String(inventory.outOfStock)],
   ];
+  const before = report.previous;
+  if (before) {
+    indicators.push(
+      ["Período anterior", csvText(`${formatDay(before.fromDate)} a ${formatDay(before.toDate)}`)],
+      ["Faturamento no período anterior", csvNumber(before.revenue)],
+      ["Vendas concluídas no período anterior", String(before.completedSales)],
+      ["Ticket médio no período anterior", before.averageTicket === null ? "" : csvNumber(before.averageTicket)],
+      ["Resultado operacional no período anterior", csvNumber(before.netResult)],
+      ["Recebido no período anterior", csvNumber(before.received)]
+    );
+  }
   for (const [label, value] of indicators) lines.push(row([csvText(label), value]));
 
   lines.push("");
