@@ -54,6 +54,8 @@ if (HAS_INTER) {
 }
 
 const FAMILY = HAS_INTER ? "Inter" : "Helvetica";
+/** Fonte já registrada, para os outros PDFs do sistema. */
+export const PDF_FONT_FAMILY = FAMILY;
 const BOLD = { fontFamily: FAMILY, fontWeight: 700 } as const;
 
 export interface PdfLogo {
