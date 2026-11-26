@@ -4,7 +4,11 @@ const nextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
   // Anexo de cliente (até 5 MB) vai por Server Action; o padrão do Next é 1 MB.
-  experimental: { serverActions: { bodySizeLimit: "6mb" } },
+  experimental: {
+    serverActions: { bodySizeLimit: "6mb" },
+    // Página carregada por antecipação (menu do /admin) vale por 30 s; ações com revalidatePath descartam antes.
+    staleTimes: { static: 30 },
+  },
   async redirects() {
     return [
       // A aba "Perguntas" virou "Dúvidas".

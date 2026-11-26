@@ -19,6 +19,7 @@ export function AdminShell({
   role,
   roleLabel,
   defaultOpen = true,
+  badges,
   children,
 }: {
   userName?: string | null;
@@ -26,21 +27,23 @@ export function AdminShell({
   role: UserRole;
   roleLabel: string;
   defaultOpen?: boolean;
+  /** Pendências por rota, mostradas como número no menu. */
+  badges?: Record<string, number>;
   children: ReactNode;
 }) {
   return (
     <TooltipProvider delayDuration={200}>
       <PresenceHeartbeat />
       <SidebarProvider defaultOpen={defaultOpen}>
-        <AdminSidebar userName={userName} userEmail={userEmail} role={role} />
-        <SidebarInset className="prime-app-main min-w-0 bg-background">
+        <AdminSidebar userName={userName} userEmail={userEmail} role={role} badges={badges} />
+        <SidebarInset className="prime-app-main prime-admin min-w-0 bg-background">
           <a
             href="#conteudo-principal"
             className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-primary focus:px-3 focus:py-2 focus:text-sm focus:text-primary-foreground"
           >
             Pular para o conteúdo
           </a>
-          <AdminHeader roleLabel={roleLabel} />
+          <AdminHeader role={role} roleLabel={roleLabel} />
           {/* SidebarInset já renderiza o <main> da página: o alvo do "pular para o conteúdo" é uma div (landmark main único). */}
           <div id="conteudo-principal" className="flex-1" tabIndex={-1}>
             {children}

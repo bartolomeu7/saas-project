@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
+import { AdminCommandMenu } from "@/components/admin/admin-command-menu";
 import { ADMIN_ROUTE_LABELS } from "@/components/admin/admin-nav-items";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -17,13 +18,14 @@ import { buttonVariants } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
+import type { UserRole } from "@/types/profile";
 
 /**
  * Header do painel da plataforma. Estrutura do `site-header` do bloco
  * dashboard-01 do shadcn/ui (SidebarTrigger + Separator + título), com
  * breadcrumb derivado da rota e o selo do papel administrativo.
  */
-export function AdminHeader({ roleLabel }: { roleLabel: string }) {
+export function AdminHeader({ role, roleLabel }: { role: UserRole; roleLabel: string }) {
   const pathname = usePathname() ?? "/admin";
   const pageLabel = ADMIN_ROUTE_LABELS[pathname] ?? ADMIN_ROUTE_LABELS[`/${pathname.split("/").slice(1, 3).join("/")}`];
   const isHome = pathname === "/admin";
@@ -61,7 +63,8 @@ export function AdminHeader({ roleLabel }: { roleLabel: string }) {
         </div>
 
         <div className="flex items-center gap-2">
-          <Badge variant="info" className="hidden sm:inline-flex">
+          <AdminCommandMenu role={role} />
+          <Badge variant="info" className="hidden lg:inline-flex">
             {roleLabel}
           </Badge>
           <Link

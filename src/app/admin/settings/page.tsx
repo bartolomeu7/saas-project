@@ -52,7 +52,7 @@ export default async function AdminSettingsPage() {
   return (
     <div className="flex flex-col gap-6 px-4 py-6 sm:px-6">
       <PageHeader
-        eyebrow="Sistema"
+        eyebrow="Acesso"
         title="Configurações"
         description="Parâmetros da plataforma com efeito real. Visível apenas para super administradores."
       />

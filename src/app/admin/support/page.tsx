@@ -27,7 +27,7 @@ export default async function AdminSupportPage({ searchParams: searchParamsPromi
 
   return (
     <div className="flex flex-col gap-6 px-4 py-6 sm:px-6">
-      <PageHeader eyebrow="Financeiro" title="Suporte" description="Chamados dos clientes sobre ordens de pagamento. Os abertos mais antigos vêm primeiro." />
+      <PageHeader eyebrow="Visão geral" title="Suporte" description="Chamados dos clientes sobre ordens de pagamento. Os abertos mais antigos vêm primeiro." />
 
       <AdminFilters
         basePath="/admin/support"

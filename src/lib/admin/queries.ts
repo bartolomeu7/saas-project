@@ -59,30 +59,27 @@ export interface PlatformAdminSession {
  * via is_platform_admin() — a mesma regra das RPCs. Memoizada por request, então
  * layout e páginas podem chamá-la sem custo extra. Quem não é admin volta para
  * /app; quem não tem sessão já foi barrado pelo middleware.
+ *
+ * Só consulta o banco: nome e e-mail vêm do perfil. A API do Clerk (pela
+ * internet, ~0,3 s por aba) só entra se o perfil não tiver e-mail.
  */
 export const requirePlatformAdmin = cache(async (): Promise<PlatformAdminSession> => {
   const supabase = await createSessionClient();
-  const { data: isAdmin, error } = await supabase.rpc("is_platform_admin");
+  const [{ data: isAdmin, error }, profile] = await Promise.all([supabase.rpc("is_platform_admin"), getCurrentProfile()]);
 
   if (error) {
     console.error("[admin] is_platform_admin() falhou:", error.message);
     throw new Error("Não foi possível validar o acesso administrativo.");
   }
 
-  if (!isAdmin) {
-    redirect("/app");
-  }
-
-  const [user, profile] = await Promise.all([getCurrentUser(), getCurrentProfile()]);
-
-  if (!user || !profile) {
+  if (!isAdmin || !profile) {
     redirect("/app");
   }
 
   return {
-    userId: user.id,
+    userId: profile.user_id,
     fullName: profile.full_name,
-    email: user.email ?? profile.email,
+    email: profile.email ?? (await getCurrentUser())?.email ?? null,
     role: profile.role,
     status: profile.status,
   };

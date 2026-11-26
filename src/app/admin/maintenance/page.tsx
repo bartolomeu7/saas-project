@@ -76,7 +76,7 @@ export default async function AdminMaintenancePage() {
   return (
     <div className="flex flex-col gap-6 px-4 py-6 sm:px-6">
       <PageHeader
-        eyebrow="Sistema"
+        eyebrow="Operação"
         title="Manutenção programada"
         description="Avise os clientes, bloqueie o sistema na hora marcada e encerre quando terminar. Visível apenas para super administradores."
         actions={

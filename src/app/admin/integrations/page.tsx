@@ -108,7 +108,7 @@ export default async function AdminIntegrationsPage({
   return (
     <div className="flex flex-col gap-6 px-4 py-6 sm:px-6">
       <PageHeader
-        eyebrow="Sistema"
+        eyebrow="Operação"
         title="Integrações"
         description="Gateway de pagamento ativo, saúde de MisticPay, SyncPay, Clerk e Supabase, e o histórico de webhooks."
       />
