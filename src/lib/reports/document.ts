@@ -5,6 +5,7 @@
 import { csvNumber, csvText } from "./csv.ts";
 import { formatDay } from "./period.ts";
 import { groupByMonth } from "./summary.ts";
+import { goalProgress, monthName } from "./goal.ts";
 import type { SalesFilters, SalesReport } from "./sales.ts";
 import type { buildAgendaReport, buildCustomersReport, buildQuotesReport } from "./people.ts";
 import type { ReportRange, ReportsWorkspace } from "../../types/report.ts";
@@ -66,7 +67,19 @@ export function documentCsv(document: ReportDocument): string {
 const period = (range: ReportRange) => `${formatDay(range.fromDate)} a ${formatDay(range.toDate)}`;
 const indicators = (title: string, rows: Cell[][], note?: string): DocumentSection => ({ title, columns: ["Indicador", "Valor"], rows, note });
 
-export function overviewDocument(report: ReportsWorkspace): ReportDocument {
+/** `goal`: meta do mês corrente, só quando o relatório é o do mês. */
+function goalSection(target: number, revenue: number, today: string): DocumentSection {
+  const progress = goalProgress(target, revenue, today);
+  return indicators(`Meta de ${monthName(today)}`, [
+    ["Meta", money(target)],
+    ["Faturamento até agora", money(revenue)],
+    ["Alcançado", percent(progress.percent)],
+    ["Falta", money(progress.remaining)],
+    ["Necessário por dia, contando hoje", money(progress.perDay)],
+  ]);
+}
+
+export function overviewDocument(report: ReportsWorkspace, goal: number | null = null): ReportDocument {
   const { summary, range, previous, appointments, inventory } = report;
   const byMonth = range.period === "year" || report.salesTrend.length > 62;
   const trend = byMonth ? groupByMonth(report.salesTrend) : report.salesTrend;
@@ -97,6 +110,7 @@ export function overviewDocument(report: ReportsWorkspace): ReportDocument {
     subtitle: period(range),
     sections: [
       main,
+      ...(goal === null ? [] : [goalSection(goal, summary.revenue, range.toDate)]),
       indicators("Como se chega no resultado", [
         ["Faturamento", money(summary.revenue)],
         ["(-) Custo das vendas", money(summary.costOfGoods)],

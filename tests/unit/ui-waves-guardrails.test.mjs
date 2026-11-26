@@ -454,6 +454,7 @@ describe("Onda E (lote 6): Relatórios e Assinatura, só apresentação", () => 
 
   it("Relatórios mantém a consulta, os períodos, a exportação CSV e o aviso de dados reais", () => {
     assert.match(reports, /getReportsWorkspace\(current\.company\.id, period, from, to\)/);
+    assert.match(reports, /getCurrentRevenueGoal\(current\.company\.id\)/);
     for (const period of ['"today"', '"7d"', '"30d"', '"month"', '"year"']) assert.ok(reports.includes(period), period);
     assert.match(reports, /\/app\/relatorios\/export\?period=/);
     assert.match(reports, /Nenhuma métrica fictícia/);

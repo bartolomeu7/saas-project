@@ -16,6 +16,10 @@ import { ReportCustomers } from "@/components/app/report-customers";
 import { ReportAgenda } from "@/components/app/report-agenda";
 import { ReportQuotes } from "@/components/app/report-quotes";
 import { ReportPrintButton } from "@/components/app/report-print-button";
+import { RevenueGoalForm } from "@/components/app/revenue-goal-form";
+import { RevenueGoalProgress } from "@/components/app/revenue-goal-progress";
+import { getCurrentRevenueGoal } from "@/lib/reports/goal-queries";
+import { monthName } from "@/lib/reports/goal";
 import { parseInactiveDays, parseReportTab, REPORT_TABS } from "@/lib/reports/people";
 import { parseSalesFilters, salesQuery } from "@/lib/reports/sales";
 
@@ -165,7 +169,12 @@ export default async function ReportsPage({
     );
   }
 
-  const report = await getReportsWorkspace(current.company.id, period, from, to);
+  // a meta é do mês corrente: aparece no período "Mês"
+  const showGoal = period === "month";
+  const [report, goal] = await Promise.all([
+    getReportsWorkspace(current.company.id, period, from, to),
+    showGoal ? getCurrentRevenueGoal(current.company.id) : Promise.resolve(null),
+  ]);
   const { previous } = report;
   const salesHref = salesDetailHref(range);
   const byMonth = period === "year" || report.salesTrend.length > 62;
@@ -212,6 +221,20 @@ export default async function ReportsPage({
           <Change current={report.summary.netResult} previous={previous?.netResult} />
         </a>
       </section>
+
+      {showGoal ? (
+        <section className={"prime-dashboard-panel" + (goal === null ? " print:hidden" : "")}>
+          <div className="prime-panel-heading"><div><p className="prime-panel-eyebrow">Meta</p><h2>Meta de {monthName(range.toDate)}</h2></div></div>
+          <div className="mt-4 grid gap-5 lg:grid-cols-[minmax(0,1.4fr)_minmax(280px,1fr)]">
+            {goal === null ? (
+              <p className="text-sm text-muted-foreground">Nenhuma meta definida. Informe quanto você quer faturar por mês para acompanhar o andamento aqui e no Dashboard.</p>
+            ) : (
+              <RevenueGoalProgress target={goal} revenue={report.summary.revenue} today={range.toDate} />
+            )}
+            <RevenueGoalForm target={goal} />
+          </div>
+        </section>
+      ) : null}
 
       <section className="grid gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(300px,.8fr)]">
         <div className="prime-dashboard-panel">
