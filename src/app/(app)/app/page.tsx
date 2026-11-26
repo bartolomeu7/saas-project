@@ -20,6 +20,11 @@ import { getProductStats } from "@/lib/products/queries";
 import { getServiceStats } from "@/lib/services/queries";
 import { getSaleStats, getSalesRevenueByDay, listSales, resolveSalePeriodRange } from "@/lib/sales/queries";
 import { getSaleSegmentHints } from "@/config/sale-segments";
+import { RevenueGoalProgress } from "@/components/app/revenue-goal-progress";
+import { getCurrentRevenueGoal } from "@/lib/reports/goal-queries";
+import { monthName } from "@/lib/reports/goal";
+import { can } from "@/lib/permissions/matrix";
+import { todayDateSaoPaulo } from "@/lib/timezone";
 import { QuickActions } from "@/components/app/quick-actions";
 import { BarChart } from "@/components/admin/admin-charts";
 import { SaleStatusBadge } from "@/components/app/sale-status-badge";
@@ -92,7 +97,9 @@ export default async function DashboardPage() {
 
   const company = current.company;
   const monthRange = resolveSalePeriodRange("month");
-  const [customerStats, productStats, serviceStats, saleStats, recentCustomers, dailyRevenue, recentSales] =
+  const canSeeGoal = can(current.role, "reports.view");
+  const today = todayDateSaoPaulo();
+  const [customerStats, productStats, serviceStats, saleStats, recentCustomers, dailyRevenue, recentSales, goal] =
     await Promise.all([
       getCustomerStats(company.id),
       getProductStats(company.id),
@@ -103,6 +110,8 @@ export default async function DashboardPage() {
         ? getSalesRevenueByDay(company.id, monthRange.from, monthRange.to)
         : Promise.resolve([]),
       listSales({ companyId: company.id, pageSize: 5 }),
+      // o Dashboard continua abrindo se só a meta falhar: o cartão é que some
+      canSeeGoal ? getCurrentRevenueGoal(company.id).catch(() => null) : Promise.resolve(null),
     ]);
 
   const saleHints = getSaleSegmentHints(company.business_type);
@@ -240,6 +249,18 @@ export default async function DashboardPage() {
         </div>
         )}
       </section>
+
+      {goal === null ? null : (
+        <section className="prime-dashboard-panel">
+          <div className="prime-panel-heading">
+            <div><p className="prime-panel-eyebrow">Meta</p><h2>Meta de {monthName(today)}</h2></div>
+            <Link href="/app/relatorios" className="prime-panel-link">Ver relatório <ArrowRight className="h-3.5 w-3.5" /></Link>
+          </div>
+          <div className="mt-4">
+            <RevenueGoalProgress target={goal} revenue={saleStats.revenue} today={today} />
+          </div>
+        </section>
+      )}
 
       <section className="grid gap-4 lg:grid-cols-[minmax(0,1.65fr)_minmax(280px,.75fr)]">
         <div className="prime-dashboard-panel">

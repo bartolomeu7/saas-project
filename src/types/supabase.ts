@@ -608,6 +608,30 @@ export type Database = {
           },
         ]
       }
+      company_revenue_goals: {
+        Row: {
+          company_id: string
+          month: string
+          target: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          company_id: string
+          month: string
+          target: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          company_id?: string
+          month?: string
+          target?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       cost_centers: {
         Row: {
           active: boolean
@@ -4970,6 +4994,16 @@ export type Database = {
         Returns: undefined
       }
       session_slot_status: { Args: { p_session_id?: string }; Returns: Json }
+      set_revenue_goal: {
+        Args: { p_company_id: string; p_target: number }
+        Returns: {
+          company_id: string
+          month: string
+          target: number
+          updated_at: string
+          updated_by: string | null
+        }
+      }
       set_appointment_status: {
         Args: {
           p_appointment_id: string

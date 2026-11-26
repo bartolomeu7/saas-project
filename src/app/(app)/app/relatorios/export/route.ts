@@ -19,6 +19,7 @@ import {
   type ReportDocument,
 } from "@/lib/reports/document";
 import { renderReportPdf } from "@/lib/reports/pdf-document";
+import { getCurrentRevenueGoal } from "@/lib/reports/goal-queries";
 import { formatDateTime } from "@/lib/format";
 import { todayDateSaoPaulo } from "@/lib/timezone";
 
@@ -72,9 +73,12 @@ export async function GET(request: Request) {
       const report = await getQuotesReport(companyId, range);
       document = () => quotesDocument(report, range);
     } else {
-      const report = await getReportsWorkspace(companyId, period, from, to);
-      csv = () => buildReportCsv(report);
-      document = () => overviewDocument(report);
+      const [report, goal] = await Promise.all([
+        getReportsWorkspace(companyId, period, from, to),
+        range.period === "month" ? getCurrentRevenueGoal(companyId) : Promise.resolve(null),
+      ]);
+      csv = () => buildReportCsv(report, goal);
+      document = () => overviewDocument(report, goal);
     }
     const slug = tab === "geral" ? "relatorio" : tab;
     name = `prime-ges-${slug}-${dates}.${pdf ? "pdf" : "csv"}`;

@@ -30,7 +30,7 @@ function row(cells: string[]): string {
  * Relatório em CSV para o Excel brasileiro: separador ponto e vírgula, vírgula decimal, BOM UTF-8.
  * Traz indicadores, faturamento por dia, formas de pagamento e TODOS os itens vendidos (não só os 8 do gráfico).
  */
-export function buildReportCsv(report: ReportsWorkspace): string {
+export function buildReportCsv(report: ReportsWorkspace, goal: number | null = null): string {
   const { summary, appointments, inventory } = report;
   const lines: string[] = [];
   lines.push(row([csvText("indicador"), csvText("valor")]));
@@ -57,6 +57,7 @@ export function buildReportCsv(report: ReportsWorkspace): string {
     ["Produtos com estoque baixo (hoje)", String(inventory.lowStock)],
     ["Produtos sem estoque (hoje)", String(inventory.outOfStock)],
   ];
+  if (goal !== null) indicators.push(["Meta do mês", csvNumber(goal)]);
   const before = report.previous;
   if (before) {
     indicators.push(
