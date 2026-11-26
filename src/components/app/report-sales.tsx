@@ -21,7 +21,8 @@ export async function ReportSales({ companyId, range, filters }: { companyId: st
 
   return (
     <>
-      <form method="get" action="/app/relatorios" aria-label="Filtros das vendas" className="flex flex-wrap items-end gap-3">
+      {/* a chave refaz os campos quando o filtro muda por um link: sem ela o campo guarda o valor antigo */}
+      <form key={href({})} method="get" action="/app/relatorios" aria-label="Filtros das vendas" className="flex flex-wrap items-end gap-3">
         <input type="hidden" name="aba" value="vendas" />
         {Object.entries(periodParams).map(([name, value]) => <input key={name} type="hidden" name={name} value={value} />)}
         <label className="grid gap-1 text-xs text-muted-foreground">

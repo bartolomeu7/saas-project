@@ -108,7 +108,7 @@ export default async function ReportsPage({
         ))}
       </nav>
 
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3 empty:hidden">
         {period === "custom" ? (
           <form key={range.fromDate + range.toDate} method="get" action="/app/relatorios" className="flex flex-wrap items-end gap-3">
             <input type="hidden" name="period" value="custom" />
