@@ -6,7 +6,7 @@ import { buildReportWorkspace, groupByMonth } from "../../src/lib/reports/summar
 const read = (path) => readFileSync(new URL("../../" + path, import.meta.url), "utf8");
 const noStockAlerts = { lowStock: 0, outOfStock: 0 };
 
-const range = { period: "7d", from: "2026-10-30T03:00:00.000Z", to: "2026-11-05T02:59:59.999Z", label: "Últimos 7 dias" };
+const range = { period: "7d", from: "2026-10-30T03:00:00.000Z", to: "2026-11-05T02:59:59.999Z", fromDate: "2026-10-30", toDate: "2026-11-04", label: "Últimos 7 dias" };
 const raw = {
   revenue: "150.00",
   cost_of_goods: 45,

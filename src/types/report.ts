@@ -1,10 +1,26 @@
-export type ReportPeriod = "today" | "7d" | "30d" | "month" | "year";
+export type ReportPeriod = "today" | "7d" | "30d" | "month" | "year" | "custom";
 
 export interface ReportRange {
   period: ReportPeriod;
   from: string;
   to: string;
+  /** Primeiro e último dia do período (AAAA-MM-DD, São Paulo). */
+  fromDate: string;
+  toDate: string;
   label: string;
+  /** As datas pedidas não serviram e o período mostrado é o padrão. */
+  invalid?: boolean;
+}
+
+/** Números do período anterior, para a comparação. */
+export interface ReportPrevious {
+  fromDate: string;
+  toDate: string;
+  revenue: number;
+  completedSales: number;
+  averageTicket: number | null;
+  netResult: number;
+  received: number;
 }
 
 export interface ReportSummary {
@@ -70,4 +86,5 @@ export interface ReportsWorkspace {
   paymentMethods: ReportPaymentMethod[];
   appointments: ReportAppointments;
   inventory: ReportInventoryAlerts;
+  previous?: ReportPrevious;
 }

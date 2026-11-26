@@ -17,12 +17,14 @@ export function BarChart({
   data,
   title,
   valueLabel,
+  pointLabel = "Dia",
   height = 140,
   className,
 }: {
   data: ChartPoint[];
   title: string;
   valueLabel: string;
+  pointLabel?: string;
   height?: number;
   className?: string;
 }) {
@@ -56,7 +58,7 @@ export function BarChart({
         <caption>{title}</caption>
         <thead>
           <tr>
-            <th scope="col">Dia</th>
+            <th scope="col">{pointLabel}</th>
             <th scope="col">{valueLabel}</th>
           </tr>
         </thead>

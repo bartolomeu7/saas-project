@@ -7,6 +7,7 @@ import { can } from "@/lib/permissions/matrix";
 import { NoAccess } from "@/components/app/no-access";
 import { getReportsWorkspace } from "@/lib/reports/queries";
 import type { ReportPeriod } from "@/types/report";
+import { describeChange, entriesDetailHref, formatDay, parseReportPeriod, salesDetailHref } from "@/lib/reports/period";
 import { formatQuantity } from "@/lib/products/stock-labels";
 import { groupByMonth } from "@/lib/reports/summary";
 import { BarChart, BreakdownBars } from "@/components/admin/admin-charts";
@@ -18,9 +19,21 @@ function money(value: number | null) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-function periodFromSearch(value: string | string[] | undefined): ReportPeriod {
-  const input = Array.isArray(value) ? value[0] : value;
-  return input === "today" || input === "7d" || input === "30d" || input === "month" || input === "year" ? input : "month";
+const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
+
+/** Variação em relação ao período anterior, com o valor de antes. */
+function Change({ current, previous }: { current: number; previous: number | null | undefined }) {
+  if (previous === null || previous === undefined) return <small className="mt-2 block text-xs text-muted-foreground">Sem base no período anterior</small>;
+  const { direction, percent } = describeChange(current, previous);
+  if (direction === "same") return <small className="mt-2 block text-xs text-muted-foreground">Igual ao período anterior</small>;
+  const up = direction === "up";
+  return (
+    <small className={"mt-2 block text-xs font-medium " + (up ? "text-emerald-700 dark:text-emerald-400" : "text-destructive")}>
+      <span aria-hidden="true">{up ? "▲" : "▼"} </span>
+      <span className="sr-only">{up ? "Subiu. " : "Caiu. "}</span>
+      {percent === null ? "" : percent.toLocaleString("pt-BR") + "% · "}antes {money(previous)}
+    </small>
+  );
 }
 
 const PERIODS: Array<{ value: ReportPeriod; label: string }> = [
@@ -29,19 +42,25 @@ const PERIODS: Array<{ value: ReportPeriod; label: string }> = [
   { value: "30d", label: "30 dias" },
   { value: "month", label: "Mês" },
   { value: "year", label: "Ano" },
+  { value: "custom", label: "Personalizado" },
 ];
 
 export default async function ReportsPage({
   searchParams: searchParamsPromise,
 }: {
-  searchParams: Promise<{ period?: string | string[] }>;
+  searchParams: Promise<{ period?: string | string[]; from?: string | string[]; to?: string | string[] }>;
 }) {
   const searchParams = await searchParamsPromise;
   const current = (await getCurrentCompany())!;
   if (!can(current.role, "reports.view")) return <NoAccess area="os Relatórios" />;
-  const period = periodFromSearch(searchParams?.period);
-  const report = await getReportsWorkspace(current.company.id, period);
-  const byMonth = period === "year";
+  const period = parseReportPeriod(first(searchParams?.period));
+  const from = first(searchParams?.from);
+  const to = first(searchParams?.to);
+  const report = await getReportsWorkspace(current.company.id, period, from, to);
+  const { range, previous } = report;
+  const customQuery = period === "custom" ? `&from=${range.fromDate}&to=${range.toDate}` : "";
+  const salesHref = salesDetailHref(range);
+  const byMonth = period === "year" || report.salesTrend.length > 62;
   const trend = byMonth ? groupByMonth(report.salesTrend) : report.salesTrend;
   const hasSales = report.summary.completedSales > 0;
   // até 12 pontos, uma linha por ponto com o valor; acima disso, gráfico compacto. Nenhum dos dois rola de lado
@@ -69,7 +88,7 @@ export default async function ReportsPage({
                 {item.label}
               </Link>
             ))}
-            <a href={"/app/relatorios/export?period=" + period} className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium hover:bg-muted">
+            <a href={"/app/relatorios/export?period=" + period + customQuery} className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium hover:bg-muted">
               <ArrowDownToLine className="h-3.5 w-3.5" />
               Exportar CSV
             </a>
@@ -77,25 +96,55 @@ export default async function ReportsPage({
         }
       />
 
+      <div className="flex flex-col gap-3">
+        {period === "custom" ? (
+          <form key={range.fromDate + range.toDate} method="get" action="/app/relatorios" className="flex flex-wrap items-end gap-3">
+            <input type="hidden" name="period" value="custom" />
+            <label className="grid gap-1 text-xs text-muted-foreground">
+              De
+              <input type="date" name="from" required defaultValue={range.fromDate} className="h-9 w-40 rounded-md border border-input bg-background px-3 text-sm text-foreground" />
+            </label>
+            <label className="grid gap-1 text-xs text-muted-foreground">
+              Até
+              <input type="date" name="to" required defaultValue={range.toDate} className="h-9 w-40 rounded-md border border-input bg-background px-3 text-sm text-foreground" />
+            </label>
+            <button type="submit" className="h-9 rounded-md border border-border px-3 text-sm font-medium text-foreground hover:bg-secondary">Aplicar</button>
+          </form>
+        ) : null}
+        {range.invalid ? (
+          <p role="alert" className="text-sm text-amber-700 dark:text-amber-400">
+            Datas não aceitas: o início precisa vir antes do fim e o intervalo vai até 5 anos. Mostrando o mês atual.
+          </p>
+        ) : null}
+        {previous ? (
+          <p className="text-xs text-muted-foreground">
+            {formatDay(range.fromDate)} a {formatDay(range.toDate)}, comparado com {formatDay(previous.fromDate)} a {formatDay(previous.toDate)}.
+          </p>
+        ) : null}
+      </div>
+
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <article className="prime-kpi-card">
+        <Link href={salesHref} className="prime-kpi-card block">
           <div className="prime-kpi-icon"><CircleDollarSign className="h-4 w-4" /></div>
           <p>Faturamento</p>
           <strong>{money(report.summary.revenue)}</strong>
-          <span>{report.summary.completedSales} vendas concluídas</span>
-        </article>
-        <article className="prime-kpi-card">
+          <span>{report.summary.completedSales} vendas concluídas · ver vendas →</span>
+          <Change current={report.summary.revenue} previous={previous?.revenue} />
+        </Link>
+        <Link href={salesHref} className="prime-kpi-card block">
           <div className="prime-kpi-icon"><ShoppingCart className="h-4 w-4" /></div>
           <p>Ticket médio</p>
           <strong>{money(report.summary.averageTicket)}</strong>
-          <span>somente vendas concluídas</span>
-        </article>
-        <article className="prime-kpi-card sm:col-span-2 lg:col-span-1">
+          <span>somente vendas concluídas · ver vendas →</span>
+          {report.summary.averageTicket === null ? null : <Change current={report.summary.averageTicket} previous={previous?.averageTicket} />}
+        </Link>
+        <a href="#resultado" className="prime-kpi-card block sm:col-span-2 lg:col-span-1">
           <div className="prime-kpi-icon"><CircleDollarSign className="h-4 w-4" /></div>
           <p>Resultado operacional</p>
           <strong>{money(report.summary.netResult)}</strong>
-          <span>receita menos custo das vendas, mais outras receitas, menos despesas operacionais</span>
-        </article>
+          <span>ver como se chega neste valor ↓</span>
+          <Change current={report.summary.netResult} previous={previous?.netResult} />
+        </a>
       </section>
 
       <section className="grid gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(300px,.8fr)]">
@@ -111,11 +160,12 @@ export default async function ReportsPage({
               <BarChart
                 className="mt-5"
                 height={180}
-                title="Faturamento por dia no período"
+                title={byMonth ? "Faturamento por mês no período" : "Faturamento por dia no período"}
+                pointLabel={byMonth ? "Mês" : "Dia"}
                 valueLabel="Faturamento"
                 data={trend.map((point) => ({ label: point.label, value: point.value, detail: money(point.value) }))}
               />
-              {bestPoint ? <p className="mt-3 text-xs text-muted-foreground">Melhor dia: {bestPoint.label}, com {money(bestPoint.value)}.</p> : null}
+              {bestPoint ? <p className="mt-3 text-xs text-muted-foreground">{byMonth ? "Melhor mês" : "Melhor dia"}: {bestPoint.label}, com {money(bestPoint.value)}.</p> : null}
             </>
           ) : (
             <div className="mt-5">
@@ -130,6 +180,8 @@ export default async function ReportsPage({
             {money(report.summary.received)} recebidos no período, pela data do recebimento
             {report.summary.refunds > 0 ? `, já descontados ${money(report.summary.refunds)} de estornos.` : "."}
           </p>
+          {previous ? <Change current={report.summary.received} previous={previous.received} /> : null}
+          <Link href={entriesDetailHref("recebimentos", range)} className="mt-2 inline-block text-xs font-medium text-primary hover:underline">Ver recebimentos</Link>
           <div className="mt-4 space-y-4">
             {report.paymentMethods.length ? report.paymentMethods.map((payment) => (
               <div key={payment.method}>
@@ -141,6 +193,30 @@ export default async function ReportsPage({
             )}
           </div>
         </div>
+      </section>
+
+      <section id="resultado" className="prime-dashboard-panel scroll-mt-24">
+        <div className="prime-panel-heading"><div><p className="prime-panel-eyebrow">Resultado</p><h2>Como se chega no resultado</h2></div></div>
+        <dl className="mt-4 divide-y divide-border text-sm">
+          {([
+            ["Faturamento", report.summary.revenue, salesHref, "ver vendas"],
+            ["− Custo das vendas", report.summary.costOfGoods, null, null],
+            ["+ Outras receitas", report.summary.otherIncome, entriesDetailHref("outras-receitas", range), "ver lançamentos"],
+            ["− Despesas operacionais", report.summary.operatingExpenses, entriesDetailHref("despesas", range), "ver lançamentos"],
+          ] as const).map(([label, value, href, action]) => (
+            <div key={label} className="flex flex-wrap items-center justify-between gap-2 py-2">
+              <dt className="text-muted-foreground">{label}</dt>
+              <dd className="flex items-center gap-3">
+                {href ? <Link href={href} className="text-xs font-medium text-primary hover:underline" aria-label={`${action} de ${label.replace(/^[−+] /, "")}`}>{action}</Link> : null}
+                <strong>{money(value)}</strong>
+              </dd>
+            </div>
+          ))}
+          <div className="flex flex-wrap items-center justify-between gap-2 py-2">
+            <dt className="font-medium">= Resultado operacional</dt>
+            <dd><strong className="text-base">{money(report.summary.netResult)}</strong></dd>
+          </div>
+        </dl>
       </section>
 
       <section className="grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(320px,.85fr)]">
@@ -178,18 +254,14 @@ export default async function ReportsPage({
           <div className="prime-panel-heading"><div><p className="prime-panel-eyebrow">Posição de hoje</p><h2>Em aberto e estoque</h2></div><Package className="h-4 w-4 text-muted-foreground" /></div>
           <p className="mt-2 text-xs text-muted-foreground">Situação atual da empresa: não muda com o período escolhido.</p>
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
-            <div className="prime-mini-stat"><span>A receber</span><strong>{money(report.summary.accountsReceivable)}</strong><small>{report.summary.overdueReceivables} venda(s) de dias anteriores</small></div>
-            <div className="prime-mini-stat"><span>A pagar</span><strong>{money(report.summary.accountsPayable)}</strong><small>{report.summary.overduePayables} vencida(s)</small></div>
-            <div className="prime-mini-stat"><span>Estoque crítico</span><strong>{report.inventory.lowStock + report.inventory.outOfStock}</strong><small>{report.inventory.outOfStock} sem estoque · {report.inventory.lowStock} baixo</small></div>
-          </div>
-          <div className="mt-4 flex flex-wrap gap-4">
-            <Link href="/app/financeiro" className="text-xs font-medium text-primary hover:underline">Abrir financeiro</Link>
-            <Link href="/app/estoque" className="text-xs font-medium text-primary hover:underline">Abrir estoque</Link>
+            <Link href="/app/financeiro?view=receber" className="prime-mini-stat hover:bg-muted/40"><span>A receber</span><strong>{money(report.summary.accountsReceivable)}</strong><small>{report.summary.overdueReceivables} venda(s) de dias anteriores</small></Link>
+            <Link href="/app/financeiro?view=pagar" className="prime-mini-stat hover:bg-muted/40"><span>A pagar</span><strong>{money(report.summary.accountsPayable)}</strong><small>{report.summary.overduePayables} vencida(s)</small></Link>
+            <Link href="/app/estoque" className="prime-mini-stat hover:bg-muted/40"><span>Estoque crítico</span><strong>{report.inventory.lowStock + report.inventory.outOfStock}</strong><small>{report.inventory.outOfStock} sem estoque · {report.inventory.lowStock} baixo</small></Link>
           </div>
         </div>
         <div className="prime-dashboard-panel">
           <div className="prime-panel-heading"><div><p className="prime-panel-eyebrow">Escopo</p><h2>{report.range.label}</h2></div><FileText className="h-4 w-4 text-muted-foreground" /></div>
-          <p className="mt-3 text-sm text-muted-foreground">No período: vendas concluídas, recebimentos pela data em que entraram, despesas operacionais e agenda. Contas em aberto e estoque mostram a posição de hoje.</p>
+          <p className="mt-3 text-sm text-muted-foreground">No período: vendas concluídas, recebimentos pela data em que entraram, despesas operacionais e agenda, comparados com o período anterior. Contas em aberto e estoque mostram a posição de hoje.</p>
           <p className="mt-3 text-xs text-muted-foreground">Fonte: dados transacionais reais do Prime Ges. Nenhuma métrica fictícia é criada para preencher o painel.</p>
         </div>
       </section>

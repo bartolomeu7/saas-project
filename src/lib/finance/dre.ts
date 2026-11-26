@@ -56,3 +56,30 @@ export function computeNetResult(input: {
 }): number {
   return input.revenue - input.costOfGoods + input.otherIncome - input.operatingExpenses;
 }
+
+const isOperatingExpense = (source: string | null | undefined) => !NON_OPERATING_EXPENSE_SOURCES.has(source ?? "");
+const isOtherIncome = (source: string | null | undefined) => !NON_OTHER_INCOME_SOURCES.has(source ?? "");
+
+/** Lançamentos que formam um número do relatório, pela mesma regra usada na soma. */
+export function entriesOfComposition<T extends { direction: string; source_type?: string | null }>(
+  rows: readonly T[],
+  composition: "outras-receitas" | "despesas" | "recebimentos"
+): T[] {
+  return rows.filter((row) => {
+    if (composition === "recebimentos") return row.source_type === "sale_payment" || row.source_type === "sale_payment_refund";
+    if (composition === "despesas") return row.direction === "expense" && isOperatingExpense(row.source_type);
+    return row.direction === "income" && isOtherIncome(row.source_type);
+  });
+}
+
+/** Total da composição. Nos recebimentos o estorno desconta; nas demais todos somam. */
+export function compositionTotal(
+  rows: ReadonlyArray<{ direction: string; amount: unknown }>,
+  composition: "outras-receitas" | "despesas" | "recebimentos"
+): number {
+  const total = rows.reduce(
+    (sum, row) => sum + (composition === "recebimentos" && row.direction === "expense" ? -money(row.amount) : money(row.amount)),
+    0
+  );
+  return Math.round(total * 100) / 100;
+}

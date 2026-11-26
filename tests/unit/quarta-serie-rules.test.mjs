@@ -93,7 +93,7 @@ test("CSV do relatório: texto que parece fórmula é neutralizado e números sa
 
 test("CSV do relatório: separador ponto e vírgula, BOM, todos os itens, dias e formas de pagamento", () => {
   const report = {
-    range: { period: "month", from: "", to: "", label: "Este mês" },
+    range: { period: "month", from: "", to: "", fromDate: "2026-11-01", toDate: "2026-11-26", label: "Este mês" },
     summary: { revenue: 1234.5, costOfGoods: 100, completedSales: 3, averageTicket: 411.5, otherIncome: 0, operatingExpenses: 50, netResult: 1084.5, received: 1234.5, refunds: 0, accountsReceivable: 0, accountsPayable: 20, overdueReceivables: 0, overduePayables: 1 },
     salesTrend: [{ date: "2026-11-20", label: "20/11", value: 1234.5 }],
     topItems: [],

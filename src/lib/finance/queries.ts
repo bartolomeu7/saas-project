@@ -9,6 +9,7 @@ import {
   sumOperatingExpenses,
   sumOtherIncome,
   sumPayableBalance,
+  entriesOfComposition,
 } from "@/lib/finance/dre";
 import type {
   AccountReceivable,
@@ -141,6 +142,27 @@ export async function listRecentFinancialEntries(
     .limit(limit);
 
   return (data ?? []) as FinancialEntry[];
+}
+
+/** Teto da lista de detalhe; acima disso a tela avisa que o total mostrado é parcial. */
+export const COMPOSITION_LIMIT = 2000;
+
+export async function listEntriesForComposition(companyId: string, composition: "outras-receitas" | "despesas" | "recebimentos", fromDate: string, toDate: string) {
+  const supabase = await createSessionClient();
+  let query = supabase
+    .from("financial_entries")
+    .select("id, direction, description, amount, occurred_on, method, source_type")
+    .eq("company_id", companyId)
+    .eq("status", "posted")
+    .gte("occurred_on", fromDate)
+    .lte("occurred_on", toDate);
+  if (composition === "despesas") query = query.eq("direction", "expense");
+  else if (composition === "outras-receitas") query = query.eq("direction", "income");
+  else query = query.in("source_type", ["sale_payment", "sale_payment_refund"]);
+  const { data, error } = await query.order("occurred_on", { ascending: false }).order("created_at", { ascending: false }).limit(COMPOSITION_LIMIT);
+  if (error) throw new Error("Não foi possível listar os lançamentos: " + error.message);
+  const rows = data ?? [];
+  return { entries: entriesOfComposition(rows, composition), truncated: rows.length >= COMPOSITION_LIMIT };
 }
 
 export const getFinanceDashboard = cache(async function getFinanceDashboard(
