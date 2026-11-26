@@ -867,7 +867,11 @@
 
 /* Impressão dos Relatórios: só o conteúdo, em preto sobre branco. */
 @media print {
-  body:has(.prime-report) { background: #fff !important; }
+  /* o painel pinta o próprio fundo: com "gráficos de segundo plano" ligado, a folha sairia escura */
+  html:has(.prime-report) { background: #fff !important; color-scheme: light !important; }
+  body:has(.prime-report),
+  body:has(.prime-report) .prime-app-main,
+  body:has(.prime-report) #conteudo-principal { background: #fff !important; }
   body:has(.prime-report) .group.peer,
   body:has(.prime-report) .prime-app-main > :not(#conteudo-principal) { display: none !important; }
   .prime-report,
