@@ -71,12 +71,12 @@ test("ações: toda mutação confere o papel e usa as funções do banco para d
   const actions = [...src.matchAll(/export async function (\w+Action)/g)].map((m) => m[1]);
   assert.deepEqual(
     actions.sort(),
-    ["addAdjustmentAction", "cancelPaymentAction", "cancelVacationAction", "closePayrollAction", "closePayrollBatchAction", "closePeriodAction", "closeThirteenthAction", "closeVacationPayAction", "createEmployeeAction", "deleteAdjustmentAction", "payPaymentAction", "saveHrSettingsAction", "scheduleVacationAction", "setAttendanceAction", "setEmployeeStatusAction", "updateEmployeeAction"].sort()
+    ["addAdjustmentAction", "cancelPaymentAction", "cancelVacationAction", "closePayrollAction", "closePayrollBatchAction", "closePeriodAction", "closeThirteenthAction", "closeVacationPayAction", "createEmployeeAction", "deleteAdjustmentAction", "payPaymentAction", "reverseAdvanceAction", "saveHrSettingsAction", "scheduleVacationAction", "setAttendanceAction", "setEmployeeStatusAction", "updateEmployeeAction"].sort()
   );
   // cada ação confere o papel antes de gravar
   assert.equal((src.match(/await manager\(\)/g) ?? []).length, actions.length);
   assert.ok(src.includes('can(current.role, "hr.manage")'));
-  for (const rpc of ["hr_set_attendance", "hr_add_adjustment", "hr_delete_adjustment", "hr_close_period", "hr_pay_payment", "hr_cancel_payment", "hr_save_clt_employee", "hr_save_settings", "hr_close_payroll"]) {
+  for (const rpc of ["hr_set_attendance", "hr_add_adjustment", "hr_delete_adjustment", "hr_close_period", "hr_pay_payment", "hr_cancel_payment", "hr_save_clt_employee", "hr_save_settings", "hr_close_payroll", "hr_reverse_advance"]) {
     assert.ok(src.includes(`rpc("${rpc}"`), rpc);
   }
   // pagamento, presença e ajustes nunca são gravados direto, e o app não escreve no financeiro por conta própria

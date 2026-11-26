@@ -18,6 +18,11 @@ export function round2(value: number): number {
 /** Margem para comparação de valores monetários (evita falso-positivo por ponto flutuante). */
 export const ROUNDING_TOLERANCE = 0.005;
 
+/** Recusa do banco quando a alteração deixaria o total menor do que o já recebido (gatilhos *_guard_paid). */
+export function paidAboveTotalMessage(error: { message: string }): string | null {
+  return error.message.includes("valor já recebido") ? error.message : null;
+}
+
 const RECALCULATE_TOTALS_ERROR =
   "Não foi possível recalcular os totais da venda. Tente novamente.";
 

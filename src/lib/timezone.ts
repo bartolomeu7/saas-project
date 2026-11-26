@@ -108,3 +108,15 @@ export function endOfDaySaoPauloFromDateString(dateStr: string): Date | null {
   if (!parts) return null;
   return new Date(Date.UTC(parts.year, parts.month, parts.day, 23, 59, 59, 999) + SAO_PAULO_OFFSET_MS);
 }
+
+/**
+ * Período digitado em dois campos de data: do começo do primeiro dia ao FIM do último, em São Paulo. Passar a data
+ * crua ao banco virava meia-noite UTC e deixava o último dia de fora. Data vazia ou inválida → null.
+ */
+export function customRangeSaoPaulo(from?: string, to?: string): { from: string | null; to: string | null } {
+  const iso = (date: Date | null) => (date && !Number.isNaN(date.getTime()) ? date.toISOString() : null);
+  return {
+    from: iso(from ? startOfDaySaoPauloFromDateString(from) : null),
+    to: iso(to ? endOfDaySaoPauloFromDateString(to) : null),
+  };
+}

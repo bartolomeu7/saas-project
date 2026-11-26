@@ -7,6 +7,7 @@ import {
   startOfMonthSaoPaulo,
   startOfYearSaoPaulo,
   currentMonthSaoPaulo,
+  customRangeSaoPaulo,
 } from "@/lib/timezone";
 
 export type RankingPeriod = "month" | "quarter" | "semester" | "year" | "custom";
@@ -35,8 +36,10 @@ export function resolvePeriodRange(
   from?: string,
   to?: string
 ): { from: string; to: string } {
-  if (period === "custom" && from && to) {
-    return { from, to };
+  if (period === "custom") {
+    // data inválida ou faltando cai no padrão de 30 dias, abaixo
+    const custom = customRangeSaoPaulo(from, to);
+    if (custom.from && custom.to) return { from: custom.from, to: custom.to };
   }
 
   const now = new Date();

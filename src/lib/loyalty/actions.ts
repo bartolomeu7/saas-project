@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createSessionClient } from "@/lib/supabase/server";
 import { getCurrentCompany } from "@/lib/companies/queries";
 import { recalculateSaleTotals } from "@/lib/sales/totals";
+import { mergeWithDefaultTiers } from "@/lib/loyalty/tiers";
 import type { ActionResult } from "@/lib/auth/actions";
 import type { Database } from "@/types/supabase";
 import { endOfDaySaoPauloFromDateString, startOfDaySaoPauloFromDateString } from "@/lib/timezone";
@@ -374,21 +375,32 @@ export async function createLoyaltyTierThresholdAction(
     .eq("company_id", current.company.id);
 
   const rows = existing ?? [];
-  if (rows.some((row) => row.name.toLowerCase() === name.toLowerCase())) {
-    return { error: "Já existe um nível com esse nome." };
-  }
-  if (rows.some((row) => row.min_lifetime_points === minLifetimePoints)) {
-    return { error: "Já existe um nível com essa mesma quantidade de pontos mínimos." };
+  let toInsert = [{ name, minLifetimePoints }];
+  if (rows.length === 0) {
+    // Primeira personalização: grava os níveis padrão junto, senão salvar um apagava os outros da tela.
+    const merged = mergeWithDefaultTiers({ name, minLifetimePoints }, normalizeTierName(formData.get("replaces")) || undefined);
+    if ("error" in merged) return { error: merged.error };
+    toInsert = merged.tiers;
+  } else {
+    if (rows.some((row) => row.name.toLowerCase() === name.toLowerCase())) {
+      return { error: "Já existe um nível com esse nome." };
+    }
+    if (rows.some((row) => row.min_lifetime_points === minLifetimePoints)) {
+      return { error: "Já existe um nível com essa mesma quantidade de pontos mínimos." };
+    }
   }
 
-  const { error: insertError } = await supabase.from("loyalty_tier_thresholds").insert({
-    company_id: current.company.id,
-    name,
-    min_lifetime_points: minLifetimePoints,
-    // Provisório: maior que qualquer índice existente (0..rows.length-1),
-    // nunca colide — resequenceLoyaltyTierThresholds ajusta a posição real.
-    sort_order: rows.length,
-  });
+  // Um só insert: ou entram todos os níveis, ou nenhum.
+  const { error: insertError } = await supabase.from("loyalty_tier_thresholds").insert(
+    toInsert.map((tier, index) => ({
+      company_id: current.company.id,
+      name: tier.name,
+      min_lifetime_points: tier.minLifetimePoints,
+      // Provisório: maior que qualquer índice existente (0..rows.length-1),
+      // nunca colide — resequenceLoyaltyTierThresholds ajusta a posição real.
+      sort_order: rows.length + index,
+    }))
+  );
 
   if (insertError) {
     // Checagem em código (acima) cobre o caso comum; a constraint UNIQUE

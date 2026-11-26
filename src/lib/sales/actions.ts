@@ -29,6 +29,7 @@ import {
   ROUNDING_TOLERANCE,
   LOYALTY_DISCOUNT_EXCEEDS_SUBTOTAL_ERROR,
   recalculateSaleTotals,
+  paidAboveTotalMessage,
 } from "@/lib/sales/totals";
 import { loyaltyDiscountRuleBroken, loyaltyPercentError } from "@/lib/sales/loyalty-cap";
 import { getLoyaltySettings } from "@/lib/loyalty/queries";
@@ -220,7 +221,7 @@ export async function updateDraftSaleAction(
       .eq("id", saleId)
       .eq("company_id", current.company.id);
     if (error) {
-      return { error: "Não foi possível salvar as alterações. Tente novamente." };
+      return { error: paidAboveTotalMessage(error) ?? "Não foi possível salvar as alterações. Tente novamente." };
     }
   }
 
@@ -464,7 +465,7 @@ export async function updateSaleItemAction(
     .eq("sale_id", saleId);
 
   if (error) {
-    return { error: "Não foi possível atualizar o item. Tente novamente." };
+    return { error: paidAboveTotalMessage(error) ?? "Não foi possível atualizar o item. Tente novamente." };
   }
 
   const recalculated = await recalculateSaleTotals(supabase, saleId, current.company.id);
@@ -550,7 +551,7 @@ export async function removeSaleItemAction(
   if (deleteError) {
     console.error("[removeSaleItemAction] falha ao remover item", { saleId, itemId, deleteError });
     revalidatePath(`/app/vendas/${saleId}`);
-    return { ok: false, error: "Não foi possível remover o item. Tente novamente." };
+    return { ok: false, error: paidAboveTotalMessage(deleteError) ?? "Não foi possível remover o item. Tente novamente." };
   }
 
   const recalculated = await recalculateSaleTotals(supabase, saleId, current.company.id);
@@ -695,4 +696,33 @@ export async function cancelSaleAction(
   revalidatePath("/app/vendas");
   revalidatePath(`/app/vendas/${saleId}`);
   return { success: "Venda cancelada. O estoque foi restaurado quando aplicável." };
+}
+
+/** Desfaz um pagamento de uma venda em rascunho: fica como estornado e o Financeiro/Caixa recebem o inverso. */
+export async function removeSalePaymentAction(saleId: string, paymentId: string): Promise<{ error?: string }> {
+  const current = await getCurrentCompany();
+  if (!current) return { error: "Nenhuma empresa encontrada para o usuário atual." };
+
+  const supabase = await createSessionClient();
+  const { error } = await supabase.rpc("remove_draft_sale_payment", { p_payment_id: paymentId });
+
+  revalidatePath(`/app/vendas/${saleId}`);
+  if (error) return { error: error.message || "Não foi possível remover o pagamento." };
+  revalidatePath("/app/caixa");
+  revalidatePath("/app/financeiro");
+  return {};
+}
+
+/** Descarta um rascunho sem pagamentos (fica registrado como cancelado; o estoque não é tocado). */
+export async function discardDraftSaleAction(saleId: string): Promise<{ error?: string }> {
+  const current = await getCurrentCompany();
+  if (!current) return { error: "Nenhuma empresa encontrada para o usuário atual." };
+
+  const supabase = await createSessionClient();
+  const { error } = await supabase.rpc("discard_draft_sale", { p_sale_id: saleId });
+  if (error) return { error: error.message || "Não foi possível descartar o rascunho." };
+
+  revalidatePath("/app");
+  revalidatePath("/app/vendas");
+  redirect("/app/vendas");
 }

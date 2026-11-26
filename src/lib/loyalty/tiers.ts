@@ -13,6 +13,26 @@ export const DEFAULT_TIER_THRESHOLDS: LoyaltyTierThreshold[] = [
   { name: "Platinum", minLifetimePoints: 5000, sortOrder: 3 },
 ];
 
+type TierInput = Pick<LoyaltyTierThreshold, "name" | "minLifetimePoints">;
+
+/**
+ * Primeira personalização: a empresa parte dos níveis padrão, trocando o editado (`replaces`) — ou o de mesmo nome ou
+ * pontos — pelo enviado. Salvar só o enviado fazia os outros três sumirem.
+ */
+export function mergeWithDefaultTiers(submitted: TierInput, replaces?: string): { tiers: TierInput[] } | { error: string } {
+  const same = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
+  const base: TierInput[] = DEFAULT_TIER_THRESHOLDS.map(({ name, minLifetimePoints }) => ({ name, minLifetimePoints }));
+  const index = base.findIndex((tier) =>
+    replaces ? same(tier.name, replaces) : same(tier.name, submitted.name) || tier.minLifetimePoints === submitted.minLifetimePoints
+  );
+  if (index >= 0) base.splice(index, 1);
+  if (base.some((tier) => same(tier.name, submitted.name))) return { error: "Já existe um nível com esse nome." };
+  if (base.some((tier) => tier.minLifetimePoints === submitted.minLifetimePoints)) {
+    return { error: "Já existe um nível com essa mesma quantidade de pontos mínimos." };
+  }
+  return { tiers: [...base, submitted].sort((a, b) => a.minLifetimePoints - b.minLifetimePoints) };
+}
+
 /**
  * Nível do cliente com base em pontos vitalícios ganhos — nunca no saldo
  * atual (resgatar pontos não rebaixa o nível). thresholds deve vir
@@ -22,9 +42,10 @@ export const DEFAULT_TIER_THRESHOLDS: LoyaltyTierThreshold[] = [
 export function calculateLoyaltyTier(
   lifetimePoints: number,
   thresholds: LoyaltyTierThreshold[] = DEFAULT_TIER_THRESHOLDS
-): LoyaltyTierThreshold {
+): LoyaltyTierThreshold | null {
   const sorted = [...thresholds].sort((a, b) => a.minLifetimePoints - b.minLifetimePoints);
-  let current = sorted[0] ?? DEFAULT_TIER_THRESHOLDS[0]!;
+  // abaixo do primeiro limite o cliente ainda não tem nível
+  let current: LoyaltyTierThreshold | null = null;
   for (const tier of sorted) {
     if (lifetimePoints >= tier.minLifetimePoints) {
       current = tier;

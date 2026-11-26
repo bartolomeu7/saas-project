@@ -47,6 +47,7 @@ function TierEditForm({
 
   return (
     <form action={formAction} onReset={keepInput} className="flex flex-col gap-3">
+      {!isPersisted && threshold.name ? <input type="hidden" name="replaces" value={threshold.name} /> : null}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor={`name-${fieldId}`}>Nome</Label>
