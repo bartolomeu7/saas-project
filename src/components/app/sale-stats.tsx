@@ -8,7 +8,7 @@ function formatMoney(value: number): string {
 
 export function SaleStats({ stats }: { stats: SaleStatsData }) {
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-5">
       <StatCard label="Vendas no período" value={stats.totalInPeriod} icon={Receipt} />
       <StatCard label="Faturamento" value={formatMoney(stats.revenue)} icon={DollarSign} />
       <StatCard
