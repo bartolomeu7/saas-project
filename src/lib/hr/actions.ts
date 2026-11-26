@@ -405,6 +405,21 @@ export async function deleteAdjustmentAction(_prev: ActionResult, formData: Form
   return { success: "Lançamento apagado." };
 }
 
+/** Estorna um vale ainda não incluído em pagamento: cancela a despesa e devolve o dinheiro ao caixa, se saiu dele. */
+export async function reverseAdvanceAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
+  const adjustmentId = text(formData.get("adjustmentId"));
+  const employeeId = text(formData.get("employeeId"));
+  if (!adjustmentId) return { error: "Lançamento inválido." };
+  const guard = await manager();
+  if ("error" in guard) return guard;
+  const supabase = (await createSessionClient()) as any;
+  const { error } = await supabase.rpc("hr_reverse_advance", { p_adjustment_id: adjustmentId });
+  if (error) return { error: friendly(error, "Não foi possível estornar o vale.") };
+  revalidateHr(employeeId || undefined);
+  revalidateMoney();
+  return { success: "Vale estornado." };
+}
+
 export async function closePeriodAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   const employeeId = text(formData.get("employeeId"));
   const start = text(formData.get("period_start"));

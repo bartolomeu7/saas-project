@@ -7,6 +7,7 @@ import { buildSearchOr } from "@/lib/search/pattern";
 import {
   startOfDaySaoPaulo,
   endOfDaySaoPaulo,
+  customRangeSaoPaulo,
   startOfMonthSaoPaulo,
   startOfYearSaoPaulo,
 } from "@/lib/timezone";
@@ -69,7 +70,7 @@ export function resolveSalePeriodRange(
     return { from: null, to: null };
   }
   if (period === "custom") {
-    return { from: from ?? null, to: to ?? null };
+    return customRangeSaoPaulo(from, to);
   }
 
   const now = new Date();

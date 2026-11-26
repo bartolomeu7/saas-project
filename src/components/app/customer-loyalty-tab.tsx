@@ -142,11 +142,12 @@ export async function CustomerLoyaltyTab({
 
   const progressPercent = (() => {
     if (!next) return 100;
-    const span = next.tier.minLifetimePoints - tier.minLifetimePoints;
+    const floor = tier?.minLifetimePoints ?? 0;
+    const span = next.tier.minLifetimePoints - floor;
     if (span <= 0) return 100;
     return Math.min(
       100,
-      Math.max(0, ((account.lifetimePoints - tier.minLifetimePoints) / span) * 100)
+      Math.max(0, ((account.lifetimePoints - floor) / span) * 100)
     );
   })();
 
@@ -175,7 +176,7 @@ export async function CustomerLoyaltyTab({
       <div>
         <div className="mb-2 flex items-center justify-between">
           <p className="text-sm font-medium text-foreground">
-            Nível atual: <span className="font-semibold">{tier.name}</span>
+            Nível atual: <span className="font-semibold">{tier?.name ?? "Sem nível"}</span>
           </p>
           {next && (
             <p className="text-xs text-muted-foreground">

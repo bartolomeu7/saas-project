@@ -2,12 +2,15 @@ import { SalePaymentStatusBadge } from "@/components/app/sale-payment-status-bad
 import { SALE_PAYMENT_METHOD_LABELS } from "@/types/sale";
 import type { SalePayment } from "@/types/sale";
 import { formatDate } from "@/lib/format";
+import { ConfirmActionForm } from "@/components/app/confirm-dialog";
+import { removeSalePaymentAction } from "@/lib/sales/actions";
 
 function formatMoney(value: number): string {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-export function SalePaymentList({ payments }: { payments: SalePayment[] }) {
+/** `removableFrom` = id da venda quando os pagamentos podem ser desfeitos (rascunho, por quem pode alterá-la). */
+export function SalePaymentList({ payments, removableFrom }: { payments: SalePayment[]; removableFrom?: string }) {
   if (payments.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">Nenhum pagamento registrado ainda.</p>
@@ -30,7 +33,18 @@ export function SalePaymentList({ payments }: { payments: SalePayment[] }) {
               {payment.notes ? ` · ${payment.notes}` : ""}
             </span>
           </div>
-          <SalePaymentStatusBadge status={payment.status} />
+          <div className="flex items-center gap-3">
+            <SalePaymentStatusBadge status={payment.status} />
+            {removableFrom && payment.status === "paid" && (
+              <ConfirmActionForm
+                action={removeSalePaymentAction.bind(null, removableFrom, payment.id)}
+                label="Remover"
+                title={`Remover o pagamento de ${formatMoney(payment.amount)}?`}
+                description="Ele fica como estornado e o Financeiro (e o caixa, se o dinheiro entrou nele) recebem o lançamento inverso."
+                destructive
+              />
+            )}
+          </div>
         </li>
       ))}
     </ul>

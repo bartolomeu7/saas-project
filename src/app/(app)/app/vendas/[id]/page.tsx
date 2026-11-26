@@ -20,6 +20,8 @@ import { SalePaymentList } from "@/components/app/sale-payment-list";
 import { CompleteSaleButton } from "@/components/app/complete-sale-button";
 import { CancelSaleButton } from "@/components/app/cancel-sale-button";
 import { SaleHistoryList } from "@/components/app/sale-history-list";
+import { ConfirmActionForm } from "@/components/app/confirm-dialog";
+import { discardDraftSaleAction } from "@/lib/sales/actions";
 import { formatDate, formatPercent } from "@/lib/format";
 
 export const metadata: Metadata = {
@@ -49,9 +51,9 @@ export default async function SaleDetailPage({ params: paramsPromise }: { params
 
   const isDraft = sale.status === "draft";
   const isCompleted = sale.status === "completed";
-  const canCancel =
-    isCompleted &&
-    (current.role === "owner" || current.role === "admin" || sale.user_id === user?.id);
+  // Dono/admin mexem em qualquer venda; funcionário só na própria (o banco repete a regra).
+  const canManage = current.role === "owner" || current.role === "admin" || sale.user_id === user?.id;
+  const canCancel = isCompleted && canManage;
 
   const marginPercentage = calculateMarginPercentage(sale.estimated_margin, sale.total_amount);
 
@@ -144,7 +146,7 @@ export default async function SaleDetailPage({ params: paramsPromise }: { params
             <div className="rounded-lg border border-border bg-card p-6">
               <h2 className="mb-4 text-sm font-semibold text-foreground">Pagamento</h2>
               <div className="flex flex-col gap-4">
-                <SalePaymentList payments={sale.payments} />
+                <SalePaymentList payments={sale.payments} removableFrom={isDraft && canManage ? sale.id : undefined} />
                 <SalePaymentForm saleId={sale.id} />
               </div>
             </div>
@@ -158,6 +160,17 @@ export default async function SaleDetailPage({ params: paramsPromise }: { params
                 editada — apenas cancelada.
               </p>
               <CompleteSaleButton saleId={sale.id} />
+              {canManage && (
+                <div className="mt-4">
+                  <ConfirmActionForm
+                    action={discardDraftSaleAction.bind(null, sale.id)}
+                    label="Descartar rascunho"
+                    title="Descartar este rascunho?"
+                    description="A venda fica registrada como cancelada e o estoque não muda. Se houver pagamento, remova antes."
+                    destructive
+                  />
+                </div>
+              )}
             </div>
           )}
         </div>

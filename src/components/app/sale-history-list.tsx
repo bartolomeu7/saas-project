@@ -17,6 +17,7 @@ const ACTION_META: Record<string, { label: string; icon: LucideIcon }> = {
   "sale.completed": { label: "Venda concluída", icon: CheckCircle2 },
   "sale.cancelled": { label: "Venda cancelada", icon: XCircle },
   "sale.payment_added": { label: "Pagamento registrado", icon: Wallet },
+  "sale.payment_removed": { label: "Pagamento removido", icon: Wallet },
   "sale.stock_adjusted": { label: "Estoque ajustado", icon: ArrowRightLeft },
 };
 
@@ -40,7 +41,7 @@ function describeMetadata(log: AuditLog): string | null {
   if (log.action === "sale.stock_adjusted" && "stock_before" in metadata) {
     return `${metadata.stock_before} → ${metadata.stock_after}`;
   }
-  if (log.action === "sale.payment_added" && "amount" in metadata) {
+  if ((log.action === "sale.payment_added" || log.action === "sale.payment_removed") && "amount" in metadata) {
     const method = String(metadata.method ?? "");
     const amount = Number(metadata.amount);
     const money = Number.isFinite(amount)

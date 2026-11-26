@@ -21,6 +21,7 @@ import {
   ScheduleVacationForm,
   ThirteenthButton,
   DeleteAdjustmentButton,
+  ReverseAdvanceButton,
   type AttendanceDay,
 } from "@/components/app/hr-forms";
 import { getCurrentCompany } from "@/lib/companies/queries";
@@ -174,7 +175,7 @@ export default async function HrEmployeePage({
         />
       ) : null}
       {tab === "presenca" ? <AttendanceTab employeeId={employee.id} month={isMonth(searchParams?.mes) ? searchParams.mes : today.slice(0, 7)} today={today} base={base} /> : null}
-      {tab === "vales" ? <AdjustmentsTab employeeId={employee.id} today={today} /> : null}
+      {tab === "vales" ? <AdjustmentsTab employeeId={employee.id} today={today} usualAmount={employee.rate_kind === "per_day" ? employee.base_amount * 30 : employee.base_amount} /> : null}
       {tab === "fechar" ? (
         <ClosePeriodTab
           employeeId={employee.id}
@@ -319,11 +320,11 @@ async function AttendanceTab({ employeeId, month, today, base }: { employeeId: s
   );
 }
 
-async function AdjustmentsTab({ employeeId, today }: { employeeId: string; today: string }) {
+async function AdjustmentsTab({ employeeId, today, usualAmount }: { employeeId: string; today: string; usualAmount: number }) {
   const adjustments = await listAdjustments(employeeId);
   return (
     <div className="flex flex-col gap-4">
-      <AdjustmentForm employeeId={employeeId} today={today} />
+      <AdjustmentForm employeeId={employeeId} today={today} usualAmount={usualAmount} />
       <section className="rounded-lg border" aria-labelledby="adj-historico">
         <h2 id="adj-historico" className="border-b px-4 py-3 text-sm font-semibold">Histórico</h2>
         {adjustments.length === 0 ? (
@@ -339,7 +340,7 @@ async function AdjustmentsTab({ employeeId, today }: { employeeId: string; today
                 <div className="flex items-center gap-2">
                   <Badge variant={row.payment_id ? "muted" : "info"}>{row.payment_id ? "Já acertado" : "Em aberto"}</Badge>
                   <span className={cn("font-semibold", row.kind === "bonus" ? "text-success" : "")}>{row.kind === "bonus" ? "+" : "−"} {formatCurrency(row.amount)}</span>
-                  {!row.payment_id && row.kind !== "advance" ? <DeleteAdjustmentButton adjustmentId={row.id} employeeId={employeeId} /> : null}
+                  {row.payment_id ? null : row.kind === "advance" ? <ReverseAdvanceButton adjustmentId={row.id} employeeId={employeeId} /> : <DeleteAdjustmentButton adjustmentId={row.id} employeeId={employeeId} />}
                 </div>
               </li>
             ))}

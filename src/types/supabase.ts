@@ -4868,6 +4868,18 @@ export type Database = {
         Args: { p_points: number; p_sale_id: string }
         Returns: number
       }
+      remove_draft_sale_payment: {
+        Args: { p_payment_id: string }
+        Returns: undefined
+      }
+      discard_draft_sale: {
+        Args: { p_sale_id: string }
+        Returns: undefined
+      }
+      hr_reverse_advance: {
+        Args: { p_adjustment_id: string }
+        Returns: undefined
+      }
       register_session_slot: {
         Args: {
           p_active_session_ids: string[]

@@ -13,6 +13,7 @@ import {
   closePeriodAction,
   deleteAdjustmentAction,
   payPaymentAction,
+  reverseAdvanceAction,
   saveHrSettingsAction,
   scheduleVacationAction,
   setAttendanceAction,
@@ -27,6 +28,8 @@ import { Button } from "@/components/ui/button";
 import { useKeepInputOnError } from "@/hooks/use-keep-input-on-error";
 import { cn } from "@/lib/utils";
 import { validateVacationSplit } from "@/lib/hr/payroll";
+import { formatCurrency } from "@/lib/format";
+import { parseMoneyInput } from "@/lib/parse-money";
 
 const initialState: ActionResult = {};
 const selectClass = "h-10 rounded-md border border-input bg-background px-3 text-sm";
@@ -128,10 +131,12 @@ export function AttendanceRangeForm({ employeeId, today }: { employeeId: string;
   );
 }
 
-export function AdjustmentForm({ employeeId, today }: { employeeId: string; today: string }) {
+export function AdjustmentForm({ employeeId, today, usualAmount }: { employeeId: string; today: string; usualAmount: number }) {
   const [state, formAction] = useFormState(addAdjustmentAction, initialState);
   const keepInput = useKeepInputOnError(state);
   const [kind, setKind] = useState("advance");
+  const [amount, setAmount] = useState("");
+  const highAdvance = kind === "advance" && (parseMoneyInput(amount) ?? 0) > usualAmount;
   return (
     <form action={formAction} onReset={keepInput} className="grid gap-3 rounded-lg border p-4 sm:grid-cols-2">
       <input type="hidden" name="employeeId" value={employeeId} />
@@ -146,7 +151,7 @@ export function AdjustmentForm({ employeeId, today }: { employeeId: string; toda
       </div>
       <div className="flex flex-col gap-2">
         <Label htmlFor="adj_amount">Valor (R$)</Label>
-        <Input id="adj_amount" name="amount" inputMode="decimal" placeholder="0,00" required />
+        <Input id="adj_amount" name="amount" inputMode="decimal" placeholder="0,00" required value={amount} onChange={(event) => setAmount(event.target.value)} />
       </div>
       <div className="flex flex-col gap-2">
         <Label htmlFor="adj_date">Data</Label>
@@ -164,6 +169,12 @@ export function AdjustmentForm({ employeeId, today }: { employeeId: string; toda
         <Label htmlFor="adj_desc">Observação</Label>
         <Input id="adj_desc" name="description" maxLength={300} placeholder="Ex.: adiantamento para passagem" />
       </div>
+      {highAdvance && (
+        <label className="flex items-start gap-2 rounded-md border border-warning/30 bg-warning/10 p-3 text-sm sm:col-span-2">
+          <input type="checkbox" required className="mt-0.5" />
+          <span>Este vale passa de {formatCurrency(usualAmount)}, o valor de um mês deste funcionário. Confirmo que está certo.</span>
+        </label>
+      )}
       <p className="text-xs text-muted-foreground sm:col-span-2">
         O vale já sai do Financeiro/Caixa na hora e é descontado no próximo fechamento. Desconto e bônus só entram no fechamento.
       </p>
@@ -184,6 +195,27 @@ export function DeleteAdjustmentButton({ adjustmentId, employeeId }: { adjustmen
         title="Apagar este lançamento?"
         description="Ele deixa de entrar no próximo fechamento. Vales já pagos continuam no Financeiro."
         confirmLabel="Apagar"
+        cancelLabel="Voltar"
+        destructive
+        onConfirm={() => formRef.current?.requestSubmit()}
+      />
+      <FormMessage state={state} />
+    </form>
+  );
+}
+
+export function ReverseAdvanceButton({ adjustmentId, employeeId }: { adjustmentId: string; employeeId: string }) {
+  const [state, formAction] = useFormState(reverseAdvanceAction, initialState);
+  const formRef = useRef<HTMLFormElement>(null);
+  return (
+    <form action={formAction} className="inline" ref={formRef}>
+      <input type="hidden" name="adjustmentId" value={adjustmentId} />
+      <input type="hidden" name="employeeId" value={employeeId} />
+      <ConfirmDialog
+        trigger={<Button type="button" variant="ghost" size="sm" className="h-8 px-2 text-destructive hover:text-destructive">Estornar vale</Button>}
+        title="Estornar este vale?"
+        description="A despesa é cancelada no Financeiro e o vale deixa de ser descontado. Se foi em dinheiro, o valor volta para o caixa aberto."
+        confirmLabel="Estornar"
         cancelLabel="Voltar"
         destructive
         onConfirm={() => formRef.current?.requestSubmit()}
