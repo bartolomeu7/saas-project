@@ -69,3 +69,11 @@ test("relatórios: falha de consulta vira erro, nunca zero", () => {
   assert.ok(queries.includes("if (error) throw"));
   assert.ok(read("src/app/(app)/app/relatorios/export/route.ts").includes("status: 503"));
 });
+
+// Achado no reteste ao vivo: três colunas cortavam os valores em tela média e o "Ano" escondia o mês com vendas.
+test("relatórios: cartões em duas colunas na tela média e gráfico sem rolagem lateral", () => {
+  const page = read("src/app/(app)/app/relatorios/page.tsx");
+  assert.ok(page.includes("grid gap-3 sm:grid-cols-2 lg:grid-cols-3"));
+  assert.ok(page.includes("<BreakdownBars") && page.includes("<BarChart"));
+  assert.ok(!page.includes("overflow-x-auto"));
+});

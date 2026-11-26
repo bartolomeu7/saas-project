@@ -9,7 +9,7 @@ import { getReportsWorkspace } from "@/lib/reports/queries";
 import type { ReportPeriod } from "@/types/report";
 import { formatQuantity } from "@/lib/products/stock-labels";
 import { groupByMonth } from "@/lib/reports/summary";
-import { BarChart } from "@/components/admin/admin-charts";
+import { BarChart, BreakdownBars } from "@/components/admin/admin-charts";
 
 export const metadata: Metadata = { title: "Relatórios" };
 
@@ -43,9 +43,8 @@ export default async function ReportsPage({
   const report = await getReportsWorkspace(current.company.id, period);
   const byMonth = period === "year";
   const trend = byMonth ? groupByMonth(report.salesTrend) : report.salesTrend;
-  const maxTrend = Math.max(...trend.map((point) => point.value), 1);
   const hasSales = report.summary.completedSales > 0;
-  // até 12 pontos cabe o valor em cima de cada barra; acima disso, gráfico compacto sem rolagem lateral
+  // até 12 pontos, uma linha por ponto com o valor; acima disso, gráfico compacto. Nenhum dos dois rola de lado
   const compactTrend = trend.length > 12;
   const bestPoint = trend.reduce<(typeof trend)[number] | null>((best, point) => (point.value > (best?.value ?? 0) ? point : best), null);
   const maxItem = Math.max(...report.topItems.map((item) => item.revenue), 1);
@@ -78,7 +77,7 @@ export default async function ReportsPage({
         }
       />
 
-      <section className="grid gap-3 sm:grid-cols-3">
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <article className="prime-kpi-card">
           <div className="prime-kpi-icon"><CircleDollarSign className="h-4 w-4" /></div>
           <p>Faturamento</p>
@@ -91,7 +90,7 @@ export default async function ReportsPage({
           <strong>{money(report.summary.averageTicket)}</strong>
           <span>somente vendas concluídas</span>
         </article>
-        <article className="prime-kpi-card">
+        <article className="prime-kpi-card sm:col-span-2 lg:col-span-1">
           <div className="prime-kpi-icon"><CircleDollarSign className="h-4 w-4" /></div>
           <p>Resultado operacional</p>
           <strong>{money(report.summary.netResult)}</strong>
@@ -119,16 +118,8 @@ export default async function ReportsPage({
               {bestPoint ? <p className="mt-3 text-xs text-muted-foreground">Melhor dia: {bestPoint.label}, com {money(bestPoint.value)}.</p> : null}
             </>
           ) : (
-            <div className="mt-5 flex min-h-[220px] items-end gap-2 overflow-x-auto pb-2">
-              {trend.map((point) => (
-                <div key={point.date} className="flex min-w-12 flex-1 flex-col items-center justify-end gap-2">
-                  <span className="text-[10px] font-medium text-muted-foreground">{point.value > 0 ? money(point.value) : "—"}</span>
-                  <div className="flex h-36 w-full max-w-14 items-end rounded-md bg-muted/60 p-1">
-                    <div className="w-full rounded-sm bg-primary" style={{ height: (point.value > 0 ? Math.max(8, (point.value / maxTrend) * 100) : 0) + "%" }} title={point.label + ": " + money(point.value)} />
-                  </div>
-                  <span className="text-[10px] text-muted-foreground">{point.label}</span>
-                </div>
-              ))}
+            <div className="mt-5">
+              <BreakdownBars items={trend.map((point) => ({ label: point.label, value: point.value, detail: money(point.value) }))} />
             </div>
           )}
         </div>
