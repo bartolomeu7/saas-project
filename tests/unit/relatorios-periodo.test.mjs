@@ -86,3 +86,8 @@ test("a lista de vendas aberta pelo relatório filtra pela conclusão", () => {
   assert.ok(page.includes('dateField: byCompletion ? "completed_at" : "sold_at"'));
   assert.ok(read("src/lib/sales/queries.ts").includes("query.gte(dateField, from)"));
 });
+
+// Achado no reteste: cinco colunas a partir de 640 px quebravam os valores um dígito por linha.
+test("os cartões de Vendas só usam cinco colunas em tela larga", () => {
+  assert.ok(read("src/components/app/sale-stats.tsx").includes("grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-5"));
+});
