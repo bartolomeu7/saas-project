@@ -33,6 +33,7 @@ import {
 } from "@/lib/sales/totals";
 import { loyaltyDiscountRuleBroken, loyaltyPercentError } from "@/lib/sales/loyalty-cap";
 import { getLoyaltySettings } from "@/lib/loyalty/queries";
+import { formatQuantity } from "@/lib/products/stock-labels";
 
 function formatBRL(value: number): string {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -312,7 +313,7 @@ export async function addSaleItemAction(
         error:
           product.stock_quantity <= 0
             ? `"${product.name}" está sem estoque.`
-            : `Estoque insuficiente para "${product.name}" (disponível: ${product.stock_quantity}).`,
+            : `Estoque insuficiente para "${product.name}" (disponível: ${formatQuantity(product.stock_quantity)}).`,
       };
     }
     description = product.name;
@@ -423,7 +424,7 @@ export async function updateSaleItemAction(
       .maybeSingle();
     if (product && parsed.data.quantity > product.stock_quantity) {
       return {
-        error: `Estoque insuficiente para "${product.name}" (disponível: ${product.stock_quantity}).`,
+        error: `Estoque insuficiente para "${product.name}" (disponível: ${formatQuantity(product.stock_quantity)}).`,
       };
     }
   }

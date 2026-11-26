@@ -95,7 +95,15 @@ export function CashRegisterCloseForm({
 
       <ConfirmDialog
         trigger={
-          <Button type="button" className="w-full sm:w-fit" disabled={difference === null}>
+          <Button
+            type="button"
+            className="w-full sm:w-fit"
+            disabled={difference === null}
+            // campo inválido (valor negativo, por exemplo) é apontado antes de pedir a confirmação
+            onClick={(event) => {
+              if (!formRef.current?.reportValidity()) event.preventDefault();
+            }}
+          >
             Fechar caixa
           </Button>
         }

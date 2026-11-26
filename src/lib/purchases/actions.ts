@@ -149,15 +149,20 @@ export async function receivePurchaseOrderAction(
 
 export async function cancelPurchaseOrderAction(
   purchaseOrderId: string,
+  _prev: ActionResult,
   formData: FormData
-): Promise<{ error?: string } | void> {
+): Promise<ActionResult> {
+  const reason = cleanField(formData.get("reason"));
+  if (!reason) return { error: "Informe o motivo do cancelamento." };
+  if (reason.length > 500) return { error: "Motivo: máximo de 500 caracteres." };
+
   const current = await getCurrentCompany();
   if (!current) return { error: "Nenhuma empresa encontrada." };
 
   const supabase = await createSessionClient();
   const { error } = await supabase.rpc("cancel_purchase_order", {
     p_purchase_order_id: purchaseOrderId,
-    p_reason: String(formData.get("reason") ?? "").trim() || undefined,
+    p_reason: reason,
   });
 
   if (error) return { error: error.message || "Não foi possível cancelar o pedido." };

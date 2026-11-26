@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import { PackagePlus, Pencil, PackageCheck, PackageX, ArrowRightLeft, History } from "lucide-react";
 import type { AuditLog } from "@/types/audit";
 import { EmptyState } from "@/components/app/empty-state";
+import { formatQuantity } from "@/lib/products/stock-labels";
 
 const ACTION_META: Record<string, { label: string; icon: LucideIcon }> = {
   "product.created": { label: "Produto cadastrado", icon: PackagePlus },
@@ -27,7 +28,7 @@ function describeMetadata(log: AuditLog): string | null {
       reason?: string;
     };
     if (previousStock !== undefined && newStock !== undefined) {
-      return `${previousStock} → ${newStock}${reason ? ` · ${reason}` : ""}`;
+      return `${formatQuantity(previousStock)} → ${formatQuantity(newStock)}${reason ? ` · ${reason}` : ""}`;
     }
   }
   return null;

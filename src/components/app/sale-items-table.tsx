@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import type { SaleItem } from "@/types/sale";
 import { ConfirmDialog } from "@/components/app/confirm-dialog";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { formatQuantity } from "@/lib/products/stock-labels";
 
 function formatMoney(value: number): string {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -59,7 +60,7 @@ function ReadOnlySaleItemRow({ item }: { item: SaleItem }) {
   return (
     <TableRow>
       <TableCell className="px-4 py-3 text-foreground">{item.description}</TableCell>
-      <TableCell className="px-4 py-3 text-muted-foreground">{item.quantity}</TableCell>
+      <TableCell className="px-4 py-3 text-muted-foreground">{formatQuantity(item.quantity)}</TableCell>
       <TableCell className="px-4 py-3 text-muted-foreground">{formatMoney(item.unit_price)}</TableCell>
       <TableCell className="px-4 py-3 text-muted-foreground">{formatMoney(item.discount_amount)}</TableCell>
       <TableCell className="px-4 py-3 text-foreground">{formatMoney(item.total_amount)}</TableCell>

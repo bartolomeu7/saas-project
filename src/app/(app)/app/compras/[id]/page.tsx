@@ -7,7 +7,6 @@ import { can } from "@/lib/permissions/matrix";
 import { NoAccess } from "@/components/app/no-access";
 import { getPurchaseOrderById, listPurchaseReceipts } from "@/lib/purchases/queries";
 import {
-  cancelPurchaseOrderAction,
   cancelPurchaseReceiptAction,
   receivePurchaseOrderAction,
 } from "@/lib/purchases/actions";
@@ -17,6 +16,8 @@ import { ConfirmActionForm } from "@/components/app/confirm-dialog";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { formatQuantity } from "@/lib/products/stock-labels";
+import { CancelPurchaseOrderButton } from "@/components/app/cancel-purchase-order-button";
 
 export const metadata: Metadata = { title: "Pedido de compra" };
 
@@ -43,10 +44,10 @@ export default async function PurchaseOrderPage({
     return <div className="px-4 py-10 text-center">Pedido de compra não encontrado.</div>;
   }
 
-  const remaining = order.purchase_order_items.reduce(
-    (sum, item) => sum + Math.max(0, item.quantity - item.received_quantity),
-    0
-  );
+  // conta itens (somar quantidades misturava unidades com quilos); pedido cancelado não tem mais o que receber
+  const pendingItems = order.status === "cancelled"
+    ? 0
+    : order.purchase_order_items.filter((item) => item.received_quantity < item.quantity).length;
 
   return (
     <div className="prime-module-page prime-module-page--compras flex flex-col gap-6 px-4 py-6 sm:px-6">
@@ -64,27 +65,12 @@ export default async function PurchaseOrderPage({
           </p>
         </div>
 
-        {order.status === "ordered" && (
-          <ConfirmActionForm
-            label="Cancelar pedido"
-            title="Cancelar este pedido de compra?"
-            description="O pedido será cancelado e não poderá mais receber mercadoria."
-            confirmLabel="Cancelar pedido"
-            destructive
-            triggerClassName={cn(buttonVariants({ variant: "outline" }), "hover:no-underline")}
-            action={async () => {
-              "use server";
-              const formData = new FormData();
-              formData.set("reason", "Cancelamento manual");
-              return await cancelPurchaseOrderAction(order.id, formData);
-            }}
-          />
-        )}
+        {order.status === "ordered" && <CancelPurchaseOrderButton orderId={order.id} />}
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard label="Total" value={money(order.total_amount)} />
-        <MetricCard label="Saldo a receber" value={remaining} />
+        <MetricCard label="Itens a receber" value={pendingItems} />
         <MetricCard label="Vencimento" value={dateOnly(order.due_date)} />
         <MetricCard label="Previsão" value={order.expected_at ? dateOnly(order.expected_at) : "Não informado"} />
       </div>
@@ -109,12 +95,12 @@ export default async function PurchaseOrderPage({
                 <TableCell className="p-3">
                   <p className="font-medium">{item.description}</p>
                   <p className="text-xs text-muted-foreground">
-                    Estoque atual: {item.products?.stock_quantity ?? "—"}
+                    Estoque atual: {item.products ? formatQuantity(item.products.stock_quantity) : "—"}
                   </p>
                 </TableCell>
-                <TableCell className="p-3">{item.quantity}</TableCell>
+                <TableCell className="p-3">{formatQuantity(item.quantity)}</TableCell>
                 <TableCell className="p-3">
-                  {item.received_quantity} / {item.quantity}
+                  {formatQuantity(item.received_quantity)} / {formatQuantity(item.quantity)}
                 </TableCell>
                 <TableCell className="p-3">{money(item.unit_cost)}</TableCell>
                 <TableCell className="p-3 text-right font-medium">{money(item.total_amount)}</TableCell>

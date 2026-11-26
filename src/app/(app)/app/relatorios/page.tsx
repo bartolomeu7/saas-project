@@ -7,6 +7,7 @@ import { can } from "@/lib/permissions/matrix";
 import { NoAccess } from "@/components/app/no-access";
 import { getReportsWorkspace } from "@/lib/reports/queries";
 import type { ReportPeriod } from "@/types/report";
+import { formatQuantity } from "@/lib/products/stock-labels";
 
 export const metadata: Metadata = { title: "Relatórios" };
 
@@ -138,7 +139,7 @@ export default async function ReportsPage({
           <div className="mt-4 space-y-3">
             {report.topItems.length ? report.topItems.map((item) => (
               <div key={item.itemType + ":" + item.description} className="prime-health-row">
-                <span className="min-w-0 flex-1"><span className="block truncate font-medium">{item.description}</span><small>{item.itemType === "service" ? "Serviço" : "Produto"} · {item.quantity} vendidos</small></span>
+                <span className="min-w-0 flex-1"><span className="block truncate font-medium">{item.description}</span><small>{item.itemType === "service" ? "Serviço" : "Produto"} · {formatQuantity(item.quantity)} vendidos</small></span>
                 <strong>{money(item.revenue)}</strong>
                 <div className="hidden w-28 sm:block"><div className="h-1.5 rounded-full bg-muted"><div className="h-full rounded-full bg-primary" style={{ width: Math.max(5, (item.revenue / maxItem) * 100) + "%" }} /></div></div>
               </div>

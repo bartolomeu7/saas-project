@@ -24,7 +24,7 @@ type Supabase = Awaited<ReturnType<typeof createSessionClient>>;
 
 /** Já existe OUTRO fornecedor da empresa com este CPF/CNPJ (com ou sem pontuação)? */
 async function documentInUse(supabase: Supabase, companyId: string, document: string, excludeId?: string): Promise<boolean> {
-  if (!document) return false;
+  if (!/\d/.test(document)) return false; // texto sem números ("ISENTO") pode repetir
   let query = (supabase as any).from("suppliers").select("id").eq("company_id", companyId).in("document", documentVariants(document)).limit(1);
   if (excludeId) query = query.neq("id", excludeId);
   const { data } = await query;

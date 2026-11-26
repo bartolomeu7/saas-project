@@ -120,7 +120,8 @@ test("estorno de compra e confirmação devolvem o motivo em vez de derrubar a p
   assert.ok(confirm.includes("toast.error(result.error)"));
   const page = read("src/app/(app)/app/compras/[id]/page.tsx");
   assert.ok(page.includes("return await cancelPurchaseReceiptAction"));
-  assert.ok(page.includes("return await cancelPurchaseOrderAction"));
+  assert.ok(page.includes("<CancelPurchaseOrderButton"));
+  assert.ok(read("src/components/app/cancel-purchase-order-button.tsx").includes("<FormMessage state={state}"));
 });
 
 test("migrations: estorno de recebimento barra conta parcial e estorno de lançamento manual tem reversão", () => {

@@ -7,14 +7,16 @@ import { listProducts } from "@/lib/products/queries";
 import { listSuppliers } from "@/lib/suppliers/queries";
 import { createPurchaseOrderAction } from "@/lib/purchases/actions";
 import { PurchaseOrderForm } from "@/components/app/purchase-order-form";
+import { listSupplierCosts } from "@/lib/purchases/queries";
 
 export const metadata: Metadata = { title: "Novo pedido de compra" };
 
 export default async function NewPurchasePage() {
   const current = (await getCurrentCompany())!;
   if (!can(current.role, "purchases.view")) return <NoAccess area="as Compras" />;
-  const [allSuppliers, products] = await Promise.all([
+  const [allSuppliers, lastCosts, products] = await Promise.all([
     listSuppliers(current.company.id),
+    listSupplierCosts(current.company.id),
     listProducts({
       companyId: current.company.id,
       status: "active",
@@ -86,6 +88,7 @@ export default async function NewPurchasePage() {
         action={createPurchaseOrderAction}
         suppliers={suppliers}
         products={products.products}
+        lastCosts={lastCosts}
       />
     </div>
   );

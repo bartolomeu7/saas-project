@@ -321,7 +321,7 @@ describe("Onda E (lote 3): Estoque, Compras e Fornecedores, mesma funcionalidade
 
   it("Fornecedores mantém busca por GET (?q), as mesmas consultas e o link do fornecedor", () => {
     assert.match(suppliers, /getSupplierStats\(current\.company\.id\)/);
-    assert.match(suppliers, /listSuppliers\(current\.company\.id, searchParams\?\.q\)/);
+    assert.match(suppliers, /listSuppliers\(current\.company\.id, searchParams\?\.q, status\)/);
     assert.match(suppliers, /name="q"/);
     assert.match(suppliers, /\/app\/fornecedores\/\$\{s\.id\}/);
     assert.match(suppliers, /aria-label="Buscar fornecedores"/);

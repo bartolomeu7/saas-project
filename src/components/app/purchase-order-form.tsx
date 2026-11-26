@@ -23,11 +23,15 @@ export function PurchaseOrderForm({
   action,
   suppliers,
   products,
+  lastCosts,
 }: {
   action: (prev: ActionResult, formData: FormData) => Promise<ActionResult>;
   suppliers: Supplier[];
   products: Product[];
+  /** Último custo pedido, por "fornecedor:produto". */
+  lastCosts: Record<string, number>;
 }) {
+  const [supplierId, setSupplierId] = useState("");
   const [state, formAction] = useFormState(action, initialState);
   const keepInput = useKeepInputOnError(state);
   const [items, setItems] = useState<DraftItem[]>([
@@ -49,7 +53,7 @@ export function PurchaseOrderForm({
     items.map((item) => ({
       product_id: item.productId,
       quantity: Number(item.quantity.replace(",", ".")),
-      unit_cost: Number(item.unitCost.replace(",", ".")),
+      unit_cost: item.unitCost.trim() === "" ? null : Number(item.unitCost.replace(",", ".")),
     }))
   );
 
@@ -61,13 +65,8 @@ export function PurchaseOrderForm({
 
   function selectProduct(index: number, productId: string) {
     const product = products.find((item) => item.id === productId);
-    patchItem(index, {
-      productId,
-      unitCost:
-        product && Number(product.cost_price) > 0
-          ? String(product.cost_price)
-          : "",
-    });
+    const suggested = lastCosts[`${supplierId}:${productId}`] ?? Number(product?.cost_price ?? 0);
+    patchItem(index, { productId, unitCost: suggested > 0 ? String(suggested) : "" });
   }
 
   return (
@@ -82,6 +81,7 @@ export function PurchaseOrderForm({
             id="supplierId"
             name="supplierId"
             required
+            onChange={(event) => setSupplierId(event.target.value)}
             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <option value="">Selecione...</option>
@@ -179,6 +179,11 @@ export function PurchaseOrderForm({
                     patchItem(index, { unitCost: event.target.value })
                   }
                 />
+                {lastCosts[`${supplierId}:${item.productId}`] ? (
+                  <p className="text-xs text-muted-foreground">
+                    Último pedido a este fornecedor: {formatMoney(lastCosts[`${supplierId}:${item.productId}`]!)}
+                  </p>
+                ) : null}
               </div>
               <div className="flex items-center gap-2">
                 <div className="min-w-32 rounded-md border border-dashed p-2 text-right text-sm">

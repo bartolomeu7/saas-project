@@ -49,6 +49,11 @@ export function addDaysToDateString(dateValue: string, amount: number): string {
   return date.toISOString().slice(0, 10);
 }
 
+/** "AAAA-MM-DD" que existe no calendário (31/02 não existe). */
+export function isCalendarDate(value: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) && addDaysToDateString(value, 0) === value;
+}
+
 /** Domingo da semana que contém a data. */
 export function weekStartSunday(dateValue: string): string {
   const [year = 1970, month = 1, day = 1] = dateValue.split("-").map(Number);

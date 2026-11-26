@@ -98,7 +98,7 @@ export default async function ProductDetailPage({
           />
           <DashboardCard
             label="Estoque mínimo"
-            value={`${product.minimum_stock} ${product.unit}`}
+            value={`${formatQuantity(product.minimum_stock)} ${product.unit}`}
             icon={AlertTriangle}
           />
         </div>
@@ -140,11 +140,15 @@ export default async function ProductDetailPage({
         <div className="flex flex-col gap-4">
           <div className="rounded-lg border border-border bg-card p-6">
             <h2 className="mb-4 text-sm font-semibold text-foreground">Ajustar estoque</h2>
-            <StockAdjustForm
-              productId={product.id}
-              currentStock={product.stock_quantity}
-              unit={product.unit}
-            />
+            {product.status === "active" ? (
+              <StockAdjustForm
+                productId={product.id}
+                currentStock={product.stock_quantity}
+                unit={product.unit}
+              />
+            ) : (
+              <p className="text-sm text-muted-foreground">Produto desativado. Reative o produto para ajustar o estoque.</p>
+            )}
           </div>
 
           <div className="rounded-lg border border-border bg-card p-6">

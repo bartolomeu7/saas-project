@@ -81,6 +81,18 @@ export async function listPurchaseReceipts(
   return (data ?? []) as PurchaseReceiptWithItems[];
 }
 
+/** Último custo pedido de cada produto a cada fornecedor ("fornecedor:produto" → custo). Custo 0 não vira sugestão. */
+export async function listSupplierCosts(companyId: string): Promise<Record<string, number>> {
+  const supabase = await createSessionClient();
+  const { data } = await supabase
+    .from("supplier_products")
+    .select("supplier_id, product_id, unit_cost")
+    .eq("company_id", companyId)
+    .gt("unit_cost", 0)
+    .order("updated_at", { ascending: false });
+  return Object.fromEntries((data ?? []).map((row) => [`${row.supplier_id}:${row.product_id}`, Number(row.unit_cost)]));
+}
+
 /** Compras de um fornecedor para a ficha: os 10 pedidos mais recentes, o total de pedidos e as contas ainda em aberto. */
 export async function getSupplierPurchases(companyId: string, supplierId: string) {
   const supabase = await createSessionClient();

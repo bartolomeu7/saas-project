@@ -19,16 +19,17 @@ export const metadata: Metadata = { title: "Fornecedores" };
 export default async function SuppliersPage({
   searchParams: searchParamsPromise,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; status?: string }>;
 }) {
   const searchParams = await searchParamsPromise;
   const current = (await getCurrentCompany())!;
   if (!can(current.role, "suppliers.view")) return <NoAccess area="os Fornecedores" />;
+  const status = searchParams?.status === "active" || searchParams?.status === "inactive" ? searchParams.status : undefined;
   const [stats, suppliers] = await Promise.all([
     getSupplierStats(current.company.id),
-    listSuppliers(current.company.id, searchParams?.q),
+    listSuppliers(current.company.id, searchParams?.q, status),
   ]);
-  const searching = Boolean(searchParams?.q);
+  const searching = Boolean(searchParams?.q || status);
 
   return (
     <div className="prime-module-page prime-module-page--fornecedores flex flex-col gap-6 px-4 py-6 sm:px-6">
@@ -59,8 +60,8 @@ export default async function SuppliersPage({
       ) : (
         <>
           <ListToolbar>
-            <form className="flex w-full items-center gap-2 sm:max-w-md" role="search">
-              <div className="relative w-full">
+            <form className="flex w-full flex-wrap items-center gap-2 sm:max-w-2xl" role="search">
+              <div className="relative min-w-[12rem] flex-1">
                 <Search
                   className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
                   aria-hidden="true"
@@ -70,10 +71,20 @@ export default async function SuppliersPage({
                   type="search"
                   defaultValue={searchParams?.q ?? ""}
                   aria-label="Buscar fornecedores"
-                  placeholder="Buscar fornecedor..."
+                  placeholder="Nome, documento, telefone ou e-mail..."
                   className="h-10 w-full rounded-md border border-input bg-background pl-9 pr-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 />
               </div>
+              <select
+                name="status"
+                defaultValue={status ?? ""}
+                aria-label="Filtrar por situação do fornecedor"
+                className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+              >
+                <option value="">Todas as situações</option>
+                <option value="active">Ativos</option>
+                <option value="inactive">Inativos</option>
+              </select>
               <button className={cn(buttonVariants({ variant: "outline" }))}>Buscar</button>
             </form>
           </ListToolbar>

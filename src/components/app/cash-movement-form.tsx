@@ -45,6 +45,9 @@ export function CashMovementForm() {
   return (
     <form ref={formRef} action={formAction} onReset={keepInput} className="flex flex-col gap-4">
       <FormMessage state={state} />
+      <p className="text-xs text-muted-foreground">
+        Movimenta só o caixa (sangria, troco). Para a receita ou despesa aparecer no Financeiro, lance por lá.
+      </p>
 
       <div className="flex flex-col gap-1.5">
         <Label>Tipo</Label>

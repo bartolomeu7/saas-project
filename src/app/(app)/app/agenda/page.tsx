@@ -25,6 +25,7 @@ import {
   AGENDA_WEEK_LABELS,
   dateRangeIso,
   getWeekBounds,
+  isCalendarDate,
   monthGrid,
   monthLabel,
   shortDateLabel,
@@ -34,6 +35,7 @@ import {
 import { countByStatus } from "@/lib/agenda/stats";
 import { APPOINTMENT_STATUS_LABELS } from "@/types/appointment";
 import { cn } from "@/lib/utils";
+import { getCurrentOpenCashRegister } from "@/lib/cash-register/queries";
 
 export const metadata: Metadata = { title: "Agenda" };
 
@@ -90,7 +92,9 @@ export default async function AgendaPage({
   const rawView = searchParams?.visao;
   const requestedDate = Array.isArray(rawDate) ? rawDate[0] : rawDate;
   const professional = Array.isArray(rawProfessional) ? rawProfessional[0] : rawProfessional;
-  const date = requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate) ? requestedDate : isoTodaySaoPaulo();
+  const validDate = requestedDate !== undefined && isCalendarDate(requestedDate);
+  const date = validDate ? requestedDate : isoTodaySaoPaulo();
+  const invalidDate = Boolean(requestedDate) && !validDate;
   // "Dia": o dia escolhido em grade de horas, uma coluna por profissional. "Mês": o mês do dia escolhido.
   // "Semana" (padrão): a semana do dia escolhido.
   const requestedView = Array.isArray(rawView) ? rawView[0] : rawView;
@@ -112,7 +116,7 @@ export default async function AgendaPage({
     return "/app/agenda?" + params.toString();
   }
 
-  const [appointments, calendarAppointments, professionals, customers, services] = await Promise.all([
+  const [appointments, calendarAppointments, professionals, customers, services, openRegister] = await Promise.all([
     listAppointments(current.company.id, date, professional),
     // A visão "Dia" usa a lista do próprio dia; só a visão "Semana" precisa dos atendimentos da semana inteira.
     view === "semana"
@@ -123,7 +127,9 @@ export default async function AgendaPage({
     listAgendaProfessionals(current.company.id),
     listAgendaCustomers(current.company.id),
     listAgendaServices(current.company.id),
+    getCurrentOpenCashRegister(current.company.id),
   ]);
+  const registerOpen = Boolean(openRegister);
   // Os cartões contam a mesma lista da tela, já filtrada pelo profissional.
   const stats = countByStatus(appointments);
 
@@ -152,6 +158,12 @@ export default async function AgendaPage({
           </nav>
         }
       />
+
+      {invalidDate ? (
+        <p role="status" className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-2 text-sm">
+          A data do endereço não existe. Mostrando o dia de hoje.
+        </p>
+      ) : null}
 
       <section aria-labelledby="agenda-semanas" className="rounded-xl border border-border bg-card/40">
         <div className="flex flex-col gap-3 border-b px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
@@ -207,6 +219,7 @@ export default async function AgendaPage({
             todayDate={today}
             nowIso={new Date().toISOString()}
             professionalId={professional}
+            registerOpen={registerOpen}
           />
         </div>
       </section>
@@ -225,7 +238,7 @@ export default async function AgendaPage({
         + Novo agendamento
       </Link>
 
-      <div className="grid gap-6 xl:grid-cols-[360px_1fr]">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[360px_1fr]">
         <section id="novo-agendamento" className="scroll-mt-20 rounded-xl border border-border bg-card/40 p-5">
           <div className="mb-5">
             <h2 className="font-semibold">Novo agendamento</h2>
@@ -304,9 +317,12 @@ export default async function AgendaPage({
                       <details className="w-full lg:w-auto">
                         <summary className="cursor-pointer rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground">Concluir</summary>
                         <div className="mt-2 min-w-[280px] rounded-lg border bg-card p-3">
-                          <CompleteAppointmentForm appointment={appointment} />
+                          <CompleteAppointmentForm appointment={appointment} registerOpen={registerOpen} />
                         </div>
                       </details>
+                    ) : null}
+                    {appointment.status === "scheduled" || appointment.status === "confirmed" ? (
+                      <AppointmentStatusForm appointmentId={appointment.id} status="no_show" label="Não compareceu" destructive />
                     ) : null}
                     {appointment.sale_id ? (
                       <Link href={`/app/vendas/${appointment.sale_id}`} className="rounded-md border px-3 py-2 text-sm font-medium">Ver venda</Link>

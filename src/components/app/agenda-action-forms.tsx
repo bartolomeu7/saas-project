@@ -75,10 +75,10 @@ export function AppointmentForm({
   }, [service?.id, service?.sale_price]);
 
   return (
-    <form action={formAction} onReset={keepInput} className="grid gap-4">
+    <form action={formAction} onReset={keepInput} className="grid grid-cols-1 gap-4">
       <input type="hidden" name="durationMinutes" value={service?.duration_minutes ?? ""} />
       <input type="hidden" name="price" value={price} />
-      <label className="grid gap-1 text-sm">
+      <label className="grid grid-cols-1 gap-1 text-sm">
         Serviço
         <NativeSelect
           name="serviceId"
@@ -91,21 +91,21 @@ export function AppointmentForm({
           {services.map((row) => <option key={row.id} value={row.id}>{row.name}</option>)}
         </NativeSelect>
       </label>
-      <label className="grid gap-1 text-sm">
+      <label className="grid grid-cols-1 gap-1 text-sm">
         Cliente
         <NativeSelect name="customerId" className="h-10 rounded-md border bg-background px-3">
           <option value="">Sem cliente definido</option>
           {customers.map((row) => <option key={row.id} value={row.id}>{row.name}</option>)}
         </NativeSelect>
       </label>
-      <label className="grid gap-1 text-sm">
+      <label className="grid grid-cols-1 gap-1 text-sm">
         Profissional
         <NativeSelect name="professionalId" className="h-10 rounded-md border bg-background px-3">
           <option value="">Sem profissional definido</option>
           {professionals.map((row) => <option key={row.id} value={row.id}>{row.display_name}</option>)}
         </NativeSelect>
       </label>
-      <label className="grid gap-1 text-sm">
+      <label className="grid grid-cols-1 gap-1 text-sm">
         Horário
         <input
           name="startsAt"
@@ -119,7 +119,7 @@ export function AppointmentForm({
           <span key={text} role="status" className="text-xs text-amber-700 dark:text-amber-400">⚠ {text}</span>
         ))}
       </label>
-      <label className="grid gap-1 text-sm">
+      <label className="grid grid-cols-1 gap-1 text-sm">
         Observações
         <textarea name="notes" rows={3} className="rounded-md border bg-background px-3 py-2" />
       </label>
@@ -207,7 +207,7 @@ function formatMoney(value: number): string {
  * Concluir o atendimento já gera a venda (e o pagamento, se você marcar que recebeu), tudo de uma vez.
  * Sem forma de pagamento a venda fica "a receber". A última forma escolhida é lembrada neste aparelho.
  */
-export function CompleteAppointmentForm({ appointment }: { appointment: Appointment }) {
+export function CompleteAppointmentForm({ appointment, registerOpen }: { appointment: Appointment; registerOpen: boolean }) {
   const [state, formAction] = useFormState(completeAppointmentAction, initialState);
   const keepInput = useKeepInputOnError(state);
   const [method, setMethod] = useState("");
@@ -269,6 +269,11 @@ export function CompleteAppointmentForm({ appointment }: { appointment: Appointm
         Gera a venda de {formatMoney(price)}
         {method ? " e registra o recebimento (entra no caixa aberto e no financeiro)." : " e deixa a receber (aparece em Contas a receber)."}
       </p>
+      {method === "cash" && !registerOpen ? (
+        <p role="status" className="text-xs text-amber-700 dark:text-amber-400">
+          ⚠ Não há caixa aberto: esse dinheiro não vai entrar no caixa.
+        </p>
+      ) : null}
       <SubmitButton state={state} pendingLabel="Concluindo..." successLabel="Concluído" size="sm" className="w-auto">
         Concluir serviço
       </SubmitButton>
