@@ -87,3 +87,11 @@ test("exportação: permissão antes de qualquer consulta, e botões nas cinco a
   assert.ok(page.includes('exportHref + "&format=pdf"') && page.includes("<ReportPrintButton />"));
   assert.ok(read("src/app/globals.css").includes("body:has(.prime-report)"));
 });
+
+// Achado no reteste: o fundo escuro do painel ia para o papel.
+test("impressão: o fundo do painel também fica branco", () => {
+  const css = read("src/app/globals.css");
+  const print = css.slice(css.indexOf("/* Impressão dos Relatórios"));
+  assert.ok(print.includes("body:has(.prime-report) .prime-app-main,"));
+  assert.ok(print.includes("color-scheme: light !important"));
+});
