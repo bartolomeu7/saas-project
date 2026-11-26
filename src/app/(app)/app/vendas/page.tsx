@@ -107,7 +107,8 @@ export default async function SalesPage({
         />
       ) : (
         <>
-          <SaleStats stats={stats} />
+          {/* vindo dos Relatórios, a lista é das concluídas: o primeiro cartão conta as abertas, e precisa dizer isso */}
+          <SaleStats stats={stats} totalLabel={byCompletion ? "Vendas abertas no período" : undefined} />
 
           {byCompletion && range.from && range.to ? (
             <p role="status" className="rounded-lg border border-border bg-card/40 px-4 py-3 text-sm text-muted-foreground">

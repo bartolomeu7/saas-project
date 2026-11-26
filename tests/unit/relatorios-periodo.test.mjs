@@ -91,3 +91,17 @@ test("a lista de vendas aberta pelo relatório filtra pela conclusão", () => {
 test("os cartões de Vendas só usam cinco colunas em tela larga", () => {
   assert.ok(read("src/components/app/sale-stats.tsx").includes("grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-5"));
 });
+
+test("datas recusadas comparam como o mês atual", () => {
+  assert.deepEqual(dates(previousRange(range("custom", "2026-11-20", "2026-11-01"))), ["2026-10-01", "2026-10-26"]);
+});
+
+// A lista do Financeiro para em 100 vendas; o total não pode sair dela.
+test("A receber do Financeiro soma todas as vendas, no banco, e erro não vira zero", () => {
+  const queries = read("src/lib/finance/queries.ts");
+  const dashboard = queries.slice(queries.indexOf("export const getFinanceDashboard"), queries.indexOf("export async function getFinanceWorkspace"));
+  assert.ok(dashboard.includes('rpc("report_summary"'));
+  assert.ok(!dashboard.includes("listAccountsReceivable"));
+  assert.ok(dashboard.includes("if (summaryResult.error || !summaryResult.data)"));
+  assert.ok(read("src/app/(app)/app/financeiro/page.tsx").includes("< dashboard.accountsReceivable - 0.005"));
+});

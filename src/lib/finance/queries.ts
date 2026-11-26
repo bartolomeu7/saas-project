@@ -174,7 +174,7 @@ export const getFinanceDashboard = cache(async function getFinanceDashboard(
   const fromDate = todayDateSaoPaulo(new Date(from));
   const toDate = todayDateSaoPaulo(new Date(to));
 
-  const [salesResult, expensesResult, cashResult, payableResult, receivables] = await Promise.all([
+  const [salesResult, expensesResult, cashResult, payableResult, summaryResult] = await Promise.all([
     supabase
       .from("sales")
       .select("total_amount, total_cost")
@@ -202,8 +202,14 @@ export const getFinanceDashboard = cache(async function getFinanceDashboard(
       .select("amount, paid_amount, due_date, status")
       .eq("company_id", companyId)
       .in("status", ["open", "partial"]),
-    listAccountsReceivable(companyId),
+    // a lista de recebíveis para em 100 vendas: o total precisa somar todas, no banco (a mesma conta dos Relatórios)
+    supabase.rpc("report_summary", { p_company_id: companyId, p_from: from, p_to: to, p_appointments_to: to }),
   ]);
+
+  if (summaryResult.error || !summaryResult.data) {
+    throw new Error("Não foi possível somar as contas a receber: " + (summaryResult.error?.message ?? "sem resposta"));
+  }
+  const summary = summaryResult.data as unknown as { receivable: number | string; receivable_overdue: number | string };
 
   const sales = salesResult.data ?? [];
   const revenue = sales.reduce((sum, row) => sum + money(row.total_amount), 0);
@@ -230,13 +236,6 @@ export const getFinanceDashboard = cache(async function getFinanceDashboard(
   const overduePayableCount = (payableResult.data ?? []).filter(
     (row) => row.due_date && row.due_date < today
   ).length;
-  const overdueReceivableCount = receivables.filter(
-    (row) => row.due_date && row.due_date < today
-  ).length;
-  const accountsReceivable = receivables.reduce(
-    (sum, row) => sum + row.outstanding_amount,
-    0
-  );
 
   return {
     revenue,
@@ -249,9 +248,9 @@ export const getFinanceDashboard = cache(async function getFinanceDashboard(
     cashOut,
     cashNet: cashIn - cashOut,
     accountsPayable,
-    accountsReceivable,
+    accountsReceivable: money(summary.receivable),
     overduePayableCount,
-    overdueReceivableCount,
+    overdueReceivableCount: Number(summary.receivable_overdue),
   };
 });
 

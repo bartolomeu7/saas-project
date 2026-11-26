@@ -244,7 +244,7 @@ export default async function FinancePage({
             </TableBody>
           </Table>
           {!receivables.length && <div className="p-10 text-center text-sm text-muted-foreground">Nenhum recebível pendente.</div>}
-          {receivables.length >= 100 && <p className="border-t p-3 text-xs text-muted-foreground">Mostrando as 100 vendas pendentes mais antigas; o total a receber acima considera todas.</p>}
+          {receivables.reduce((sum, row) => sum + row.outstanding_amount, 0) < dashboard.accountsReceivable - 0.005 && <p className="border-t p-3 text-xs text-muted-foreground">Mostrando as 100 vendas pendentes mais antigas; o total a receber acima considera todas.</p>}
         </div>
       </PageShell>
     );
