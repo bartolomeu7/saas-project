@@ -18,6 +18,7 @@ import {
   CompleteAppointmentForm,
   RescheduleForm,
 } from "@/components/app/agenda-action-forms";
+import { AgendaWhatsappLink } from "@/components/app/agenda-whatsapp-link";
 import { AgendaWeekCalendar } from "@/components/app/agenda-week-calendar";
 import {
   addMonthsToDateString,
@@ -132,6 +133,7 @@ export default async function AgendaPage({
   const registerOpen = Boolean(openRegister);
   // Os cartões contam a mesma lista da tela, já filtrada pelo profissional.
   const stats = countByStatus(appointments);
+  const now = new Date();
 
   return (
     <div className="prime-module-page prime-module-page--agenda flex flex-col gap-6 px-4 py-6 sm:px-6">
@@ -217,9 +219,10 @@ export default async function AgendaPage({
             professionals={professionals as { id: string; display_name: string; color: string }[]}
             dayDate={date}
             todayDate={today}
-            nowIso={new Date().toISOString()}
+            nowIso={now.toISOString()}
             professionalId={professional}
             registerOpen={registerOpen}
+            companyName={current.company.name}
           />
         </div>
       </section>
@@ -312,6 +315,7 @@ export default async function AgendaPage({
                   </div>
 
                   <div className="flex flex-wrap gap-2 lg:justify-end">
+                    <AgendaWhatsappLink appointment={appointment} companyName={current.company.name} now={now} />
                     {appointment.status === "scheduled" ? <AppointmentStatusForm appointmentId={appointment.id} status="confirmed" label="Confirmar" /> : null}
                     {appointment.status === "scheduled" || appointment.status === "confirmed" ? (
                       <details className="w-full lg:w-auto">
