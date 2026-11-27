@@ -1,5 +1,6 @@
 import "server-only";
 
+import { connection } from "next/server";
 import { createSessionClient } from "@/lib/supabase/server";
 import { createPublicClient } from "@/lib/supabase/public";
 import { normalizePublicPlan } from "@/lib/billing/pricing-display";
@@ -36,21 +37,39 @@ export async function getPlans(options: { includeInactive?: boolean } = {}): Pro
   return (data ?? []) as Plan[];
 }
 
+// Guarda só o SUCESSO: falha nunca fica em cache e, com o banco fora, preço antigo não dura mais que o prazo.
+// Não usar unstable_cache aqui: ele continua servindo o valor vencido quando a renovação falha.
+const PUBLIC_CATALOG_TTL_MS = 60_000;
+let publicCatalog: { plans: PublicPlan[]; expiresAt: number } | null = null;
+
+/** Chamado quando o /admin salva um plano: o site mostra a mudança na visita seguinte. */
+export function clearPublicPlansCache(): void {
+  publicCatalog = null;
+}
+
 /**
  * Catálogo público — FONTE ÚNICA de planos para o site, via get_public_plans() (só planos ativos, visíveis, não
- * vitalícios; desconto calculado no banco e só com promoção vigente). Sem sessão: usa o cliente anônimo sem cookies,
- * então a home pode ser gerada de forma estática e revalidada. Falha => [] (a home mostra "indisponível"; nunca preço
- * inventado). Com `authenticated: true` usa a sessão do usuário (tela de planos do app).
+ * vitalícios; desconto calculado no banco e só com promoção vigente). Falha => [] (a página mostra "indisponível";
+ * nunca preço inventado). Sem sessão: cliente anônimo sem cookies, sempre em tempo de requisição (nunca no build, que
+ * não alcança o banco) e com cache em memória. Com `authenticated: true` usa a sessão do usuário (tela de planos do app).
  */
 export async function getPublicPlans(options: { authenticated?: boolean } = {}): Promise<PublicPlan[]> {
+  if (!options.authenticated) {
+    // Fora do try: no build, connection() interrompe a pré-geração lançando um erro que o Next precisa receber.
+    await connection();
+    if (publicCatalog && Date.now() < publicCatalog.expiresAt) return publicCatalog.plans;
+  }
   try {
     const supabase = options.authenticated ? await createSessionClient() : createPublicClient();
-    const { data, error } = await supabase.rpc("get_public_plans");
+    // A página espera esta resposta: com o banco travado, melhor mostrar "indisponível" do que deixar a visita pendurada.
+    const { data, error } = await supabase.rpc("get_public_plans").abortSignal(AbortSignal.timeout(5_000));
     if (error) {
       console.error("[billing] get_public_plans() falhou:", error.message);
       return [];
     }
-    return ((data ?? []) as unknown as Record<string, unknown>[]).map(normalizePublicPlan);
+    const plans = ((data ?? []) as unknown as Record<string, unknown>[]).map(normalizePublicPlan);
+    if (!options.authenticated) publicCatalog = { plans, expiresAt: Date.now() + PUBLIC_CATALOG_TTL_MS };
+    return plans;
   } catch (error) {
     console.error("[billing] catálogo público indisponível:", error instanceof Error ? error.message : "erro desconhecido");
     return [];

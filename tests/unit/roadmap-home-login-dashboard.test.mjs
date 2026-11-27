@@ -25,10 +25,9 @@ describe("Home — composição (entrega A)", () => {
     assert.match(sections, /siteConfig\.links\.login/);
   });
 
-  it("não carrega o Clerk e mantém JSON-LD, ISR e planos reais do banco", () => {
+  it("não carrega o Clerk e mantém JSON-LD e planos reais do banco", () => {
     assert.doesNotMatch(page, /@clerk\//);
     assert.match(page, /<JsonLd data=\{STRUCTURED_DATA\}/);
-    assert.match(page, /export const revalidate = 60/);
     assert.match(page, /getPublicPlans\(\)/);
   });
 

@@ -4,7 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 
 /**
  * Cliente Supabase ANÔNIMO e sem cookies/sessão, para leituras públicas (catálogo de planos da home).
- * Não toca em cookies()/headers(), então a página que o usa pode ser estática/ISR. Só enxerga o que o papel `anon`
+ * Não toca em cookies()/headers(). Só enxerga o que o papel `anon`
  * enxerga (RPCs públicas como get_public_plans) — nunca usa a service role.
  * Lança se a configuração pública estiver ausente; quem chama decide o fallback (a home mostra "indisponível").
  */

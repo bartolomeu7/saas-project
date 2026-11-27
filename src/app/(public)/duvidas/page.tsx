@@ -14,8 +14,6 @@ const TITLE = "Dúvidas sobre sistema para pequenas empresas";
 const DESCRIPTION =
   "Respostas às perguntas mais buscadas sobre SaaS e sistema para pequenas empresas: preço, estoque, caixa, vendas, MEI e como escolher.";
 
-export const revalidate = 60;
-
 export const metadata: Metadata = {
   title: TITLE,
   description: DESCRIPTION,

@@ -22,10 +22,8 @@ const HOME_TITLE = "Prime Ges — Sistema de gestão para pequenas empresas e ME
 const SEO_DESCRIPTION =
   "Sistema de gestão online para pequenas empresas e MEI: organize vendas, caixa, estoque, clientes e financeiro em um só lugar, direto no navegador.";
 
-// Os planos vêm do banco (get_public_plans): a página é estática e se renova sozinha a cada 60 s; salvar um plano no
-// /admin também chama revalidatePath("/"). Se o catálogo não carregar, a seção mostra "indisponível" — nunca um preço
-// inventado ou desatualizado.
-export const revalidate = 60;
+// Os planos vêm do banco via getPublicPlans(): a página é montada a cada visita (nunca no build) e o catálogo fica até
+// 60 s em memória. Se o catálogo não carregar, a seção mostra "indisponível" — nunca um preço inventado ou desatualizado.
 
 export const metadata: Metadata = {
   // `absolute`: o modelo "%s | Prime Ges" do layout raiz não se aplica à home (a marca já está no título).

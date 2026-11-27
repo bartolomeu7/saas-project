@@ -11,9 +11,6 @@ const TITLE = "Preços do sistema de gestão";
 const DESCRIPTION =
   "Planos do Prime Ges por período, pagos por Pix e sem renovação automática. Veja como funciona a ordem de pagamento e a ajuda.";
 
-// Mesma regra da home: catálogo do banco, renovado a cada 60 s e ao salvar um plano no /admin.
-export const revalidate = 60;
-
 export const metadata: Metadata = {
   title: TITLE,
   description: DESCRIPTION,

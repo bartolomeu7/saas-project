@@ -5,6 +5,7 @@ import { z } from "zod";
 import { createSessionClient } from "@/lib/supabase/server";
 import { requirePlatformAdmin, requireSuperAdmin } from "@/lib/admin/queries";
 import { confirmPaymentFromProvider } from "@/lib/billing/confirm-payment";
+import { clearPublicPlansCache } from "@/lib/billing/queries";
 import type { ActionResult } from "@/lib/auth/actions";
 import { buildPlanPayload } from "@/lib/admin/plan-form";
 import type { Json } from "@/types/supabase";
@@ -622,9 +623,7 @@ export async function savePlanAction(planId: string | null, input: unknown): Pro
   revalidatePath("/admin/plans");
   revalidatePath("/admin/audit");
   revalidatePath("/app/assinatura/planos");
-  revalidatePath("/"); // a home lê o catálogo público (revalida também por tempo)
-  revalidatePath("/precos");
-  revalidatePath("/duvidas");
+  clearPublicPlansCache(); // o site público lê o catálogo a cada visita
   return { success: planId === null ? "Plano criado." : "Plano atualizado.", planId: typeof data === "string" ? data : (planId ?? undefined) };
 }
 
@@ -650,9 +649,7 @@ export async function setPlanStatusAction(planId: string, status: string): Promi
   revalidatePath("/admin/plans");
   revalidatePath("/app/assinatura/planos");
   revalidatePath("/admin/audit");
-  revalidatePath("/");
-  revalidatePath("/precos");
-  revalidatePath("/duvidas");
+  clearPublicPlansCache();
   return { success: parsed.data.status === "active" ? "Plano ativado." : "Plano desativado." };
 }
 
