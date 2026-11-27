@@ -12,9 +12,8 @@ import { getPublicPlans } from "@/lib/billing/queries";
 import { toPricingView } from "@/lib/billing/pricing-display";
 import { buildArticleData } from "@/lib/seo/structured-data";
 
-// Só as páginas da lista existem (endereço desconhecido = 404). A de preços lê o catálogo, renovado a cada 60 s.
+// Só as páginas da lista existem (endereço desconhecido = 404). As que mostram planos leem o catálogo a cada visita.
 export const dynamicParams = false;
-export const revalidate = 60;
 
 export function generateStaticParams() {
   return DOUBTS.map((doubt) => ({ slug: doubt.slug }));

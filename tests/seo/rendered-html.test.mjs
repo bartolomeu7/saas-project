@@ -1,20 +1,65 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { spawn } from "node:child_process";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { createServer } from "node:net";
 import { describe, it } from "node:test";
+import { setTimeout as sleep } from "node:timers/promises";
+import { fileURLToPath } from "node:url";
 
 /**
  * SEO — verificação do HTML REALMENTE GERADO (não do código-fonte).
  *
  * Como rodar (depois de `npm run build`):
  *   node --no-warnings --test tests/seo/rendered-html.test.mjs
- * Para também conferir as rotas dinâmicas públicas, suba `npm run start` (porta 3100) e rode com
+ * Home, preços e dúvidas leem o catálogo de planos e por isso não são geradas no build: o teste sobe o `next start`
+ * sozinho (mesmas variáveis de ambiente do build) só para pedir essas páginas, ou usa SEO_BASE_URL se estiver definido.
+ * Para também conferir login, cadastro e noindex, suba `npm run start` (porta 3100) e rode com
  *   SEO_BASE_URL=http://localhost:3100 node --no-warnings --test tests/seo/rendered-html.test.mjs
  * Sem build ou sem SEO_BASE_URL, os grupos correspondentes são PULADOS (nunca "passam" em silêncio).
  */
 const root = new URL("../../", import.meta.url);
 const built = (name) => new URL(`.next/server/app/${name}`, root);
-const hasBuild = existsSync(built("index.html"));
+const hasBuild = existsSync(new URL(".next/BUILD_ID", root));
 const BASE = process.env.SEO_BASE_URL?.replace(/\/$/, "");
+
+/** Páginas que leem o catálogo de planos: rota → nome que teriam no build. */
+const ON_DEMAND = { "/": "index.html", "/precos": "precos.html", "/duvidas": "duvidas.html" };
+
+async function renderOnDemand() {
+  let base = BASE;
+  let server;
+  let log = "";
+  if (!base) {
+    const probe = createServer();
+    await new Promise((resolve) => probe.listen(0, "localhost", resolve));
+    const { port } = probe.address();
+    await new Promise((resolve) => probe.close(resolve));
+    base = `http://localhost:${port}`;
+    server = spawn(process.execPath, ["node_modules/next/dist/bin/next", "start", "-H", "localhost", "-p", String(port)], { cwd: fileURLToPath(root) });
+    for (const stream of [server.stdout, server.stderr]) stream.on("data", (chunk) => (log += chunk));
+  }
+  // "localhost" (e não 127.0.0.1): com outro nome, os redirecionamentos internos do proxy viram um laço no `next start`.
+  try {
+    for (let attempt = 0; server; attempt++) {
+      if (await fetch(base + "/robots.txt", { signal: AbortSignal.timeout(5_000) }).then((r) => r.ok, () => false)) break;
+      assert.ok(attempt < 120 && server.exitCode === null, "o `next start` não respondeu:\n" + log);
+      await sleep(500);
+    }
+    const pages = {};
+    for (const [path, file] of Object.entries(ON_DEMAND)) {
+      const response = await fetch(base + path, { signal: AbortSignal.timeout(30_000) });
+      assert.equal(response.status, 200, `${path} respondeu ${response.status}\n${log}`);
+      pages[file] = await response.text();
+    }
+    return pages;
+  } finally {
+    server?.kill();
+  }
+}
+
+const rendered = hasBuild ? await renderOnDemand() : {};
+const exists = (name) => name in rendered || existsSync(built(name));
+const read = (name) => rendered[name] ?? readFileSync(built(name), "utf8");
 
 const text = (html) =>
   html
@@ -31,8 +76,21 @@ const all = (html, re) => [...html.matchAll(re)].map((m) => m[1]);
 const marketing = readFileSync(new URL("src/config/marketing.ts", root), "utf8");
 const QUESTIONS = all(marketing, /question:\s*"([^"]+)"/g);
 
+describe("Catálogo de planos — nada pré-gerado no build", { skip: !hasBuild && "rode `npm run build` antes" }, () => {
+  const generated = hasBuild ? readdirSync(built(""), { recursive: true }).filter((file) => /\.(html|rsc)$/.test(file)) : [];
+
+  it("nenhuma página gerada no build traz a mensagem de planos indisponíveis", () => {
+    assert.ok(generated.length > 0, "o build gera páginas estáticas");
+    for (const file of generated) assert.doesNotMatch(readFileSync(built(file.replaceAll("\\", "/")), "utf8"), /planos estão indisponíveis/i, file);
+  });
+
+  it("home, preços e dúvidas não existem como HTML do build (são montadas a cada visita)", () => {
+    for (const file of Object.values(ON_DEMAND)) assert.ok(!existsSync(built(file)), file);
+  });
+});
+
 describe("FAQ da home (S01) — HTML gerado", { skip: !hasBuild && "rode `npm run build` antes" }, () => {
-  const html = hasBuild ? readFileSync(built("index.html"), "utf8") : "";
+  const html = hasBuild ? read("index.html") : "";
   const faq = one(html, /<section[^>]*id="faq"[^>]*>([\s\S]*?)<\/section>/) ?? "";
 
   it("a fonte tem 13 perguntas e todas aparecem no HTML, na ordem", () => {
@@ -80,7 +138,7 @@ describe("Títulos e descrições (S05) — páginas estáticas geradas", { skip
     "direitos-do-titular": ["direitos-do-titular.html", "Direitos do Titular de Dados | Prime Ges"],
   };
   const docs = Object.fromEntries(
-    Object.entries(pages).map(([k, [file]]) => [k, hasBuild && existsSync(built(file)) ? readFileSync(built(file), "utf8") : ""]),
+    Object.entries(pages).map(([k, [file]]) => [k, hasBuild && exists(file) ? read(file) : ""]),
   );
 
   it("cada página tem exatamente um <title> com o texto esperado (marca presente, sem duplicar)", () => {
@@ -124,7 +182,7 @@ describe("Compartilhamento (S03) e ícones (S10) — HTML gerado", { skip: !hasB
     "politica-de-reembolso": "politica-de-reembolso.html",
     "direitos-do-titular": "direitos-do-titular.html",
   };
-  const docs = Object.fromEntries(Object.entries(files).map(([k, f]) => [k, hasBuild ? readFileSync(built(f), "utf8") : ""]));
+  const docs = Object.fromEntries(Object.entries(files).map(([k, f]) => [k, hasBuild ? read(f) : ""]));
   const metas = (html) => [...html.matchAll(/<meta (?:property|name)="((?:og|twitter):[^"]+)" content="([^"]*)"/g)].map((m) => [m[1], m[2]]);
   const value = (html, key) => metas(html).filter(([k]) => k === key).map(([, v]) => v);
   const IMAGE_PATH = "/og-primeges-1200x630.jpg";
@@ -189,7 +247,7 @@ describe("Compartilhamento (S03) e ícones (S10) — HTML gerado", { skip: !hasB
 });
 
 describe("Home — título, descrição, H1, hierarquia e links (Etapa 4) — HTML gerado", { skip: !hasBuild && "rode `npm run build` antes" }, () => {
-  const html = hasBuild ? readFileSync(built("index.html"), "utf8") : "";
+  const html = hasBuild ? read("index.html") : "";
   const source = readFileSync(new URL("src/app/(public)/page.tsx", root), "utf8");
   const EXPECTED_TITLE = source.match(/const HOME_TITLE = "([^"]+)"/)[1];
   const EXPECTED_DESCRIPTION = source.match(/const SEO_DESCRIPTION =\s*"([^"]+)"/)[1];
@@ -262,8 +320,8 @@ const LD_RE = /<script type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/g;
 const ldBlocks = (html) => [...html.matchAll(LD_RE)].map((m) => m[1]);
 
 describe("Dados estruturados JSON-LD (Etapa 5) — HTML gerado", { skip: !hasBuild && "rode `npm run build` antes" }, () => {
-  const read = (file) => (hasBuild && existsSync(built(file)) ? readFileSync(built(file), "utf8") : "");
-  const home = read("index.html");
+  const readIfBuilt = (file) => (hasBuild && exists(file) ? read(file) : "");
+  const home = readIfBuilt("index.html");
   const blocks = ldBlocks(home);
   const data = blocks.length === 1 ? JSON.parse(blocks[0]) : null;
   const nodes = data?.["@graph"] ?? [];
@@ -345,9 +403,9 @@ describe("Dados estruturados JSON-LD (Etapa 5) — HTML gerado", { skip: !hasBui
 
   it("não há JSON-LD duplicado nem em outras páginas públicas estáticas (legais)", () => {
     for (const file of ["termos-de-uso.html", "politica-de-privacidade.html", "politica-de-reembolso.html", "direitos-do-titular.html"]) {
-      assert.equal(ldBlocks(read(file)).length, 0, file);
+      assert.equal(ldBlocks(readIfBuilt(file)).length, 0, file);
     }
-    assert.equal(ldBlocks(read("_not-found.html")).length, 0);
+    assert.equal(ldBlocks(readIfBuilt("_not-found.html")).length, 0);
   });
 
   it("os metadados, a imagem de compartilhamento e o FAQ das Etapas 1 a 4 seguem na home", () => {
@@ -380,7 +438,7 @@ function robotsAllows(rules, path) {
 describe("Sitemap e robots.txt (S06/S07) — arquivos gerados", { skip: !hasBuild && "rode `npm run build` antes" }, () => {
   const xml = hasBuild && existsSync(built("sitemap.xml.body")) ? readFileSync(built("sitemap.xml.body"), "utf8") : "";
   const robotsTxt = hasBuild && existsSync(built("robots.txt.body")) ? readFileSync(built("robots.txt.body"), "utf8") : "";
-  const home = hasBuild ? readFileSync(built("index.html"), "utf8") : "";
+  const home = hasBuild ? read("index.html") : "";
   const origin = new URL(all(home, /<link rel="canonical" href="([^"]+)"/g)[0] ?? "http://x.invalid").origin;
   const urls = [...xml.matchAll(/<url>([\s\S]*?)<\/url>/g)].map((m) => ({
     loc: (m[1].match(/<loc>([^<]+)<\/loc>/) ?? [])[1],
