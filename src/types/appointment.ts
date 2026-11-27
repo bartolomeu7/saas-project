@@ -21,6 +21,8 @@ export interface Appointment {
   updated_at: string;
   customer_name?: string | null;
   customer_phone?: string | null;
+  /** telefone no formato do wa.me (só dígitos, com 55); null se não for válido */
+  customer_whatsapp?: string | null;
   service_name?: string | null;
   professional_name?: string | null;
   professional_color?: string | null;

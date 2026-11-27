@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createSessionClient } from "@/lib/supabase/server";
+import { normalizePhoneBr } from "@/lib/chat/phone-br";
 import { endOfDaySaoPaulo, startOfDaySaoPauloFromDateString } from "@/lib/timezone";
 import type { Appointment } from "@/types/appointment";
 
@@ -55,6 +56,7 @@ export async function listAppointmentsBetween(
       ...(row as Appointment),
       customer_name: customer?.name ?? null,
       customer_phone: customer?.phone ?? null,
+      customer_whatsapp: normalizePhoneBr(customer?.phone)?.e164.slice(1) ?? null,
       service_name: service?.name ?? null,
       professional_name: professional?.display_name ?? null,
       professional_color: professional?.color ?? null,

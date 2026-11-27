@@ -21,6 +21,7 @@ import {
   type AgendaVisualState,
 } from "@/lib/agenda/week-view";
 import { professionalDotClass, STATE_STYLES } from "@/components/app/agenda-visual";
+import { AgendaWhatsappLink } from "@/components/app/agenda-whatsapp-link";
 import { TimeGrid, type TimeGridColumn } from "@/components/app/agenda-time-grid";
 import { MonthGrid } from "@/components/app/agenda-month-grid";
 import type { Appointment } from "@/types/appointment";
@@ -62,6 +63,8 @@ interface AgendaWeekCalendarProps {
   professionalId?: string;
   /** Há caixa aberto? (concluir em dinheiro avisa quando não há) */
   registerOpen: boolean;
+  /** Nome da empresa, usado na mensagem de WhatsApp. */
+  companyName: string;
   /** Profissionais ativos (colunas da visão "Dia"). */
   professionals?: AgendaProfessional[];
   /** Dia mostrado na visão "Dia" (YYYY-MM-DD) ou qualquer dia do mês na visão "Mês". */
@@ -76,6 +79,7 @@ export function AgendaWeekCalendar({
   nowIso,
   professionalId,
   registerOpen,
+  companyName,
   professionals = [],
   dayDate,
 }: AgendaWeekCalendarProps) {
@@ -193,7 +197,7 @@ export function AgendaWeekCalendar({
 
       <Dialog open={selected !== null} onOpenChange={(open) => { if (!open) setSelectedId(null); }}>
         <DialogContent>
-          {selected ? <AppointmentDetails appointment={selected} now={now} registerOpen={registerOpen} /> : null}
+          {selected ? <AppointmentDetails appointment={selected} now={now} registerOpen={registerOpen} companyName={companyName} /> : null}
         </DialogContent>
       </Dialog>
     </div>
@@ -269,7 +273,7 @@ function DayList({ days, byDay, todayDate, now, dayHref, onSelect }: ViewProps) 
   );
 }
 
-function AppointmentDetails({ appointment, now, registerOpen }: { appointment: Appointment; now: Date; registerOpen: boolean }) {
+function AppointmentDetails({ appointment, now, registerOpen, companyName }: { appointment: Appointment; now: Date; registerOpen: boolean; companyName: string }) {
   const state = appointmentVisualState(appointment, now);
   const open = appointment.status === "scheduled" || appointment.status === "confirmed";
   const date = dayKeyOf(appointment.starts_at);
@@ -307,6 +311,7 @@ function AppointmentDetails({ appointment, now, registerOpen }: { appointment: A
 
       {open ? (
         <div className="flex flex-col gap-3 border-t pt-4">
+          <AgendaWhatsappLink appointment={appointment} companyName={companyName} now={now} showHint />
           <div className="rounded-lg border bg-muted/30 p-3">
             <p className="mb-2 text-sm font-medium">Concluir e cobrar</p>
             <CompleteAppointmentForm appointment={appointment} registerOpen={registerOpen} />
